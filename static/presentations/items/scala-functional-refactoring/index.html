@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Functional refactoringin in Scala</title>
+    <link rel="stylesheet" href="../../css/reveal.css">
+    <link rel="stylesheet" href="../../css/theme.css">
+    <link rel="stylesheet" href="../../css/code.css">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+  </head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <section>
+        <div style="height:600px;"><div style="padding:200px 0px 0px 0px;">
+        <h2>Functional refactoring in Scala</h2>
+        <p>
+          by&nbsp;
+          <a href="http://linkedin.com/in/polyulya" class="roll"><span data-title="Yuriy Polyulya">Yuriy Polyulya</span></a>
+          &nbsp;/&nbsp;
+          <a href="http://twitter.com/polyulya" class="roll"><span data-title="@polyulya">@polyulya</span></a>
+          &nbsp;/&nbsp;
+          <a href="http://cogita-et-visa.blogspot.com" class="roll"><span data-title="+blog">+blog</span></a>
+        </p>
+        </div></div>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Some update method for:</h3>
+        <p style="font-size:50%;text-align:left;">Chess game player score update method. For player with: id, name, last name, games and score fields stored in MongoDB.</p><br/>
+        <h4 style="text-align:left;">User class:</h4>
+        <pre><code data-trim class="scala">
+case class User(
+  id        : String,
+  name      : String,
+  lastName  : String,
+  games     : Long,
+  score     : Double)
+        </code></pre>
+        <br/>
+        <h4 style="text-align:left;">Database document:</h4>
+        <pre><code data-trim class="scala">
+{ "_id" : "yuriy_polyulya@epam.com",
+  "name" : "Yuriy",
+  "last-name" : "Polyulya",
+  "games" : 15,
+  "score" : 100.0 }
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Can look like:</h3>
+        <pre style="height:600px;"><code data-trim class="scala" style="max-height:100%;height:100%;">
+def updateScore(id : String, gameScore : Double): Option[DBObject] = {
+  val users = MongoClient("localhost")("chess")("users")
+  val q = MongoDBObject(ID -> id)
+
+ users.findOne(q) match {
+    case Some(dbo)  =>
+
+      val games = dbo.getAs[Long]("games")
+      val score = dbo.getAs[Double]("score")
+
+      (games, score) match {
+        case (Some(g), Some(s)) =>
+
+          val gamesU = g + 1
+          val scoreU = s + gameScore
+
+          val update = $set("games" -> gamesU, "score" -> scoreU)
+
+          users.update(q, update)
+          users.findOne(q)
+
+        case _ => None
+      }
+    case None => None
+  }
+}
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Design Issues:</h3>
+        <br/>
+        <ul style="list-style-type:none;list-style:none; width:100%">
+          <li class="fragment roll-in" data-fragment-index="1">
+          <h4 style="text-align:left;">1. Tight-coupling:</h4>
+          <pre><code data-trim class="scala">
+  val users = MongoClient("localhost")("chess")("users")
+          </code></pre><br/>
+          </li>
+          <li class="fragment roll-in" data-fragment-index="2">
+          <h4 style="text-align:left;">2. Complexity:</h4>
+          <pre><code data-trim class="scala">
+  ... match {
+        case Some(dbo)  =>
+          ... match {
+              case (Some(g), Some(s)) =>
+                ...
+              case _ => None
+          }
+        case None => None
+    }
+          </code></pre><br/>
+          </li>
+          <li class="fragment roll-in" data-fragment-index="3">
+          <h4 style="text-align:left;">3. Direct fields using, more...</h4>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Tight-coupling fix:</h3>
+        <section>
+          <br/>
+          <ul style="list-style-type:none;list-style:none; width:100%">
+            <li class="fragment roll-in" data-fragment-index="1">
+            <h4 style="text-align:left;">1. Service Locator (global collection factory/storage):</h4>
+            <pre><code data-trim class="scala">
+object ChessMongoCollections {
+  lazy val users = MongoClient("localhost")("chess")("users") // or def
+}
+
+...
+
+val users = ChessMongoCollections.users
+            </code></pre><br/>
+            </li>
+            <li class="fragment roll-in" data-fragment-index="2">
+            <h4 style="text-align:left;">2. Dependency Injection:</h4>
+            <pre><code data-trim class="scala">
+def updateScore(
+  id : String,
+  gameScore : Double,
+  users : MongoCollection): Option[DBObject] = {
+
+...
+
+}
+            </code></pre><br/>
+            </li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="text-align:left;">Dependency injection after curring:</h4>
+          <pre style="height:600px;width:960px"><code data-trim class="scala" style="max-height:100%;height:100%;">
+def updateScore(id : String, setScore : Double): Collection => Option[DBObject] =
+  users => {
+    val q = MongoDBObject(ID -> id)
+
+    users.findOne(q) match {
+      case Some(dbo)  =>
+
+        val games = dbo.getAs[Long]("games")
+        val score = dbo.getAs[Double]("score")
+
+        (games, score) match {
+          case (Some(g), Some(s)) =>
+            val gamesU = g + 1
+            val scoreU = s + newScore
+
+            val update = $set("games" -> gamesU, "score" -> scoreU)
+
+            users.update(q, update)
+            users.findOne(q)
+
+          case _ => None
+        }
+      case None => None
+    }
+  }
+          </code></pre>
+        </section>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Mongo-Collection Reader:</h3>
+        <p style="font-size:50%;text-align:left;">Reader - for computations which read values from a shared environment.</p><br/>
+        <section>
+         <pre><code data-trim class="scala">
+case class DB[R](read : MongoCollection => R) {
+  def apply(c : MongoCollection): R = read(c)
+}
+          </code></pre>
+          <br/>
+          <ul style="list-style-type:none;list-style:none; width:100%">
+            <li class="fragment roll-in" data-fragment-index="1">
+              <h4 style="text-align:left;">Possible issue:</h4>
+              <p style="font-size:50%;">MongoCollection class doesn't represent data inside it:</p>
+              <pre><code data-trim class="scala">
+val collection = MongoClient("localhost")("chess")("games")
+
+// substitute "games" collection instead of "users" collection!!!
+updateScore("a@epam.com", 2.0)(collection)
+              </code></pre>
+            </li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="text-align:left;">Solution:</h4>
+          <p style="font-size:50%;text-align:left;">Use "Tagged type" to mark MongoCollection:</p>
+          <pre><code data-trim class="scala">
+type Tagged[U] = { type Tag = U }
+type @@[T, U] = T with Tagged[U]
+
+def withTag[T](c: MongoCollection) = c.asInstanceOf[MongoCollection @@ T]
+
+type #>[Tag, R] = MongoCollection @@ Tag => R
+          </code></pre>
+          <br/>
+          <p style="font-size:50%;text-align:left;">And DB reader:</p>
+          <pre><code data-trim class="scala">
+case class DB[CTag, R](read : Tag #> R) {
+  def apply(c : MongoCollection @@ CTag): R = read(c)
+}
+          </code></pre>
+        </section>
+        <br/>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Mongo-Collection Reader:</h3>
+        <p style="font-size:50%;text-align:left;">Extend DB Reader for: pass values from function to function, and execute sub-computations in a modified environment.</p><br/>
+        <ul style="list-style-type:none;list-style:none; width:100%">
+          <li data-fragment-index="1">
+            <h4 style="text-align:left;">Lift exist function to Reader:</h4>
+            <pre><code data-trim class="scala">
+case class DB[CTag, R](read : CTag #> R) {
+  ...
+
+  def map[B](f : R => B): DB[CTag, B] = DB { read andThen f }
+}
+            </code></pre>
+            <br/>
+          </li>
+          <li class="fragment roll-in" data-fragment-index="2">
+            <h4 style="text-align:left;">Combine two Readers:</h4>
+            <pre><code data-trim class="scala">
+case class DB[CTag, R](read : CTag #> R) {
+  ...
+
+  def flatMap[B](f : R => DB[CTag, B]): DB[CTag, B] =
+    DB { c => (read andThen f)(c).read(c) }
+}
+            </code></pre>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Mongo-Collection Reader:</h3>
+        <p style="font-size:50%;text-align:left;"></p><br/>
+        <h4 style="text-align:left;">DB Reader class:</h4>
+        <pre style="width:960px"><code data-trim class="scala">
+case class DB[CTag, R](read : CTag #> R) {
+  def apply(c : MongoCollection @@ CTag): R = read(c)
+
+  def map[B](f : R => B): DB[CTag, B] = DB { read andThen f }
+
+  def flatMap[B](f : R => DB[CTag, B]): DB[CTag, B] =
+    DB { c => (read andThen f)(c).read(c) }
+}
+        </code></pre>
+        <br/>
+        <h4 style="text-align:left;">DB Reader object (for "pure" method):</h4>
+        <pre style="width:960px"><code data-trim class="scala">
+object DB {
+  def pure[CTag, R](value : => R): DB[CTag, R] = DB { _ => value }
+
+  implicit def funcToDB[CTag, R](f : CTag #> R): DB[CTag, R] = DB(f)
+}
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Update method with DB Reader:</h3>
+        <br/>
+        <section>
+          <h4 style="text-align:left;">Functionality decomposition:</h4>
+          <pre style="width:960px"><code data-trim class="scala">
+trait Users
+
+def getById(id : String): Users #> Option[DBObject] =
+  _.findOne(MongoDBObject(ID -> id))
+
+
+def updateById(id : String, update : DBObject): Users #> Unit =
+  _.update(MongoDBObject(ID -> id), update)
+
+
+def updateScore(id : String, newScore : Double): User #> Option[DBObject] =
+  ...
+          </code></pre>
+        </section>
+        <section>
+          <h4 style="text-align:left;">Updated 'updateScore' method:</h4>
+          <pre style="width:960px"><code data-trim class="scala">
+def updateScore(id : String, newScore : Double): User #> Option[DBObject] =
+  for {
+    dboOpt <- getById(id)
+
+    update = for {
+      dbo   <- dboOpt
+      games <- dbo.getAs[Long]("games")
+      score <- dbo.getAs[Double]("score")
+      gamesU = games + 1
+      scoreU = score + newScore
+    } yield $set("games" -> gamesU, "score" -> scoreU)
+
+    _ <- updateById(id, update)
+    updated <- getById(id)
+  } yield updated
+          </code></pre>
+          <p style="font-size:50%;text-align:left;"><i>
+          Looks better but have a compile time error.<br/><br/>
+          Type mismatch - <b>updateById(id, update)</b><br/>
+          found: <b>Option[DBObject]</b><br/>
+          required: <b>DBObject</b>
+          </i></p>
+        </section>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Mongo-Collection Reader Transformer:</h3>
+        <p style="font-size:50%;text-align:left;">Special types that allow us to roll two containers DB & Option into a single one that shares the behaviour of both.</p>
+        <pre style="width:960px"><code data-trim class="scala">
+case class DBTOpt[CTag, R](run : DB[CTag, Option[R]]) {
+  def map[B](f : R => B): DBTOpt[CTag, B] = DBTOpt { DB { run(_) map f } }
+
+  def flatMap[B](f : R => DBTOpt[CTag, B]): DBTOpt[CTag, B] =
+    DBTOpt { DB { c => run(c) map f match {
+      case Some(r)  => r.run(c)
+      case None     => None
+    }}}
+}
+        </code></pre>
+        <br/>
+        <h4 style="text-align:left;">DB Transformer (for "pure" method and implicit conversion):</h4>
+        <pre style="width:960px"><code data-trim class="scala">
+object DBTOpt {
+  def pure[CTag, R](value : => Option[R]): DBTOpt[CTag, R] =
+    DBTOpt { DB { _ => value } }
+
+  implicit def toDBT[CTag, R](db : DB[CTag, Option[R]]): DBTOpt[CTag, R] =
+    DBTOpt { db }
+
+  implicit def fromDBT[CTag, R](dbto : DBTOpt[CTag, R]): DB[CTag, Option[R]] =
+   dbto.run
+}
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Update method with DB Reader & Transformer:</h3>
+        </br>
+        <pre style="width:960px"><code data-trim class="scala">
+def updateScore(id : String, newScore : Double): DB[Users, Option[DBObject]] =
+  for {
+    dbo   <- DBTOpt { getById(id) }
+    games <- DBTOpt.pure { dbo.getAs[Long]("games") }
+    score <- DBTOpt.pure { dbo.getAs[Double]("score") }
+
+    gamesU = games + 1
+    scoreU = score + newScore
+    update = $set("games" -> gamesU, "score" -> scoreU)
+
+    _ <- updateById(id, update)
+    updated <- getById(id)
+  } yield updated
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Dependency Resolver:</h3>
+        <br/>
+        <section>
+          <h4 style="text-align:left;">Resolver:</h4>
+          <pre><code data-trim class="scala">
+object resolve {
+  def apply[T, R](f : T => R)(implicit a : T) = f(a)
+}
+
+          </code></pre>
+        </section>
+        <section>
+          <h4 style="text-align:left;">DB interpreter:</h4>
+          <pre><code data-trim class="scala">
+trait CollectionProvider[CTag] {
+  def apply[R](db : DB[CTag, R]): R
+}
+          </code></pre>
+          <h4 style="text-align:left;">Companion with factory method:</h4>
+          <pre><code data-trim class="scala">
+object CollectionProvider {
+  def apply[CTag](host : String, db : String, collection : String) =
+    new CollectionProvider[CTag] {
+      val coll = withTag[CTag](MongoClient(host)(db)(collection))
+      def apply[R](db : DB[CTag, R]): R = db(coll)
+    }
+}
+          </code></pre>
+        </section>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Dependency injection:</h3>
+        <br/>
+        <section>
+          <h4 style="text-align:left;">Code:</h4>
+          <pre><code data-trim class="scala">
+def parseDouble(s : String): Option[Double] = ...
+
+def program(id : String): CollectionProvider[Users] => Unit =
+  ctx => {
+    println(s"Enter game result for '$id'")
+    parseDouble(readLine) map {
+      score => ctx(updateScore(id, score))
+    } map {
+      dbo => println(s"Updated: $dbo")
+    }
+  }
+
+          </code></pre>
+        </section>
+        <section>
+          <h4 style="text-align:left;">Concrete instances:</h4>
+          <pre><code data-trim class="scala">
+object inProduction {
+  implicit lazy val users =
+    CollectionProvider[Users]("localhost", "chess-online", "users")
+
+  implicit lazy val games =
+    CollectionProvider[Games]("localhost", "chess-online", "games")
+}
+          </code></pre>
+          <br/>
+          <h4 style="text-align:left;">"Injection":</h4>
+          <pre><code data-trim class="scala">
+import inProduction._
+
+resolve(program("a@epam.com"))
+          </code></pre>
+        </section>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Reader Monad:</h3>
+        <p style="font-size:50%;text-align:left;">The Reader monad (also called the Environment monad). Represents a computation, which can read values from a shared environment, pass values from function to function, and execute sub-computations in a modified environment.</p>
+        <br/>
+        <h4 style="text-align:left;">Computation type:</h4>
+        <p style="font-size:50%;text-align:left;">Computations which read values from a shared environment.</p>
+        <br/>
+        <h4 style="text-align:left;">Useful for:</h4>
+        <p style="font-size:50%;text-align:left;">Maintaining variable bindings, or other shared environment.</p>
+        <br/>
+        <h4 style="text-align:left;">Type:</h4>
+        <pre><code data-trim class="scala">
+type Reader[E, A] = ReaderT[Id, E, A]
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Monad Transformer:</h3>
+        <p style="font-size:50%;text-align:left;"><b>Monad transformers</b>: special types that allow us to roll two monads into a single one that shares the behaviour of both. We will begin with an example to illustrate why transformers are useful and show a simple example of how they work.</p>
+        <br/>
+        <h4 style="text-align:left;">Type:</h4>
+        <pre><code data-trim class="scala">
+type ReaderT[F[_], E, A] = Kleisli[F, E, A]
+        </code></pre>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Reader Monad & Monad Transformer (Scalaz):</h3>
+        <br/>
+        <pre style="width:960px"><code data-trim class="scala">
+import scalaz._, Scalaz._
+
+//usage already defined in scalaz: type =?>[E, A] = ReaderT[Option, E, A]
+
+object RTOpt extends KleisliFunctions with KleisliInstances {
+  def apply[A, B](f : A => Option[B]): A =?> B = kleisli(f)
+  def pure[A, B](r : => Option[B]): A =?> B = kleisli(_ => r)
+}
+        </code></pre>
+        <br/>
+        <h4 style="text-align:left;">And implicit conversions:</h4>
+        <pre style="width:960px"><code data-trim class="scala">
+type MC[Tag] = MongoCollection @@ Tag
+
+implicit def toR[Tag, R](f : MC[Tag] => R) = Reader(f)
+implicit def toRTOpt[Tag, R](f : Reader[MC[Tag], Option[R]]) = RTOpt(f)
+        </code></pre>                             <F5>
+      </section>
+
+      <section>
+        <h3 style="text-align:left;">Update method (with Scalaz):</h3>
+        <br/>
+        <pre style="width:960px"><code data-trim class="scala">
+def updateScore(id : String, newScore : Double): Users #> Option[DBObject] =
+  for {
+    dbo   <- RTOpt { getById(id) }
+    games <- RTOpt.pure { dbo.getAs[Long]("games") }
+    score <- RTOpt.pure { dbo.getAs[Double]("score") }
+
+    gamesU = games + 1
+    scoreU = score + newScore
+    update = $set("games" -> gamesU, "score" -> scoreU)
+
+    _ <- updateById(id, update)
+    updated <- getById(id)
+  } yield updated
+        </code></pre>
+        <br/>
+        <ul style="list-style-type:none;list-style:none; width:100%">
+          <li class="fragment roll-in" data-fragment-index="1">
+          <h4 style="text-align:left;"><mark class="red">Tight-coupling&nbsp;&nbsp;- RESOLVED</mark></h4>
+          <br/>
+          </li>
+          <li class="fragment roll-in" data-fragment-index="2">
+          <h4 style="text-align:left;"><mark class="red">Complexity&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- RESOLVED</mark></h4>
+          </li>
+        </ul>
+
+
+      </section>
+
+      <section>
+        <div style="height:600px;"><div style="padding:200px 0px 0px 0px;">
+        <ul style="width:100%;list-style-type:none;list-style:none;align:center;text-align:center;">
+          <li data-fragment-index="0"><h2>Questions?</h2><br/></li>
+          <li class="fragment roll-in" data-fragment-index="1"><h2>Remarks?</h2></li>
+        </ul>
+        </div></div>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="../../js/reveal.min.js"></script>
+  <script src="../../js/head.min.js"></script>
+  <script>
+    Reveal.initialize({
+      controls: true,
+      progress: true,
+      rollingLinks: true,
+      history: true,
+      center: false,
+      theme: Reveal.getQueryHash().theme,
+      transition: 'default',
+      dependencies: [
+          { src: '../../js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: '../../js/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: '../../js/zoom.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+     });
+  </script>
+  <script type="text/javascript" src="../../js/highlight.js"></script>
+  <script type="text/javascript" src="../../js/zoom.js"></script>
+</body>
+</html>

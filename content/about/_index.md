@@ -24,6 +24,6 @@ This is a personal blog to share author's thoughts and ideas. The main focus is 
 #### Area of interest:
 
 1. Distributed systems and related scientific areas: Systems Theory, Optimization Theory, Game Theory, Collective behavior, Evolution and Adaptation;
-2. Engineering principles and Functional/Object oriented design, various programming languages: Java, Scala, Rust;
+2. Engineering principles and Functional/Object oriented design, various programming languages: Java, Scala, Python, Rust;
 3. Invention engineering: TRIZ and ARIZ, Concept-Knowledge design theory.
 

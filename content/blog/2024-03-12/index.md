@@ -58,20 +58,19 @@ When examining this from a goal-oriented perspective—"describing reality" (sci
 
 This intersection is where skills and mindset become critical. But what exactly constitutes this mindset?
 
-&nbsp;&nbsp; [\#Mindset](/tags/mindset/) is a set of cognitive frameworks that enables us to identify optimal processes for reaching goals and evaluate the quality of both process and results. The key properties of an effective scientific-engineering mindset include::
+&nbsp;&nbsp; [\#Mindset](/tags/mindset/) is a set of cognitive frameworks that enables us to identify optimal processes for reaching goals and evaluate the quality of both process and results. The key properties of an effective scientific-engineering mindset include:
 
 * **Simulation** - the ability to model complex systems mentally, manipulating variables and focusing on critical parameters while recognizing that these models are abstractions rather than perfect reflections of reality. This cognitive scaffolding allows prediction of behavior under various conditions.
 
 * **Abstraction** - perhaps the most fundamental property of an advanced mindset, abstraction enables identification of underlying patterns by filtering out noise and non-essential details. Rather than mere simplification, abstraction represents a sophisticated generalization that requires rational validation and typically depends on simulation results.
 
 * **Rationality** - the discipline of decision-making based on evidence and logical frameworks. Rationality serves as the verification mechanism for both simulation and abstraction, checking for inconsistencies and rule violations. It demands intellectual honesty and willingness to discard appealing but incorrect solutions.
-* 
+
 * **Awareness** - the meta-cognitive ability to recognize the limitations of one's simulations and abstractions. Awareness encompasses understanding the boundaries of current knowledge and acknowledging the potential side effects of mental frameworks. Without this self-reflective capacity, identifying and correcting errors in simulation and abstraction becomes impossible.
 
 * **Optimization** - The systematic pursuit of solutions that maximize desired outcomes while minimizing costs. Since humans are natural satisficers<sup>[1]</sup> (accepting "good enough" rather than optimal solutions), true optimization requires deliberate practices that challenge our tendency toward premature solution acceptance.
 
-
-**Note:**  In my assessment, other properties of mindset derive from these core attributes, with the exception of domain knowledge. Domain knowledge, while essential, represents a collection of facts and principles rather than a cognitive property—it serves as the raw material upon which these mental frameworks operate.
+***Note:***  In my assessment, other properties of mindset derive from these core attributes, with the exception of domain knowledge. Domain knowledge, while essential, represents a collection of facts and principles rather than a cognitive property—it serves as the raw material upon which these mental frameworks operate.
 
 &nbsp;
 
