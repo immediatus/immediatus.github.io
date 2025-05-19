@@ -27,8 +27,8 @@ This is a personal blog to share author's thoughts and ideas. The main focus is 
 2. Engineering principles and Functional/Object oriented design, various programming languages: Java, Scala, Python, Rust;
 3. Invention engineering: TRIZ and ARIZ, Concept-Knowledge design theory.
 
-#### Presentations:
- - [Functional refactoring in Scala](https://e-mindset.space/presentations/items/scala-functional-refactoring/)
- - [How to be polymorphic in Scala](https://e-mindset.space/presentations/items/scala-polymorphism/)
- - [Functional programming with arrows](https://e-mindset.space/presentations/items/scala-functional-programming-with-arrows/)
- - [Few words about Kleisli category](https://e-mindset.space/presentations/items/scala-kleisli-category/)
+### Presentation materials:
+<sup>[1]</sup> ***JavaDays 2013***: [Functional refactoring in Scala](https://e-mindset.space/presentations/items/scala-functional-refactoring/)
+<sup>[2]</sup> ***JavaDays 2013***: [How to be polymorphic in Scala](https://e-mindset.space/presentations/items/scala-polymorphism/)
+<sup>[3]</sup> ***ScalaDays 2015***: [Functional programming with arrows](https://e-mindset.space/presentations/items/scala-functional-programming-with-arrows/)
+<sup>[4]</sup> ***Scala Meetup 2016***: [Few words about Kleisli category](https://e-mindset.space/presentations/items/scala-kleisli-category/)
