@@ -1,2 +1,6 @@
 #IDE metadata
 **.idea/**
+**.vscode/**
+
+# Build output
+**public/**
