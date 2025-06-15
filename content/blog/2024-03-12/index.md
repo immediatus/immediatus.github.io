@@ -1,7 +1,7 @@
 +++
 authors = [ "Yuriy Polyulya" ]
-title = "Ideas about definion of mindset"
-description = "Based on assumption that mindset is something what is exists and can be defined."
+title = "Ideas about definition of mindset"
+description = "Based on the assumption that mindset exists and can be defined."
 date = 2024-03-12
 
 draft = false
@@ -12,15 +12,15 @@ tags = ["mindset"]
 [extra]
 toc = false
 disclaimer = """
-Building definition of <mark>"Engineering Mindset"</mark> is mine long term project, and this is first post what has intention to set the basemant for discussion.
+Building a definition of <mark>"Engineering Mindset"</mark> is my long-term project, and this is the first post intended to set the foundation for discussion.
 """
 +++
 
-&nbsp;&nbsp; Given the opportunity to compare my engineering education and scientific extension in the same specialization, I've reflected on the fundamental differences between being an engineer and a scientist within engineering disciplines. The most apparent distinctions lie in roles, goals, and objectives.
+Given the opportunity to compare my engineering education with scientific extension in the same specialization, I've reflected on the fundamental differences between being an engineer and a scientist within engineering disciplines. The most apparent distinctions lie in roles, goals, and objectives.
 
-&nbsp;&nbsp; For scientists, the goals are relatively well-established: "to describe reality." For engineers, however, the definition is less straightforward, as it typically revolves around specific problem definitions where generalization presents challenges. The most compelling definition of an engineering goal I've encountered is: "to change reality".
+For scientists, the goals are relatively well-established: "to describe reality." For engineers, however, the definition is less straightforward, as it typically revolves around specific problem definitions where generalization presents challenges. The most compelling definition of an engineering goal I've encountered is: "to change reality."
 
-&nbsp;&nbsp; Scientific and engineering mindsets are often intertwined, but they have distinct traits. Going to the roots of the difference between the two, it is possible to see that the main difference is in the **goal**, **focuse** and **approach**.
+Scientific and engineering mindsets are often intertwined, but they have distinct traits. Looking at the roots of the difference between the two, it becomes clear that the main differences lie in **goal**, **focus**, and **approach**.
 
 <style>
 #tbl_1 + table th:first-of-type  { width: 20%; }
@@ -29,36 +29,31 @@ Building definition of <mark>"Engineering Mindset"</mark> is mine long term proj
 </style>
 <div id="tbl_1"></div>
 
-| Property | Scientist | Engineer
-| --- | --- | ---
-| Goal | To describe reality | To change reality
-| Focus | **Generalization**</br>discovery, research, experimentation | **Specialization**</br>problem-solving, invention, optimization
-| Approach | **Inductive**</br>hypothesis testing, data collection, analysis | **Deductive**</br>design, build, test, iterate
-| Result | **Knowledge**</br>theory, model, simulation | **Product**</br>device, system, process
-|Purpose | **Understanding**</br>advancing human knowledge | **Application**</br>solving practical problems
-|Success Metric | **Explanatory power**</br>accuracy, peer validation | **Functionality**</br>efficiency, reliability, scalability
-|Time Orientation| **Future knowledge**</br>long-term insights| **Present solutions**</br>immediate implementation
+| Property | Scientist | Engineer |
+| --- | --- | --- |
+| Goal | To describe reality | To change reality |
+| Focus | **Generalization**<br>discovery, research, experimentation | **Specialization**<br>problem-solving, invention, optimization |
+| Approach | **Inductive**<br>hypothesis testing, data collection, analysis | **Deductive**<br>design, build, test, iterate |
+| Result | **Knowledge**<br>theory, model, simulation | **Product**<br>device, system, process |
+| Purpose | **Understanding**<br>advancing human knowledge | **Application**<br>solving practical problems |
+| Success Metric | **Explanatory power**<br>accuracy, peer validation | **Functionality**<br>efficiency, reliability, scalability |
+| Time Orientation | **Future knowledge**<br>long-term insights | **Present solutions**<br>immediate implementation |
 
 
-When examining this from a goal-oriented perspective—"describing reality" (scientists) versus "changing reality" (engineers)—we can observe a complete spectrum of roles with numerous gradations between pure engineers and pure scientists. This spectrum includes engineers solving invention problems and scientists developing applied theories, as illustrated in  [Figure. 1](#pic_1).
-
+When examining this from a goal-oriented perspective—"describing reality" (scientists) versus "changing reality" (engineers)—we can observe a complete spectrum of roles with numerous gradations between pure engineers and pure scientists. This spectrum includes engineers solving invention problems and scientists developing applied theories, as illustrated in [Figure 1](#pic_1).
 
 <a name="pic_1">{{ image(url = "blog/2024-03-12/scientist_vs_engineer.svg", no_hover=true, full=false)}}</a>
-<figcaption>pic.1 Scientist ↔️ Engineer spectrum.</figcaption>
+<figcaption>Figure 1: Scientist ↔️ Engineer spectrum.</figcaption>
 
-&nbsp;
+Any point in [Figure 1](#pic_1) represents a possible specialization profile, such as R&D Engineers or Applied Scientists, each addressing defined problems through their unique blend of scientific and engineering approaches. To complete this picture, we must enrich our understanding of these goals with their underlying objectives:
 
-&nbsp;&nbsp; Any point in [Fig. 1](#pic_1) represents a possible specialization profile, such as R&D Engineers or Applied Scientists, each addressing defined problems through their unique blend of scientific and engineering approaches. To complete this picture, we must enrich our understanding of these goals with their underlying objectives:
-
-* *To describe reality* - to create the most compact, elegant, and predictive description possible, capturing essential phenomena with mathematical precision.
+* **To describe reality** - to create the most compact, elegant, and predictive description possible, capturing essential phenomena with mathematical precision.
   
-* *To change reality* - to transform the existing state into one that more closely approximates an ideal final result, balancing constraints of time, resources, and feasibility.
-
-&nbsp;
+* **To change reality** - to transform the existing state into one that more closely approximates an ideal final result, balancing constraints of time, resources, and feasibility.
 
 This intersection is where skills and mindset become critical. But what exactly constitutes this mindset?
 
-&nbsp;&nbsp; [\#Mindset](/tags/mindset/) is a set of cognitive frameworks that enables us to identify optimal processes for reaching goals and evaluate the quality of both process and results. The key properties of an effective scientific-engineering mindset include:
+**[Mindset](/tags/mindset/)** is a set of cognitive frameworks that enables us to identify optimal processes for reaching goals and evaluate the quality of both process and results. The key properties of an effective scientific-engineering mindset include:
 
 * **Simulation** - the ability to model complex systems mentally, manipulating variables and focusing on critical parameters while recognizing that these models are abstractions rather than perfect reflections of reality. This cognitive scaffolding allows prediction of behavior under various conditions.
 
@@ -70,11 +65,9 @@ This intersection is where skills and mindset become critical. But what exactly 
 
 * **Optimization** - The systematic pursuit of solutions that maximize desired outcomes while minimizing costs. Since humans are natural satisficers<sup>[1]</sup> (accepting "good enough" rather than optimal solutions), true optimization requires deliberate practices that challenge our tendency toward premature solution acceptance.
 
-***Note:***  In my assessment, other properties of mindset derive from these core attributes, with the exception of domain knowledge. Domain knowledge, while essential, represents a collection of facts and principles rather than a cognitive property—it serves as the raw material upon which these mental frameworks operate.
+**Note:** In my assessment, other properties of mindset derive from these core attributes, with the exception of domain knowledge. Domain knowledge, while essential, represents a collection of facts and principles rather than a cognitive property—it serves as the raw material upon which these mental frameworks operate.
 
-&nbsp;
-
-&nbsp;&nbsp; The most innovative breakthroughs often occur at the intersection of scientific understanding and engineering application, where descriptive power meets transformative capability. Those professionals who can navigate this spectrum with fluidity, applying both mindsets as circumstances demand, become the most versatile problem-solvers in their fields.
+The most innovative breakthroughs often occur at the intersection of scientific understanding and engineering application, where descriptive power meets transformative capability. Those professionals who can navigate this spectrum with fluidity, applying both mindsets as circumstances demand, become the most versatile problem-solvers in their fields.
 
 ---
 <sup>[1]</sup> [Satisficing](https://en.wikipedia.org/wiki/Satisficing) is a decision-making strategy that aims for a satisfactory or adequate result, rather than the optimal solution.
