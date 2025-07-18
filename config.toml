@@ -33,6 +33,6 @@ google_analytics = "G-X0M5X84BLR"
 
 [extra.nav]
 links = [
-  { url = "$BASE_URL/", name = "Blog" },
-  { url = "$BASE_URL/about", name = "About" },
+  { url = "$BASE_URL/", icon = "coffee", name = "Blog" },
+  { url = "$BASE_URL/about", icon = "user", name = "About" },
 ]
