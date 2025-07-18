@@ -3,7 +3,7 @@
     <ul>
       {% for link in config.extra.nav.links %}
         <li>
-          <a href="{{ link.url | safe | replace(from='$BASE_URL', to=get_url(path='')) | safe }}">{{ link.name }}</a>
+          <a href="{{ link.url | safe | replace(from='$BASE_URL', to=get_url(path='')) | safe }}"><i data-feather="{{ link.icon }}" class="ico"></i>&nbsp;{{ link.name }}</a>
         </li>
       {% endfor %}
     </ul>
