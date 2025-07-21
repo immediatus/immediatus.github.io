@@ -9,6 +9,7 @@
   --fg-muted-5: rgba(0, 0, 0, 0.6);
   --disclaimer-bg: rgba(10, 10, 10, 0.1);
   --disclaimer-fg: rgba(25, 25, 25, 1.0);
+  --primary-color: rgba(50, 50, 50, 1.0);
   --primary-color-alpha: rgba(200, 200, 200, 0.2);
   --nav-bg: rgba(240, 240, 240, 0.8);
   --active: 0.9;
@@ -26,6 +27,16 @@
   --transition-long: 800ms;
   --transition-longer: 400ms;
   --transition: 200ms;
+
+  /* Mermaid Theme Variables */
+  --mermaid-primary-color: var(--fg-muted-1);
+  --mermaid-primary-text-color: var(--fg-color);
+  --mermaid-primary-border-color: var(--fg-muted-5);
+  --mermaid-line-color: var(--primary-color);
+  --mermaid-secondary-color: var(--bg-color);
+  --mermaid-tertiary-color: var(--fg-muted-2);
+  --mermaid-edge-label-background: var(--bg-color);
+  --mermaid-edge-label-color: var(--primary-color);
 }
 
 * {
@@ -107,15 +118,15 @@ h6:hover .zola-anchor {
 }
 
 h1 {
-  font-size: 2.0rem;
-}
-
-h2 {
   font-size: 1.7rem;
 }
 
-h3 {
+h2 {
   font-size: 1.4rem;
+}
+
+h3 {
+  font-size: 1.2rem;
 }
 
 hr {
@@ -141,6 +152,7 @@ a:not(.no-animation)::before {
   inset: 0;
   width: 102%;
   position: absolute;
+  display: inline-block;
   transform: scaleX(0);
   transform-origin: right;
   transition: transform 0.5s ease-in-out;

@@ -24,10 +24,10 @@ This is a personal blog to share author's thoughts and ideas. The main focus is 
 #### Area of interest:
 
 1. Distributed systems and related scientific areas: Systems Theory, Optimization Theory, Game Theory, Collective behavior, Evolution and Adaptation;
-2. Engineering principles and Functional/Object oriented design, various programming languages: Java, Scala, Python, Rust;
+2. Engineering principles and Functional/Object oriented design, various programming languages: Java, Scala, Rust, Haskell;
 3. Invention engineering: TRIZ and ARIZ, Concept-Knowledge design theory.
 
-### Presentation materials:
+### Conferences materials:
 <sup>[1]</sup> *JavaDays 2013*: [Functional refactoring in Scala](https://e-mindset.space/presentations/items/scala-functional-refactoring/)
 
 <sup>[2]</sup> *JavaDays 2013*: [How to be polymorphic in Scala](https://e-mindset.space/presentations/items/scala-polymorphism/)

@@ -43,19 +43,36 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
-
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs';
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true, 
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#002528'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#fff'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#7C0000'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#F8B229'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#006100'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#fff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#000')
+      }
+    });
+  </script>
+
   <script>
-    renderMathInElement(
-        document.body,
-        {
-            delimiters: [
-                {left: "\\[", right: "\\]", display: true},
-                {left: "\\(", right: "\\)", display: false}
-            ]
-        }
-    );
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } }
   </script>
 
 </head>
