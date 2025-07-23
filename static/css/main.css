@@ -14,7 +14,7 @@
   --nav-bg: rgba(240, 240, 240, 0.8);
   --active: 0.9;
   --blur: saturate(50%) blur(2px);
-  --content-width: 720px;
+  --content-width: 960px;
   --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   --font-monospace: "Hack", monospace;
   --font-serif: "Hack", serif;

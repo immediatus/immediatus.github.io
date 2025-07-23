@@ -1,6 +1,5 @@
 #IDE metadata
-**.idea/**
-**.vscode/**
+**/.vscode/**
 
 # Build output
-**public/**
+**/public/**
