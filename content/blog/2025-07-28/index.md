@@ -1,7 +1,7 @@
 +++
 authors = [ "Yuriy Polyulya" ]
 title = "Adversarial Intuition: Engineering Anti-Fragile Decision-Making in Human-LLM Systems"
-description = "How engineers can develop mathematical frameworks for decision-making that become stronger when LLM systems fail, building cognitive resilience through adversarial thinking and dynamic trust calibration."
+description = "How engineers can develop frameworks for decision-making that become stronger when LLM systems fail, building cognitive resilience through adversarial thinking and dynamic trust calibration."
 date = 2025-07-28
 
 draft = false
