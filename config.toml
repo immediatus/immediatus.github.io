@@ -13,8 +13,15 @@ title = "Midset Footprint"
 # The default author for pages
 author = "Yuriy Polyulya"
 
+generate_feeds = true
+feed_filenames = ["atom.xml", "rss.xml"]
+
+generate_robots_txt = true
+
+generate_sitemap = true
+
 taxonomies = [
-  { name = "tags" },
+  { name = "tags", feed = true },
 ]
 
 
