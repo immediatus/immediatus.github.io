@@ -336,7 +336,9 @@ $$p_i(k+1) = p_i(k) + \eta_i \cdot \sum_{j \neq i} w_j(k) \cdot \text{InfoGain}_
 $$w_i(k+1) = \alpha \cdot \text{Trust}_i(k) + (1-\alpha-\beta) \cdot \text{Quality}_i(k) + \beta \cdot \text{Consistency}_i(k)$$
 
 **Consensus Quality Measurement:**
-$$\text{ConsensusQuality}(k) = \frac{1}{1 + \frac{\sigma(\{r_i(k)\}_{i=1}^n)}{\text{mean}(\{|r_i(k)|\}_{i=1}^n)}}$$
+$$\text{ConsensusQuality}(k) = \frac{1}{1 + \frac{\sigma_k}{\mu_k}}$$
+
+Where \\(\sigma_k\\) is the standard deviation of agent responses \\(r_i(k)\\) in round \\(k\\), and \\(\mu_k\\) is the mean of absolute response values \\(|r_i(k)|\\) across all \\(n\\) agents.
 
 **Termination Condition:**
 $$\text{Continue} \iff \text{ConsensusQuality}(k) < \tau \text{ AND } k < K_{\max}$$
@@ -360,9 +362,9 @@ Where:
 
 **Connecting the Examples**: The Apple earnings analysis (line 87) that escalates to arbitration could benefit from multi-round deliberation if time permits, using this merger analysis framework. When consensus quality falls below 0.55, the system can choose between immediate arbitration (fast) or multi-round deliberation (thorough) based on time constraints and decision stakes.
 
-**ConsensusQuality Calculation**: For Round 1 scores (+0.1, -0.4, +0.3), we first calculate the standard deviation (\\(\sigma ≈ 0.36\\)) and the mean of the absolute values (\\(mean_{abs} ≈ 0.27\\)). Our consensus quality is defined as \\(\frac{1}{1 + \frac{\sigma}{mean_{abs}}}\\).
+**ConsensusQuality Calculation**: For Round 1 scores (+0.1, -0.4, +0.3), we first calculate the standard deviation (\\(\sigma_1 ≈ 0.36\\)) and the mean of the absolute values (\\(\mu_1 ≈ 0.27\\)). Our consensus quality is defined as \\(\frac{1}{1 + \frac{\sigma_1}{\mu_1}}\\).
 
-This gives ConsensusQuality(1) = 1 / (1 + 0.36 / 0.27) = 1 / 2.33 ≈ 0.43. Since 0.43 is below the termination threshold of τ = 0.75, deliberation continues. This formula naturally bounds results between 0 (infinite disagreement) and 1 (perfect consensus).
+This gives ConsensusQuality(1) = 1 / (1 + σ₁/μ₁) = 1 / (1 + 0.36/0.27) = 1 / 2.33 ≈ 0.43. Since 0.43 is below the termination threshold of τ = 0.75, deliberation continues. This formula naturally bounds results between 0 (infinite disagreement) and 1 (perfect consensus).
 
 ### Byzantine Social Choice Theory
 
