@@ -7,6 +7,7 @@
   --fg-muted-3: rgba(0, 0, 0, 0.2);
   --fg-muted-4: rgba(0, 0, 0, 0.5);
   --fg-muted-5: rgba(0, 0, 0, 0.6);
+  --fg-muted-6: rgba(0, 0, 0, 0.8);
   --disclaimer-bg: rgba(10, 10, 10, 0.1);
   --disclaimer-fg: rgba(25, 25, 25, 1.0);
   --primary-color: rgba(50, 50, 50, 1.0);
@@ -72,7 +73,7 @@ body {
   scroll-margin-top: 15vh;
   animation: var(--transition-long) 1s highlight-in-out;
   color: var(--primary-color);
-  text-shadow: var(--primary-color-alpha) 0 0 4px, var(--primary-color) 0 0 12px;
+  text-decoration: underline;
 }
 
 .container {
@@ -200,9 +201,11 @@ dl dd {
 }
 
 blockquote {
-  border-left: .25rem solid var(--primary-color);
-  border-radius: .2rem;
-  color: var(--fg-muted-5);
+  border-left: .25rem solid var(--fg-muted-3);
+  border-radius: .3rem;
+  color: var(--fg-muted-6);
+  text-shadow: var(--fg-muted-2) 0 0 1px, var(--fg-muted-3) 0 0 1px;
+  background-color: var(--fg-muted-1);
   margin: 0;
   padding: 0 .75rem;
 }
@@ -316,10 +319,12 @@ table {
   overflow: hidden;
   table-layout: fixed;
   width: 100%;
+  background: linear-gradient(135deg, var(--fg-muted-0) 0%, var(--fg-muted-1) 100%);
 }
 
 table th {
   font-weight: bold;
+  border-bottom: 1px solid var(--fg-muted-2);
 }
 
 table th,
@@ -616,4 +621,96 @@ img:not(.no-hover):hover {
 		font-size: 0.75rem;
 		font-style: italic;
 	}
+}
+
+/* Part Table of Contents styling - Modern Design */
+.part-toc {
+    font-size: 0.9em;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, var(--fg-muted-0) 0%, var(--fg-muted-1) 100%);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: var(--rounded-corner);
+    overflow: hidden;
+}
+
+.part-toc-header {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    padding: 1em 1.5em 0.8em;
+    background: var(--fg-muted-1);
+    border-bottom: 1px solid var(--fg-muted-2);
+}
+
+.part-toc-title {
+    font-weight: 600;
+    color: var(--fg-color);
+    font-size: 1em;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    margin: 0;
+}
+
+.part-toc ul {
+    list-style: none;
+    padding: 0.5em 0;
+    margin: 0;
+}
+
+.part-toc li {
+    margin: 0;
+    padding: 0.75em 1.5em;
+    line-height: 1.6;
+    transition: background-color 0.2s ease, padding-left 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.part-toc a {
+    color: var(--fg-color);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.part-toc-desc {
+    display: block;
+    font-style: italic;
+    color: var(--fg-muted-5);
+    margin-top: 0.25em;
+    margin-left: 1.5em;
+    font-size: 0.92em;
+    font-weight: normal;
+    line-height: 1.5;
+    transition: color 0.2s ease;
+}
+
+.part-toc-nav {
+    padding: 0.25em 1.0em;
+    background: var(--fg-muted-1);
+    border-top: 1px solid var(--fg-muted-2);
+    display: flex;
+    justify-content: space-between;
+}
+
+.prev-part-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.85em;
+    white-space: nowrap;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.next-part-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.85em;
+    white-space: nowrap;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
 }
