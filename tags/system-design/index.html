@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="description" content="" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Midset Footprint" />
+  <meta property="og:title" content="Midset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;tags&#x2F;system-design&#x2F;" />
+  <meta property="og:description" content="" />
+
+  <title>Midset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;tags&#x2F;system-design&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/fonts.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-X0M5X84BLR');
+    </script>
+  
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs';
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true, 
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#002528'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#fff'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#7C0000'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#F8B229'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#006100'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#fff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#000')
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+  <nav>
+    <ul>
+      
+        <li>
+          <a href="https://e-mindset.space/"><i data-feather="coffee" class="ico"></i>&nbsp;Blog</a>
+        </li>
+      
+        <li>
+          <a href="https://e-mindset.space/about"><i data-feather="user" class="ico"></i>&nbsp;About</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<div id="main" class="container">
+    
+<h1>Posts with tag “system-design”</h1>
+<small>
+  <a class="link-page" href="https://e-mindset.space/tags">See all tags</a>
+  <br />
+  1 posts in total
+</small>
+<article>
+  
+    <h3><a class="link-page" href="https://e-mindset.space/blog/architecting-real-time-ads-platforms-design-exercise/">Architecting Real-Time Ads Platforms: A Distributed Systems Engineer&#x27;s Design Exercise</a></h3>
+      <p>A design exploration of building real-time ads platforms serving 400M+ users with sub-100ms latency. Applying distributed systems principles to RTB protocols, ML inference pipelines, auction algorithms, and resilience patterns - a thought experiment in solving complex distributed systems challenges.</p>
+    <small>
+      <time datetime=' 2025-10-15T00:00:00+00:00' pubdate>15 October 2025</time>
+          <span>•</span>
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/system-design/">#system-design</a></li>
+          </ul>
+    </small>
+  
+</article>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script>
+  feather.replace();
+</script>
+
+</body>
+</html>
