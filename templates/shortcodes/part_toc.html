@@ -1,0 +1,16 @@
+<div class="part-toc">
+<div class="part-toc-header">
+<div class="part-toc-title">In this part:</div>
+</div>
+{{ body | safe }}
+{% if prev_part or next_part %}
+<div class="part-toc-nav">
+{% if prev_part %}
+    <a href="#{{ prev_part | slugify }}" class="prev-part-link"><i class="fa fa-angle-double-up"></i> {{ prev_part }}</a>
+{% endif %}
+{% if next_part %}
+    <a href="#{{ next_part | slugify }}" class="next-part-link">{{ next_part }} <i class="fa fa-angle-double-down"></i></a>
+{% endif %}
+</div>
+{% endif %}
+</div>
