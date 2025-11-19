@@ -1,31 +1,77 @@
 {% extends "base.html" %}
+{% import "macros/taxonomy.html" as taxonomy_macros %}
 
 {% block content %}
-<h1>Posts with tag “{{ term.name }}”</h1>
-<small>
-  <a class="link-page" href="{{ get_url(path='tags') }}">See all tags</a>
-  <br />
-  {{ term.pages | length }} posts in total
-</small>
-<article>
+
+{%- if taxonomy.name == "series" %}
+  {# Series view - show ordered posts #}
+  {% set_global series_posts = [] %}
+
   {% for page in term.pages %}
-    <h3><a class="link-page" href="{{ page.permalink | safe }}">{{ page.title }}</a></h3>
-    {%- if page.description %}
-      <p>{{ page.description }}</p>
-    {%- endif %}
-    <small>
-      <time datetime='{{ page.date | date(format=' %+') }}' pubdate>{{- page.date | date(format=config.extra.date_format) -}}</time>
-      {%- if page.taxonomies %}
-        {%- for name, taxon in page.taxonomies %}
-          <span>•</span>
-          <ul class="tags">
-            {%-for item in taxon %}
-              <li><a class="tag" href="{{ get_taxonomy_url(kind=name, name=item) }}">#{{ item }}</a></li>
-            {%- endfor %}
-          </ul>
-        {%- endfor %}
-      {%- endif %}
-    </small>
+    {% if page.extra.series_order %}
+      {% set_global series_posts = series_posts | concat(with=[page]) %}
+    {% endif %}
   {% endfor %}
-</article>
+
+  {% set_global series_posts = series_posts | sort(attribute="extra.series_order") %}
+
+  <header class="series-page-header">
+    <h1>{{ term.pages[0].extra.series_title | default(value=term.name | title) }}</h1>
+
+    {% if series_posts[0].extra.series_description %}
+      <div class="series-intro-description">
+        {{ series_posts[0].extra.series_description | markdown | safe }}
+      </div>
+    {% endif %}
+
+    <p class="series-page-meta">
+      <span>{{ series_posts | length }} parts</span>
+      <span>•</span>
+      <a class="link-page" href="{{ get_url(path='series') }}">View all series</a>
+    </p>
+  </header>
+
+  <div class="series-page-posts">
+    {% for page in series_posts %}
+      <article class="series-page-post">
+        <div class="series-page-part-badge">Part {{ page.extra.series_order }}</div>
+        <div class="series-page-content-wrapper">
+          <h2 class="series-page-title"><a class="link-page" href="{{ page.permalink | safe }}">{{ page.title }}</a></h2>
+          {%- if page.description %}
+            <p class="series-page-description">{{ page.description }}</p>
+          {%- endif %}
+          <div class="series-page-post-meta">
+            <time datetime="{{ page.date | date(format='%+') }}" pubdate>{{- page.date | date(format=config.extra.date_format) -}}</time>
+            {{ taxonomy_macros::render_tags(page=page, format="list", show_separator=true) }}
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+
+{%- else %}
+  {# Tag view - simple list #}
+  <h1>Posts with tag "{{ term.name }}"</h1>
+  <small>
+    <a class="link-page" href="{{ get_url(path='tags') }}">See all tags</a>
+    <br />
+    {{ term.pages | length }} posts in total
+  </small>
+
+  <div class="blog-list">
+    {% for page in term.pages %}
+      <article>
+        <h2><a class="link-page" href="{{ page.permalink | safe }}">{{ page.title }}</a></h2>
+        {%- if page.description %}
+          <p>{{ page.description }}</p>
+        {%- endif %}
+        <small>
+          <time datetime="{{ page.date | date(format='%+') }}" pubdate>{{- page.date | date(format=config.extra.date_format) -}}</time>
+          {{ taxonomy_macros::render_tags(page=page, format="list", show_separator=true) }}
+        </small>
+      </article>
+    {% endfor %}
+  </div>
+{%- endif %}
+
 {% endblock content %}

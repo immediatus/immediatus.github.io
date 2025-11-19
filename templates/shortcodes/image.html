@@ -1,5 +1,5 @@
 {% if url %}<a href="{{get_url(path=url)}}" class="no-animation">{% endif %}
   <img class="{% if full %}full{% endif %} {% if transparent %}transparent{% endif %} {% if no_hover %}no-hover{% endif %}"
-    {% if alt %}alt="{{alt}}"{% endif %}
+    alt="{% if alt %}{{alt}}{% endif %}"
     src="{% if url_min %}{{get_url(path=url_min)}}{% else %}{{get_url(path=url)}}{% endif %}" />
 {% if url %}</a>{% endif %}

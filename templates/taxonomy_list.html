@@ -1,14 +1,98 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Tags</h1>
-<small> {{ terms | length }} tags in total </small>
-<br />
-<small>
-  <ul class="tags">
-    {% for tag in terms %}
-      <li><a class="tag" href="{{ get_taxonomy_url(kind='tags', name=tag.name) }}">#{{ tag.name }}</a></li>
-    {% endfor %}
-  </ul>
-</small>
+<header class="tags-page-header">
+  <h1>Explore Topics</h1>
+  <p class="tags-page-subtitle">{{ terms | length }} topics across all posts</p>
+</header>
+
+<div class="tag-cloud" id="tagCloud">
+  {% set_global sorted_tags = terms | sort(attribute="pages") | reverse %}
+  {% for tag in sorted_tags %}
+    <a href="{{ get_taxonomy_url(kind='tags', name=tag.name) }}"
+       class="tag-cloud-item"
+       data-count="{{ tag.pages | length }}">
+      <span class="tag-name">{{ tag.name }}</span>
+      <span class="tag-count">{{ tag.pages | length }}</span>
+    </a>
+  {% endfor %}
+</div>
+
+<script>
+// Tag cloud initialization with smooth animations
+document.addEventListener('DOMContentLoaded', function() {
+  const tagCloud = document.getElementById('tagCloud');
+  const tags = tagCloud.querySelectorAll('.tag-cloud-item');
+
+  // Apply size classes based on count
+  tags.forEach(tag => {
+    const count = parseInt(tag.dataset.count);
+    if (count >= 5) {
+      tag.classList.add('tag-cloud-xl');
+    } else if (count >= 3) {
+      tag.classList.add('tag-cloud-lg');
+    } else if (count >= 2) {
+      tag.classList.add('tag-cloud-md');
+    } else {
+      tag.classList.add('tag-cloud-sm');
+    }
+  });
+
+  // Animate tags on load with staggered delay
+  tags.forEach((tag, index) => {
+    tag.style.opacity = '0';
+    tag.style.transform = 'scale(0.8) translateY(20px)';
+
+    setTimeout(() => {
+      tag.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      tag.style.opacity = '1';
+      tag.style.transform = 'scale(1) translateY(0)';
+    }, index * 50);
+  });
+
+  // Interactive hover effect with movement
+  tags.forEach(tag => {
+    tag.addEventListener('mouseenter', function() {
+      // Make hovered tag float up
+      this.style.transform = 'translateY(-8px) scale(1.05)';
+
+      const rect = this.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      // Make nearby tags react
+      tags.forEach(otherTag => {
+        if (otherTag !== this) {
+          const otherRect = otherTag.getBoundingClientRect();
+          const otherCenterX = otherRect.left + otherRect.width / 2;
+          const otherCenterY = otherRect.top + otherRect.height / 2;
+
+          const distance = Math.sqrt(
+            Math.pow(centerX - otherCenterX, 2) +
+            Math.pow(centerY - otherCenterY, 2)
+          );
+
+          if (distance < 200) {
+            const angle = Math.atan2(otherCenterY - centerY, otherCenterX - centerX);
+            const pushDistance = Math.max(0, (200 - distance) / 20);
+            const moveX = Math.cos(angle) * pushDistance;
+            const moveY = Math.sin(angle) * pushDistance;
+
+            otherTag.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.95)`;
+            otherTag.style.opacity = '0.6';
+          }
+        }
+      });
+    });
+
+    tag.addEventListener('mouseleave', function() {
+      tags.forEach(otherTag => {
+        otherTag.style.transform = '';
+        otherTag.style.opacity = '';
+      });
+    });
+  });
+});
+</script>
+
 {% endblock content %}

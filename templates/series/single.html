@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if term.pages %}
+  {# Create array of posts with their series_order #}
+  {% set_global series_posts = [] %}
+  {% for page_item in term.pages %}
+    {% if page_item.extra.series_order %}
+      {% set_global series_posts = series_posts | concat(with=[page_item]) %}
+    {% endif %}
+  {% endfor %}
+
+  {# Sort posts by series_order #}
+  {% set_global series_posts = series_posts | sort(attribute="extra.series_order") %}
+
+  {% if series_posts | length > 0 %}
+    {% for post in series_posts %}
+      {% if loop.index0 == 0 %}
+        {% if post.extra.series_title %}
+          <h1>Series: {{ post.extra.series_title }}</h1>
+          <p class="series-description">{{ post.extra.series_description }}</p>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    <p class="series-count">{{ series_posts | length }} post{% if series_posts | length != 1 %}s{% endif %} in this series</p>
+
+    <div class="series-list">
+      <ol class="series-posts">
+        {% for post in series_posts %}
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">{{ post.extra.series_order }}.</span>
+                <a href="{{ post.permalink }}">{{ post.title }}</a>
+              </h2>
+              {% if post.description %}
+                <p class="series-post-description">{{ post.description }}</p>
+              {% endif %}
+              {% if post.date %}
+                <small class="series-post-date">{{ post.date | date(format=config.extra.date_format) }}</small>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+  {% endif %}
+{% else %}
+  <p>No posts found in this series.</p>
+{% endif %}
+
+<p class="dialog-buttons">
+  <a class="inline-button" href="{{ get_url(path="@/_index.md") }}">← Back to all posts</a>
+</p>
+{% endblock content %}

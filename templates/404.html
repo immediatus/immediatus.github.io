@@ -4,6 +4,6 @@
 
 <h1>Page Not Found</h1>
 
-<p>The requested page could not be found! <a onclick="window.history.go(-1)">Go Back</a></p>
+<p>The requested page could not be found! <button class="inline-button" onclick="window.history.back()">Go Back</button> or <a href="{{ get_url(path='@/_index.md') }}">Return Home</a></p>
 
 {% endblock content %}

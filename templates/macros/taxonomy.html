@@ -1,0 +1,31 @@
+{#
+  Macro: render_tags
+  Renders taxonomy tags (excluding series) with consistent formatting
+
+  Parameters:
+  - page: The page object containing taxonomies
+  - format: "inline" (default) or "list" (for ul/li structure)
+  - show_separator: true/false - whether to show • separator before tags
+#}
+{% macro render_tags(page, format="inline", show_separator=false) %}
+  {%- if page.taxonomies %}
+    {%- for name, taxon in page.taxonomies %}
+      {%- if name != "series" %}
+        {% if show_separator %}<span class="meta-separator">•</span>{% endif %}
+        {% if format == "list" %}
+          <ul class="tags">
+            {%- for item in taxon %}
+              <li><a class="tag" href="{{ get_taxonomy_url(kind=name, name=item) }}">#{{ item }}</a></li>
+            {%- endfor %}
+          </ul>
+        {% else %}
+          <div class="post-tags">
+            {%- for item in taxon %}
+              <a class="tag" href="{{ get_taxonomy_url(kind=name, name=item) }}">#{{ item }}</a>
+            {%- endfor %}
+          </div>
+        {% endif %}
+      {%- endif %}
+    {%- endfor %}
+  {%- endif %}
+{% endmacro render_tags %}

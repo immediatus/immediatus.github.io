@@ -1,5 +1,8 @@
-#IDE metadata
+# IDE metadata
 **/.vscode/**
 
 # Build output
 **/public/**
+
+# Other files
+**/.claude/**

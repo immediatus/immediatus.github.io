@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>All Series</h1>
+
+{% if terms %}
+  <p>{{ terms | length }} series available</p>
+
+  <div class="series-index">
+    {% for term in terms %}
+      {# Get posts in this series #}
+      {% set_global series_posts = [] %}
+      {% for page_item in term.pages %}
+        {% if page_item.extra.series_order %}
+          {% set_global series_posts = series_posts | concat(with=[page_item]) %}
+        {% endif %}
+      {% endfor %}
+
+      {% set_global series_posts = series_posts | sort(attribute="extra.series_order") %}
+
+      <div class="series-index-item">
+
+        {% if series_posts | length > 0 %}
+          {% for post in series_posts %}
+            {% if loop.index0 == 0 and post.extra.series_title %}
+              <h2> <a href="{{ term.permalink }}">{{ post.extra.series_title }}</a></h2>
+              <p class="series-index-description">{{ post.extra.series_description }}</p>
+            {% endif %}
+          {% endfor %}
+
+          <p class="series-count">{{ series_posts | length }} post{% if series_posts | length != 1 %}s{% endif %}</p>
+
+          <ol class="series-preview">
+            {% for post in series_posts %}
+              <li>
+                <a href="{{ post.permalink }}">
+                  Part {{ post.extra.series_order }}: {{ post.title }}
+                </a>
+              </li>
+            {% endfor %}
+          </ol>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No series found.</p>
+{% endif %}
+
+<p class="dialog-buttons">
+  <a class="inline-button" href="{{ get_url(path="@/_index.md") }}">← Back to all posts</a>
+</p>
+{% endblock content %}

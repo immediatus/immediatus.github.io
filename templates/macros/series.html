@@ -1,0 +1,140 @@
+{% macro navigation(page) %}
+  {% set_global series_name = false %}
+  {% set_global series_posts = [] %}
+
+  {# Get the series name from current page #}
+  {% if page.taxonomies.series %}
+    {% set_global series_name = page.taxonomies.series[0] %}
+  {% endif %}
+
+  {# Get all pages in the same series #}
+  {% if series_name %}
+    {% set all_series = get_taxonomy(kind="series") %}
+    {% for series_term in all_series.items %}
+      {% if series_term.name == series_name %}
+        {% set_global term = series_term %}
+      {% endif %}
+    {% endfor %}
+    {% if term and term.pages %}
+      {# Create array of posts with their series_order #}
+      {% set_global series_posts = [] %}
+      {% for page_item in term.pages %}
+        {% if page_item.extra.series_order %}
+          {% set_global series_posts = series_posts | concat(with=[page_item]) %}
+        {% endif %}
+      {% endfor %}
+
+      {# Sort posts by series_order #}
+      {% set_global series_posts = series_posts | sort(attribute="extra.series_order") %}
+
+      {# Find current post and get prev/next using loop tracking #}
+      {% set_global current_index = false %}
+      {% set_global prev_post = false %}
+      {% set_global next_post = false %}
+      {% set_global found_current = false %}
+
+      {% for post in series_posts %}
+        {% if found_current and not next_post %}
+          {# This is the post after current, save it as next #}
+          {% set_global next_post = post %}
+        {% endif %}
+
+        {% if post.path == page.path %}
+          {% set_global current_index = loop.index0 %}
+          {% set_global found_current = true %}
+        {% endif %}
+
+        {% if not found_current %}
+          {# Keep updating prev_post until we find current #}
+          {% set_global prev_post = post %}
+        {% endif %}
+      {% endfor %}
+
+      {# Clear prev_post if we were on the first item #}
+      {% if current_index == 0 %}
+        {% set_global prev_post = false %}
+      {% endif %}
+
+      {# Display navigation #}
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="{{ get_taxonomy_url(kind='series', name=series_name) }}" class="series-link">
+            {{ page.extra.series_title | default(value=series_name) }}
+          </a>
+          {% if current_index or current_index == 0 %}
+            <span class="series-progress">Part {{ current_index + 1 }}/{{ series_posts | length }}</span>
+          {% endif %}
+        </div>
+
+        <div class="series-nav">
+          {% if prev_post %}
+            <a class="series-nav-item series-nav-prev" href="{{ prev_post.permalink }}" title="{{ prev_post.title }}">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          {% endif %}
+
+          {% if next_post %}
+            <a class="series-nav-item series-nav-next" href="{{ next_post.permalink }}" title="{{ next_post.title }}">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          {% endif %}
+        </div>
+      </nav>
+    {% endif %}
+  {% endif %}
+{% endmacro navigation %}
+
+
+{% macro list(page, name="") %}
+  {% set_global series_name = false %}
+
+  {# Get series name from parameter or from current page #}
+  {% if name %}
+    {% set_global series_name = name %}
+  {% elif page.taxonomies.series %}
+    {% set_global series_name = page.taxonomies.series[0] %}
+  {% endif %}
+
+  {% if series_name %}
+    {% set all_series = get_taxonomy(kind="series") %}
+    {% set_global term = false %}
+    {% for series_term in all_series.items %}
+      {% if series_term.name == series_name %}
+        {% set_global term = series_term %}
+      {% endif %}
+    {% endfor %}
+    {% if term and term.pages %}
+      {# Create array of posts with their series_order #}
+      {% set_global series_posts = [] %}
+      {% for page_item in term.pages %}
+        {% if page_item.extra.series_order %}
+          {% set_global series_posts = series_posts | concat(with=[page_item]) %}
+        {% endif %}
+      {% endfor %}
+
+      {# Sort posts by series_order #}
+      {% set_global series_posts = series_posts | sort(attribute="extra.series_order") %}
+
+      <div class="series-list">
+        <h3>All posts in this series:</h3>
+        <ol class="series-posts">
+          {% for post in series_posts %}
+            <li class="series-post-item {% if page and post.path == page.path %}current{% endif %}">
+              <a href="{{ post.permalink }}">
+                <strong>Part {{ post.extra.series_order }}:</strong> {{ post.title }}
+              </a>
+              {% if post.description %}
+                <p class="series-post-description">{{ post.description }}</p>
+              {% endif %}
+              {% if page and post.path == page.path %}
+                <span class="current-indicator">← You are here</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endmacro list %}

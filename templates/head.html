@@ -58,17 +58,47 @@
     };
 
     mermaid.initialize({
-      startOnLoad: true, 
+      startOnLoad: true,
       theme: 'base',
       themeVariables: {
-        primaryColor: getCSSVariable('--mermaid-primary-color', '#002528'),
-        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#fff'),
-        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#7C0000'),
-        lineColor: getCSSVariable('--mermaid-line-color', '#F8B229'),
-        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#006100'),
-        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff'),
-        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#fff'),
-        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#000')
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
       }
     });
   </script>

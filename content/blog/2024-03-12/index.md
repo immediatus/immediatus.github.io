@@ -40,12 +40,13 @@ Scientific and engineering mindsets are often intertwined, but they have distinc
 | Time Orientation | **Future knowledge**<br>long-term insights | **Present solutions**<br>immediate implementation |
 
 
-When examining this from a goal-oriented perspective—"describing reality" (scientists) versus "changing reality" (engineers)—we can observe a complete spectrum of roles with numerous gradations between pure engineers and pure scientists. This spectrum includes engineers solving invention problems and scientists developing applied theories, as illustrated in [Figure 1](#pic_1).
+When examining this from a goal-oriented perspective—"describing reality" (scientists) versus "changing reality" (engineers)—we can observe a complete spectrum of roles with numerous gradations between pure engineers and pure scientists. This spectrum includes engineers solving invention problems and scientists developing applied theories, as illustrated in Figure 1.
 
-<a name="pic_1">{{ image(url = "blog/2024-03-12/scientist_vs_engineer.svg", no_hover=true, full=false)}}</a>
+![pic_1](/blog/2024-03-12/scientist_vs_engineer.svg)
+
 <figcaption>Figure 1: Scientist ↔️ Engineer spectrum.</figcaption>
 
-Any point in [Figure 1](#pic_1) represents a possible specialization profile, such as R&D Engineers or Applied Scientists, each addressing defined problems through their unique blend of scientific and engineering approaches. To complete this picture, we must enrich our understanding of these goals with their underlying objectives:
+Any point in Figure 1 represents a possible specialization profile, such as R&D Engineers or Applied Scientists, each addressing defined problems through their unique blend of scientific and engineering approaches. To complete this picture, we must enrich our understanding of these goals with their underlying objectives:
 
 * **To describe reality** - to create the most compact, elegant, and predictive description possible, capturing essential phenomena with mathematical precision.
   
