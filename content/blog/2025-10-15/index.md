@@ -79,9 +79,9 @@ The ad tech industry uses specialized terminology. Let's establish a common voca
 - **CPC (Cost Per Click):** Advertiser pays only when users click the ad. Risk shifts to publisher (no clicks = no revenue).
 - **CPA (Cost Per Action/Acquisition):** Advertiser pays only for conversions (app installs, purchases). Highest risk for publisher.
 
-**eCPM (Effective Cost Per Mille):** Metric that normalizes different pricing models (CPM/CPC/CPA) to "revenue per 1000 impressions" for comparison. Formula: `eCPM = (Total Earnings / Total Impressions) × 1000`. Used to rank ads fairly in auctions.
+**eCPM (Effective Cost Per Mille):** Metric that normalizes different pricing models (CPM/CPC/CPA) to "revenue per 1000 impressions" for comparison. Formula: \\(eCPM = \frac{\text{Total Earnings}}{\text{Total Impressions}} \times 1000\\). Used to rank ads fairly in auctions.
 
-**CTR (Click-Through Rate):** Percentage of ad impressions that result in clicks. Formula: `CTR = (Clicks / Impressions) × 100`. Typical range: 0.5-2% for display ads. Critical for converting CPC bids to eCPM.
+**CTR (Click-Through Rate):** Percentage of ad impressions that result in clicks. Formula: \\(CTR = \frac{\text{Clicks}}{\text{Impressions}} \times 100\\). Typical range: 0.5-2% for display ads. Critical for converting CPC bids to eCPM.
 
 With this terminology established, we can now define the system requirements that will drive our architectural decisions.
 
