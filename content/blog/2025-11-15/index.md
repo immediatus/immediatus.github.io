@@ -252,9 +252,9 @@ From [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture
 
 | Gateway | Latency Overhead | Memory per Pod | Operational Complexity | Kubernetes-Native |
 |---------|------------------|----------------|------------------------|-------------------|
-| **Envoy Gateway** | **2-4ms** | 50-80MB | Low (Envoy config only) | ✅ Gateway API native |
+| **Envoy Gateway** | **2-4ms** | 50-80MB | Low (Envoy config only) | Gateway API native |
 | **Kong** | 10-15ms | 150-200MB | Medium (plugin ecosystem learning curve) | ⚠️ CRD-based |
-| **Traefik** | 5-8ms | 100-120MB | Medium (label-based config, less flexible) | ✅ Gateway API support |
+| **Traefik** | 5-8ms | 100-120MB | Medium (label-based config, less flexible) | Gateway API support |
 | **NGINX Ingress** | 3-6ms | 80-100MB | Medium (annotation-heavy, error-prone) | ⚠️ Annotation-based |
 
 **2. Latency-Critical Operations**
@@ -269,10 +269,46 @@ From [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture
 - **Protocol flexibility:** Native support for HTTP/2, gRPC, WebSocket (critical for RTB bidstream)
 
 **4. Integration with Linkerd Service Mesh**
-- Envoy Gateway handles **north-south traffic** (external → cluster)
-- Linkerd handles **east-west traffic** (service → service within cluster)
-- **Seamless handoff:** Request enters via Envoy Gateway → Linkerd proxy intercepts at pod boundary → gRPC to backend service
-- **No double-proxying:** Unlike Kong + Istio setup where request passes through Kong proxy + Istio sidecar (adding 20-30ms total)
+
+**What is a Service Mesh:** A service mesh is an infrastructure layer that handles communication between microservices. Think of it as a dedicated network for your services that provides features like encrypted communication (mTLS), load balancing, retry logic, and traffic monitoring - without changing your application code.
+
+**Why We Need Both Envoy Gateway AND Linkerd:**
+
+Our platform has two types of traffic that need different handling:
+
+- **North-South Traffic (external → internal):** Requests coming FROM the internet TO our cluster
+  - Example: Mobile app → Envoy Gateway → Ad Server
+  - **Handled by:** Envoy Gateway (the "front door")
+  - **Responsibilities:** Authentication (JWT validation), rate limiting, TLS termination
+
+- **East-West Traffic (internal ↔ internal):** Services talking TO each other WITHIN our cluster
+  - Example: Ad Server → ML Service → Feature Store → Database
+  - **Handled by:** Linkerd (the "internal network")
+  - **Responsibilities:** Automatic mTLS encryption, intelligent load balancing, retry logic, observability
+
+**How They Work Together:**
+
+```
+1. External Request → Envoy Gateway (checks auth, applies rate limits)
+2. Envoy Gateway → Linkerd sidecar proxy (attached to Ad Server pod)
+3. Linkerd → Ad Server application
+4. Ad Server calls ML Service → Linkerd handles routing with mTLS
+5. ML Service calls Feature Store → Linkerd handles routing with mTLS
+```
+
+**Key Benefit - No Double-Proxying:**
+- Envoy Gateway and Linkerd both use Envoy proxy technology (same underlying engine)
+- Request smoothly transitions from Gateway → Linkerd with minimal overhead (2-4ms total)
+- **Contrast with alternatives:** Kong + Istio = different proxy technologies = 20-30ms overhead (10× slower)
+
+**What Linkerd Adds:**
+- **Automatic mTLS:** All internal traffic encrypted without code changes
+- **Smart retries:** Failed requests automatically retried with exponential backoff
+- **Circuit breaking:** Prevents cascade failures when services go down
+- **Observability:** Request traces, latency metrics, success rates - all automatic
+- **Zero trust:** Every service-to-service call is authenticated and encrypted
+
+**Latency Impact:** Linkerd adds ~1ms per service hop (Ad Server → ML Service = 1ms overhead). With 3-4 internal hops per request, total overhead is 3-4ms, well within our 150ms budget.
 
 **Alternative Considered: Kong API Gateway**
 - **Pros:** Rich plugin ecosystem (OAuth, GraphQL transform, caching), strong community
@@ -549,8 +585,8 @@ From [Part 4's fraud detection analysis](/blog/ads-platform-part-4-production/#f
 ### L3: ML-Based Anomaly Detection - Batch Gradient Boosted Decision Trees
 
 **Model Architecture:** GBDT (same as CTR prediction, different training data)
-- **Trees:** 200 trees, depth 6
-- **Features:** 40 features across behavioral, temporal, and device dimensions
+- **Trees:** ~200 trees, depth 6 - 8
+- **Features:** ~40 features across behavioral, temporal, and device dimensions
 - **Training frequency:** Daily batch retraining on previous 7 days of labeled data
 - **Deployment:** Model updated via blue-green deployment (shadow scoring validates new model before promotion)
 
@@ -673,7 +709,7 @@ From [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#three-tier-feature-fres
 - Tecton serves features for specified version, handling schema evolution transparently
 - **Migration pattern:** Deploy new model version alongside old (canary deployment), both versions served simultaneously during transition period
 
-**Schema change example:** Adding "last_30_day_CTR" feature to feature set:
+**Schema change example:** Adding `last_30_day_CTR` feature to feature set:
 1. Define new feature in Tecton (v2 feature set)
 2. Backfill historical values for existing users (batch Spark job)
 3. Update streaming pipeline to compute new feature going forward
@@ -683,8 +719,8 @@ From [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#three-tier-feature-fres
 
 ### Operational Considerations
 
-**Cost Trade-Off:** Managed Tecton costs ~$X/month for 1M+ QPS serving, but eliminates:
-- 2-3 FTEs for Feast self-hosting (salary cost significantly higher)
+**Cost Trade-Off:** Managed Tecton costs ~$(TODO: find reliable source)/month for 1M+ QPS serving, but eliminates:
+- 2-3 FTEs for Feast self-hosting (depends on location)
 - Infrastructure costs for self-managed Spark cluster (EMR), Redis cluster, Kafka consumers
 - Operational burden of 24/7 on-call for feature store incidents
 
@@ -912,7 +948,8 @@ graph TB
 - **Integrity Check Service**: Go (lightweight, sub-ms latency), Bloom filter fraud detection, 5ms target
 - **Ad Selection Service**: Java 21 + ZGC, queries CockroachDB for internal ad candidates, 15ms target
 - **ML Inference Service**: GBDT (LightGBM/XGBoost) CTR prediction, 40ms target, eCPM calculation
-- **RTB Auction Service**: Java 21 + ZGC, HTTP/2 connection pooling, fanout to 50+ DSPs via OpenRTB 2.5/3.0, 100ms target
+- **DSP Performance Tier Service**: Java 21 + ZGC, tracks P50/P95/P99 latency per DSP hourly, provides tier filtering for egress cost optimization (detailed in [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#egress-bandwidth-cost-optimization-predictive-dsp-timeouts)), 1ms lookup latency
+- **RTB Auction Service**: Java 21 + ZGC, HTTP/2 connection pooling, fanout to 20-30 selected DSPs (filtered by DSP Performance Tier Service) via OpenRTB 2.5/3.0, 100ms target
 - **Budget Service**: Java 21 + ZGC, Redis atomic DECRBY operations for spend tracking, 3ms target
 - **Auction Logic**: Java 21 + ZGC, unified auction combining internal ML-scored ads + external RTB bids, first-price auction
 
@@ -962,7 +999,7 @@ graph TB
 | **Feature Store** | Tecton online store | 10ms | Real-time feature lookup, Redis-backed |
 | **Ad Selection** | Java 21 + CockroachDB | 15ms | Internal ad candidates query |
 | **ML Inference** | GBDT (LightGBM/XGBoost) | 40ms | CTR prediction on candidates, eCPM calculation |
-| **RTB Auction** | Java 21 + HTTP/2 fanout | 100ms | **Critical path** - 50+ DSPs parallel, runs parallel to ML path (65ms) |
+| **RTB Auction** | Java 21 + HTTP/2 fanout | 100ms | **Critical path** - DSP selection (1ms) + 20-30 selected DSPs parallel (99ms), runs parallel to ML path (65ms). See [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#egress-bandwidth-cost-optimization-predictive-dsp-timeouts) for DSP tier filtering and egress cost optimization |
 | **Budget Check** | Java 21 + Valkey | 3ms | Redis DECRBY atomic op |
 | **Auction Logic** | Java 21 + ZGC | 8ms | eCPM comparison, winner selection |
 | **Serialization** | gRPC protobuf | 5ms | Response formatting |
@@ -1190,7 +1227,7 @@ Let's verify the final architecture meets the requirements established in Part 1
 - Fill rate: 99.8% (0.2% dropped due to fraud/malformed requests)
 - Revenue per 1M impressions: $3,200 vs $2,200 (45% lift)
 
-✅ **All [Part 1](/blog/ads-platform-part-1-foundation-architecture/) requirements met or exceeded.**
+**All [Part 1](/blog/ads-platform-part-1-foundation-architecture/) requirements met or exceeded.**
 
 ---
 

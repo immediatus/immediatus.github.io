@@ -829,6 +829,7 @@ The core architectural challenge: enforcing global rate limits across 100+ distr
 - User Profile (shared): 10ms
 - Integrity Check (fraud filter): 5ms
 - Critical service path: 100ms (RTB dominates - runs in parallel with ML)
+  - *Note: RTB phase includes 1ms DSP selection lookup (performance tier filtering for egress cost optimization) + 99ms DSP auction. See [Part 2's Egress Bandwidth Cost Optimization](/blog/ads-platform-part-2-rtb-ml-pipeline/#egress-bandwidth-cost-optimization-predictive-dsp-timeouts) for details on DSP Performance Tier Service.*
 - ML path (parallel): 65ms (completes before RTB)
 - Auction logic + Budget check + Serialization: 13ms avg (15ms p99)
 - **Total: 143ms avg (145ms p99)** with 5-7ms buffer to 150ms SLO

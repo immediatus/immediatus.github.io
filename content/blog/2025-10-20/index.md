@@ -576,10 +576,10 @@ $$Score_{DSP} = 0.3 \times S_{latency} + 0.25 \times S_{bid rate} + 0.25 \times 
 **Tier Assignment:**
 
 <style>
-#tbl_tier_assign + table th:first-of-type  { width: 25%; }
-#tbl_tier_assign + table th:nth-of-type(2) { width: 20%; }
+#tbl_tier_assign + table th:first-of-type  { width: 22%; }
+#tbl_tier_assign + table th:nth-of-type(2) { width: 18%; }
 #tbl_tier_assign + table th:nth-of-type(3) { width: 35%; }
-#tbl_tier_assign + table th:nth-of-type(4) { width: 20%; }
+#tbl_tier_assign + table th:nth-of-type(4) { width: 25%; }
 </style>
 <div id="tbl_tier_assign"></div>
 
@@ -588,6 +588,9 @@ $$Score_{DSP} = 0.3 \times S_{latency} + 0.25 \times S_{bid rate} + 0.25 \times 
 | **Tier 1 (Premium)** | >80 | Always call from all regions | 10-15 DSPs |
 | **Tier 2 (Regional)** | 50-80 | Call if same region + healthy | 20-25 DSPs |
 | **Tier 3 (Opportunistic)** | 30-50 | Call only for premium inventory | 10-15 DSPs |
+| **Tier 4 (Excluded)** | <30 OR P95>100ms | SKIP entirely (egress cost savings) | 5-10 DSPs |
+
+**Note:** Tier assignment also incorporates P95 latency for cost optimization. See [Egress Bandwidth Cost Optimization](#egress-bandwidth-cost-optimization-predictive-dsp-timeouts) section below for detailed predictive timeout calculation and Tier 4 exclusion logic that achieves 45% egress cost reduction.
 
 **Early Termination Strategy:**
 
@@ -956,6 +959,328 @@ The 100ms RTB timeout aligns with **industry-standard practices**, but achieving
 - **Regional DSP participation**: 60-70ms practical response time enables 92-95% response rates within geographic clusters
 - **Selective global participation**: High-value DSPs (Google AdX, Magnite) called globally despite latency risk, justified by revenue contribution
 - **Physics compliance**: Acknowledges that NY→Asia (200-300ms RTT) makes global broadcast impossible; regional sharding is not optional
+
+### Egress Bandwidth Cost Optimization: Predictive DSP Timeouts
+
+> **Architectural Driver: Cost Efficiency** - Egress bandwidth is the largest variable operational cost in RTB integration. At 1M QPS sending requests to 50+ DSPs, the platform pays for every byte sent to DSPs, regardless of whether they respond in time or win the auction. Optimizing which DSPs receive requests and with what timeouts directly impacts infrastructure costs.
+
+**The Egress Bandwidth Problem:**
+
+RTB integration involves sending HTTP POST requests (2-8KB each) to dozens of external DSPs for every ad request. At scale, this creates massive egress bandwidth costs:
+
+**Bandwidth Calculation at 1M QPS:**
+- **Request volume**: 1M ad requests/sec
+- **DSPs per request**: 50 DSPs (without optimization)
+- **Request size**: ~4KB average (OpenRTB 2.5 bid request JSON)
+- **Egress bandwidth**: 1M × 50 × 4KB = **200GB/sec = 17,280 TB/day**
+- **Baseline monthly egress**: 17,280 TB/month
+
+**The Waste:** DSPs that consistently respond slowly (>100ms) rarely win auctions due to the 150ms total SLO constraint. Yet the platform still pays full egress costs to send them bid requests.
+
+**Example of waste:**
+- DSP "SlowBid Inc" has P95 latency = 150ms (too slow for 100ms RTB budget)
+- Platform sends 1M requests/day to SlowBid
+- SlowBid responds to only 15% within 100ms (rest timeout)
+- **85% of egress bandwidth wasted** (requests sent but timeouts occur)
+- Wasted bandwidth per slow DSP: 1M × 4KB × 0.85 = 3.4GB/day
+- With 10-15 underperforming DSPs: **34-51 GB/day in pure waste per region**
+
+**Solution: DSP Performance Tier Service with Predictive Timeouts**
+
+Instead of using a global 100ms timeout for all DSPs, dynamically adjust timeout per DSP based on historical performance, and skip DSPs that won't respond in time.
+
+**DSP Performance Tier Service Architecture:**
+
+This is a dedicated microservice that:
+1. **Tracks** P50, P95, P99 latency for every DSP (hourly rolling window)
+2. **Calculates** predictive timeout for each DSP
+3. **Assigns** DSPs to performance tiers
+4. **Provides** real-time lookup for ad server (via Redis cache, <1ms lookup)
+
+**Latency Budget Impact:**
+
+The DSP performance lookup adds 1ms to the RTB auction phase and is accounted for within the existing 100ms RTB budget:
+
+**RTB Phase Breakdown (100ms total):**
+- **DSP selection (1ms):** Redis lookup for tier data, filter DSPs based on region and tier
+- **HTTP fan-out (2-5ms):** Establish connections, send bid requests to 20-30 selected DSPs
+- **DSP processing + network (50-70ms):** Wait for DSP responses with dynamic timeouts
+- **Response collection (2-3ms):** Parse incoming bids, validate responses
+- **Buffer (20-40ms):** Remaining time for slow DSPs up to their individual timeout limits
+
+**Key point:** The 1ms lookup happens at the start of the RTB phase and reduces the effective fan-out budget from 100ms to 99ms. This is acceptable because:
+- Dynamic timeouts reduce average wait time by 20-30ms (from 80ms to 50-60ms)
+- Net latency impact: -20ms to -30ms improvement despite the 1ms lookup cost
+- The lookup enables skipping 40-60% of DSPs, which eliminates their connection overhead (2-5ms per skipped DSP)
+
+**Trade-off:** Spend 1ms upfront to save 20-30ms on average through smarter DSP selection and dynamic timeouts. The ROI is 20:1 to 30:1 in latency savings.
+
+**Predictive Timeout Calculation:**
+
+For each DSP, calculate dynamic timeout based on historical latency:
+
+$$T_{DSP} = \min(P95_{DSP} + \text{safety margin}, T_{max})$$
+
+Where:
+- \\(P95_{DSP}\\) = 95th percentile latency for DSP over last hour
+- \\(\text{safety margin}\\) = 10ms buffer for network variance
+- \\(T_{max}\\) = 100ms (absolute maximum timeout)
+
+**Example calculations:**
+
+| DSP | P95 Latency (1h) | Predictive Timeout | Action |
+|-----|------------------|-------------------|---------|
+| Google AdX | 35ms | min(35+10, 100) = **45ms** | Include with short timeout |
+| Magnite | 55ms | min(55+10, 100) = **65ms** | Include with medium timeout |
+| Regional DSP A | 25ms | min(25+10, 100) = **35ms** | Include with very short timeout |
+| SlowBid Inc | 145ms | min(145+10, 100) = **100ms** | Include but likely timeout |
+| UnreliableDSP | 180ms | Exceeds 150ms | **SKIP entirely** (pre-filter) |
+
+**Enhanced Tier Assignment with Cost Optimization:**
+
+Extend the existing 3-tier system to incorporate egress cost optimization:
+
+| Tier | Latency Profile | Predictive Timeout | Treatment | Egress Savings |
+|------|----------------|-------------------|-----------|----------------|
+| **Tier 1 (Premium)** | P95 < 50ms | P95 + 10ms (dynamic) | Always call, optimized timeout | Minimal waste |
+| **Tier 2 (Regional)** | P95 50-80ms | P95 + 10ms (dynamic) | Call if same region | 15-25% reduction |
+| **Tier 3 (Opportunistic)** | P95 80-100ms | P95 + 10ms (capped at 100ms) | Call only premium inventory | 40-50% reduction |
+| **Tier 4 (Excluded)** | P95 > 100ms | N/A | **SKIP entirely** | **100% saved** |
+
+**DSP Selection Algorithm with Cost Optimization:**
+
+Enhanced algorithm that incorporates both latency AND cost:
+
+**Step 1: User Context Identification**
+- Determine user's geographic region from IP address (US-East, EU-West, or APAC)
+- Identify inventory value tier (premium, standard, or remnant)
+
+**Step 2: Fetch DSP Performance Data**
+
+Ad Server retrieves current performance data from Redis cache for all DSPs:
+- DSP tier assignment (1, 2, 3, or 4)
+- Predictive timeout (individualized per DSP)
+- P95 latency from last hour
+- Response rate within 100ms window
+
+**Step 3: Apply Tier-Based Filtering Rules**
+
+**Tier 4 DSPs (P95 > 100ms):** Skip entirely. These DSPs timeout too frequently to justify egress bandwidth cost. **Result:** 100% egress savings for excluded DSPs.
+
+**Tier 3 DSPs (P95 80-100ms):** Include only for premium inventory. For standard or remnant inventory, the slow response time doesn't justify waiting. **Result:** 40-50% of Tier 3 calls eliminated.
+
+**Tier 2 DSPs (P95 50-80ms):** Include only if DSP region matches user region. Cross-region calls add 30-60ms network latency, making these DSPs non-competitive. **Result:** 15-25% of Tier 2 calls eliminated.
+
+**Tier 1 DSPs (P95 < 50ms):** Always include with optimized timeout. Premium DSPs like Google AdX and Magnite have multi-region infrastructure, ensuring fast response regardless of user location.
+
+**Step 4: Assign Dynamic Timeouts**
+
+For each included DSP, set individualized timeout based on predictive timeout calculation. Fast DSPs get shorter timeouts (35-45ms), slower DSPs get longer timeouts (65-100ms), reducing average wait time.
+
+**Step 5: Outcome**
+
+**Selected DSPs:** 20-30 DSPs per request (down from 50 without optimization)
+
+**Timeout distribution:**
+- 10-15 DSPs with 35-50ms timeout (Tier 1)
+- 8-12 DSPs with 50-70ms timeout (Tier 2)
+- 2-3 DSPs with 80-100ms timeout (Tier 3)
+
+**Savings achieved:**
+- 40-60% fewer DSPs called (pre-filtering)
+- 20-30ms reduced average wait time (dynamic timeouts)
+- 45-55% total egress bandwidth reduction
+
+**Cost Impact Analysis:**
+
+**Before optimization** (baseline):
+- DSPs called per request: 50
+- Average timeout wait: 80ms
+- Egress per request: 50 × 4KB = 200KB
+- Monthly egress bandwidth: 17,280 TB (baseline = 100%)
+
+**After optimization** (with predictive timeouts):
+- DSPs called per request: 25-30 (Tier 1+2+3, Tier 4 excluded)
+- Average timeout wait: 55ms (dynamic timeouts)
+- Egress per request: 27.5 × 4KB = 110KB
+- Monthly egress bandwidth: ~9,500 TB (55% of baseline)
+- **Egress reduction: 45% compared to baseline**
+
+**Additional benefits:**
+- **Latency improvement**: Reduced average wait from 80ms → 55ms
+- **Response quality**: Higher percentage of responses arrive in time
+- **Revenue maintained**: 95-97% of revenue captured (only excluding non-competitive DSPs)
+
+{% mermaid() %}
+graph TB
+    subgraph DSP_SERVICE["DSP Performance Tier Service"]
+        METRICS[("Latency Metrics DB<br/>P50/P95/P99 per DSP<br/>Hourly rolling window")]
+        CALC["Predictive Timeout Calculator<br/>T = min P95 + 10ms, 100ms"]
+        TIER["Tier Assignment Logic<br/>Tier 1-4 based on P95"]
+        CACHE[("Redis Cache<br/>DSP performance data<br/>1ms lookup latency")]
+
+        METRICS --> CALC
+        CALC --> TIER
+        TIER --> CACHE
+    end
+
+    subgraph AD_FLOW["Ad Server Request Flow"]
+        REQ["Ad Request<br/>1M QPS"]
+        LOOKUP["Lookup DSP Performance<br/>from Redis cache"]
+        FILTER["Filter DSPs<br/>Apply tier rules"]
+        FANOUT["Fan-out to Selected DSPs<br/>With dynamic timeouts"]
+        COLLECT["Collect Responses<br/>Progressive auction"]
+
+        REQ --> LOOKUP
+        LOOKUP --> FILTER
+        FILTER --> FANOUT
+        FANOUT --> COLLECT
+    end
+
+    subgraph COST["Cost Impact"]
+        BEFORE["Before: 50 DSPs<br/>200KB egress per request<br/>Baseline 100 percent"]
+        AFTER["After: 27 DSPs<br/>110KB egress per request<br/>55 percent of baseline"]
+        SAVINGS["Improvement:<br/>45 percent egress reduction<br/>25 ms latency improvement"]
+
+        BEFORE -.-> AFTER
+        AFTER -.-> SAVINGS
+    end
+
+    CACHE --> LOOKUP
+    FANOUT --> METRICS
+
+    style SAVINGS fill:#d4edda
+    style FILTER fill:#fff3cd
+    style TIER fill:#e1f5ff
+{% end %}
+
+**Implementation Details:**
+
+**1. DSP Performance Metrics Collection:**
+
+Track per-DSP metrics with hourly aggregation using time-series database (InfluxDB or Prometheus):
+
+**Latency Metrics:**
+- P50 latency per DSP per region (e.g., Google AdX in US-East: 32ms)
+- P95 latency per DSP per region (e.g., Google AdX in US-East: 45ms)
+- P99 latency per DSP per region (e.g., Google AdX in US-East: 78ms)
+
+**Performance Metrics:**
+- Response rate within 100ms window (e.g., Google AdX: 95%)
+- Bid rate (% of auctions where DSP submits bid, e.g., 85%)
+- Win rate (% of bids that win auction, e.g., 12%)
+
+Each metric is tagged with DSP identifier and region for granular analysis and tier assignment.
+
+**2. Hourly Tier Recalculation:**
+
+Automated job runs every hour:
+
+1. **Query** last 1 hour of DSP latency data
+2. **Calculate** P95 for each DSP
+3. **Compute** predictive timeout: `T = min(P95 + 10ms, 100ms)`
+4. **Assign** tier based on P95:
+   - Tier 1: P95 < 50ms
+   - Tier 2: P95 50-80ms
+   - Tier 3: P95 80-100ms
+   - Tier 4: P95 > 100ms (exclude)
+5. **Update** Redis cache with new tier + timeout data
+6. **Alert** if Tier 1 DSP degrades to Tier 2/3
+
+**3. Ad Server Integration:**
+
+Ad Server fetches DSP performance data via REST API endpoint. For a request from US-East region, the service returns current performance data for all DSPs:
+
+**Example DSP Performance Data (US-East Region):**
+
+| DSP | Tier | Predictive Timeout | P95 Latency | Response Rate | Region | Include? |
+|-----|------|-------------------|-------------|---------------|--------|----------|
+| Google AdX | 1 | 45ms | 35ms | 95% | Global | Yes (Always) |
+| Regional DSP A | 2 | 38ms | 28ms | 92% | US-East | Yes (Same region) |
+| Regional DSP B | 2 | 42ms | 32ms | 88% | EU-West | No (Cross-region) |
+| Slow DSP | 4 | N/A | 145ms | 15% | US-East | No (Excluded) |
+
+**Data Freshness:** Performance data updated hourly, cached timestamp indicates last recalculation (e.g., 2025-11-19 14:00:00 UTC).
+
+**Ad Server Decision Logic:**
+- **Google AdX (Tier 1):** Include with 45ms timeout (premium DSP, always called)
+- **Regional DSP A (Tier 2):** Include with 38ms timeout (same region match)
+- **Regional DSP B (Tier 2):** Skip (cross-region adds 30-60ms latency)
+- **Slow DSP (Tier 4):** Skip entirely (P95 > 100ms, saves egress bandwidth)
+
+**4. Monitoring & Alerting:**
+
+Track cost optimization effectiveness:
+
+**Metrics:**
+- `egress_bandwidth_gb_per_day`: Total egress to DSPs
+- `egress_cost_usd_per_day`: Calculated cost
+- `dsp_exclusion_rate`: % of DSPs excluded per request
+- `avg_dsps_per_request`: Average DSPs called (target: 25-30)
+- `cost_savings_vs_baseline`: Monthly savings vs 50-DSP baseline
+
+**Alerts:**
+- **P1 Critical**: Tier 1 DSP degraded to Tier 3+ for >2 hours
+- **P1 Critical**: Egress cost exceeds budget by >20%
+- **P2 Warning**: >5 DSPs moved from Tier 2 → Tier 3 in single hour (infrastructure issue?)
+- **P2 Warning**: Average DSPs per request > 35 (over-inclusive filtering)
+
+**5. A/B Testing Impact:**
+
+Validate cost savings without revenue loss:
+
+**Test setup:**
+- **Control group** (20% traffic): Use global 100ms timeout for all DSPs
+- **Treatment group** (80% traffic): Use predictive timeouts with tier filtering
+
+**Metrics tracked:**
+- Revenue per 1000 impressions (eCPM)
+- Egress bandwidth cost
+- P95 RTB latency
+- Fill rate (% requests with winning bid)
+
+**Expected results:**
+- eCPM: -1% to +1% (revenue neutral)
+- Egress cost: -40% to -50%
+- P95 latency: -20ms to -30ms (improved)
+- Fill rate: -0.1% to +0.2% (maintained)
+
+**Trade-offs Accepted:**
+
+1. **Reduced DSP participation**: 50 → 27 DSPs per request
+   - **Mitigation**: Tier 1 premium DSPs (Google AdX, Magnite) always included
+   - **Impact**: Only low-performing DSPs excluded
+
+2. **Complexity**: Additional service to maintain
+   - **Justification**: 45% egress cost savings significantly exceeds incremental maintenance overhead
+   - **Operational overhead**: Minimal (automated tier calculation, 1-2 days/month monitoring)
+
+3. **False exclusions during DSP recovery**: If DSP was slow for 1 hour but recovers, stays excluded until next hourly update
+   - **Mitigation**: Consider 15-minute recalculation window for Tier 1 DSPs
+   - **Impact**: Minimal (most DSP performance is stable hour-to-hour)
+
+**ROI Analysis:**
+
+**Investment:**
+- Engineering: 3 weeks × 2 engineers (one-time implementation effort)
+- Infrastructure: Additional Redis cache + metrics database (ongoing infrastructure cost)
+- Maintenance: Approximately 20% of one engineer's time for ongoing monitoring
+
+**Benefits:**
+- Egress bandwidth: 45% reduction (ongoing operational savings)
+- Latency improvement: 20-30ms average reduction in RTB wait time
+- Revenue impact: Neutral to slightly positive (95-97% revenue maintained while excluding only non-competitive DSPs)
+- **Overall ROI**: Implementation cost recovered within first 1-2 months through reduced egress bandwidth charges
+
+**Conclusion:**
+
+Predictive DSP timeouts with tier-based filtering is a **high-impact, low-risk optimization** that:
+- Reduces egress bandwidth costs by 45-50% compared to baseline
+- Improves P95 RTB latency by 20-30ms
+- Maintains 95-97% of revenue (only excludes non-competitive DSPs)
+- Requires minimal engineering investment with payback period of 1-2 months
+
+This optimization transforms egress bandwidth from the largest variable operational cost to a manageable, optimized expense.
 
 ---
 
@@ -2470,95 +2795,47 @@ Even if eCPM improves, reject model if:
 
 **Versioning Scheme:**
 
-**Format**: `YYYY-MM-DD-HH` (timestamp-based)
-- Example: `2025-11-19-14` (deployed November 19, 2025 at 14:00 UTC)
-- **Why timestamp**: Chronological ordering, no semantic versioning confusion
-
-**Storage:**
-
-**Location**: S3 bucket `s3://ad-platform-models/ctr-prediction/`
-**Retention**: 30 days (balances storage cost vs rollback capability)
-**Structure**:
-```
-/ctr-prediction/
-  /2025-11-19-14/
-    model.pkl          (50MB LightGBM binary)
-    metadata.json      (training date, AUC, calibration, hyperparameters)
-    feature_list.txt   (450 features used)
-  /2025-11-12-08/
-    ...
-  /2025-11-05-02/
-    ...
-```
-
-**Metadata Contents:**
-- Training date: 2025-11-19T14:00:00Z
-- Validation AUC: 0.784
-- Calibration error: ±7.2% (within ±10% target)
-- Feature count: 450
-- Hyperparameters: learning_rate=0.05, max_depth=6, num_leaves=63
-- Training sample size: 10.2M impressions
-
-**Rollback Procedure:**
-
-**Trigger Conditions:**
-- Error rate > 1.0% for 15 minutes (10× normal rate)
-- Latency P99 > 60ms for 15 minutes (50% above SLA)
-- Revenue drops > 5% for 1 hour (severe business impact)
-
-**Rollback Steps (< 5 minutes):**
-
-1. **Identify previous version**: Query metadata, select last known-good model
-2. **Update configuration**: Edit model serving config `model_version: 2025-11-12-08`
-3. **Reload model servers**: Rolling restart of ML inference pods (no downtime)
-4. **Verify**: Check metrics dashboard, confirm error rate drops and latency recovers
-5. **Alert**: P1 to ML Engineering with rollback reason
+Models use timestamp-based versioning (`YYYY-MM-DD-HH`) for chronological ordering without semantic version complexity. Each version includes the model binary, metadata (AUC, calibration metrics, hyperparameters), and feature list. Storage in S3 with 30-day retention balances rollback capability against storage costs, with last 3 production-stable models (deployed ≥7 days without incidents) retained indefinitely as ultimate fallback.
 
 **Fast Rollback Architecture:**
-- Model servers poll config every 30 seconds
-- Config change detected → load new model from S3 (10s)
-- Graceful transition: Finish in-flight requests with old model, new requests use new model
-- **Total rollback time**: 30s (config poll) + 10s (model load) + 30s (verification) = **70 seconds**
 
-**Known-Good Model Safety:**
+Model servers poll configuration every 30 seconds, enabling sub-2-minute rollback when production metrics degrade. Configuration update triggers graceful model reload: in-flight requests complete with current model while new requests route to previous version loaded from S3 (10-second fetch). Total rollback time averages 70 seconds (30s config poll + 10s model load + 30s verification).
 
-Retain last **3 known-good models** indefinitely (beyond 30-day retention):
-- Definition: Model deployed for ≥7 days with no incidents
-- Purpose: Ultimate fallback if recent models all fail
-- Stored: `s3://ad-platform-models/ctr-prediction/known-good/`
+**Rollback Triggers:**
+- Error rate >1.0% for 15+ minutes (10× baseline)
+- Latency P99 >60ms for 15+ minutes (50% above SLA)
+- Revenue drop >5% for 1+ hour (severe business impact)
 
 {% mermaid() %}
-graph TB
-    subgraph "Real-Time Metrics (Grafana)"
-        CTR[CTR: 1.02%<br/>Baseline: 1.00%<br/>Status: OK]
-        ECPM[eCPM: $5.10<br/>Baseline: $5.00<br/>Status: OK]
-        LAT[P95 Latency: 38ms<br/>Target: < 40ms<br/>Status: OK]
-        ERR[Error Rate: 0.02%<br/>Target: < 0.1%<br/>Status: OK]
-    end
+graph LR
+    DEPLOY[New Model Deployed<br/>v2025-11-19-14]
+    MONITOR[Monitor Metrics<br/>Latency Error Rate Revenue]
 
-    subgraph "Daily Metrics (Automated Report)"
-        AUC[AUC: 0.79<br/>Target: ≥ 0.78<br/>Status: OK]
-        CAL[Calibration: ±8%<br/>Target: ±10%<br/>Status: OK]
-        PSI[PSI: 0.12<br/>Threshold: < 0.25<br/>Status: WARNING]
-    end
+    DEGRADED{Degradation<br/>Detected?}
 
-    subgraph "Weekly Review (Manual)"
-        FEAT[Feature Importance<br/>Top 20 stable<br/>Status: OK]
-        DRIFT[Concept Drift<br/>Gradual AUC decline<br/>Action: Schedule retrain]
-    end
+    ROLLBACK[Rollback Triggered<br/>Load v2025-11-12-08]
+    RELOAD[Servers Reload<br/>70 sec transition]
+    VERIFY[Verify Recovery<br/>Metrics normalized]
 
-    ALERT[Alert: PSI Warning<br/>Monitor closely]
+    CONTINUE[Continue Monitoring<br/>Model stable]
 
-    PSI -.-> ALERT
+    DEPLOY --> MONITOR
+    MONITOR --> DEGRADED
 
-    style CTR fill:#e6ffe6
-    style ECPM fill:#e6ffe6
-    style LAT fill:#e6ffe6
-    style ERR fill:#e6ffe6
-    style AUC fill:#e6ffe6
-    style CAL fill:#e6ffe6
-    style PSI fill:#fff4e6
-    style ALERT fill:#ffffcc
+    DEGRADED -->|Yes<br/>Threshold exceeded| ROLLBACK
+    DEGRADED -->|No<br/>Within SLA| CONTINUE
+
+    ROLLBACK --> RELOAD
+    RELOAD --> VERIFY
+    VERIFY --> MONITOR
+
+    CONTINUE --> MONITOR
+
+    style DEPLOY fill:#e1f5ff
+    style DEGRADED fill:#fff4e6
+    style ROLLBACK fill:#ffe6e6
+    style VERIFY fill:#e6ffe6
+    style CONTINUE fill:#e6ffe6
 {% end %}
 
 **Cross-References:**
