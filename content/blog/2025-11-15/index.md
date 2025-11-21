@@ -237,18 +237,9 @@ This pattern (detailed in [Part 4 Production Operations](/blog/ads-platform-part
 
 ### API Gateway: Envoy Gateway Decision
 
-**Technology Choice: Envoy Gateway over Kong / Traefik / NGINX**
+From [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition), gateway operations (authentication, rate limiting, routing) must complete within 4-5ms to preserve 150ms SLO. Envoy Gateway achieves 2-4ms total overhead: JWT auth via ext_authz filter (1-2ms, cached 60s), rate limiting via Valkey token bucket (0.5ms atomic DECR), routing decisions (1-1.5ms). Production measurements: P50 2.8ms, P99 4.2ms.
 
-From [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition): Gateway must handle authentication, rate limiting, and routing within 4-5ms to preserve overall 150ms SLO.
-
-**Why Envoy Gateway (Kubernetes Gateway API) Selected:**
-
-**1. Unified Proxy Stack with Linkerd (Both Use Envoy)**
-- **Operational simplicity:** Single proxy technology to learn, monitor, and troubleshoot (Envoy) rather than two different proxies (e.g., Kong + Istio's Envoy)
-- **Shared metrics/tracing:** Same observability patterns across ingress (Envoy Gateway) and service mesh (Linkerd's Envoy-based proxy)
-- **Resource efficiency:** Avoids running two different control planes with duplicate functionality
-
-**Comparison:**
+#### Technology Comparison
 
 | Gateway | Latency Overhead | Memory per Pod | Operational Complexity | Kubernetes-Native |
 |---------|------------------|----------------|------------------------|-------------------|
@@ -257,78 +248,17 @@ From [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture
 | **Traefik** | 5-8ms | 100-120MB | Medium (label-based config, less flexible) | Gateway API support |
 | **NGINX Ingress** | 3-6ms | 80-100MB | Medium (annotation-heavy, error-prone) | ⚠️ Annotation-based |
 
-**2. Latency-Critical Operations**
-- **JWT Authentication via ext_authz filter:** 1-2ms latency (external auth call to identity service cached for 60s)
-- **Rate Limiting via Redis:** 0.5ms latency using token bucket algorithm with atomic Valkey operations
-- **Routing decisions:** 1-1.5ms latency for path-based routing to backend services
-- **Total overhead target:** 2-4ms (measured P50: 2.8ms, P99: 4.2ms)
+**Kong rejected:** 10-15ms latency (7-10% of budget), 150-200MB memory, different proxy tech from service mesh (Kong Lua + Istio Envoy = 20-30ms combined overhead). **NGINX rejected:** annotation-based config error-prone (`nginx.ingress.kubernetes.io/rate-limit` typo fails silently), no native gRPC support, external rate-limit sidecar complexity. **Traefik rejected:** label-based config insufficient for RTB's sophisticated timeout/header transformation requirements.
 
-**3. Kubernetes Gateway API Alignment**
-- **Future-proof:** Gateway API is Kubernetes standard replacing Ingress (more expressive, role-based)
-- **Multi-tenancy support:** HTTPRoute and ReferenceGrant enable namespace isolation for different teams
-- **Protocol flexibility:** Native support for HTTP/2, gRPC, WebSocket (critical for RTB bidstream)
+#### Unified Proxy Stack with Linkerd Service Mesh
 
-**4. Integration with Linkerd Service Mesh**
+Platform handles two traffic patterns: **north-south** (external → cluster via Envoy Gateway) and **east-west** (internal service-to-service via Linkerd). Both use Envoy proxy technology, enabling smooth transitions without double-proxying overhead. Alternative (Kong + Istio) requires learning two proxies, separate observability, 20-30ms combined latency.
 
-**What is a Service Mesh:** A service mesh is an infrastructure layer that handles communication between microservices. Think of it as a dedicated network for your services that provides features like encrypted communication (mTLS), load balancing, retry logic, and traffic monitoring - without changing your application code.
+**Traffic flow:** External request → Envoy Gateway (TLS termination, JWT validation, rate limiting) → Linkerd sidecar (mTLS encryption, load balancing, retries) → Ad Server → internal calls via Linkerd (automatic mTLS, observability). Each service hop adds ~1ms Linkerd overhead; 3-4 hops = 3-4ms total, well within budget. Achieves zero-trust (every call authenticated/encrypted) without code changes.
 
-**Why We Need Both Envoy Gateway AND Linkerd:**
+**Gateway API benefits:** HTTPRoute enables per-DSP timeout policies and header transformations declaratively. ReferenceGrant provides namespace isolation for multi-tenant deployments. Native HTTP/2, gRPC, WebSocket support eliminates manual proxy_pass configuration for RTB bidstream.
 
-Our platform has two types of traffic that need different handling:
-
-- **North-South Traffic (external → internal):** Requests coming FROM the internet TO our cluster
-  - Example: Mobile app → Envoy Gateway → Ad Server
-  - **Handled by:** Envoy Gateway (the "front door")
-  - **Responsibilities:** Authentication (JWT validation), rate limiting, TLS termination
-
-- **East-West Traffic (internal ↔ internal):** Services talking TO each other WITHIN our cluster
-  - Example: Ad Server → ML Service → Feature Store → Database
-  - **Handled by:** Linkerd (the "internal network")
-  - **Responsibilities:** Automatic mTLS encryption, intelligent load balancing, retry logic, observability
-
-**How They Work Together:**
-
-```
-1. External Request → Envoy Gateway (checks auth, applies rate limits)
-2. Envoy Gateway → Linkerd sidecar proxy (attached to Ad Server pod)
-3. Linkerd → Ad Server application
-4. Ad Server calls ML Service → Linkerd handles routing with mTLS
-5. ML Service calls Feature Store → Linkerd handles routing with mTLS
-```
-
-**Key Benefit - No Double-Proxying:**
-- Envoy Gateway and Linkerd both use Envoy proxy technology (same underlying engine)
-- Request smoothly transitions from Gateway → Linkerd with minimal overhead (2-4ms total)
-- **Contrast with alternatives:** Kong + Istio = different proxy technologies = 20-30ms overhead (10× slower)
-
-**What Linkerd Adds:**
-- **Automatic mTLS:** All internal traffic encrypted without code changes
-- **Smart retries:** Failed requests automatically retried with exponential backoff
-- **Circuit breaking:** Prevents cascade failures when services go down
-- **Observability:** Request traces, latency metrics, success rates - all automatic
-- **Zero trust:** Every service-to-service call is authenticated and encrypted
-
-**Latency Impact:** Linkerd adds ~1ms per service hop (Ad Server → ML Service = 1ms overhead). With 3-4 internal hops per request, total overhead is 3-4ms, well within our 150ms budget.
-
-**Alternative Considered: Kong API Gateway**
-- **Pros:** Rich plugin ecosystem (OAuth, GraphQL transform, caching), strong community
-- **Cons:**
-  - 10-15ms latency overhead (3-4× higher than Envoy Gateway)
-  - Heavy memory footprint (150-200MB per pod vs 50-80MB for Envoy Gateway)
-  - Different proxy technology than service mesh (operational complexity: learning Lua for Kong + Envoy for Linkerd)
-  - Plugin model introduces non-deterministic latency (some plugins add 5-10ms)
-
-**Alternative Considered: NGINX Ingress Controller**
-- **Pros:** Mature, well-understood, decent latency (3-6ms)
-- **Cons:**
-  - Annotation-based configuration is error-prone (typo in annotation = silent failure)
-  - Not Kubernetes Gateway API native (uses legacy Ingress resource)
-  - Rate limiting requires external sidecar (nginx-rate-limit-module) adding complexity
-  - No native gRPC support (requires manual proxy_pass configuration)
-
-**Decision Rationale:** Envoy Gateway chosen for **lowest latency overhead (2-4ms)**, **unified Envoy stack** with Linkerd, and **Kubernetes Gateway API** alignment. The 2-4ms overhead consumes only 1.3-2.7% of 150ms latency budget, leaving margin for upstream/downstream operations.
-
-**Trade-Off Accepted:** Smaller plugin ecosystem compared to Kong. If complex transformations needed (e.g., GraphQL → REST), implement as dedicated microservice rather than gateway plugin to avoid latency penalty.
+**Trade-off:** Smaller plugin ecosystem vs Kong. Complex transformations (GraphQL→REST) implemented as dedicated microservices rather than gateway plugins, preserving low latency while allowing independent scaling.
 
 ---
 
@@ -508,6 +438,42 @@ From [Part 3](/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-
 - Hash slot calculation: `CRC16(key) mod 16384`
 - Keys for same campaign co-located: `campaign:{id}:budget`, `campaign:{id}:metadata` use same hash tag `{id}`
 - Ensures atomic operations on related keys hit same node
+
+---
+
+## Immutable Audit Log: Technology Stack
+
+### Compliance Requirement and Technology Decision
+
+From [Part 3's audit log architecture](/blog/ads-platform-part-3-data-revenue/#immutable-financial-audit-log-compliance-architecture): CockroachDB operational ledger is mutable (allows UPDATE/DELETE for operational efficiency), violating SOX and tax compliance requirements. Regulators require immutable, cryptographically verifiable financial records with 7-year retention for audit trail integrity.
+
+**Solution: Kafka + ClickHouse Event Sourcing Pattern**
+
+Platform selected Kafka + ClickHouse over AWS QLDB based on four factors. First, proven industry pattern validated at scale (Netflix KV DAL, Uber metadata platform operate similar architectures at 1M+ QPS). Second, query performance advantage: ClickHouse columnar OLAP delivers sub-500ms audit queries compared to QLDB PartiQL requiring 2-5 seconds for equivalent aggregations over billions of rows. Third, operational familiarity: platform already operates both technologies (Kafka for event streaming, ClickHouse for analytics dashboards), reusing existing expertise reduces learning curve. Fourth, AWS deprecation signal: AWS documentation (2024) recommends migrating QLDB workloads to Aurora PostgreSQL, indicating reduced investment in ledger-specific database.
+
+QLDB rejected due to vendor lock-in (AWS-only, no multi-cloud option), query language barrier (PartiQL requires finance team retraining vs standard SQL), and OLAP performance lag for analytical compliance workloads (tax reporting aggregations, multi-year dispute investigations).
+
+### Implementation and Performance Characteristics
+
+ClickHouse consumes financial events from Kafka via Kafka Engine table, transforms via Materialized View into columnar MergeTree storage. Configuration optimized for audit access patterns: monthly partitioning by timestamp enables efficient pruning for annual tax queries, ordering key `(campaignId, timestamp)` co-locates campaign history for fast sequential scans, ZSTD compression achieves 65% reduction (200GB/day raw → 70GB/day compressed). System delivers 100K events/sec ingestion throughput with <5 second end-to-end lag (event published → queryable), sub-500ms query latency for most audit scenarios (campaign spend history, dispute investigation). Full configuration details in [Part 3](/blog/ads-platform-part-3-data-revenue/#clickhouse-storage-design).
+
+### Resource Trade-Offs and Operational Impact
+
+**Additional Infrastructure Required:**
+
+Compliance architecture adds dedicated resources beyond operational systems. ClickHouse cluster: 8 nodes with 3× replication factor across availability zones, consuming approximately 24 compute instances total. Storage footprint: 180TB for 7-year compliance retention (70GB/day × 365 days × 7 years), representing 15-20% additional storage compared to operational database infrastructure baseline (CockroachDB + Valkey). Kafka brokers: 12 nodes reused from existing event streaming infrastructure (impression/click events already flow through same cluster), marginal incremental capacity required.
+
+**Ingestion and Query Resource Usage:**
+
+ClickHouse ingestion consumes CPU cycles for JSON parsing, columnar transformation, compression, and replication. At 100K events/sec, ingestion workload averages 30-40% CPU utilization per node during peak hours, leaving headroom for query workload. Query resource consumption varies by complexity: simple aggregations (monthly campaign spend) consume <1 CPU-second, complex multi-year tax reports consume 5-10 CPU-seconds. Daily reconciliation job (compares operational vs audit ledgers) runs during off-peak hours (2AM UTC), consuming ~5 minutes CPU time across cluster.
+
+**Operational Overhead:**
+
+Compliance infrastructure introduces ongoing operational burden. Monitoring: Kafka consumer lag alerts (detect ingestion delays >1 minute), ClickHouse query latency dashboards (ensure audit queries remain sub-second), storage growth tracking (project retention capacity needs). Retention policy enforcement: monthly automated job drops partitions >7 years old, archives to S3 cold storage, validates hash chain integrity. Daily reconciliation: automated Airflow job compares ledgers, alerts on discrepancies >0.01 per campaign, typically finds 0-3 mismatches out of 10,000+ campaigns requiring investigation. Incident response: estimated 2-4 hours/month for discrepancy investigation, schema evolution coordination between operational and audit systems.
+
+**Benefit Justifies Resource Cost:**
+
+Compliance infrastructure prevents regulatory violations (SOX audit failures, IRS tax disputes), enables advertiser billing dispute resolution with cryptographically verifiable records (hash-chained events prove tampering), and satisfies payment processor requirements (Visa/Mastercard mandate immutable transaction logs). Resource investment (24 ClickHouse nodes, 180TB storage, operational monitoring) eliminates legal/financial risk exposure from non-compliant mutable ledgers.
 
 ---
 
@@ -830,110 +796,253 @@ This approach achieves [Part 4's zero-downtime requirement](/blog/ads-platform-p
 
 ## Final System Architecture
 
-Here's the complete system architecture:
+Architecture presented using C4 model approach: System Context → Container views. Each diagram focuses on specific architectural concern for clarity.
+
+### Level 1: System Context Diagram
+
+Shows the ads platform and its external dependencies at highest abstraction level.
 
 {% mermaid() %}
 graph TB
-    subgraph "Client Layer"
-        CLIENT[Mobile/Web Client]
+    CLIENT[Mobile/Web Clients<br/>1M+ users]
+    ADVERTISERS[Advertisers<br/>Campaign creators<br/>Budget managers]
+    PLATFORM[Real-Time Ads Platform<br/>1M QPS, 150ms P99 SLO]
+    DSP[DSP Partners<br/>50+ external bidders<br/>OpenRTB 2.5/3.0]
+    STORAGE[Cloud Storage<br/>S3 Data Lake<br/>7-year retention]
+
+    CLIENT -->|Ad requests| PLATFORM
+    PLATFORM -->|Ad responses| CLIENT
+    ADVERTISERS -->|Create campaigns<br/>Fund budgets| PLATFORM
+    PLATFORM -->|Reports, analytics| ADVERTISERS
+    PLATFORM <-->|Bid requests/responses<br/>100ms timeout| DSP
+    PLATFORM -->|Events, audit logs| STORAGE
+
+    style PLATFORM fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style CLIENT fill:#fff3e0,stroke:#f57c00
+    style ADVERTISERS fill:#e1bee7,stroke:#8e24aa
+    style DSP fill:#f3e5f5,stroke:#7b1fa2
+    style STORAGE fill:#e8f5e9,stroke:#388e3c
+{% end %}
+
+**Key External Dependencies:**
+- **Clients**: Mobile apps, web browsers requesting ads (1M+ concurrent users)
+- **Advertisers**: Create campaigns, fund budgets, receive performance reports
+- **DSP Partners**: External demand-side platforms bidding via OpenRTB protocol (50+ integrations)
+- **Cloud Storage**: S3 for data lake, analytics, and compliance archival (7-year retention)
+
+### Level 2a: Core Request Flow (Container Diagram)
+
+Real-time ad serving path from client request to response. Shows critical path components achieving 150ms P99 SLO.
+
+{% mermaid() %}
+graph LR
+    CLIENT[Client]
+
+    subgraph EDGE["Edge Layer (15ms)"]
+        CDN[CloudFront CDN<br/>5ms]
+        LB[Route53 GeoDNS<br/>Multi-region<br/>5ms]
+        GW[Envoy Gateway<br/>Auth + Rate Limit<br/>5ms]
     end
 
-    subgraph "Edge Layer"
-        CDN[CDN<br/>CloudFront]
-        GLB[Global Load Balancer<br/>Route53 GeoDNS]
-    end
+    subgraph SERVICES["Core Services (115ms)"]
+        AS[Ad Server<br/>Orchestrator<br/>Java 21 + ZGC]
 
-    subgraph "Regional Service Layer"
-        GW[API Gateway<br/>Auth + Rate Limiting]
-        AS[Ad Server Orchestrator<br/>Central Coordinator]
-
-        subgraph "Core Services"
-            UP[User Profile Service<br/>Cache Hierarchy]
-            INTEGRITY[Integrity Check<br/>Fraud Filter]
-            AD_SEL[Ad Selection Service<br/>Internal Candidates]
-            ML[ML Inference Service<br/>GBDT CTR Prediction]
-            RTB[RTB Auction Service<br/>DSP Fanout]
-            BUDGET[Budget Service<br/>Atomic Pacing]
-            AUCTION[Auction Logic<br/>Unified Auction]
+        subgraph PARALLEL["Parallel Execution"]
+            direction TB
+            ML_PATH[ML Path 65ms:<br/>Profile → Features → Inference]
+            RTB_PATH[RTB Path 100ms:<br/>DSP Fanout → Bids]
         end
 
-        subgraph "Data Layer"
-            REDIS[(Redis/Valkey<br/>L2 Cache + Counters)]
-            CRDB[(CockroachDB<br/>L3 Profiles + Ledger)]
-            FEATURE[(Tecton<br/>Feature Store)]
-        end
+        AUCTION[Unified Auction<br/>Budget Check<br/>Winner Selection<br/>11ms]
     end
 
-    subgraph "Data Processing Pipeline"
-        KAFKA[Kafka<br/>Event Streams]
-        FLINK[Flink<br/>Stream Prep]
-        SPARK[Spark<br/>Batch Features]
-        S3[(S3<br/>Data Lake)]
+    subgraph DATA["Data Layer"]
+        CACHE[(Valkey Cache<br/>L2: 2ms)]
+        DB[(CockroachDB<br/>L3: 10-15ms)]
+        FEATURES[(Tecton<br/>Features: 10ms)]
     end
 
-    subgraph "ML Training Pipeline"
-        AIRFLOW[Airflow<br/>Orchestration]
-        TRAIN[Training Cluster<br/>GBDT Retraining]
-        REGISTRY[Model Registry<br/>Versioning]
-    end
-
-    subgraph "Observability"
-        PROM[Prometheus<br/>Metrics]
-        JAEGER[Tempo<br/>Tracing]
-        GRAF[Grafana<br/>Dashboards]
-    end
-
-    CLIENT --> CDN
-    CLIENT --> GLB
-    GLB --> GW
+    CLIENT -->|Request| CDN
+    CDN --> LB
+    LB --> GW
     GW --> AS
 
-    AS --> UP
-    AS --> INTEGRITY
-    AS --> AD_SEL
-    AS --> ML
-    AS --> RTB
-    AS --> AUCTION
-    AS --> BUDGET
+    AS --> ML_PATH
+    AS --> RTB_PATH
 
-    UP --> REDIS
-    UP --> CRDB
+    ML_PATH --> AUCTION
+    RTB_PATH --> AUCTION
 
-    INTEGRITY --> REDIS
+    ML_PATH -.-> CACHE
+    ML_PATH -.-> DB
+    ML_PATH -.-> FEATURES
 
-    AD_SEL --> REDIS
-    AD_SEL --> CRDB
+    RTB_PATH <-.->|Bid requests/<br/>responses| DSP[50+ DSPs]
 
-    ML --> FEATURE
+    AUCTION -.-> CACHE
+    AUCTION -.-> DB
+    AUCTION --> GW
+    GW --> LB
+    LB --> CDN
+    CDN -->|Response| CLIENT
 
-    RTB --> EXTERNAL[50+ DSP Partners]
+    style AS fill:#9f9,stroke:#2e7d32,stroke-width:2px
+    style PARALLEL fill:#fff3e0,stroke:#f57c00
+    style AUCTION fill:#ffccbc,stroke:#d84315
+{% end %}
 
-    BUDGET --> REDIS
-    BUDGET --> CRDB
+**Critical Path**: Client → Edge (15ms) → Profile+Features (20ms) → Parallel[ML 65ms | RTB 100ms] → Auction+Budget (11ms) = **146ms P99**
 
-    AS -.-> KAFKA
-    KAFKA --> FLINK
-    FLINK --> REDIS
-    FLINK --> S3
+**Detailed flow**: See [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition) for component-by-component breakdown.
+
+### Level 2b: Data & Compliance Layer (Container Diagram)
+
+Dual-ledger architecture separating operational (mutable) from compliance (immutable) data stores.
+
+{% mermaid() %}
+graph TB
+    subgraph OPERATIONAL["Operational Systems"]
+        BUDGET[Budget Service<br/>3ms atomic ops]
+        BILLING[Billing Service<br/>Charges/Refunds]
+    end
+
+    subgraph CACHE["Cache & Database"]
+        L2[L2: Valkey<br/>Distributed cache<br/>2ms, atomic ops]
+        L3[L3: CockroachDB<br/>Operational ledger<br/>10-15ms, mutable]
+    end
+
+    subgraph COMPLIANCE["Compliance & Audit"]
+        KAFKA[Kafka<br/>Financial Events<br/>30-day buffer]
+        CH[(ClickHouse<br/>Immutable Audit Log<br/>7-year retention<br/>180TB)]
+        RECON[Daily Reconciliation<br/>Airflow 2AM UTC<br/>Compare ledgers]
+    end
+
+    BUDGET --> L2
+    BUDGET --> L3
+    BUDGET -->|Async publish| KAFKA
+
+    BILLING --> L3
+    BILLING -->|Async publish| KAFKA
+
+    KAFKA -->|Real-time<br/>5s lag| CH
+
+    RECON -.->|Query operational| L3
+    RECON -.->|Query audit| CH
+
+    style L3 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style CH fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style RECON fill:#ffebee,stroke:#c62828
+    style KAFKA fill:#f3e5f5,stroke:#7b1fa2
+    style L2 fill:#e1f5fe,stroke:#0277bd
+{% end %}
+
+**Separation of Concerns**: Operational ledger optimized for performance (mutable, 90-day retention), audit log for compliance (immutable, 7-year retention, SOX/tax). Daily reconciliation ensures data integrity. Details in [Part 3's audit log architecture](/blog/ads-platform-part-3-data-revenue/#immutable-financial-audit-log-compliance-architecture).
+
+### Level 2c: ML & Feature Pipeline (Container Diagram)
+
+Offline training and online serving infrastructure for machine learning.
+
+{% mermaid() %}
+graph TB
+    subgraph EVENTS["Event Collection"]
+        REQUESTS[Ad Requests<br/>Impressions<br/>Clicks<br/>1M events/sec]
+        KAFKA_EVENTS[Kafka Topics<br/>Event Streams]
+    end
+
+    subgraph PROCESSING["Feature Processing"]
+        FLINK[Flink<br/>Stream Processing<br/>Windowed aggregations]
+        SPARK[Spark<br/>Batch Processing<br/>Historical features]
+        S3[(S3 Data Lake<br/>Raw events<br/>Feature snapshots)]
+    end
+
+    subgraph FEATURE_PLATFORM["Feature Platform (Tecton)"]
+        OFFLINE[Offline Store<br/>Training features<br/>S3 Parquet]
+        ONLINE[Online Store<br/>Serving features<br/>Redis, sub-10ms]
+    end
+
+    subgraph TRAINING["ML Training Pipeline"]
+        AIRFLOW[Airflow<br/>Orchestration<br/>Daily/weekly jobs]
+        TRAIN[Training Cluster<br/>GBDT<br/>LightGBM/XGBoost]
+        REGISTRY[Model Registry<br/>Versioning<br/>A/B testing]
+    end
+
+    subgraph SERVING["ML Serving"]
+        ML_SERVICE[ML Inference Service<br/>40ms P99<br/>CTR prediction]
+    end
+
+    REQUESTS --> KAFKA_EVENTS
+    KAFKA_EVENTS --> FLINK
+    KAFKA_EVENTS --> SPARK
+
+    FLINK --> ONLINE
     SPARK --> S3
-    SPARK --> FEATURE
-
-    CRDB -.-> S3
+    SPARK --> OFFLINE
 
     AIRFLOW --> TRAIN
+    TRAIN -->|Features| OFFLINE
     TRAIN --> REGISTRY
-    REGISTRY --> ML
 
-    AS -.-> PROM
-    AS -.-> JAEGER
-    PROM --> GRAF
+    REGISTRY -->|Deploy models| ML_SERVICE
+    ML_SERVICE -->|Query features| ONLINE
 
-    style AS fill:#9f9
-    style CRDB fill:#fcf
-    style REDIS fill:#fcc
-    style FEATURE fill:#ccf
-    style ML fill:#ffc
+    style ONLINE fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style ML_SERVICE fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style TRAIN fill:#f3e5f5,stroke:#7b1fa2
 {% end %}
+
+**Two-Track System**: Offline pipeline trains models on historical data (Spark → S3 → Training cluster), online pipeline serves predictions with real-time features (Flink → Tecton → ML Inference). Model lifecycle: Train → Registry → Canary → Production. Details in [Part 2's ML pipeline](/blog/ads-platform-part-2-rtb-ml-pipeline/#ml-inference-pipeline).
+
+### Level 2d: Observability Stack (Container Diagram)
+
+Monitoring, tracing, and alerting infrastructure for operational visibility.
+
+{% mermaid() %}
+graph TB
+    subgraph SERVICES["All Services"]
+        APP[Application Services<br/>Ad Server, Budget, RTB<br/>Emit metrics + traces]
+    end
+
+    subgraph COLLECTION["Collection Layer"]
+        PROM[Prometheus<br/>Metrics scraping<br/>15s interval]
+        OTEL[OpenTelemetry Collector<br/>Trace aggregation]
+        FLUENTD[Fluentd<br/>Log aggregation]
+    end
+
+    subgraph STORAGE["Storage Layer"]
+        THANOS[Thanos<br/>Long-term metrics<br/>Multi-region]
+        TEMPO[Tempo<br/>Distributed traces<br/>S3-backed]
+        LOKI[Loki<br/>Log storage<br/>Label-based indexing]
+    end
+
+    subgraph VISUALIZATION["Visualization & Alerting"]
+        GRAFANA[Grafana Dashboards<br/>SLO tracking<br/>P99 latency<br/>Error rates]
+        ALERTMANAGER[AlertManager<br/>Alert routing<br/>P1/P2 severity]
+    end
+
+    PAGERDUTY[PagerDuty<br/>On-call notifications<br/>Incident management]
+
+    APP -->|Metrics<br/>http://localhost:9090/metrics| PROM
+    APP -->|Traces<br/>OTLP gRPC| OTEL
+    APP -->|Logs<br/>stdout JSON| FLUENTD
+
+    PROM --> THANOS
+    OTEL --> TEMPO
+    FLUENTD --> LOKI
+
+    THANOS --> GRAFANA
+    TEMPO --> GRAFANA
+    LOKI --> GRAFANA
+
+    GRAFANA --> ALERTMANAGER
+    ALERTMANAGER -->|P1/P2 alerts| PAGERDUTY
+
+    style GRAFANA fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style APP fill:#9f9,stroke:#2e7d32
+    style ALERTMANAGER fill:#ffebee,stroke:#c62828
+    style PAGERDUTY fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+{% end %}
+
+**Observability Pillars**: Metrics (Prometheus → Thanos), Traces (OpenTelemetry → Tempo), Logs (Fluentd → Loki). Unified visualization in Grafana with SLO tracking and automated alerting via AlertManager → PagerDuty for P99 latency violations, error rate spikes, budget reconciliation failures.
 
 ### Technology Selection by Component
 
@@ -956,7 +1065,8 @@ graph TB
 **Data Layer**:
 - **L1 Cache**: Caffeine in-process JVM heap cache, 0.5ms latency, 60-70% hit rate for hot user profiles
 - **L2 Cache**: Redis/Valkey 20-node distributed cache, 1-2ms latency, 25% hit rate, also serves budget counters and rate limiting tokens
-- **L3 Database**: CockroachDB 60-80 nodes multi-region, stores user profiles, campaigns, billing ledger with HLC timestamps, 10-15ms latency
+- **L3 Database**: CockroachDB 60-80 nodes multi-region, stores user profiles, campaigns, operational ledger (mutable, 90-day retention) with HLC timestamps, 10-15ms latency
+- **Audit Log**: ClickHouse 8 nodes (3× replication), immutable financial audit log for SOX/tax compliance, consumes from Kafka, 7-year retention (~180TB), <500ms audit query latency
 
 **Feature Platform (Tecton Managed)**:
 - **Tecton Online Store**: Redis-backed real-time feature serving, sub-10ms P99
@@ -1043,41 +1153,41 @@ Complete table of all major technology decisions and rationale:
 
 ## System Integration: How It All Works Together
 
-This section shows how all the pieces connect to serve a single ad request.
+Single ad request flow demonstrating how technology components achieve 150ms P99 latency, revenue optimization, and compliance.
 
-### Request Flow with Technology Stack
+### Critical Path: Request to Response (146ms P99)
 
-**1. Edge Layer (15ms):** Request enters through CloudFront CDN (5ms for static assets, geo-routing), Route53 GeoDNS routes to nearest region with zero added latency, Regional Load Balancer distributes across availability zones, Envoy Gateway performs JWT authentication via ext_authz filter and rate limiting via Redis token bucket (4ms total), Linkerd Service Mesh adds 1ms for routing to Ad Server pod with mTLS encryption handled transparently, finally reaching Ad Server Orchestrator (Java 21 + ZGC).
+**Edge Layer (15ms):** CloudFront CDN geo-routes and serves static assets (5ms). Route53 GeoDNS directs to nearest region. Envoy Gateway performs JWT validation via ext_authz filter with 60s cache (1-2ms), enforces rate limits via Valkey token bucket (0.5ms), routes request (1-1.5ms) = 4ms total. Linkerd Service Mesh adds mTLS encryption and observability (1ms), delivers to Ad Server (Java 21 + ZGC).
 
-**2. User Context Gathering (15ms):** Ad Server makes parallel gRPC calls to User Profile Service (10ms budget) which queries L1 Caffeine cache (0.5ms, 60% hit rate), falling back to L2 Valkey cluster (2ms, 25% additional hit rate), and finally L3 CockroachDB (10-15ms for remaining 15% misses). Simultaneously, Integrity Check Service (5ms) validates request via Valkey Bloom filter for bot IP detection (1ms lookup).
+**User Context (15ms parallel):** Ad Server fires parallel gRPC calls. User Profile Service queries L1 Caffeine (0.5ms, 60% hit) → L2 Valkey (2ms, 25% hit) → L3 CockroachDB (10-15ms, 15% miss). Integrity Check Service validates via Valkey Bloom filter (1ms). Both complete within 15ms budget.
 
-**3. Parallel Path Split (65ms ML, 100ms RTB):**
+**Parallel Revenue Paths (100ms critical):** Platform runs two paths simultaneously for revenue maximization.
 
-**ML Path (65ms total):** Ad Server calls Feature Store (Tecton) for real-time feature lookup (10ms from Tecton Online Store backed by Redis), then Ad Selection Service queries CockroachDB for internal ad candidates (15ms), followed by ML Inference Service running GBDT model (LightGBM) for CTR prediction and eCPM scoring (40ms).
+- **ML Path (65ms):** Tecton Feature Store lookup (10ms Redis-backed Online Store) → Ad Selection Service queries CockroachDB for 20-50 candidates (15ms) → ML Inference Service runs GBDT (LightGBM) CTR prediction with 500+ features, computes eCPM (40ms).
 
-**RTB Path (100ms total):** Ad Server calls RTB Gateway which maintains HTTP/2 connection pool (32 connections × 50 DSPs) and fans out OpenRTB 2.5 requests to 50+ DSPs in parallel with 120ms hard timeout (from [Part 1's P99 defense strategy](/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail)).
+- **RTB Path (100ms):** RTB Gateway maintains pre-warmed HTTP/2 pools (32 connections/DSP), selects 20-30 DSPs via performance tiers ([Part 2 cost optimization](/blog/ads-platform-part-2-rtb-ml-pipeline/#egress-bandwidth-cost-optimization-predictive-dsp-timeouts)), fans out OpenRTB 2.5/3.0 requests with 120ms hard cutoff. Tier-1 DSPs respond in 60-80ms.
 
-**4. Unified Auction (8ms):** Ad Server calls Auction Service (3ms) which runs first-price auction comparing internal ML bids against external RTB bids, then Budget Service (3ms avg, 5ms P99) executes atomic budget check-and-deduct via Valkey Lua script (atomic DECRBY operation), with successful deductions appended asynchronously to CockroachDB billing ledger for audit trail.
+Critical path is RTB's 100ms (parallel, not additive).
 
-**5. Background Processing (Asynchronous):** Ad Server publishes impression/click events to Kafka event stream, Flink stream processing consumes events for real-time aggregation (CTR calculations, fraud detection input), Tecton Rift materializes streaming features for future requests, fraud analysis pipeline updates L1 Bloom filters based on L3 ML-detected patterns. Separately, Spark batch processing runs daily to prepare model training data (exported to S3 Parquet), Airflow orchestrates GBDT model retraining, new models are versioned in Model Registry for A/B testing, validated models deploy to ML Inference Service via canary rollout.
+**Unified Auction (11ms):** Auction Service runs first-price auction comparing ML-scored internal ads vs RTB bids, selects highest eCPM (3ms). Budget Service executes atomic Valkey Lua script: `if balance >= amount then balance -= amount` (3ms avg, 5ms P99), prevents double-spend without locks. Failed budget check triggers fallback to next bidder. Successful deductions append asynchronously to CockroachDB operational ledger, publish to Kafka for ClickHouse audit log.
 
-### Data Flow Patterns
+**Response (5ms):** Ad Server serializes winning ad via gRPC protobuf, returns through Linkerd → Envoy → Route53 → CloudFront. **Total: 146ms P99** (4ms buffer under 150ms SLO).
 
-**Cache Hierarchy (L1 → L2 → L3):**
-- **95% hit rate** overall (60% L1 + 25% L2 + 10% L3)
-- **Average latency**: 0.6ms (weighted: 60%×0.5ms + 25%×2ms + 15%×12ms)
-- **Consistency**: L1 invalidated on writes, L2 TTL 60s, L3 source of truth
+### Background Processing: Asynchronous Feedback Loop
 
-**Budget Pacing (Atomic Operations):**
-- Pre-allocation: Campaign daily budget divided into 1-minute windows
-- Atomic check-and-deduct: Valkey Lua script (prevents double-spend)
-- Audit trail: Async append to CockroachDB ledger (HLC timestamps)
-- Reconciliation: Hourly job compares Valkey counters vs CockroachDB ledger
+**Event Collection:** Ad Server publishes impression/click events to Kafka post-response (ad ID, features, prediction, outcome). Zero impact on request latency.
 
-**Feature Pipeline (Real-time + Batch):**
-- Real-time: Flink processes Kafka events → Tecton Rift materializes features (1-hour click rate)
-- Batch: Spark daily jobs compute historical features (7-day CTR, 30-day conversion rate)
-- Online serving: Tecton Online Store (Redis) provides <10ms P99 feature lookups
+**Real-Time Aggregation:** Flink consumes Kafka events, computes windowed aggregations (fraud detection, feature updates). Tecton Rift materializes streaming features ("clicks in last hour") to Online Store within seconds.
+
+**Model Training:** Daily Spark jobs export events to S3 Parquet (billions of examples). Airflow orchestrates GBDT retraining, new models versioned in Model Registry, undergo A/B testing, canary rollout to production. Continuous improvement without latency impact.
+
+### Key Data Flow Patterns
+
+**Cache Hierarchy:** Three-tier achieves 95% hit rate. L1 Caffeine (0.5ms, 60% hot profiles) → L2 Valkey (2ms, 25% warm profiles) → L3 CockroachDB (10-15ms, 15% cold misses). Weighted average: 60%×0.5ms + 25%×2ms + 15%×12ms = **0.6ms effective latency** (20× faster than L3-only). Consistency via invalidation: L1 expires on writes, L2 uses 60s TTL, L3 source of truth.
+
+**Atomic Budget:** Pre-allocation divides daily budget into 1-minute windows ($1440/day = $1/min), smooths spend. Valkey Lua script server-side atomic check-and-deduct eliminates race conditions, 3ms latency under contention. Audit trail: async append to CockroachDB (HLC timestamps) → Kafka → ClickHouse. Hourly reconciliation compares Valkey vs CockroachDB, alerts on discrepancies >$1.
+
+**Feature Pipeline:** Two-track system for latency/accuracy trade-off. **Real-time:** Flink processes Kafka events (1-hour click rate, 5-min conversion rate) → Tecton Rift materializes to Online Store (seconds lag), enables reactive features. **Batch:** Spark daily jobs compute historical features (7-day CTR, 30-day AOV) → Offline Store (training) + Online Store (serving). Tecton Online Store unifies both tracks, single API <10ms P99.
 
 ---
 

@@ -1222,6 +1222,101 @@ graph LR
 
 **Build vs Buy:** Custom PostgreSQL + HLC implementation costs 1-1.5 engineer-years plus ongoing maintenance. CockroachDB's premium (20-30% of financial storage baseline) eliminates upfront engineering cost and operational burden. For cold archive, S3 + Athena is the clear choice - no operational burden and 50-100× cheaper than running a database.
 
+### Financial Audit Log Reconciliation
+
+**Purpose:** Verify operational ledger (CockroachDB) matches immutable audit log (ClickHouse) to detect data inconsistencies, event emission bugs, or system integrity issues before they compound into billing disputes.
+
+**Daily Reconciliation Job** (automated, runs 2:00 AM UTC):
+
+**Step 1: Query Both Systems**
+
+Extract previous 24 hours of financial data from both ledgers:
+- **CockroachDB (Operational)**: `SELECT campaignId, SUM(amount) as operational_total FROM billing_ledger WHERE date = YESTERDAY GROUP BY campaignId`
+- **ClickHouse (Audit)**: `SELECT campaignId, SUM(amount) as audit_total FROM financial_audit WHERE toDate(timestamp) = YESTERDAY AND eventType IN ('BUDGET_DEDUCT', 'IMPRESSION_CHARGE') GROUP BY campaignId`
+
+**Step 2: Compare Aggregates**
+
+Per-campaign validation with acceptable tolerance:
+- **Match criteria**: `|operational_total - audit_total| < MAX(0.01, operational_total * 0.00001)` (1 cent or 0.001%, whichever is greater)
+- **Rationale**: Allows rounding differences and sub-millisecond timing variations between systems
+- **Expected result**: 99.999%+ campaigns match (typically 0-3 discrepancies out of 10,000+ active campaigns)
+
+**Step 3: Alert on Discrepancies**
+
+Automated notification when thresholds exceeded:
+- **P1 page to finance team**: Campaign IDs with mismatches, delta amounts, percentage variance
+- **Dashboard visualization**: Total campaigns affected, aggregate delta, trend analysis (increasing discrepancies indicate systemic issue)
+- **Automated ticket creation**: Jira issue with forensic query suggestions pre-populated
+
+**Step 4: Investigation Workflow**
+
+Forensic analysis to identify root cause:
+1. **Drill-down query**: Retrieve all transactions for affected `campaignId` from both systems ordered by timestamp
+2. **Event correlation**: Match `requestId` between operational logs and audit trail to identify missing/duplicate events
+3. **Common causes identified**:
+   - **Kafka lag** (85% of discrepancies): Event delayed >24 hours due to consumer backlog → resolves automatically when ClickHouse catches up
+   - **Schema mismatch** (10%): Field name change in event emission without updating ClickHouse parser → fix parser, backfill missing events
+   - **Event emission bug** (5%): Edge case where Budget Service fails to emit event → fix bug, manual INSERT into ClickHouse with audit trail explanation
+
+**Step 5: Resolution**
+
+Manual intervention when automated reconciliation fails:
+- **If CockroachDB correct**: Backfill missing event to ClickHouse (manual INSERT with metadata: `{source: "manual_backfill", reason: "missed_kafka_event", approver: "finance_team", ticket: "JIRA-1234"}`)
+- **If ClickHouse correct**: Investigate CockroachDB data corruption (extremely rare), restore from backup if needed, update operational ledger with correction entry
+
+**Compliance Verification**
+
+**Quarterly Audit Preparation:**
+
+External auditor access workflow:
+1. **Export ClickHouse data**: Generate Parquet files for audit period (e.g., Q4 2024: Oct 1 - Dec 31)
+2. **Cryptographic verification**: Run hash chain validation across exported dataset, produce merkle tree root hash as tamper-evident seal
+3. **Auditor query interface**: Provide read-only Metabase dashboard with pre-built queries (campaign spend totals, refund analysis, dispute history)
+4. **Documentation bundle**: Reconciliation job logs, discrepancy resolution tickets, system architecture diagrams
+
+**SOX Control Documentation:**
+
+**Segregation of Duties:**
+- **DBAs**: Cannot modify ClickHouse audit log (read-only access enforced via IAM roles)
+- **Finance team**: Query-only access to both systems, no INSERT/UPDATE/DELETE privileges
+- **Engineering team**: Can deploy code changes but cannot directly modify financial data
+- **Audit trail**: All ClickHouse schema changes logged in separate audit table with approver identity and business justification
+
+**Change Audit:**
+
+Administrative operations on financial data systems logged separately:
+- **CockroachDB schema changes**: `ALTER TABLE` commands logged with timestamp, user, justification, approval ticket
+- **ClickHouse partition operations**: `ALTER TABLE DROP PARTITION` (only operation allowing data removal) requires two-person approval and logged with business justification
+- **Access control changes**: IAM role modifications logged and reviewed quarterly
+
+**Access Control Matrix:**
+
+| Role | CockroachDB | ClickHouse | Kafka | Permitted Operations |
+|------|-------------|------------|-------|---------------------|
+| Budget Service | Write-only | No access | Publish events | INSERT billing records |
+| Finance Team | Read-only | Read-only | No access | Query, export, reporting |
+| DBA Team | Admin | Read-only | Admin | Schema changes, performance tuning |
+| Audit Team | Read-only | Read-only | Read-only | Compliance verification |
+| Engineering | Read-only (production) | Read-only | Read-only | Debugging, monitoring |
+
+**Retention Policy Enforcement:**
+
+**Automated Archival** (runs monthly):
+
+Data lifecycle management ensuring compliance while optimizing costs:
+1. **Age detection**: Query ClickHouse for partitions >7 years old (`toYYYYMM(timestamp) < toYYYYMM(now() - INTERVAL 7 YEAR)`)
+2. **Export to cold storage**: Write partition data to S3 Glacier in Parquet format with WORM (Write-Once-Read-Many) configuration
+3. **External table creation**: Create ClickHouse external table pointing to S3 location (data remains queryable via standard SQL but stored at 1/50th cost)
+4. **Partition drop**: Remove from ClickHouse hot storage after S3 export verified (`ALTER TABLE financial_audit DROP PARTITION 'partition_id'` - logged as administrative action)
+5. **Verification**: Monthly job validates S3 object count matches dropped partitions, alerts if mismatch detected
+
+**Cost Impact:**
+
+Retention policy reduces storage costs while maintaining compliance accessibility:
+- **Active ClickHouse storage** (0-7 years): 180TB at standard ClickHouse rates
+- **Cold storage** (>7 years): S3 Glacier at ~2% of active storage cost
+- **Query capability**: Athena or ClickHouse external tables provide SQL interface to cold data (seconds latency acceptable for historical compliance queries)
+
 ---
 
 ## Observability and Operations

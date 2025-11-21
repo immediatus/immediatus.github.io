@@ -1121,6 +1121,171 @@ On update:
 
 ---
 
+## Immutable Financial Audit Log: Compliance Architecture
+
+### The Compliance Gap
+
+CockroachDB operational ledger is mutable by design - optimized for operational efficiency but violating financial compliance:
+- **Budget corrections**: UPDATE operations modify balances retroactively
+- **Schema evolution**: ALTER TABLE changes data structure
+- **Data cleanup**: DELETE removes old transaction records
+- **Admin access**: DBAs can modify or delete historical financial data
+
+**Regulatory violations:**
+- **SOX (Sarbanes-Oxley)**: Requires immutable audit trail for financial reporting accuracy
+- **Tax regulations**: 7-year retention of unmodifiable transaction records (IRS Circular 230, EU tax directives)
+- **Advertiser disputes**: Need cryptographically verifiable billing history for dispute resolution
+- **Payment processor compliance**: Visa/Mastercard mandates immutable transaction logs
+
+### Solution: Dual-Ledger Architecture
+
+Separate operational concerns (performance) from compliance concerns (immutability) using distinct systems:
+
+**Operational Ledger (CockroachDB):**
+- **Purpose**: Real-time transactional system for budget checks and billing writes
+- **Mutability**: YES (optimized for corrections, cleanup, operational flexibility)
+- **Query patterns**: Current balance, recent transactions, hot campaign data
+- **Retention**: 90 days (then archived to cold storage for cost optimization)
+- **Performance**: 3ms budget deduction writes, 10ms transactional reads
+
+**Immutable Audit Log (Kafka → ClickHouse):**
+- **Purpose**: Permanent compliance record, non-repudiable financial history
+- **Mutability**: NO (append-only storage with cryptographic hash chaining)
+- **Query patterns**: Historical spend analysis, dispute investigation, tax reporting, audit queries
+- **Retention**: 7 years (minimum tax compliance requirement)
+- **Performance**: Asynchronous ingestion (<5s lag), no impact on operational latency
+
+{% mermaid() %}
+graph TB
+    subgraph OPERATIONAL["Operational Systems (Real-Time)"]
+        BUDGET[Budget Service<br/>3ms latency]
+        BILLING[Billing Service<br/>Charges & Refunds]
+        CRDB[(CockroachDB<br/>Operational Ledger<br/>Mutable<br/>90-day retention)]
+    end
+
+    subgraph PIPELINE["Event Pipeline"]
+        KAFKA[Kafka Topic<br/>financial-events<br/>30-day retention<br/>3x replication]
+    end
+
+    subgraph AUDIT["Immutable Audit Log"]
+        CH_KAFKA[ClickHouse<br/>Kafka Engine Table]
+        CH_MV[Materialized View<br/>Transform JSON]
+        CH_STORAGE[(ClickHouse<br/>MergeTree Storage<br/>Immutable<br/>7-year retention<br/>Hash chaining)]
+    end
+
+    subgraph QUERY["Query Interfaces"]
+        RECON[Daily Reconciliation Job<br/>Automated 2AM UTC]
+        METABASE[Metabase Dashboard<br/>Finance Team]
+        SQL[SQL Client<br/>External Auditors]
+        EXPORT[Parquet Export<br/>Quarterly Audits]
+    end
+
+    BUDGET -->|Async publish<br/>non-blocking| KAFKA
+    BILLING -->|Async publish<br/>non-blocking| KAFKA
+    BUDGET -->|Sync write<br/>3ms| CRDB
+    BILLING -->|Sync write<br/>5ms| CRDB
+
+    KAFKA -->|Real-time consume<br/>5s lag| CH_KAFKA
+    CH_KAFKA --> CH_MV
+    CH_MV --> CH_STORAGE
+
+    RECON -.->|Query operational| CRDB
+    RECON -.->|Query audit| CH_STORAGE
+    METABASE -.->|Ad-hoc queries| CH_STORAGE
+    SQL -.->|Read-only access| CH_STORAGE
+    EXPORT -.->|Quarterly extract| CH_STORAGE
+
+    style BUDGET fill:#e3f2fd
+    style BILLING fill:#e3f2fd
+    style CRDB fill:#fff3e0
+    style KAFKA fill:#f3e5f5
+    style CH_STORAGE fill:#e8f5e9
+    style RECON fill:#ffebee
+{% end %}
+
+### Event Pipeline Architecture
+
+**Event Flow:** Budget Service and Billing Service emit structured financial events (budget deductions, impression charges, refunds, allocations) to Kafka `financial-events` topic asynchronously. Each event contains event type, campaign/advertiser IDs, amount, timestamp, and correlation IDs for traceability.
+
+**Kafka Buffer:** Topic configured with 30-day retention (safety buffer during ClickHouse downtime), partitioned by `campaignId` for ordering guarantees, 3× replication for durability. Capacity: 100K events/sec (10% of platform QPS generating financial events).
+
+**ClickHouse Ingestion:** Kafka Engine table consumes events directly, Materialized View transforms JSON into columnar schema optimized for analytics. MergeTree storage provides append-only immutability with automatic ZSTD compression (65% reduction). Ingestion lag: <5 seconds from event generation to queryable.
+
+**4. Audit Query Patterns**
+
+ClickHouse OLAP optimization enables sub-second queries for compliance scenarios:
+
+**Campaign Spend History (Tax Reporting):**
+Aggregate all budget deductions for specific campaign over annual period. Common during tax filing season when advertisers request detailed spending breakdowns by campaign, geography, and time period. ClickHouse columnar storage and partition pruning enable sub-500ms queries across billions of events when filtering by campaign and time-range.
+
+**Dispute Investigation (Billing Accuracy):**
+Trace complete event sequence for specific request ID when advertiser disputes charge. Requires chronological ordering of all events (budget deduction, impression charge, click attribution, refund if applicable) to reconstruct exact billing calculation. Bloom filter index on `requestId` enables <100ms single-request retrieval even across multi-year dataset.
+
+**Reconciliation Analysis (Data Integrity):**
+Compare daily aggregate spend between operational ledger (CockroachDB) and audit log (ClickHouse) to detect discrepancies. Requires grouping by campaign with tolerance for rounding differences. ClickHouse materialized views pre-compute daily aggregates for instant reconciliation queries.
+
+**Compliance Audit Trail (SOX/Regulatory):**
+External auditors query complete financial history for specific advertiser or time period. Requires filtering by advertiser ID, event type (budget allocations, deductions, refunds), and date range with multi-dimensional grouping. ClickHouse query performance remains sub-second for most audit scenarios due to partition pruning and columnar compression.
+
+### Query Access Control
+
+**Access Restriction Policy:** Financial audit log is classified data with restricted access per Segregation of Duties (SOX compliance). Default access: NONE. Only designated roles below have explicit permissions:
+
+**Automated Systems:**
+- **Daily Reconciliation** (Airflow service account): Compares operational vs audit ledger aggregates, alerts on variance >0.01 or >0.001%
+- **Quarterly Export** (scheduled job): Generates Parquet files with cryptographic hash verification for compliance audits
+
+**Finance Team:**
+Read-only Metabase access (SSO auth, 30s timeout, 100K row limit). Authorized queries: campaign spend trends, refund analysis, advertiser billing summaries, budget utilization reports. Handles all billing dispute investigations requiring financial data access.
+
+**External Auditors:**
+Temporary credentials (expire post-audit) with pre-approved query templates for: annual tax reporting, SOX compliance verification, advertiser reconciliation. Complex queries scheduled off-peak. All auditor activity logged separately for compliance record.
+
+**Break-Glass Access:**
+Emergency investigation (data corruption, critical billing bug) requires VP Finance + VP Engineering approval, limited to 1-hour window, full session recording, mandatory post-incident compliance review.
+
+### ClickHouse Storage Design
+
+**MergeTree Configuration:** Ordering key `(campaignId, timestamp)` optimizes campaign history queries. Monthly partitioning `toYYYYMM(timestamp)` enables efficient pruning for tax/annual reports. ZSTD compression achieves 65% reduction (200GB/day → 70GB/day). Bloom filter index on `requestId` enables <100ms dispute lookups.
+
+**Immutability Enforcement:** MergeTree prohibits UPDATE/DELETE operations by design. Administrative changes require explicit ALTER TABLE DROP PARTITION (logged separately). Each row includes SHA-256 `previousHash` creating tamper-evident chain - modification breaks hash sequence, detected during quarterly verification.
+
+**Performance & Cost:** Asynchronous write path (1-2ms Kafka publish, <5s ingestion lag) has zero operational latency impact. Query performance: <500ms simple aggregations, 1-3s complex analytics, <100ms dispute lookups. Storage: 180TB for 7-year retention (70GB/day × 2,555 days), approximately 15-20% of database infrastructure cost. Sub-second queries over billions of rows via columnar OLAP optimization.
+
+### Daily Reconciliation Process
+
+Automated verification ensuring operational and audit ledgers remain synchronized. This process validates data integrity and detects system issues before they compound into billing disputes.
+
+**Reconciliation Job** (Airflow DAG, scheduled 2:00 AM UTC daily):
+
+**Step 1: Extract Daily Aggregates from Both Systems**
+
+Query operational ledger (CockroachDB) and audit log (ClickHouse) for previous 24 hours, aggregating spend per campaign. Operational ledger contains real-time mutable data (90-day retention), while audit log contains immutable append-only events (7-year retention). Aggregation groups by campaign ID, summing budget deductions and impression charges while excluding refunds (handled separately).
+
+**Step 2: Compare Aggregates with Tolerance**
+
+Per-campaign validation accepts minor differences due to rounding and microsecond-level timing variations. Match tolerance set at 1 cent OR 0.001% of campaign total (whichever greater). For example, campaign with 10,000 spend allows up to 10 cents variance, while small campaign with 5 spend allows 1 cent variance. This tolerance accounts for floating-point rounding in budget calculations and clock skew between systems.
+
+**Step 3: Alert on Significant Discrepancies**
+
+P1 PagerDuty alert triggered when campaign variance exceeds threshold. Alert includes: affected campaign IDs, operational vs audit totals, percentage variance, and trend analysis (has this campaign had previous mismatches?). Dashboard visualization shows aggregate delta across all campaigns, enabling quick identification of systemic issues (e.g., Kafka consumer lag affecting all campaigns vs isolated campaign-specific bug).
+
+**Step 4: Forensic Investigation**
+
+Drill-down analysis retrieves complete event sequence for mismatched campaign from both systems. Event correlation matches operational ledger entries with audit log events by request ID to identify missing events (operational wrote but Kafka publish failed), duplicate events (retry caused double-write), or timing mismatches (event arrived after reconciliation window). Most common root causes:
+- **Kafka lag** (85% of discrepancies): Consumer backlog delays event ingestion >24 hours, resolves automatically when ClickHouse catches up
+- **Schema mismatch** (10%): Field rename in event schema without updating ClickHouse parser, requires parser fix and backfill
+- **Event emission bug** (5%): Edge case where service fails to publish event, requires code fix and manual backfill with audit justification
+
+**Step 5: Automated Resolution Tracking**
+
+Reconciliation job stores results in dedicated tracking table: campaign ID, discrepancy amount, detection timestamp, resolution status. Daily report summarizes: total campaigns reconciled, mismatch count, average variance, unresolved discrepancy age. Historical trend analysis detects degrading data quality (increasing mismatch rate signals systemic problem requiring investigation).
+
+**Historical Success Rate:**
+99.999%+ campaigns match daily (typically 0-3 discrepancies out of 10,000+ active campaigns). Most discrepancies resolve automatically within 24-48 hours as delayed Kafka events arrive. Only 1-2 cases per month require manual intervention (code bug fixes, schema corrections, or manual backfill with approval workflow).
+
+---
+
 ## Auction Mechanism Design
 
 
@@ -1150,9 +1315,9 @@ The conversion formulas are as follows:
 
 $$
 \begin{array}{ll}
-\text{CPM bid:} & \text{eCPM} = \text{CPM (direct)} \\
-\text{CPC bid:} & \text{eCPM} = \text{CPC} \times \text{CTR} \times 1000 \\
-\text{CPA bid:} & \text{eCPM} = \text{CPA} \times \text{conversion_rate} \times \text{CTR} \times 1000
+\text{CPM bid:} & eCPM = CPM (direct) \\\\
+\text{CPC bid:} & eCPM = CPC \times CTR \times 1000 \\\\
+\text{CPA bid:} & eCPM = CPA \times conversion\\_rate \times CTR \times 1000
 \end{array}
 $$
 

@@ -540,6 +540,24 @@ The platform deploys across **multiple geographic regions** to satisfy availabil
 
 *Operational details of multi-region failover (GeoDNS health checks, split-brain prevention, regional budget pacing, RTO/RPO targets) are covered in [Part 4](/blog/ads-platform-part-4-production/). Specific regional sizing, instance counts, and cluster configurations are detailed in [Part 5](/blog/ads-platform-part-5-implementation/).*
 
+### Financial Integrity: Immutable Audit Log
+
+**Compliance Requirement:**
+
+The operational ledger (CockroachDB) is mutable by design - rows can be updated for budget corrections, deleted during cleanup, or modified by database administrators. This violates SOX (Sarbanes-Oxley) and tax compliance requirements for non-repudiable financial records. Regulators and auditors require immutable, cryptographically verifiable transaction history that cannot be tampered with after the fact.
+
+**Architectural Solution:**
+
+Implement **dual-ledger architecture** separating concerns:
+- **Operational Ledger** (CockroachDB): Mutable system optimized for real-time transactions (budget checks, billing writes) with 3ms latency
+- **Immutable Audit Log** (Kafka → ClickHouse): Append-only permanent record for compliance, storing every financial event (budget deductions, charges, refunds) with cryptographic hash chaining
+
+Every financial operation publishes an event to Kafka `financial-events` topic, which ClickHouse consumes into append-only MergeTree tables. ClickHouse retains records for 7 years (tax compliance requirement) with hash-based integrity verification preventing undetected tampering. Daily reconciliation job compares both systems to detect discrepancies.
+
+**Trade-off:** Additional infrastructure complexity (Kafka cluster + ClickHouse deployment) and operational overhead (reconciliation monitoring) for regulatory compliance and audit confidence. Cost increase approximately 15-20% of database infrastructure budget, but eliminates compliance risk and enables advertiser dispute resolution with verifiable records.
+
+Detailed architecture covered in [Part 3's Immutable Audit Log section](/blog/ads-platform-part-3-data-revenue/#immutable-financial-audit-log-compliance-architecture), implementation details in [Part 5](/blog/ads-platform-part-5-implementation/#immutable-audit-log-technology-stack).
+
 ### Load Balancing and Traffic Distribution
 
 Traffic flows through multiple load balancing layers, each serving a distinct purpose:
