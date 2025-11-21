@@ -1409,7 +1409,7 @@ You now have a complete blueprint - from requirements to deployed system. The ar
 
 **What Made This Worth Building**
 
-[Part 1](/blog/ads-platform-part-1-foundation-architecture/) framed this as a [cognitive workout](https://www.psychologytoday.com/us/blog/the-digital-self/202501/new-years-resolution-go-to-ais-cognitive-gym) - training engineering thinking through complex constraints. After five posts, that framing holds. The constraints forced specific disciplines: latency budgeting trained decomposition (150ms split across 15-20 components), financial accuracy forced consistency modeling (strong vs eventual), and massive coordination demanded failure handling (graceful degradation when DSPs timeout). These skills - decomposing budgets, modeling consistency, designing for failure - don't get commoditized by better AI tools.
+[Part 1](/blog/ads-platform-part-1-foundation-architecture/) framed this as a [cognitive workout](https://www.psychologytoday.com/us/blog/the-digital-self/202312/new-years-resolution-go-to-ais-cognitive-gym) - training engineering thinking through complex constraints. After five posts, that framing holds. The constraints forced specific disciplines: latency budgeting trained decomposition (150ms split across 15-20 components), financial accuracy forced consistency modeling (strong vs eventual), and massive coordination demanded failure handling (graceful degradation when DSPs timeout). These skills - decomposing budgets, modeling consistency, designing for failure - don't get commoditized by better AI tools.
 
 **For Builders**
 
