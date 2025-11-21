@@ -145,15 +145,29 @@ A 99.9% uptime target means 43 minutes of allowed downtime per month. This error
 
 **The constraint:** Maintain 99.9%+ availability with the system remaining operational even when individual components fail. All planned operations (deployments, schema changes, configuration updates) must be zero-downtime.
 
+**Driver 4: Signal Availability (Privacy-First Reality)**
+
+**Why this matters:** AdTech in 2024/2025 is defined by **signal loss**. Third-party cookies are dying (Chrome Privacy Sandbox), mobile identifiers are restricted (iOS ATT), and privacy regulations (GDPR, CCPA) limit data collection. The assumption that rich "User Profiles" are always available via stable `user_id` is increasingly false.
+
+The traditional ad tech stack assumed: request arrives → look up user → personalize ad. This breaks when:
+- **iOS (ATT)**: Only [~50% of users opt-in](https://www.appsflyer.com/company/newsroom/pr/att-data-findings/) to tracking globally (varies significantly by region: Germany 20%, UAE 50%), and dual opt-in drops to ~27%
+- **Chrome (Privacy Sandbox)**: Third-party cookies replaced with Topics API (coarse interest signals)
+- **Safari/Firefox**: Third-party cookies blocked entirely since 2020
+- **New users**: No historical data available regardless of consent
+
+**The constraint:** Design for **graceful signal degradation**. The system must serve relevant, revenue-generating ads across the full spectrum: from rich identity (logged-in users with full history) to zero identity (anonymous first-visit). This isn't an edge case - it's 40-60% of traffic on mobile inventory.
+
+**Impact on architecture:** The User Profile Service becomes a **dual-mode system** - identity-based enrichment when available, contextual-only targeting as the primary fallback. ML models must be trained on contextual features (page content, device type, time of day, geo) as first-class signals, not afterthoughts. Revenue expectations must account for lower CPMs on contextual-only inventory (typically 30-50% lower than behaviorally-targeted inventory, though conversion efficiency can be comparable).
+
 **When These Constraints Conflict:**
 
-These three drivers sometimes conflict with each other. For example, ensuring financial accuracy may require additional verification steps that add latency. Maximizing availability might mean accepting some data staleness that could affect billing precision.
+These four drivers sometimes conflict with each other. For example, ensuring financial accuracy may require additional verification steps that add latency. Maximizing availability might mean accepting some data staleness that could affect billing precision. Signal availability constraints may force simpler models that reduce revenue optimization.
 
 When trade-offs are necessary, we prioritize:
 
-**Financial Accuracy > Availability > Latency**
+**Financial Accuracy > Availability > Signal Availability > Latency**
 
-Rationale: Legal and trust issues from billing errors have longer-lasting impact than temporary downtime; downtime has more severe consequences than slightly slower ad delivery. Throughout this post, when you see architectural decisions that seem to sacrifice latency or availability, they're usually protecting financial accuracy.
+Rationale: Legal and trust issues from billing errors have longer-lasting impact than temporary downtime; downtime has more severe consequences than privacy-compliant degradation; serving a slightly less personalized ad is better than timing out. Throughout this post, when you see architectural decisions that seem to sacrifice latency or personalization, they're usually protecting financial accuracy or privacy compliance.
 
 ### Non-Functional Requirements: Performance Modeling
 
@@ -280,7 +294,7 @@ graph TB
     end
 
     subgraph "Profile & Security Services"
-        PROFILE[User Profile Service<br/>Demographics, Interests]
+        PROFILE[User Profile Service<br/>Identity + Contextual Dual-Mode]
         INTEGRITY[Integrity Check Service<br/>Fraud Detection, Validation]
     end
 
@@ -337,7 +351,7 @@ The platform decomposes into focused, independently scalable services. Each serv
 
 **Ad Server Orchestrator** - The central coordinator that orchestrates the entire ad request lifecycle. Receives requests, coordinates parallel calls to all downstream services (User Profile, Integrity Check, ML Inference, RTB Gateway), manages timeouts, runs the unified auction, and returns the winning ad. Stateless and horizontally scaled to handle 1M+ QPS.
 
-**User Profile Service** - Manages user targeting data (demographics, interests, behavioral history). Optimized for read-heavy workloads with aggressive caching (95%+ cache hit rate). Tolerates eventual consistency - profile updates can lag by seconds without business impact.
+**User Profile Service** - Manages user targeting data through a **dual-mode architecture** designed for signal loss reality. When identity is available (stable user_id via login or device ID), enriches requests with demographics, interests, and behavioral history. When identity is unavailable (ATT opt-out, cookie-blocked browsers, new users), falls back to **contextual-only mode** using request-time signals: page URL/content, device type, geo-IP, time of day, and Topics API categories. Optimized for read-heavy workloads with aggressive caching (95%+ cache hit rate). Tolerates eventual consistency - profile updates can lag by seconds without business impact. The dual-mode design ensures 100% of requests receive targeting signals regardless of identity availability.
 
 **Integrity Check Service** - Validates request authenticity, detects fraud patterns, enforces rate limits. First line of defense against bot traffic and malicious requests. Must be fast (5ms budget) to stay off critical path.
 
@@ -606,7 +620,7 @@ graph TB
         AS[Ad Server Orchestrator<br/>Stateless, Horizontally Scaled<br/>150ms latency budget]
 
         subgraph "Core Services"
-            UP[User Profile Service<br/>Demographics, Interests<br/>Target: 10ms]
+            UP[User Profile Service<br/>Identity + Contextual<br/>Target: 10ms]
             INTEGRITY[Integrity Check Service<br/>Lightweight Fraud Filter<br/>Target: <5ms]
             AD_SEL[Ad Selection Service<br/>Candidate Retrieval<br/>Target: 15ms]
             ML[ML Inference Service<br/>CTR Prediction<br/>Target: 40ms]
@@ -1180,6 +1194,33 @@ Better to serve a guaranteed ad at 120ms than wait for a perfect RTB bid that mi
 
 *[Part 4](/blog/ads-platform-part-4-production/) covers implementation details: request cancellation patterns, fallback logic, monitoring strategies, and chaos testing for P99 defense.*
 
+**Defense Strategy 3: Hedge Requests for Read Paths**
+
+While ZGC eliminates GC pauses and hard timeouts handle slow RTB bidders, neither addresses **application logic stalls** or **network jitter** on internal read paths. A single slow User Profile or Feature Store lookup can push P99 over budget despite all other optimizations.
+
+**The pattern:** Hedge requests, introduced by Dean and Barroso in ["The Tail at Scale" (2013)](https://cseweb.ucsd.edu/classes/sp18/cse124-a/post/schedule/p74-dean.pdf), send the same read request to **two replicas**, taking the first response and discarding the second. Google demonstrated this reduces 99.9th percentile latency from 1,800ms to 74ms with only 2% additional load.
+
+**Where to apply hedge requests:**
+- **User Profile Service (10ms budget)**: Read-heavy, idempotent, replicated across 3+ instances
+- **Feature Store (10ms budget)**: Pre-computed features, read-only, easily replicated
+
+**Where NOT to apply:**
+- **Budget Service**: Write operations - hedging would cause double-spend
+- **RTB Gateway**: External calls already expensive; doubling would double DSP costs
+- **ML Inference**: Compute-bound, replicas equally loaded; hedging wastes GPU cycles
+
+**Trade-off analysis:**
+- **Cost:** 2× read load on hedged services (but reads are cheap - cache hits in <1ms)
+- **Benefit:** P99 latency reduced by ~30-40% on hedged paths (taking min of two samples from the latency distribution)
+
+**Implementation approach:**
+
+The pattern uses asynchronous request handling with timeout-based triggers. The primary request starts immediately to the first replica. If it doesn't complete within the P95 latency threshold, a secondary request fires to a different replica. Whichever response arrives first wins; the slower response is discarded.
+
+**When to trigger hedge:** Per the original paper, defer hedge requests until the primary has been outstanding longer than the **95th percentile latency** for that service. For User Profile (P95 ~3ms), trigger hedge at 3ms. This limits additional load to ~5% while substantially shortening the tail - only requests in the slow tail trigger the hedge.
+
+**Monitoring:** Track `hedge_request_rate` and `hedge_win_rate`. If hedge requests win >20% of the time, investigate why primary is consistently slow.
+
 ---
 
 ## External API Architecture
@@ -1221,14 +1262,23 @@ Publishers are tiered (Bronze: 1K QPS, Silver: 5K, Gold: 10K, Platinum: 50K+). R
 
 **Request Schema**
 
-The request payload contains three categories of data:
+The request payload contains four categories of data:
 
-**User Context Section:**
-- `user_id` (hashed for privacy): SHA-256 hash of device ID or email, enables cross-session tracking while protecting PII
+**User Identity Section (Optional - Signal Loss Reality):**
+- `user_id` (hashed, **optional**): SHA-256 hash of device ID or email when available
 - `demographics`: Age range (18-24, 25-34, etc.), gender (inferred or declared)
 - `interests`: Array of categories ([sports, technology, travel]) from behavioral signals
 
-**Why hashed `user_id`:** Privacy-preserving while allowing frequency capping and sequential retargeting. Raw device IDs violate GDPR/CCPA; hashes satisfy "pseudonymization" requirements while enabling core ad tech workflows.
+**Why `user_id` is optional:** Due to ATT (only ~50% opt-in on iOS, ~27% dual opt-in), cookie blocking (Safari, Firefox), and Privacy Sandbox (Chrome), stable user identity is unavailable for 40-60% of mobile traffic. The system must serve ads without it. When present, `user_id` enables frequency capping and sequential retargeting. When absent, the system falls back to contextual targeting.
+
+**Contextual Signals Section (Always Available):**
+- `page_url`: Current page URL for content-based targeting (news.com/sports → sports advertisers)
+- `page_categories`: Publisher-declared content categories (IAB taxonomy)
+- `topics`: Chrome Topics API categories (when available) - privacy-preserving interest signals
+- `referrer`: Traffic source for intent inference
+- `session_depth`: Pages viewed this session (engagement signal)
+
+**Why contextual signals are first-class:** These signals are always available regardless of identity. While contextual inventory commands lower CPMs than behaviorally-targeted inventory (typically 30-50% lower, though premium placements approach parity), contextual targeting delivers comparable conversion performance - [a GumGum/Dentsu study](https://gumgum.com/blog/landmark-study-proves-the-effectiveness-of-contextual-over-behavioral-targeting) found 48% lower cost-per-click and similar conversion rates. This makes contextual the economically viable fallback for the 40-60% of traffic without stable user_id.
 
 **Placement Section:**
 - `format`: banner, video, interstitial, native, rewarded-video

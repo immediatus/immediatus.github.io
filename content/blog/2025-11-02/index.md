@@ -295,6 +295,20 @@ graph TB
 | **L3** | 10ms | 10-15% | 0.5-1% | Medium (GBDT inference) |
 | **Total** | 0-15ms | 70-95% | ~1-2% | Acceptable |
 
+**Signal Loss Impact on Fraud Detection:**
+
+Fraud detection becomes harder when `user_id` is unavailable (40-60% of mobile traffic due to ATT/Privacy Sandbox). Without stable identity:
+- **L2 behavioral analysis degrades**: Can't track "this user clicked 50 ads today" - limited to IP/device fingerprint patterns
+- **L3 historical features unavailable**: Lifetime clicks, account age, session history all require persistent identity
+
+**Mitigation strategies for anonymous traffic:**
+- **Lean harder on L1**: IP reputation, device fingerprint, and request metadata still available
+- **Publisher-level fraud scoring**: Aggregate fraud rates by publisher compensate for missing user signals
+- **Session-level patterns**: Short-term behavioral analysis within single anonymous session
+- **Conservative blocking**: Lower thresholds for anonymous traffic (accept slightly higher false positive rate)
+
+**Expected accuracy degradation**: AUC drops from 0.92 (identified) to ~0.82-0.85 (anonymous) - still effective but less precise.
+
 **Latency impact on overall SLO:**
 
 Fraud detection runs in PARALLEL with ad selection (as shown in the architecture post's critical path analysis):
@@ -1226,18 +1240,47 @@ graph LR
 
 **Purpose:** Verify operational ledger (CockroachDB) matches immutable audit log (ClickHouse) to detect data inconsistencies, event emission bugs, or system integrity issues before they compound into billing disputes.
 
+**Dual-Ledger Architecture:**
+
+{% mermaid() %}
+graph TB
+    ADV[Budget Service<br/>Ad Server]
+
+    ADV -->|"1. Direct write<br/>Transactional"| CRDB[("CockroachDB<br/>Operational Ledger<br/>90-day hot")]
+    ADV -->|"2. Publish event<br/>Async"| KAFKA[("Kafka<br/>Financial Events")]
+    KAFKA -->|"Stream"| CH[("ClickHouse<br/>Immutable Audit Log<br/>7-year retention")]
+
+    RECON[Reconciliation Job<br/>Daily 2:00 AM UTC]
+    CRDB -.->|"Aggregate yesterday"| RECON
+    CH -.->|"Aggregate yesterday"| RECON
+
+    RECON -->|"99.999% match"| OK[No action]
+    RECON -->|"Discrepancy detected"| ALERT[Alert Finance Team<br/>P1 Page]
+    ALERT --> INVESTIGATE[Investigation:<br/>- Kafka lag 85%<br/>- Schema mismatch 10%<br/>- Event bug 5%]
+
+    classDef operational fill:#fff3e0,stroke:#f57c00
+    classDef audit fill:#e8f5e9,stroke:#388e3c
+    classDef stream fill:#e3f2fd,stroke:#1976d2
+    classDef check fill:#f3e5f5,stroke:#7b1fa2
+
+    class CRDB operational
+    class CH audit
+    class KAFKA stream
+    class RECON,ALERT,INVESTIGATE check
+{% end %}
+
 **Daily Reconciliation Job** (automated, runs 2:00 AM UTC):
 
 **Step 1: Query Both Systems**
 
 Extract previous 24 hours of financial data from both ledgers:
-- **CockroachDB (Operational)**: `SELECT campaignId, SUM(amount) as operational_total FROM billing_ledger WHERE date = YESTERDAY GROUP BY campaignId`
-- **ClickHouse (Audit)**: `SELECT campaignId, SUM(amount) as audit_total FROM financial_audit WHERE toDate(timestamp) = YESTERDAY AND eventType IN ('BUDGET_DEDUCT', 'IMPRESSION_CHARGE') GROUP BY campaignId`
+- **CockroachDB (Operational)**: Aggregate campaign charges by summing amounts from billing ledger for previous day, grouped by campaign
+- **ClickHouse (Audit)**: Aggregate financial events (budget deductions, impression charges) from audit trail for previous day, grouped by campaign
 
 **Step 2: Compare Aggregates**
 
 Per-campaign validation with acceptable tolerance:
-- **Match criteria**: `|operational_total - audit_total| < MAX(0.01, operational_total * 0.00001)` (1 cent or 0.001%, whichever is greater)
+- **Match criteria**: Absolute difference between operational and audit totals must be less than the greater of (1 cent or 0.001% of operational total)
 - **Rationale**: Allows rounding differences and sub-millisecond timing variations between systems
 - **Expected result**: 99.999%+ campaigns match (typically 0-3 discrepancies out of 10,000+ active campaigns)
 
@@ -1261,7 +1304,7 @@ Forensic analysis to identify root cause:
 **Step 5: Resolution**
 
 Manual intervention when automated reconciliation fails:
-- **If CockroachDB correct**: Backfill missing event to ClickHouse (manual INSERT with metadata: `{source: "manual_backfill", reason: "missed_kafka_event", approver: "finance_team", ticket: "JIRA-1234"}`)
+- **If CockroachDB correct**: Backfill missing event to ClickHouse with audit metadata (source, reason, approver identity, ticket reference)
 - **If ClickHouse correct**: Investigate CockroachDB data corruption (extremely rare), restore from backup if needed, update operational ledger with correction entry
 
 **Compliance Verification**
@@ -1285,8 +1328,8 @@ External auditor access workflow:
 **Change Audit:**
 
 Administrative operations on financial data systems logged separately:
-- **CockroachDB schema changes**: `ALTER TABLE` commands logged with timestamp, user, justification, approval ticket
-- **ClickHouse partition operations**: `ALTER TABLE DROP PARTITION` (only operation allowing data removal) requires two-person approval and logged with business justification
+- **CockroachDB schema changes**: Table alterations logged with timestamp, user, justification, approval ticket
+- **ClickHouse partition operations**: Partition drops (only operation allowing data removal) require two-person approval and logged with business justification
 - **Access control changes**: IAM role modifications logged and reviewed quarterly
 
 **Access Control Matrix:**
@@ -1304,10 +1347,10 @@ Administrative operations on financial data systems logged separately:
 **Automated Archival** (runs monthly):
 
 Data lifecycle management ensuring compliance while optimizing costs:
-1. **Age detection**: Query ClickHouse for partitions >7 years old (`toYYYYMM(timestamp) < toYYYYMM(now() - INTERVAL 7 YEAR)`)
+1. **Age detection**: Identify partitions older than 7 years based on timestamp conversion to year-month format
 2. **Export to cold storage**: Write partition data to S3 Glacier in Parquet format with WORM (Write-Once-Read-Many) configuration
 3. **External table creation**: Create ClickHouse external table pointing to S3 location (data remains queryable via standard SQL but stored at 1/50th cost)
-4. **Partition drop**: Remove from ClickHouse hot storage after S3 export verified (`ALTER TABLE financial_audit DROP PARTITION 'partition_id'` - logged as administrative action)
+4. **Partition drop**: Remove from ClickHouse hot storage after S3 export verified (logged as administrative action)
 5. **Verification**: Monthly job validates S3 object count matches dropped partitions, alerts if mismatch detected
 
 **Cost Impact:**
@@ -1435,10 +1478,10 @@ Training pipeline validates incoming events before model training:
 **GDPR "Right to be Forgotten":**
 
 Per GDPR Article 12, the platform must respond to erasure requests **within one month** (can be extended to three months for complex cases). Deletion is executed across 10+ systems in parallel:
-- CockroachDB: DELETE user_profiles
-- Redis/Valkey: FLUSH user keys
-- Kafka: Publish tombstone (log compaction)
-- ML training: Mark deleted
+- CockroachDB: Delete user profile records
+- Redis/Valkey: Flush all user cache keys
+- Kafka: Publish tombstone events (triggers log compaction)
+- ML training: Mark user data as deleted
 - S3 cold archive: Mark for deletion (note: 7-year financial audit trails may be retained per legal basis override)
 - Backups: Crypto erasure (delete encryption key)
 

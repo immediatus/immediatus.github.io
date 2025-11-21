@@ -56,8 +56,8 @@ Here's the final stack, organized by layer:
 |-----------|-----------|---------|-----------|
 | **Ad Server Orchestrator** | Java + Spring Boot | 21 LTS | Ecosystem maturity, ZGC availability, team expertise |
 | **Garbage Collector** | ZGC (Z Garbage Collector) | Java 21+ | <1ms p99.9 pauses, eliminates GC as P99 contributor |
-| **User Profile Service** | Java + Spring Boot | 21 LTS | Consistency with orchestrator, shared libraries |
-| **ML Inference** | GBDT (LightGBM/XGBoost) | - | CTR prediction, 20ms inference, operational benefits (incremental learning, interpretability) |
+| **User Profile Service** | Java + Spring Boot | 21 LTS | Dual-mode architecture (identity + contextual fallback), consistency with orchestrator |
+| **ML Inference** | GBDT (LightGBM/XGBoost) | - | Day-1 CTR prediction, 20ms inference. Evolution path: two-pass ranking with distilled DNN reranker (see [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#2025-reality-check-dl-is-increasingly-viable)) |
 | **Budget Service** | Java + Spring Boot | 21 LTS | Strong consistency requirements, atomic operations |
 | **RTB Gateway** | Java + Spring Boot | 21 LTS | HTTP/2 connection pooling, protobuf support |
 | **Integrity Check** | Go | 1.21+ | Sub-ms latency, minimal resource footprint, stateless filtering |
@@ -76,7 +76,7 @@ Here's the final stack, organized by layer:
 
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
-| **L3: Transactional DB** | CockroachDB 23.x | User profiles, campaigns, billing ledger. Strong consistency, multi-region, HLC timestamps, 7-10× cheaper than DynamoDB |
+| **L3: Transactional DB** | CockroachDB Serverless | User profiles, campaigns, billing ledger. Strong consistency, cross-region ACID transactions, HLC timestamps. 50-75% cheaper than DynamoDB, fully managed. Evaluate self-hosted at 15-25B+ requests/day. |
 | **L2: Distributed Cache** | Valkey 7.x (Redis fork) | Budget counters (DECRBY atomic), L2 cache, rate limit tokens. Sub-ms latency, permissive BSD-3 license |
 | **L1: In-Process Cache** | Caffeine | Hot user profiles, 60-70% hit rate. 8-12× faster than Redis, JVM-native, excellent eviction |
 | **Feature Store** | Tecton (managed) | Batch (Spark) + Streaming (Rift) + Real-time online store. Sub-10ms P99, Redis-backed |
@@ -333,16 +333,24 @@ From [Part 1](/blog/ads-platform-part-1-foundation-architecture/) and [Part 3](/
 
 ### Cluster Topology
 
-**Configuration:**
+**Day-1 Choice: CockroachDB Serverless**
+- Fully managed by Cockroach Labs
+- Pay-per-use pricing (~40-50% of DynamoDB)
+- Auto-scaling capacity (no manual node management)
+- Same features as self-hosted (cross-region ACID, HLC, SQL)
+
+**Self-Hosted Configuration (if scaling to 15-25B+ requests/day):**
 - **60-80 nodes** across 3 AWS regions (us-east-1, us-west-2, eu-west-1)
 - **20-27 nodes per region** (distributed across 3 availability zones)
 - **Replication factor: 5** (2 replicas in home region, 1 in each remote region)
 - **Node specs**: c5.4xlarge (16 vCPU, 32GB RAM, 500GB NVMe SSD per node)
 
-**Why 60-80 nodes:**
+**Why 60-80 nodes (self-hosted sizing):**
 From benchmarks: CockroachDB achieves 400K QPS (99% reads) with 20 nodes, 1.2M QPS (write-heavy) with 200 nodes.
 
 Our workload: ~70% reads, ~30% writes, 1M+ QPS total → 60-80 nodes provides headroom.
+
+**Decision point:** Evaluate self-hosted when infrastructure savings (10-15% vs DynamoDB) exceed SRE team costs ($840K-1.44M/year, or $70-120K/month for 3-5 engineers). Break-even is around 15-25B+ requests/day. See [Part 3's cost analysis](/blog/ads-platform-part-3-data-revenue/#database-cost-comparison-at-8b-requestsday) for details.
 
 **Multi-Region Deployment:**
 
@@ -1053,7 +1061,7 @@ graph TB
 
 **Core Application Services** (all communicate via gRPC over HTTP/2):
 - **Ad Server Orchestrator**: Java 21 + ZGC (sub-2ms GC pauses), Spring Boot, 300 instances @ 5K QPS each, central coordinator
-- **User Profile Service**: Java 21 + ZGC, manages L1 (Caffeine) / L2 (Redis) / L3 (CockroachDB) cache hierarchy, 10ms target
+- **User Profile Service**: Java 21 + ZGC, **dual-mode architecture** serving identity-based profiles when available, contextual-only signals (page, device, geo, time) when user_id unavailable (40-60% of mobile traffic). Manages L1/L2/L3 cache hierarchy, 10ms target
 - **Integrity Check Service**: Go (lightweight, sub-ms latency), Bloom filter fraud detection, 5ms target
 - **Ad Selection Service**: Java 21 + ZGC, queries CockroachDB for internal ad candidates, 15ms target
 - **ML Inference Service**: GBDT (LightGBM/XGBoost) CTR prediction, 40ms target, eCPM calculation
@@ -1065,7 +1073,7 @@ graph TB
 **Data Layer**:
 - **L1 Cache**: Caffeine in-process JVM heap cache, 0.5ms latency, 60-70% hit rate for hot user profiles
 - **L2 Cache**: Redis/Valkey 20-node distributed cache, 1-2ms latency, 25% hit rate, also serves budget counters and rate limiting tokens
-- **L3 Database**: CockroachDB 60-80 nodes multi-region, stores user profiles, campaigns, operational ledger (mutable, 90-day retention) with HLC timestamps, 10-15ms latency
+- **L3 Database**: CockroachDB Serverless multi-region (fully managed), stores user profiles, campaigns, operational ledger (mutable, 90-day retention) with HLC timestamps, 10-15ms latency
 - **Audit Log**: ClickHouse 8 nodes (3× replication), immutable financial audit log for SOX/tax compliance, consumes from Kafka, 7-year retention (~180TB), <500ms audit query latency
 
 **Feature Platform (Tecton Managed)**:

@@ -1289,11 +1289,21 @@ This optimization transforms egress bandwidth from the largest variable operatio
 
 ### Feature Engineering Architecture
 
-Machine learning for CTR prediction requires real-time feature computation. Features fall into three categories:
+Machine learning for CTR prediction requires real-time feature computation. Features fall into four categories, ordered by **signal availability** (most reliable first):
 
-1. **Static features** (pre-computed, stored in cache): User demographics, advertiser account info, historical campaign performance
-2. **Real-time features** (computed on request): Time of day, device type, current location, session context
-3. **Aggregated features** (streaming aggregations): User's last 7-day engagement rate, advertiser's hourly budget pace, category-level CTR trends
+1. **Contextual features** (always available): Page URL/content, device type, time of day, geo-IP location, referrer, session depth. These are the **primary signals** when user identity is unavailable (40-60% of mobile traffic due to ATT/Privacy Sandbox).
+2. **Static features** (pre-computed, stored in cache): User demographics, advertiser account info, historical campaign performance - requires stable user_id
+3. **Real-time features** (computed on request): Current session behavior, recently viewed categories, cart contents
+4. **Aggregated features** (streaming aggregations): User's last 7-day engagement rate, advertiser's hourly budget pace, category-level CTR trends
+
+**Why contextual features are first-class:**
+
+Traditional ML pipelines treat contextual signals as "fallback" features. This is backwards in 2024/2025:
+- **40-60% of mobile traffic** has no stable user_id (iOS ATT opt-out, Safari/Firefox cookie blocking)
+- **Contextual targeting delivers comparable conversions** at lower CPMs - [research shows](https://gumgum.com/blog/landmark-study-proves-the-effectiveness-of-contextual-over-behavioral-targeting) 48% lower CPC and 50% higher click likelihood than non-contextual
+- **Training on contextual-first** ensures the model degrades gracefully when identity signals are missing
+
+Our feature pipeline computes contextual features **first**, then enriches with identity-based features when available.
 
 The challenge is computing these features within our latency budget while maintaining consistency.
 
@@ -1645,6 +1655,33 @@ Operational factors favor GBDT despite FM's infrastructure advantage:
 
 **Typical architecture:** Embedding layers for categoricals, followed by 3 dense layers (256→128→64 units with ReLU, 0.3 dropout), sigmoid output. Trained via binary cross-entropy with Adam optimizer. Inference latency ~20-40ms depending on batch size and hardware (GPU vs CPU).
 
+**2025 Reality Check: DL is Increasingly Viable**
+
+The "DNN is too slow" argument is increasingly outdated. Modern inference optimization techniques make deep learning viable even within strict latency budgets:
+
+- **INT8 Quantization**: Reduces model size by 4× and inference latency by [25-50%](https://aws.amazon.com/blogs/machine-learning/how-amazon-search-reduced-ml-inference-costs-by-85-with-aws-inferentia/) with <1% accuracy loss. Amazon Search achieves P99 < 10ms for BERT inference using quantized models.
+- **Knowledge Distillation**: Train a smaller "student" model (3-5ms inference) to mimic a larger "teacher" model (40ms), retaining 90-95% of accuracy at a fraction of latency.
+- **Specialized Hardware**: AWS Inferentia, Google TPUs, and NVIDIA TensorRT can serve DL models in <10ms at scale.
+
+**Evolution Path: Two-Pass Ranking**
+
+The industry standard at scale (Google, Meta, TikTok) is a [two-stage ranking architecture](https://developers.google.com/machine-learning/recommendation/dnn/re-ranking):
+
+1. **Stage 1 - Candidate Generation (GBDT, 5-10ms)**: Fast model reduces millions of ads → 50-200 candidates. This is where our GBDT excels.
+2. **Stage 2 - Reranking (Lightweight DL, 10-15ms)**: More expressive model scores the small candidate set. Distilled neural network captures complex feature interactions.
+
+**Why start with GBDT-only:**
+
+Our Day-1 GBDT approach is pragmatic, not a permanent ceiling:
+- **Operational simplicity**: Single model type, single serving infrastructure, faster iteration
+- **Data collection**: Build the feature pipeline and feedback loops before adding model complexity
+- **Baseline establishment**: Understand what AUC is achievable before investing in DL infrastructure
+
+**Planned evolution (6-12 months post-launch):**
+- Deploy candidate generation with GBDT (existing model)
+- Add lightweight reranker (distilled DNN, INT8 quantized)
+- Expected improvement: +1-2% AUC lift → millions in incremental annual revenue at scale
+
 ### The Cold Start Problem: Serving Ads Without Historical Data
 
 **The Challenge:**
@@ -1774,6 +1811,48 @@ Cold start strategy impacts revenue during bootstrap period:
 - **Month 2+**: Reach ~90%+ (sufficient user-level history)
 
 **Launch decision:** Accept 65% initial revenue rather than delaying for data that can only be gathered post-launch.
+
+### Signal Loss vs Cold Start: The Privacy-Era Challenge
+
+Cold start (new users with no history) and **signal loss** (returning users we can't identify) require different strategies. Signal loss is increasingly common due to privacy regulations:
+
+| Scenario | Cause | Available Signals | Strategy |
+|----------|-------|-------------------|----------|
+| **Cold Start** | New user, first visit | Device, geo, time + page context | Exploration + cohort fallback |
+| **Signal Loss** | ATT opt-out, cookie blocked | Device, geo, time + page context | Contextual-only bidding |
+| **Partial Signal** | Cross-device, new browser | Some history, fragmented | Probabilistic identity matching |
+
+**Key difference:** Cold start users will eventually accumulate history. Signal loss users **never will** - they remain anonymous indefinitely.
+
+**Bidding Strategy Without User Identity:**
+
+When `user_id` is unavailable (40-60% of mobile traffic), the bidding strategy shifts entirely to contextual signals:
+
+**1. Contextual Bid Adjustment:**
+
+$$eCPM_{contextual} = BaseCPM \times ContextMultiplier \times QualityScore$$
+
+Where `ContextMultiplier` is derived from:
+- **Page category** (sports page → sports advertisers bid higher)
+- **Time of day** (evening → entertainment ads, morning → news/finance)
+- **Device type** (tablet → premium inventory, mobile → performance ads)
+- **Geo-intent** (user in shopping mall → retail ads)
+
+**2. Publisher-Level Optimization:**
+
+Without user identity, optimize at **publisher level** instead:
+- Track publisher-level CTR by ad category
+- Build publisher quality scores from aggregate engagement
+- Shift budget to high-performing publisher × category combinations
+
+**3. Revenue Expectations:**
+
+Contextual-only inventory typically achieves:
+- **CPM**: 30-50% lower than behaviorally-targeted
+- **CTR**: Comparable (sometimes higher due to relevance)
+- **Overall revenue per request**: 50-70% of identified traffic
+
+**Trade-off accepted:** Lower revenue per impression is better than zero revenue from blocked/unavailable users. The 40-60% of traffic without identity still represents significant revenue at scale.
 
 ### Model Serving Infrastructure
 
@@ -2842,7 +2921,7 @@ graph LR
 
 - AUC target (≥ 0.78) established in Part 2's ML Inference Pipeline section above
 - Latency budget (P95 < 40ms) from Part 2's Model Serving Infrastructure section above
-- A/B testing integrates with [Part 4's testing strategy](/blog/ads-platform-part-4-production-operations/#critical-testing-requirements)
+- A/B testing integrates with [Part 4's testing strategy](/blog/ads-platform-part-4-production/#critical-testing-requirements)
 - Model serving infrastructure detailed in [Part 5's ML Service section](/blog/ads-platform-part-5-implementation/#ml-inference-service)
 
 **Production MLOps Summary:**

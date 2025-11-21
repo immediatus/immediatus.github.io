@@ -142,13 +142,13 @@ In 2024, Redis Labs changed licensing from BSD to dual-license (SSPL + proprieta
 </style>
 <div id="tbl_l3_db"></div>
 
-| Technology | Read Latency (p99) | Write Throughput<br/>(cluster-level) | Scalability | Consistency | HLC Built-in | Pros | Cons |
-|------------|-------------------|------------------|-------------|-------------|--------------|------|------|
-| **CockroachDB** | 10-15ms | 400K writes/sec<br/>(60-80 nodes) | Horizontal (Raft) | Strong (ACID) | Yes | SQL, multi-region, built-in HLC | License (BSL → Apache 2.0) |
-| YugabyteDB | 10-15ms | 400K writes/sec<br/>(60-80 nodes) | Horizontal (Raft) | Strong (ACID) | Yes | PostgreSQL-compatible | Smaller ecosystem |
-| Cassandra | 20ms | 500K writes/sec<br/>(100+ nodes) | Linear (peer-to-peer) | Tunable (eventual) | No | Multi-DC, mature | No JOINs, eventual consistency |
-| PostgreSQL | 15ms | 50K writes/sec<br/>(single node) | Vertical + sharding | ACID transactions | No | SQL, JOINs, strong consistency | Manual sharding complex |
-| DynamoDB | 10ms | 1M writes/sec<br/>(auto-scaled) | Fully managed | Eventual/strong | No | Auto-scaling, no ops | Vendor lock-in, cost at scale |
+| Technology | Read Latency (p99) | Write Throughput<br/>(cluster-level) | Scalability | Consistency | Cross-Region ACID | HLC Built-in | Pros | Cons |
+|------------|-------------------|------------------|-------------|-------------|-------------------|--------------|------|------|
+| **CockroachDB** | 10-15ms | 400K writes/sec<br/>(60-80 nodes) | Horizontal (Raft) | Serializable | Yes | Yes | SQL, JOINs, multi-region transactions | Operational complexity (self-hosted) |
+| YugabyteDB | 10-15ms | 400K writes/sec<br/>(60-80 nodes) | Horizontal (Raft) | Serializable | Yes | Yes | PostgreSQL-compatible | Smaller ecosystem |
+| Cassandra | 20ms | 500K writes/sec<br/>(100+ nodes) | Linear (peer-to-peer) | Tunable (eventual) | No | No | Multi-DC, mature | No JOINs, eventual consistency |
+| PostgreSQL | 15ms | 50K writes/sec<br/>(single node) | Vertical + sharding | ACID | No | No | SQL, JOINs, strong consistency | Manual sharding complex |
+| DynamoDB | 10ms | 1M writes/sec<br/>(auto-scaled) | Fully managed | Strong per-region<br/>MRSC (2024) | **No** | No | Auto-scaling, fully managed | **No cross-region transactions**, no JOINs, NoSQL limitations |
 
 **Why CockroachDB**
 
@@ -161,25 +161,88 @@ The persistent store must handle 400M user profiles (4TB+) with strong consisten
 - Full SQL + JOINs (vs learning CQL)
 - Better read latency: 10-15ms vs Cassandra's 20ms
 
+**Why Not DynamoDB?**
+
+Despite being fully managed and highly scalable, DynamoDB lacks critical features for our financial accuracy requirements:
+
+1. **No cross-region ACID transactions**: DynamoDB's [2024 MRSC feature](https://aws.amazon.com/blogs/aws/build-the-highest-resilience-apps-with-multi-region-strong-consistency-in-amazon-dynamodb-global-tables/) provides strong consistency for reads/writes within each region, but transactions (`TransactWriteItems`) only work within a single region. Budget enforcement requires atomic operations across user profiles + campaign ledger + audit log - this cannot be guaranteed across regions.
+
+2. **No HLC or causal ordering**: DynamoDB uses "last writer wins" conflict resolution based on internal timestamps. Without HLC, we can't guarantee causal ordering across regions for financial audit trails. Example failure: Budget update in us-east-1 and spend deduction in eu-west-1 arrive out-of-order, causing temporary overspend that violates financial accuracy constraints.
+
+3. **NoSQL limitations**: No SQL JOINs, no complex queries. Ad selection queries like "find all active campaigns for advertiser X targeting users in age group Y with budget remaining > Z" require multiple round-trips and application-level joins, adding latency and complexity.
+
+4. **Schema evolution complexity**: Requires dual-write patterns and application-level migration logic. CockroachDB supports online schema changes (`ALTER TABLE` without blocking).
+
+**DynamoDB is excellent for:**
+- Workloads that don't require cross-region transactions
+- Key-value access patterns without complex queries
+- Teams prioritizing operational simplicity over feature requirements
+
 **Alternatives:**
 - **YugabyteDB:** Similar architecture, PostgreSQL-compatible. CockroachDB chosen for slightly more mature multi-region tooling.
 - **PostgreSQL:** Doesn't scale horizontally without manual sharding. Citus adds complexity without HLC or native multi-region support.
+- **Google Spanner:** Provides TrueTime for global consistency, but requires custom hardware and is more expensive than CRDB Serverless.
 
 **Database cost comparison at 8B requests/day:**
 
-| Database | Relative Cost | Trade-offs |
-|----------|---------------|------------|
-| **DynamoDB** | 100% (managed baseline) | Fully managed, eventual consistency default, vendor lock-in |
-| **CockroachDB** (60-80 nodes, self-hosted) | 10-15% of DynamoDB | Self-managed infrastructure, strong consistency, multi-region native, HLC built-in |
-| **PostgreSQL** (sharded, self-hosted) | 8-12% of DynamoDB | Self-managed, no native multi-region, complex sharding |
+| Database Option | Relative Cost | Operational Model | Trade-offs |
+|-----------------|---------------|-------------------|------------|
+| **DynamoDB** | 100% (baseline) | Fully managed (AWS) | No cross-region transactions, NoSQL limitations, vendor lock-in |
+| **CockroachDB Serverless** | 40-50% of DynamoDB | Fully managed (Cockroach Labs) | Pay-per-use, auto-scaling, same features as self-hosted |
+| **CockroachDB Dedicated** | 25-35% of DynamoDB | Managed by Cockroach Labs | Reserved capacity, SLAs, predictable pricing |
+| **CockroachDB Self-Hosted** | 10-15% of DynamoDB (infra only) | Self-managed | Lowest infra cost, requires 3-5 SREs ($840K-1.44M/year ops overhead) |
+| **PostgreSQL** (sharded) | 8-12% of DynamoDB (infra only) | Self-managed | No native multi-region, complex sharding, no HLC |
 
-**CockroachDB self-hosted at scale is 7-10× cheaper** than DynamoDB at billions of requests/day (infrastructure costs only), while providing strong consistency and native multi-region support.
+**Key insight:** CockroachDB Serverless/Dedicated provide 50-75% cost savings over DynamoDB while maintaining full feature parity (cross-region transactions, HLC, SQL) **without operational overhead**. Self-hosted is only cheaper when infrastructure savings exceed $840K-1.44M/year SRE costs.
 
-**Important Caveats on Cost Comparison:**
-- **Workload dependency**: The 7-10× advantage applies to **write-heavy workloads** at billions of requests/day. For read-heavy or sporadic workloads, DynamoDB's on-demand pricing may be competitive or cheaper.
-- **Operational overhead**: Self-hosted CockroachDB requires **2-3 FTEs** for database operations (monitoring, upgrades, capacity planning, incident response). This operational cost (fully loaded engineer salaries) should be factored into total cost of ownership (TCO). At smaller scales, managed DynamoDB may have lower TCO despite higher infrastructure costs.
-- **Managed vs self-hosted**: CockroachDB Serverless vs DynamoDB has different economics - choose based on operational complexity tolerance and scale.
-- **Break-even analysis**: Self-hosted becomes cost-effective when infrastructure savings exceed operational overhead - typically around 1-5B requests/day depending on team costs.
+**Decision Framework: Avoiding "Spreadsheet Engineering"**
+
+The comparison above shows infrastructure costs only. Here's the complete decision framework:
+
+**For most teams (< 5B requests/day): Choose CockroachDB Serverless/Dedicated**
+
+Reasons:
+- 50-75% cheaper than DynamoDB
+- Full feature parity (cross-region transactions, HLC, SQL)
+- Zero operational overhead (fully managed)
+- Faster time-to-market than self-hosting
+
+**For high-scale teams (> 15B requests/day): Consider self-hosted**
+
+Requirements:
+- 3-5 dedicated SREs ($840K-1.44M/year ops overhead, or $70-120K/month)
+- Existing database operations expertise
+- Infrastructure savings > $1.5M/year to justify ops team (break-even at 15-25B requests/day)
+- Mature operational processes (monitoring, capacity planning, incident response)
+
+**Break-even calculation at 8B requests/day:**
+- DynamoDB cost: $600K/year
+- CRDB infra: $84K/year (14% of DynamoDB)
+- Infrastructure savings: $516K/year
+- SRE costs: $840K-1.44M/year
+- **Net cost: Self-hosted is $324K-924K/year MORE expensive than DynamoDB**
+
+Self-hosted only makes sense at much higher scale (15-25B+ requests/day) where infrastructure savings exceed SRE costs.
+
+**Never choose self-hosted if:**
+- Team size < 15 engineers (no dedicated ops capacity)
+- Traffic < 15B requests/day (ops overhead exceeds infrastructure savings)
+- Startup stage (operational risk > cost savings)
+- No database operations experience on team
+
+**Why DynamoDB remains a valid choice despite limitations:**
+
+For workloads that don't require:
+- Cross-region ACID transactions
+- Complex SQL queries
+- Causal ordering guarantees
+
+DynamoDB's operational simplicity (zero management) may outweigh feature limitations. Many ad tech companies successfully use DynamoDB by:
+- Keeping transactions within single region
+- Using application-level consistency checks
+- Accepting eventual consistency trade-offs
+
+**Our choice:** CockroachDB Serverless for Day 1, evaluate self-hosted only if we reach 15-25B+ requests/day with dedicated ops team.
 
 {% mermaid() %}
 graph TB
@@ -989,7 +1052,7 @@ Count-Min Sketch is a probabilistic data structure that tracks key frequencies i
    - Determine based on single-node capacity and typical access patterns
 
 2. **Replication factor selection**: Choose how many replicas to create
-   - Calculate: `replicas_needed = hot_key_traffic / single_node_capacity` (rounded up)
+   - Calculate: \\(\text{replicas\\_needed} = \lceil \frac{\text{hot\\_key\\_traffic}}{\text{single\\_node\\_capacity}} \rceil\\)
    - Trade-off: More replicas = better load distribution but higher memory overhead
    - Consider network topology (replicate across availability zones for resilience)
 
@@ -1001,7 +1064,7 @@ Count-Min Sketch is a probabilistic data structure that tracks key frequencies i
 - Measure your cache node's request handling capacity under load
 - Profile your key access distribution (use histograms or probabilistic counters)
 - Set detection threshold at 60-80% of single-node capacity to trigger before saturation
-- Calculate replication factor dynamically: `max(2, ceil(observed_traffic / node_capacity))`
+- Calculate replication factor dynamically: \\(\max\left(2, \lceil \frac{\text{observed\\_traffic}}{\text{node\\_capacity}} \rceil\right)\\)
 
 ### Workload Isolation: Separating Batch from Serving Traffic
 
@@ -1025,8 +1088,8 @@ Hourly batch jobs updating user profiles in CockroachDB (millions of writes/hour
    - Batch jobs: bursty writes, throughput-focused, can tolerate higher latency
 
 2. **Capacity allocation strategy**: Dedicate infrastructure based on workload intensity
-   - Calculate: `batch_capacity = (batch_write_throughput × replication_factor) / node_write_capacity`
-   - Calculate: `serving_capacity = (serving_read_throughput × safety_margin) / node_read_capacity`
+   - Calculate: \\(\text{batch\\_capacity} = \frac{\text{batch\\_write\\_throughput} \times \text{replication\\_factor}}{\text{node\\_write\\_capacity}}\\)
+   - Calculate: \\(\text{serving\\_capacity} = \frac{\text{serving\\_read\\_throughput} \times \text{safety\\_margin}}{\text{node\\_read\\_capacity}}\\)
    - Trade-off: Over-provisioning batch capacity wastes resources; under-provisioning causes spillover that degrades serving latency
 
 3. **Consistency vs staleness trade-off**: Decide what staleness is acceptable for serving reads
@@ -1041,8 +1104,8 @@ Hourly batch jobs updating user profiles in CockroachDB (millions of writes/hour
 
 **How to determine capacity split:**
 - Profile your workload: measure read QPS, write QPS, and their respective resource consumption
-- Calculate resource needs: `serving_nodes = ceil(read_load / (node_capacity × target_utilization))`
-- Calculate batch needs: `batch_nodes = ceil(write_load × replication_factor / node_write_capacity)`
+- Calculate resource needs: \\(\text{serving\\_nodes} = \lceil \frac{\text{read\\_load}}{\text{node\\_capacity} \times \text{target\\_utilization}} \rceil\\)
+- Calculate batch needs: \\(\text{batch\\_nodes} = \lceil \frac{\text{write\\_load} \times \text{replication\\_factor}}{\text{node\\_write\\_capacity}} \rceil\\)
 - Validate with load testing that serving latency remains stable during batch job execution
 
 **Cost of isolation:**
@@ -1096,7 +1159,7 @@ Total invalidation propagation: **~15ms**
 **Strategy 3: Versioned Caching**
 
 Include version in cache key:
-- **Cache key format**: user_id:version (e.g., "user123:v2")
+- **Cache key format**: `user_id:version` (e.g., "user123:v2")
 
 On update:
 1. Increment version in metadata store
@@ -1118,6 +1181,95 @@ On update:
 - **Normal updates:** TTL = 30s (passive invalidation)
 - **Critical updates** (e.g., GDPR opt-out): Active invalidation via Kafka
 - **Version metadata** for tracking update history
+
+---
+
+## Privacy-Preserving Attribution: SKAdNetwork & Privacy Sandbox
+
+> **Architectural Driver: Signal Availability** - When 40-60% of traffic lacks stable user_id (ATT opt-out, Privacy Sandbox), traditional click-to-conversion attribution breaks. SKAdNetwork (iOS) and Attribution Reporting API (Chrome) provide privacy-preserving alternatives with delayed, aggregated conversion data.
+
+### The Attribution Challenge
+
+**Traditional attribution:** User clicks ad → store `user_id` + `click_id` → user converts → match conversion to click via `user_id` → attribute revenue.
+
+**This fails when:**
+- iOS user opts out of ATT → no IDFA to link click and conversion
+- Chrome Privacy Sandbox → third-party cookies unavailable
+- Cross-device journeys → user clicks on phone, converts on desktop
+
+**Privacy frameworks provide attribution without persistent identifiers:**
+
+### SKAdNetwork Postback Handling (iOS)
+
+Apple's SKAdNetwork provides conversion data for ATT opt-out users through delayed postbacks. When a user clicks an ad and installs an app, iOS starts a privacy timer (24-72 hours, randomized). If the user converts within the app during this window, the app signals the conversion to SKAdNetwork. After the timer expires, Apple sends an aggregated postback to the ad network containing campaign-level attribution data.
+
+**Critical architectural constraints:**
+
+The postback contains only campaign identifier and a 6-bit conversion value (0-63) - no user identity, device ID, or precise conversion details. This forces a fundamentally different attribution model:
+
+- **Campaign-level aggregation only**: Individual user journeys are invisible; optimization happens at campaign cohorts
+- **Delayed feedback loop**: 1-3 day lag between conversion and attribution means ML models train on stale data
+- **Coarse conversion signals**: 64 possible values must encode all conversion types (trials, purchases, subscription tiers)
+- **No creative/keyword attribution**: Cannot determine which ad variant drove the conversion
+
+**Data pipeline integration:**
+
+{% mermaid() %}
+graph TB
+    SKAN[SKAdNetwork Postback<br/>HTTPS webhook]
+    KAFKA[Kafka Topic<br/>skan-postbacks]
+    FLINK[Flink Processor<br/>Aggregate by campaign]
+    CRDB[CockroachDB<br/>campaign_conversions table]
+
+    SKAN -->|Parse & validate| KAFKA
+    KAFKA --> FLINK
+    FLINK -->|campaign_id, conversion_value, count| CRDB
+
+    style SKAN fill:#f9f,stroke:#333
+    style KAFKA fill:#ff9,stroke:#333
+    style FLINK fill:#9ff,stroke:#333
+    style CRDB fill:#9f9,stroke:#333
+{% end %}
+
+**Storage and aggregation:**
+
+Postbacks arrive as HTTPS webhooks, get queued in Kafka for reliability, then aggregated by Flink into campaign-level conversion metrics. The database stores daily aggregates partitioned by date: campaign identifier, conversion value, postback count, and revenue estimates.
+
+**Conversion value interpretation:**
+
+Advertisers map the 64-bit conversion space to their business model. Common patterns include quartile-based revenue brackets (0-15 for trials/signups, 16-31 for small purchases, 32-47 for medium, 48-63 for high-value conversions) or subscription tier encoding. The mapping becomes a critical product decision since it defines what the ML models can optimize for.
+
+**Trade-offs accepted:**
+- **No user-level attribution**: Only campaign-level aggregates
+- **Delayed reporting**: 1-3 days lag before optimization possible
+- **Coarse signals**: 64 possible conversion values for all events
+- **Revenue**: SKAdNetwork campaigns typically achieve 60-70% of IDFA campaign performance due to delayed optimization
+
+### Privacy Sandbox Attribution Reporting API (Chrome)
+
+Chrome's Attribution Reporting API offers two distinct privacy models: event-level reports that link individual clicks to conversions with heavy noise (only 3 bits of conversion data, delayed 2-30 days), and aggregate reports that provide detailed conversion statistics across many users protected by differential privacy. The browser mediates all attribution, storing click events locally and generating reports after random delays to prevent timing attacks.
+
+**Integration approach:**
+
+Reports arrive at a dedicated endpoint, flow through the same Kafka-Flink-CockroachDB pipeline as SKAdNetwork postbacks, and aggregate into unified campaign-level metrics. This allows treating iOS and Chrome privacy-preserving attribution as a single conceptual layer despite different underlying mechanisms.
+
+**Maturity considerations:**
+
+Privacy Sandbox is evolving through 2024/2025. Attribution Reporting API is in origin trials (pre-production testing), Topics API is already integrated for contextual interest signals ([Part 1](/blog/ads-platform-part-1-foundation/)), and Protected Audience API (formerly FLEDGE) for on-device auctions remains on the roadmap. The architecture must accommodate API changes as specifications stabilize.
+
+**Operational impact:**
+
+| Attribution Method | Coverage | Latency | Granularity | Revenue Performance |
+|-------------------|----------|---------|-------------|---------------------|
+| **Traditional (cookie/IDFA)** | 40-60% (declining) | Real-time | User-level | 100% baseline |
+| **SKAdNetwork** | iOS opt-out users | 24-72 hours | Campaign-level | 60-70% of baseline |
+| **Privacy Sandbox** | Chrome users | 2-30 days | Event-level (noised) or aggregate | 50-80% of baseline (evolving) |
+| **Contextual-only** | All users | Real-time | Request-level | 50-70% of baseline |
+
+**Our approach:**
+- Layer attribution methods: traditional where available, privacy-preserving fallbacks
+- Accept delayed optimization for privacy-compliant inventory
+- Focus optimization on high-signal traffic (logged-in users, first-party data)
 
 ---
 
