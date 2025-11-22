@@ -811,13 +811,13 @@ gantt
 **Key architectural insight:** RTB auction (100ms) is the **critical path** - it dominates the latency budget. The internal ML path (Feature Store 10ms + Ad Selection 15ms + ML Inference 40ms = 65ms) completes well before RTB responses arrive, so they run in parallel without blocking each other.
 
 **Why 100ms RTB timeout is the p95 target (with p99 protection at 120ms):**
-- **Industry standard**: OpenRTB implementations typically use 100-200ms timeouts
+- **Industry standard**: OpenRTB implementations use 100-200ms timeouts (IAB Tech Lab recommendation)
 - **Real-world examples**: Most SSPs allow 100-150ms, Magnite CTV uses 250ms
 - **This platform's choice**: 100ms p95 target with operational target of 50-70ms, and **120ms absolute p99 cutoff** with forced failure to fallback inventory (see [P99 Tail Latency Defense](/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail) in the architecture post)
 - **Critical constraint**: Without optimization, global DSPs cannot respond within 100ms (physics impossibility shown above)
 
 **The 150ms SLO:**
-The 150ms total latency provides good user experience (mobile apps typically timeout at 200-300ms) while accommodating industry-standard RTB mechanics. However, meeting this SLO requires the multi-tier optimization approach described earlier.
+The 150ms total latency provides good user experience (mobile apps timeout at 200-300ms) while accommodating industry-standard RTB mechanics. However, meeting this SLO requires the multi-tier optimization approach described earlier.
 
 **Why Regional Sharding + Bidder Health Scoring are Mandatory (not optional)**
 
@@ -1591,7 +1591,7 @@ $$T_{ml} = T_{feature} + T_{inference} + T_{overhead}$$
 
 **Accuracy Comparison:**
 
-CTR prediction is fundamentally constrained by signal sparsity - user click rates are typically 0.1-2% in ads, creating severe class imbalance. Model performance expectations:
+CTR prediction is fundamentally constrained by signal sparsity - user click rates are 0.1-2% in ads (industry benchmark: display 0.5%, video 1.8%), creating severe class imbalance. Model performance expectations:
 
 - **GBDT**: Target AUC 0.78-0.82 - Strong baseline for CTR tasks due to handling of feature interactions via tree splits. Performance ceiling exists because trees can't learn arbitrary feature combinations beyond depth limit.
 - **DNN**: Target AUC 0.80-0.84 - Higher theoretical ceiling from learned embeddings and non-linear interactions, but requires significantly more training data (millions of samples) and risks overfitting with sparse signals.
@@ -1764,7 +1764,7 @@ $$a_t = \begin{cases}
 
 where:
 - \\(Q(a)\\) = estimated CTR for ad \\(a\\) based on current data
-- \\(\epsilon\\) = exploration rate (typically 0.05-0.10 for new users)
+- \\(\epsilon\\) = exploration rate (0.05-0.10 for new users, calibrated empirically)
 
 **Adaptive exploration rate:**
 
@@ -1796,7 +1796,7 @@ When launching the entire platform with zero historical data:
 $$T_{bootstrap} = \frac{N_{min}}{R_{impressions} \times P_{engagement}}$$
 
 where:
-- \\(N_{min}\\) = minimum samples for reliable prediction (typically 100 clicks)
+- \\(N_{min}\\) = minimum samples for reliable prediction (100 clicks, statistical significance p<0.05)
 - \\(R_{impressions}\\) = impression rate per user/day
 - \\(P_{engagement}\\) = estimated click rate
 
@@ -1847,7 +1847,7 @@ Without user identity, optimize at **publisher level** instead:
 
 **3. Revenue Expectations:**
 
-Contextual-only inventory typically achieves:
+Contextual-only inventory achieves:
 - **CPM**: 30-50% lower than behaviorally-targeted
 - **CTR**: Comparable (sometimes higher due to relevance)
 - **Overall revenue per request**: 50-70% of identified traffic
@@ -2043,7 +2043,7 @@ $$y = W_{int8} \cdot x_{int8} \times scale + zero\\_point$$
 **Benefits:**
 - 4x memory reduction (32-bit → 8-bit)
 - 2-4x inference speedup (INT8 ops faster)
-- Accuracy loss: typically <1% AUC degradation
+- Accuracy loss: <1% AUC degradation (TensorFlow Lite benchmarks)
 
 **3. GPU Acceleration**
 
@@ -2454,7 +2454,7 @@ These metrics track real-world performance with live traffic:
 - **Why hourly**: Detects issues faster than daily aggregation (6-hour window captures problems before significant revenue loss)
 
 **Effective Cost Per Mille (eCPM):**
-- **Baseline**: Platform-specific (typically $3-8 for general audience)
+- **Baseline**: Platform-specific ($3-8 for general audience, Q4 2024 benchmark)
 - **Monitoring**: Daily average, alert if drops > 10% for 2 consecutive days
 - **Relationship to model**: Better CTR predictions → more accurate eCPM → better auction decisions → higher revenue
 
@@ -2922,7 +2922,7 @@ graph LR
 - AUC target (≥ 0.78) established in Part 2's ML Inference Pipeline section above
 - Latency budget (P95 < 40ms) from Part 2's Model Serving Infrastructure section above
 - A/B testing integrates with [Part 4's testing strategy](/blog/ads-platform-part-4-production/#critical-testing-requirements)
-- Model serving infrastructure detailed in [Part 5's ML Service section](/blog/ads-platform-part-5-implementation/#ml-inference-service)
+- Model serving infrastructure detailed in [Part 5's implementation blueprint](/blog/ads-platform-part-5-implementation/)
 
 **Production MLOps Summary:**
 

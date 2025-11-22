@@ -128,7 +128,7 @@ In 2024, Redis Labs changed licensing from BSD to dual-license (SSPL + proprieta
 
 **L3 Persistent Store Options:**
 
-**Note:** Write throughput numbers reflect **cluster-level performance** at production scale (20-80 nodes for distributed databases). Single-node performance is typically 5-20K writes/sec depending on hardware and workload characteristics.
+**Note:** Write throughput numbers reflect **cluster-level performance** at production scale (20-80 nodes for distributed databases). Single-node performance is 5-20K writes/sec (SSD RAID10, 32GB RAM) depending on workload characteristics.
 
 <style>
 #tbl_l3_db + table th:first-of-type  { width: 12%; }
@@ -471,8 +471,7 @@ Parquet format characteristics:
 
 The pattern is straightforward: maintain a compact `deleted_users` table (in CockroachDB) that stores `(user_id, deleted_at, deletion_request_id)` tuples. When a deletion request arrives, insert a marker row. Historical Parquet files in S3 remain unchanged—no expensive rewrites needed.
 
-**Query-time filtering:** Analytics queries join against the deletion marker table to exclude deleted users. For example, a LEFT OUTER JOIN with a `WHERE deleted_users.user_id IS NULL` clause filters out any user who has a deletion marker. Production pipelines typically:
-- **Encapsulate filtering in views/CTEs** so every query doesn't repeat the JOIN logic
+**Query-time filtering:** Analytics queries join against the deletion marker table to exclude deleted users. For example, a LEFT OUTER JOIN with a `WHERE deleted_users.user_id IS NULL` clause filters out any user who has a deletion marker. Production pipelines encapsulate filtering in views/CTEs (best practice) so every query doesn't repeat the JOIN logic:
 - **Implement partition pruning** by comparing `deletion_date` vs `partition_date` to skip entire files when users were deleted before the data was collected
 - **Cache the deletion table in memory** (thousands of rows vs billions of impressions makes this practical)
 - **Use Bloom filters** for fast "probably not deleted" checks before expensive JOINs
@@ -769,7 +768,7 @@ where:
 - \\(P_{memory}\\) = cost per GB-month (baseline cache cost unit)
 - \\(N_{nodes}\\) = number of Redis nodes
 
-**Cache pricing note:** Managed cache services (ElastiCache, Valkey) typically cost 10-12× per GB compared to raw compute instances. Self-hosted Redis on standard instances is cheaper but adds operational overhead.
+**Cache pricing note:** Managed cache services (ElastiCache, Valkey) cost 10-12× per GB compared to self-hosted instances. Self-hosted Redis on standard instances is cheaper but adds operational overhead.
 
 **Example:** 1000 nodes × 16GB/node × baseline GB-month rate = **baseline cache cost**
 
@@ -896,12 +895,14 @@ Subject to:
 </style>
 <div id="tbl_cache_sizing"></div>
 
-| L2 Cache Size (% of 4TB total) | Cumulative L1+L2 Hit Rate | Cost Breakdown (relative %) | Total Relative Cost | Analysis |
+| L2 Cache Size (% of 4TB total) | Cumulative L1+L2 Hit Rate | Cost Breakdown (relative %) | Total Cost vs Baseline<sup>*</sup> | Analysis |
 |------------|----------|----------------------------|---------------------|----------|
 | **5% (200GB)** | 65-70% | Cache: 15%, DB: 54%, Latency: 31% | **100%** (baseline) | High DB+latency penalties |
 | **10% (400GB)** | 75-80% | Cache: 37%, DB: 40%, Latency: 23% | **81%** | Better balance |
 | **20% (800GB)** | 85-90% | Cache: 74%, DB: 16%, Latency: 10% | **80%** (optimal) | Best total cost |
 | **40% (1.6TB)** | 93-96% | Cache: 93%, DB: 5%, Latency: 2% | **128%** | Expensive for marginal gain |
+
+<sup>*</sup>Total cost relative to 5% coverage baseline (100%). Lower is better.
 
 **Optimal choice: 20% coverage (800GB L2 cache)**
 
@@ -1243,7 +1244,7 @@ Advertisers map the 64-bit conversion space to their business model. Common patt
 - **No user-level attribution**: Only campaign-level aggregates
 - **Delayed reporting**: 1-3 days lag before optimization possible
 - **Coarse signals**: 64 possible conversion values for all events
-- **Revenue**: SKAdNetwork campaigns typically achieve 60-70% of IDFA campaign performance due to delayed optimization
+- **Revenue**: SKAdNetwork campaigns achieve 60-70% of IDFA campaign performance due to delayed optimization
 
 ### Privacy Sandbox Attribution Reporting API (Chrome)
 

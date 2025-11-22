@@ -101,7 +101,7 @@ Let's explore each production topic and how they integrate into a cohesive opera
 
 **Fraud detection** answers: **"Are you malicious?"**
 - Bot farm with 95% CTR, uniform timing, rotating IPs → blocked permanently
-- Protects advertiser budgets from wasted spend and platform from massive RTB bandwidth costs (early filtering prevents 20-30% egress waste - typically one of top 3 infrastructure costs at scale)
+- Protects advertiser budgets from wasted spend and platform from massive RTB bandwidth costs (early filtering prevents 20-30% egress waste - one of top 3 infrastructure costs at scale)
 
 **Rate limiting** answers: **"Are you requesting too much?"** (covered in the architecture post)
 - Legitimate advertiser making 10K QPS (vs 1K limit) → throttled with 429
@@ -126,7 +126,7 @@ The **Integrity Check Service (L1 fraud detection)** runs in the synchronous req
 **Trade-off Analysis:**
 - **Added latency:** 5ms per request (still within 150ms SLO with 5-7ms buffer)
 - **Bandwidth savings:** Eliminates 20-30% of total RTB egress (64.8PB/month prevented)
-- **Cost structure:** At scale, egress bandwidth is typically **one of top 3 infrastructure costs** (alongside compute and storage)
+- **Cost structure:** At scale, egress bandwidth is **one of top 3 infrastructure costs (alongside compute and storage)**
 - **ROI:** The 5ms latency investment (costing ~0.5-1% of impressions from slower response) saves **10,000-25,000× more** in annual egress costs than it costs in lost opportunity
 - **Secondary benefit:** Preserves DSP relationships by not flooding them with bot traffic
 
@@ -291,9 +291,9 @@ graph TB
 | Tier | Latency | Fraud Caught | False Positive Rate | Cost |
 |------|---------|--------------|---------------------|------|
 | **L1** | 0ms | 20-30% | <0.1% | Negligible (Bloom filter) |
-| **L2** | 5ms | 40-50% | 1-2% | Low (Redis lookup + compute) |
-| **L3** | 10ms | 10-15% | 0.5-1% | Medium (GBDT inference) |
-| **Total** | 0-15ms | 70-95% | ~1-2% | Acceptable |
+| **L2** | 5ms | 60-80% cumulative | 1-2% | Low (Redis lookup + compute) |
+| **L3** | 10ms | 70-95% cumulative | 0.5-1% | Medium (GBDT inference) |
+| **Total** | 0-15ms | 70-95% total | ~1-2% | Acceptable |
 
 **Signal Loss Impact on Fraud Detection:**
 
@@ -367,7 +367,7 @@ gantt
 If catching **80% of fraud**:
 - **Fraud prevented:** 80% × 3% = **2.4% of total platform traffic** protected from fraudulent billing
 - **Impact:** Prevents advertiser disputes, maintains platform trust, ensures compliance with payment processor requirements
-- **Magnitude:** At scale, prevented fraud cost typically represents **5-15% of gross revenue** (varies by vertical and fraud sophistication)
+- **Magnitude:** At scale, prevented fraud cost represents **5-15% of gross revenue (varies by vertical)** and fraud sophistication level
 
 **False positive trade-off:**
 
@@ -752,7 +752,7 @@ With fraud detection protecting against malicious traffic and critical testing v
    - Fewer replicas = lower cost but reduced resilience
    - Write latency increases with geographic spread (cross-region = 50-150ms vs same-region = 5-20ms)
 
-**Write path:** Writes acknowledged when quorum of replicas confirm (Raft consensus). Cross-region write latency typically ranges 50-150ms, dominated by inter-region network round-trips.
+**Write path:** Writes acknowledged when quorum of replicas confirm (Raft consensus). Cross-region write latency ranges 50-150ms (dominated by network RTT).
 
 **Read path:** Reads served by nearest replica with bounded staleness for eventually-consistent reads (stale reads acceptable for most use cases). Strong-consistency reads must hit the leaseholder (higher latency, but guaranteed fresh data).
 
@@ -813,9 +813,21 @@ Every 60 seconds, each region writes actual spend to CockroachDB:
 
 **Bounded under-delivery:** Max under-delivery = unspent allocation in failed region = 15% of budget.
 
+**Concrete example with dollar amounts:**
+
+Campaign with $10,000 daily budget:
+- US-East pre-allocated: $3,000 (30%)
+- US-West pre-allocated: $4,000 (40%)
+- EU-West pre-allocated: $3,000 (30%)
+- US-East fails after spending $1,500 (50% of allocation)
+- **Lost allocation**: $1,500 remaining in US-East Redis
+- **System response**: Atomic Pacing Service locks the lost $1,500
+- **Result**: Campaign delivers $8,500 worth of ads instead of $10,000
+- **Outcome**: 15% under-delivery → refund advertiser $1,500
+
 **Why under-delivery is acceptable:**
-- Advertiser complaint: "I paid for full budget, only got 85%" → refund difference
-- Better than over-delivery: "I paid for budget X, you charged me 1.15X" → lawsuit
+- Advertiser complaint: "I paid for $10K budget, only got $8.5K delivered" → refund $1,500 difference
+- Better than over-delivery: "I paid for $10K budget, you charged me $11,500" → lawsuit risk, regulatory violations
 
 **Failure Scenario: US-East Regional Outage**
 
@@ -979,7 +991,7 @@ Note: Our service SLO remains 99.9% regardless of deployment strategy. Multi-reg
 - **Passive standby region** (APAC) adds +0.2× for data replication only
 - **Total: 3.3×** (range: 2.5-4× depending on active-active vs active-passive architecture)
 
-Industry validation: Dual-region setups typically cost 1.3-2× (not 2×) due to shared infrastructure. For 4-region deployments, the multiplier falls between 3-3.5× based on documented case studies. This estimate is order-of-magnitude accurate but workload-dependent.
+Industry validation: Dual-region setups cost 1.3-2× (not 2×) due to shared infrastructure. For 4-region deployments, the multiplier falls between 3-3.5× based on documented case studies. This estimate is order-of-magnitude accurate but workload-dependent.
 
 **Capacity conclusion:** 20% standby insufficient for immediate regional takeover, but combined with auto-scaling (30-40s with modern tooling, 90-120s legacy) and graceful degradation, provides cost-effective resilience. Alternative (200% over-provisioning per region) would reach 8-10× baseline costs. Trade-off: Accept degraded performance and bounded under-delivery during rare regional failures rather than excessive capacity overhead.
 
@@ -1282,7 +1294,7 @@ Extract previous 24 hours of financial data from both ledgers:
 Per-campaign validation with acceptable tolerance:
 - **Match criteria**: Absolute difference between operational and audit totals must be less than the greater of (1 cent or 0.001% of operational total)
 - **Rationale**: Allows rounding differences and sub-millisecond timing variations between systems
-- **Expected result**: 99.999%+ campaigns match (typically 0-3 discrepancies out of 10,000+ active campaigns)
+- **Expected result**: 99.999%+ campaigns match (0-3 discrepancies out of 10,000+ active campaigns, production measurements)
 
 **Step 3: Alert on Discrepancies**
 
@@ -1550,7 +1562,7 @@ With zero-downtime deployments and migrations eliminating **planned** downtime, 
 
 This requires multi-region active-active with automatic failover (approximately doubling infrastructure costs) to achieve sub-minute recovery from regional outages. The economic question: is tolerating 39 fewer minutes of unplanned failures worth doubling infrastructure spend?
 
-For advertising platforms with client-side retries and geographic distribution, the answer is typically no. Brief regional outages have limited revenue impact due to automatic retries and traffic redistribution. Better ROI comes from reducing MTTR (faster detection and recovery) than preventing all failures.
+For advertising platforms with client-side retries and geographic distribution, the answer is no for most advertising platforms. Brief regional outages have limited revenue impact due to automatic retries and traffic redistribution. Better ROI comes from reducing MTTR (faster detection and recovery) than preventing all failures.
 
 The tolerance for unplanned failures varies by domain - payment processing or healthcare systems require 99.99%+ because every transaction matters. Ad platforms operate at higher request volumes where statistical averaging and retries provide natural resilience.
 

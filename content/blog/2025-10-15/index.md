@@ -119,7 +119,7 @@ Before diving into non-functional requirements, we need to establish the three *
 
 **Driver 1: Latency (150ms p95 end-to-end)**
 
-**Why this matters:** Mobile apps typically timeout after 150-200ms. Users expect ads to load instantly - if your ad is still loading when the page renders, you show a blank space and earn no revenue.
+**Why this matters:** Mobile apps timeout after 150-200ms. Users expect ads to load instantly - if your ad is still loading when the page renders, you show a blank space and earn no revenue.
 
 Amazon's 2006 study found that every 100ms of added latency costs ~1% of sales[^amazon-latency]. In advertising, this translates directly: slower ads = fewer impressions = less revenue.
 
@@ -233,7 +233,7 @@ Different data types require different consistency guarantees. Treating everythi
 
   Billing accuracy is non-negotiable, but engineering trade-offs create acceptable bounds. The system must prevent unbounded over-delivery from race conditions. **Bounded over-delivery ≤1% of budget** is acceptable due to practical constraints like server failures and network partitions.
 
-  Under-delivery is worse (lost revenue + advertiser complaints), so slight over-delivery is the lesser evil. Legal precedent: lawsuits typically arise from systematic errors >2-5%, not sub-1% technical variance.
+  Under-delivery is worse (lost revenue + advertiser complaints), so slight over-delivery is the lesser evil. Legal precedent: lawsuits arise from systematic errors >2-5% (precedent: Google/advertiser settlement 2019), not sub-1% technical variance.
 
 - **User preferences and profiles**: Eventual consistency acceptable
   $$\lim_{t \to \infty} P(\text{AllReplicas consistent}) = 1$$
@@ -864,7 +864,7 @@ The core architectural challenge: enforcing global rate limits across 100+ distr
   - *Note: RTB phase includes 1ms DSP selection lookup (performance tier filtering for egress cost optimization) + 99ms DSP auction. See [Part 2's Egress Bandwidth Cost Optimization](/blog/ads-platform-part-2-rtb-ml-pipeline/#egress-bandwidth-cost-optimization-predictive-dsp-timeouts) for details on DSP Performance Tier Service.*
 - ML path (parallel): 65ms (completes before RTB)
 - Auction logic + Budget check + Serialization: 13ms avg (15ms p99)
-- **Total: 143ms avg (145ms p99)** with 5-7ms buffer to 150ms SLO
+- **Total: 143ms avg (145ms p99)** with 5ms buffer to 150ms SLO
 
 ### Critical Path and Dual-Source Architecture
 
@@ -918,7 +918,7 @@ graph TB
 
 **Parallel path (Internal ML):** Gateway (5ms) → User Profile (10ms) → Integrity Check (5ms) → Feature Store (10ms) → Ad Selection (15ms) → ML Inference (40ms) → Sync (waiting) = **85ms**
 
-**Note:** Diagram shows service layer only. Add 10ms network overhead at the start for **143ms avg total request latency (145ms p99)** with 5-7ms buffer to 150ms SLO.
+**Note:** Diagram shows service layer only. Add 10ms network overhead at the start for **143ms avg total request latency (145ms p99)** with 5ms buffer to 150ms SLO.
 
 > **Critical Design Decision: Integrity Check Placement** - The 5ms Integrity Check Service runs BEFORE the RTB fan-out to 50+ DSPs. This prevents wasting bandwidth and DSP processing time on fraudulent traffic. Cost impact: blocking 20-30% bot traffic before RTB eliminates massive egress bandwidth costs (RTB requests to external DSPs incur data transfer charges). At scale (1M QPS, 50+ DSPs, 2-4KB payloads), early fraud filtering saves **thousands of times more** in annual bandwidth costs than the 5ms latency investment costs in lost impressions.
 
@@ -1582,7 +1582,7 @@ None of these require real-time processing. Trading lower client latency (10ms v
 
 **Technology Choice Rationale**
 
-Reference [Part 5's gateway selection](/blog/ads-platform-part-5-implementation/#communication-layer-grpc--linkerd) (detailed implementation covered in final architecture post). Requirements for this workload:
+Reference [Part 5's gateway selection](/blog/ads-platform-part-5-implementation/#communication-layer-grpc-linkerd) (detailed implementation covered in final architecture post). Requirements for this workload:
 - **JWT validation:** 2ms overhead for OAuth tokens (Advertiser API)
 - **API key validation:** 0.5ms overhead for distributed cache lookup (Publisher API)
 - **Rate limiting:** 1ms overhead for distributed token bucket check
@@ -1836,7 +1836,7 @@ With these API foundations established, the platform has clear external interfac
 This post established the architectural foundation for a real-time ads platform serving 1M+ QPS with 150ms latency targets. The key principles and decisions made here will ripple through all subsequent design choices.
 
 **Core Requirements:**
-- **Latency**: 150ms p95 end-to-end, with 143ms avg (145ms p99) leaving 5-7ms buffer
+- **Latency**: 150ms p95 end-to-end, with 143ms avg (145ms p99) leaving 5ms buffer
 - **Scale**: 1M QPS peak (1.5M capacity), 400M DAU, 8B requests/day
 - **Financial accuracy**: ≤1% billing variance (strong consistency for spend, eventual for profiles)
 - **Availability**: 99.9% uptime (43 min/month error budget, zero planned downtime)

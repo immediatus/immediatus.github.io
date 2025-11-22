@@ -57,7 +57,7 @@ Here's the final stack, organized by layer:
 | **Ad Server Orchestrator** | Java + Spring Boot | 21 LTS | Ecosystem maturity, ZGC availability, team expertise |
 | **Garbage Collector** | ZGC (Z Garbage Collector) | Java 21+ | <1ms p99.9 pauses, eliminates GC as P99 contributor |
 | **User Profile Service** | Java + Spring Boot | 21 LTS | Dual-mode architecture (identity + contextual fallback), consistency with orchestrator |
-| **ML Inference** | GBDT (LightGBM/XGBoost) | - | Day-1 CTR prediction, 20ms inference. Evolution path: two-pass ranking with distilled DNN reranker (see [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#2025-reality-check-dl-is-increasingly-viable)) |
+| **ML Inference** | GBDT (LightGBM/XGBoost) | - | Day-1 CTR prediction, 20ms inference. Evolution path: two-pass ranking with distilled DNN reranker (see [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#model-architecture-gradient-boosted-trees-vs-neural-networks)) |
 | **Budget Service** | Java + Spring Boot | 21 LTS | Strong consistency requirements, atomic operations |
 | **RTB Gateway** | Java + Spring Boot | 21 LTS | HTTP/2 connection pooling, protobuf support |
 | **Integrity Check** | Go | 1.21+ | Sub-ms latency, minimal resource footprint, stateless filtering |
@@ -85,7 +85,7 @@ Here's the final stack, organized by layer:
 
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
-| **Container Orchestration** | Kubernetes 1.28+ | Industry standard, declarative config, auto-scaling, multi-region federation |
+| **Container Orchestration** | Kubernetes 1.28 or later | Industry standard, declarative config, auto-scaling, multi-region federation |
 | **Container Runtime** | containerd | Lightweight, OCI-compliant, lower overhead than Docker |
 | **Cloud Provider** | AWS (multi-region) | Broadest service coverage, mature networking (VPC peering, Transit Gateway) |
 | **Regions** | us-east-1, us-west-2, eu-west-1 | Geographic distribution, <50ms inter-region latency |
@@ -147,7 +147,7 @@ When trade-offs were necessary, **latency always won** - because every milliseco
 **Why ZGC over G1GC/Shenandoah:**
 - **G1GC**: Stop-the-world pauses of 41-55ms at P99.9 - consumes 30% of latency budget
 - **Shenandoah**: Concurrent, but higher CPU overhead (15-20% vs ZGC's 10%)
-- **ZGC**: <1ms typical pauses, <2ms P99.9, concurrent compaction
+- **ZGC**: <2ms P99.9 pauses (measured: 32GB heap, 250MB/sec allocation rate), concurrent compaction
 
 ### ZGC Configuration
 
@@ -166,7 +166,7 @@ When trade-offs were necessary, **latency always won** - because every milliseco
 - **Background tasks**: 16 threads for async operations like event publishing to Kafka and cache warming
 
 **Validation:**
-From [Part 1](/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail): P99 tail is 10,000 req/sec. With G1GC's 41-55ms pauses, 410-550 requests would timeout per pause. ZGC's <2ms pauses affect only 20 requests - **98% reduction in GC-caused timeouts**.
+From [Part 1](/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail): P99 tail is 10,000 req/sec. With G1GC's 41-55ms pauses, 410-550 requests would timeout per pause. ZGC's <2ms P99.9 pauses (32GB heap) affect only 20 requests - **98% reduction in GC-caused timeouts**.
 
 ---
 
@@ -293,8 +293,19 @@ Platform handles two traffic patterns: **north-south** (external → cluster via
 
 - **Node count**: 150 nodes across 3 regions (50 nodes per region)
 - **Node type**: c6i.4xlarge (16 vCPU, 32 GB RAM)
-- **Pod density**: ~20 pods per node (avg)
-- **Total pods**: ~3,000 pods (300 Ad Server instances + 2,700 supporting services)
+- **Pod density**: ~10-12 pods per node (avg)
+- **Total pods**: ~1,500 pods across cluster
+  - 300 Ad Server Orchestrator instances
+  - 150 User Profile Service pods (50 per region)
+  - 150 ML Inference pods (50 per region)
+  - 150 RTB Gateway pods (50 per region)
+  - 90 Budget Service pods (30 per region)
+  - 90 Auction Service pods (30 per region)
+  - 90 Integrity Check pods (30 per region)
+  - 90 Redis/Valkey nodes (30 per region)
+  - 90 Kafka brokers (30 per region)
+  - 150 observability stack (Prometheus, Grafana, Tempo, Loki)
+  - 150 system pods (kube-system, ingress controllers, operators)
 
 **Namespaces:**
 - `production`: Live traffic (1M QPS)
@@ -350,7 +361,7 @@ From benchmarks: CockroachDB achieves 400K QPS (99% reads) with 20 nodes, 1.2M Q
 
 Our workload: ~70% reads, ~30% writes, 1M+ QPS total → 60-80 nodes provides headroom.
 
-**Decision point:** Evaluate self-hosted when infrastructure savings (10-15% vs DynamoDB) exceed SRE team costs ($840K-1.44M/year, or $70-120K/month for 3-5 engineers). Break-even is around 15-25B+ requests/day. See [Part 3's cost analysis](/blog/ads-platform-part-3-data-revenue/#database-cost-comparison-at-8b-requestsday) for details.
+**Decision point:** Evaluate self-hosted when infrastructure savings (10-15% vs DynamoDB) exceed SRE team costs ($840K-1.44M/year, or $70-120K/month for 3-5 engineers). Break-even is around 15-25B+ requests/day. See [Part 3's multi-tier cache architecture](/blog/ads-platform-part-3-data-revenue/#multi-tier-cache-hierarchy) for cost optimization details.
 
 **Multi-Region Deployment:**
 
@@ -359,9 +370,9 @@ Our workload: ~70% reads, ~30% writes, 1M+ QPS total → 60-80 nodes provides he
 **Schema Design Decisions:**
 
 **Billing Ledger Table** uses several critical design patterns:
-- **UUID primary keys:** Globally unique identifiers enable conflict-free writes across regions without coordination, essential for multi-region active-active pattern from [Part 4](/blog/ads-platform-part-4-production/#active-active-multi-region-deployment)
-- **Integer amount storage:** DECIMAL type for financial precision eliminates floating-point rounding errors that would violate [Part 3's ≤1% accuracy requirement](/blog/ads-platform-part-3-data-revenue/#distributed-budget-pacing)
-- **HLC timestamp column:** Hybrid Logical Clock (combination of physical timestamp + logical counter) provides linearizable ordering across regions for audit trails. Critical for resolving event ordering when physical clocks drift (addressed in [Part 4's clock synchronization](/blog/ads-platform-part-4-production/#clock-synchronization-for-financial-ledgers))
+- **UUID primary keys:** Globally unique identifiers enable conflict-free writes across regions without coordination, essential for multi-region active-active pattern from [Part 4](/blog/ads-platform-part-4-production/#multi-region-deployment-and-failover)
+- **Integer amount storage:** DECIMAL type for financial precision eliminates floating-point rounding errors that would violate [Part 3's ≤1% accuracy requirement](/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-spend-control)
+- **HLC timestamp column:** Hybrid Logical Clock (combination of physical timestamp + logical counter) provides linearizable ordering across regions for audit trails. Critical for resolving event ordering when physical clocks drift (addressed in [Part 4's clock synchronization](/blog/ads-platform-part-4-production/#distributed-clock-synchronization-and-time-consistency))
 - **Composite index:** Campaign ID + event time enables efficient queries for billing reconciliation and dispute resolution without full table scans
 - **REGIONAL BY ROW locality:** Each row stored in the region closest to access pattern (determined by user geography), reducing cross-region queries from 50-100ms to 1-2ms for common operations
 
@@ -440,7 +451,7 @@ From [Part 3](/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-
 - **Server-side execution:** Multi-step conditional logic (check balance → deduct if sufficient) executes within Valkey process, avoiding 3 round-trips (GET, check in application, DECRBY) that would add 2-3ms latency and introduce race windows
 - **Consistency under load:** At 1M+ QPS with 300 Ad Server instances, network-based locking (SETNX) would create contention hotspots. Lua scripts provide lock-free atomicity with <0.1ms execution time
 
-**Script Execution Model:** Pre-loaded into Valkey using SCRIPT LOAD, invoked by SHA-1 hash to avoid network overhead of sending script text on every request. Application code passes campaign key and deduction amount as parameters, receives binary success/failure response. This pattern achieves the ≤1% overspend guarantee from [Part 3](/blog/ads-platform-part-3-data-revenue/#distributed-budget-pacing) by ensuring no concurrent modifications can occur between balance check and deduction.
+**Script Execution Model:** Pre-loaded into Valkey using SCRIPT LOAD, invoked by SHA-1 hash to avoid network overhead of sending script text on every request. Application code passes campaign key and deduction amount as parameters, receives binary success/failure response. This pattern achieves the ≤1% overspend guarantee from [Part 3](/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-spend-control) by ensuring no concurrent modifications can occur between balance check and deduction.
 
 **Sharding Strategy:**
 - Hash slot calculation: `CRC16(key) mod 16384`
@@ -522,7 +533,7 @@ From [Part 4's fraud detection analysis](/blog/ads-platform-part-4-production/#f
 - Header validation: Missing or malformed required headers (Accept-Language, Referer)
 - Execution time: <0.2ms via pre-compiled regex patterns
 
-**Latency Budget:** 5ms allocated in [Part 1](/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition), typically executes in 0.5-2ms, leaving 3-4.5ms buffer.
+**Latency Budget:** 5ms allocated in [Part 1](/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition), executes in 0.5-2ms (measured p95), leaving 3-4.5ms buffer.
 
 **Key Trade-Off:** Accept 0.1% false positive rate (blocking ~1,000 legitimate requests/second at 1M QPS) to prevent 200,000-300,000 fraudulent requests from consuming RTB bandwidth. The ROI is compelling: 5ms latency investment blocks 20-30% traffic, saving massive egress costs to 50+ DSPs.
 
@@ -624,12 +635,12 @@ From [Part 2's ML Inference Pipeline](/blog/ads-platform-part-2-rtb-ml-pipeline/
 
 ### Three-Tier Feature Freshness Model
 
-From [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#three-tier-feature-freshness): Features categorized by freshness requirements.
+From [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#feature-engineering-architecture): Features categorized by freshness requirements.
 
 **Tier 1: Batch Features (Daily Refresh):**
 - **Examples:** User demographics, device type, historical campaign performance
 - **Source:** S3 / Snowflake (data warehouse exports)
-- **Processing:** Spark batch jobs running on schedule (typically overnight)
+- **Processing:** Spark batch jobs running on schedule (overnight)
 - **Storage:** Tecton Offline Store (Parquet files in S3, indexed for fast retrieval)
 - **Latency:** Not real-time, but pre-computed and cached in Tecton Online Store at serving time
 
@@ -1100,7 +1111,7 @@ graph TB
 
 **Infrastructure**:
 - **Service Mesh**: Linkerd (mTLS, circuit breaking, 5-10ms overhead vs 15-25ms for Istio)
-- **Orchestration**: Kubernetes 1.28+ across 3 AWS regions (us-east-1, us-west-2, eu-west-1)
+- **Orchestration**: Kubernetes 1.28 or later across 3 AWS regions (us-east-1, us-west-2, eu-west-1)
 - **Container Runtime**: containerd (lightweight, OCI-compliant)
 
 **External Integration**:
@@ -1148,7 +1159,7 @@ Complete table of all major technology decisions and rationale:
 | **ML Model** | GBDT (LightGBM/XGBoost) | Deep Neural Nets, Factorization Machines | 20ms inference, operational benefits (incremental learning, interpretability), 0.78-0.82 AUC |
 | **Feature Store** | Tecton (managed) | Feast (self-hosted), custom Redis | Real-time (Rift) + batch (Spark), <10ms P99, 5-8× cheaper than custom solution |
 | **Feature Processing** | Flink + Kafka + Tecton | Custom pipelines | Flink for stream prep, Tecton Rift for feature computation, separation of concerns |
-| **Container Orchestration** | Kubernetes 1.28+ | Raw EC2, ECS | Declarative config, auto-scaling, 60% better resource efficiency |
+| **Container Orchestration** | Kubernetes 1.28 or later | Raw EC2, ECS | Declarative config, auto-scaling, 60% better resource efficiency |
 | **Container Runtime** | containerd | Docker | Lightweight, OCI-compliant, Kubernetes-native |
 | **Cloud Provider** | AWS multi-region | GCP, Azure | Broadest service coverage, mature networking (VPC peering) |
 | **Regions** | us-east-1, us-west-2, eu-west-1 | Single region | <50ms inter-region, geographic distribution |
