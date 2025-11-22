@@ -2860,7 +2860,7 @@ A/B testing validates that new model versions improve business outcomes with sta
 **Example Result:**
 - Control eCPM: $5.00
 - Treatment eCPM: $5.08 (+1.6%)
-- P-value: 0.03 < 0.05 ✓
+- P-value: 0.03 < 0.05 (statistically significant)
 - Decision: **Deploy v1.3.0** (statistically and practically significant improvement)
 
 **Guardrail Metrics:**

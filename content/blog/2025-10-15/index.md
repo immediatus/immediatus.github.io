@@ -923,7 +923,7 @@ graph TB
 > **Critical Design Decision: Integrity Check Placement** - The 5ms Integrity Check Service runs BEFORE the RTB fan-out to 50+ DSPs. This prevents wasting bandwidth and DSP processing time on fraudulent traffic. Cost impact: blocking 20-30% bot traffic before RTB eliminates massive egress bandwidth costs (RTB requests to external DSPs incur data transfer charges). At scale (1M QPS, 50+ DSPs, 2-4KB payloads), early fraud filtering saves **thousands of times more** in annual bandwidth costs than the 5ms latency investment costs in lost impressions.
 
 **Component explanations** (referencing dual-source architecture above):
-- **User Profile (10ms)**: L1/L2/L3 cache hierarchy retrieves user demographics, interests, browsing history. Shared by both paths.
+- **User Profile (10ms)**: L1/L2/L3 cache hierarchy retrieves user demographics, interests, browsing history. Shared by both paths. Uses hedge requests (Defense Strategy 3 below) for P99.9 tail latency protection against network jitter.
 - **Integrity Check (5ms)**: Lightweight fraud detection using Bloom filter (known bad IPs), device fingerprint validation, and basic behavioral rules. Runs BEFORE expensive RTB calls to prevent wasting bandwidth on bot traffic. Multi-tier fraud detection is detailed in [Part 4](/blog/ads-platform-part-4-production/#fraud-detection-pattern-based-abuse-detection). Blocks 20-30% of fraudulent requests here.
 - **Feature Store (10ms)**: Retrieves pre-computed behavioral features (1-hour click rate, 7-day CTR, etc.) from distributed feature cache. Used only by ML path.
 - **Ad Selection (15ms)**: Queries **internal ad database** (transactional database) for top 100 candidates from direct deals, guaranteed campaigns, and house ads. Filters by user profile and features. Does NOT include RTB ads (those come from external DSPs).
@@ -1201,25 +1201,140 @@ While ZGC eliminates GC pauses and hard timeouts handle slow RTB bidders, neithe
 **The pattern:** Hedge requests, introduced by Dean and Barroso in ["The Tail at Scale" (2013)](https://cseweb.ucsd.edu/classes/sp18/cse124-a/post/schedule/p74-dean.pdf), send the same read request to **two replicas**, taking the first response and discarding the second. Google demonstrated this reduces 99.9th percentile latency from 1,800ms to 74ms with only 2% additional load.
 
 **Where to apply hedge requests:**
-- **User Profile Service (10ms budget)**: Read-heavy, idempotent, replicated across 3+ instances
+- **User Profile Service (10ms budget)**: Read-heavy, idempotent, replicated across 3+ instances — **Primary application: Ad Server → User Profile gRPC client configuration for P99.9 protection against network jitter**
 - **Feature Store (10ms budget)**: Pre-computed features, read-only, easily replicated
 
 **Where NOT to apply:**
-- **Budget Service**: Write operations - hedging would cause double-spend
-- **RTB Gateway**: External calls already expensive; doubling would double DSP costs
-- **ML Inference**: Compute-bound, replicas equally loaded; hedging wastes GPU cycles
+
+**CRITICAL: Never hedge write operations or non-idempotent methods**
+
+Hedging executes requests multiple times on the server. gRPC documentation explicitly states: "Hedged RPCs may execute more than once on a server so only idempotent methods should be hedged."
+
+- **Budget Service**: Write operations cause double-spend (campaign charged $10 instead of $5 when both primary and hedge complete)
+- **Any mutation operation**: INSERT, UPDATE, DELETE operations execute twice → data corruption
+- **RTB Gateway**: External calls already expensive; doubling would double DSP costs and violate rate limits
+- **ML Inference**: Compute-bound, replicas equally loaded; hedging wastes GPU cycles without benefit
+
+**Implementation safety:** Use explicit service allowlist in gRPC configuration to prevent accidental hedging. Only enable for services explicitly designed as read-only and idempotent (UserProfileService, FeatureStoreService).
 
 **Trade-off analysis:**
 - **Cost:** 2× read load on hedged services (but reads are cheap - cache hits in <1ms)
-- **Benefit:** P99 latency reduced by ~30-40% on hedged paths (taking min of two samples from the latency distribution)
+- **Benefit:** P99.9 latency protection against network jitter - reduces tail latency by 30-40% on hedged paths, validated by production measurements:
+  - [Google tied requests](https://cacm.acm.org/research/the-tail-at-scale/): 40% reduction at P99.9 in real production system
+  - [Global Payments with AWS DynamoDB](https://aws.amazon.com/blogs/database/how-global-payments-inc-improved-their-tail-latency-using-request-hedging-with-amazon-dynamodb/): 30% reduction at P99
+  - [Grafana Tempo distributed tracing](https://grafana.com/blog/2021/11/23/how-we-reduced-tail-latency-in-grafana-tempo-by-nearly-50/): 45% reduction in tail latency
 
 **Implementation approach:**
 
 The pattern uses asynchronous request handling with timeout-based triggers. The primary request starts immediately to the first replica. If it doesn't complete within the P95 latency threshold, a secondary request fires to a different replica. Whichever response arrives first wins; the slower response is discarded.
 
+**Client-side configuration (Ad Server → User Profile gRPC):**
+- Configure gRPC client with hedge policy enabled for read-only operations
+- Set hedge delay to P95 latency threshold (User Profile: ~3ms)
+- Enable automatic replica selection from service discovery
+- Client-side only implementation - requires only client configuration, no server architecture changes (though servers must handle cancellation cooperatively for full benefit)
+
 **When to trigger hedge:** Per the original paper, defer hedge requests until the primary has been outstanding longer than the **95th percentile latency** for that service. For User Profile (P95 ~3ms), trigger hedge at 3ms. This limits additional load to ~5% while substantially shortening the tail - only requests in the slow tail trigger the hedge.
 
 **Monitoring:** Track `hedge_request_rate` and `hedge_win_rate`. If hedge requests win >20% of the time, investigate why primary is consistently slow.
+
+**Advanced Optimizations and Safety Mechanisms:**
+
+The baseline hedge implementation adds ~5% load (requests in the slow tail). Two production-validated optimizations improve effectiveness while one critical safety mechanism prevents cascading failures:
+
+**1. Load-Aware Hedge Routing via Service Mesh**
+
+Leverage service mesh built-in load balancing rather than random replica selection:
+- **Linkerd approach:** EWMA (Exponentially Weighted Moving Average) algorithm automatically tracks per-replica latency and routes hedge requests to faster instances
+- **Istio approach:** Configure least-request load balancing policy, which routes to replicas with fewest active requests
+- **Why not custom logic:** Building custom "choose lowest queue depth" algorithms creates oscillation risk - the least-loaded replica receives all hedges, becomes most-loaded, causing hedges to shift to next replica in unstable pattern
+- **Benefit:** Service mesh naturally avoids slow replicas, increasing hedge win rate from 5% to 8-12% without custom code
+- **Production validation:** Linkerd measured as fastest service mesh for low-latency workloads (RPS < 500), with sub-millisecond median latencies
+
+**2. Request Cancellation on First Response**
+
+Cancel the slower request immediately when first response arrives:
+- **Mechanism:** gRPC supports request cancellation - client sends `RST_STREAM` frame to cancel in-flight request
+- **Server handling requirement:** Server MUST detect cancellation and stop processing. In gRPC/Java, service implementation should periodically check `ServerCallStreamObserver.isCancelled()` and abort work when true
+- **Critical caveat:** Cancellation is cooperative - if server ignores cancellation signal, it continues processing to completion even though client stopped listening. This wastes server resources (CPU, memory, DB connections)
+- **Benefit (if properly implemented):** Reduces actual compute cost from 2× to ~1.05-1.1× (only requests in slow tail complete duplicate work)
+- **Implementation:** Client-side cancellation via gRPC context is automatic. Server-side requires explicit cancellation handling in service code
+
+**3. Circuit Breaker for Hedge Safety (Critical)**
+
+Prevent thundering herd during system degradation:
+
+**The problem adaptive thresholds tried to solve - and why they fail:**
+
+Initial intuition suggests: "During degradation, hedge more aggressively to maintain SLOs." This leads to adaptive thresholds that lower the hedge trigger (P95 → P90) when P50 latency increases, raising hedge rate from 5% to 10%. **This is backwards.** When User Profile Service is degraded (e.g., Valkey partial outage slows L2 cache), ALL requests exceed the P95 threshold → hedge rate spikes to 100% → effective load doubles (2× every request) → replicas saturate → P50 increases further → more hedging → cascading failure.
+
+No production systems use adaptive hedge thresholds. Instead, they use circuit breakers to disable hedging during overload.
+
+**The Netflix/Hystrix pattern:**
+
+Circuit breaker monitors hedge rate and **throttles immediately** rather than waiting for system to break:
+- **Monitor:** Track hedge request rate over rolling 60-second window
+- **Threshold:** If hedge rate exceeds 15-20% for sustained period (60 seconds)
+- **Action:** Disable hedging entirely for 5 minutes (circuit open)
+- **Resume:** Re-enable hedging and monitor (circuit half-open → closed if healthy)
+- **Additional safety:** Disable hedging during multi-region failover (when more than 1 region down)
+
+**Why 15-20% threshold:** Baseline hedge rate should be ~5% (only slow tail requests). If rate climbs to 15-20%, it indicates widespread degradation where hedging adds load without benefit - primary and hedge requests are both slow.
+
+**Production precedent:** Netflix Hystrix emphasizes that "concurrency limits and timeouts are the proactive portion that prevent anything from going beyond limits and throttle immediately, rather than waiting for statistics or for the system to break." The circuit breaker is "icing on the cake" that provides the safety valve.
+
+**Combined impact:**
+- Service mesh load-aware routing: +50% hedge win rate (5% → 8%) without custom code
+- Request cancellation: -50% wasted compute (2× → 1.05×) when properly implemented
+- Circuit breaker: Prevents cascading failures during degradation (essential safety mechanism)
+- **Net result:** Maintain ~5% average hedge rate with protection against overload. Total capacity increase: +4-6 pods per region to handle hedge overhead.
+
+**Production implementation guidance:**
+
+Start with baseline (P95 threshold, no optimizations):
+1. Enable hedging for User Profile Service only via gRPC service configuration
+2. Configure service mesh for hedging-eligible methods (read-only, idempotent operations)
+3. Implement circuit breaker monitoring (track hedge rate, disable if >15% for 60s)
+4. Require server-side cancellation handling (check cancellation token, abort work)
+
+gRPC native hedging configuration specifies maximum attempts (primary plus one hedge), hedging delay (P95 latency threshold), and which error codes should trigger hedging versus failing fast. The client automatically cancels slower requests when first response arrives, but servers must cooperatively check cancellation status and stop processing.
+
+**Trade-offs to accept:**
+
+This approach adds three types of complexity worth the 30-40% P99.9 latency benefit:
+- Monitoring complexity (requires hedge rate metric and circuit breaker logic)
+- Idempotency requirement (services must be safe to execute multiple times)
+- Cache coherence challenge (discussed below)
+
+Only implement after validating baseline hedge requests prove effective in production.
+
+**Cache Coherence Trade-off:**
+
+Hedging requests to different replicas with L1 in-process caches introduces data consistency challenges:
+
+**The scenario:**
+- User Profile pods maintain L1 Caffeine caches with 60-second TTL
+- User updates profile at T=0, invalidating L2 Valkey cache immediately
+- Replica A: L1 cache entry still valid (won't expire until T=60)
+- Replica B: L1 cache already expired, fetches fresh data from L2
+- Hedge request sent to both replicas → **whichever wins determines user experience**
+
+**Impact:**
+- User may see inconsistent profile data across consecutive requests
+- Ad targeting uses stale interests (up to 60 seconds old) → reduced relevance
+- GDPR compliance concern: Opt-out signal may not reflect for up to 60 seconds
+
+**Why no simple fix exists:**
+
+Two standard approaches, both with drawbacks:
+1. **Reduce L1 TTL** (60s → 10s): Increases L2 Valkey load 6× (60% of requests now miss L1 instead of hitting it)
+2. **Active invalidation** (publish cache eviction events): Adds latency (15ms Kafka publish + propagation), adds complexity (event streaming infrastructure), still has eventual consistency window (100ms instead of 60s)
+
+**Recommended approach:**
+
+Accept 60-second max staleness as trade-off for 30-40% P99.9 latency improvement. For critical updates requiring immediate consistency (GDPR opt-out, account suspension), implement active invalidation via L2 cache eviction events - trigger explicit Valkey DELETE when these updates occur, forcing all replicas to fetch fresh data from L3.
+
+**This is a fundamental distributed caching trade-off, not specific to hedging** - any multi-tier cache with in-process L1 faces this challenge. Hedging simply makes the inconsistency more visible by potentially serving requests from replicas in different cache states within single user session.
 
 ---
 
@@ -1671,21 +1786,21 @@ graph LR
     subgraph PUBLISHER ["Publisher API<br/>Low Latency Priority (0.5ms total)"]
         direction LR
         P1[Client Request<br/>X-API-Key header] --> P2[Gateway:<br/>Cache lookup<br/>for API key]
-        P2 --> P3[Validation<br/>✓ Key exists<br/>✓ Not revoked<br/>0.5ms]
+        P2 --> P3[Validation<br/>Key exists<br/>Not revoked<br/>0.5ms]
         P3 --> P4[Forward to<br/>Ad Server]
     end
 
     subgraph ADVERTISER ["Advertiser API<br/>Security Priority (2-3ms total)"]
         direction LR
         A1[Client Request<br/>OAuth Bearer token] --> A2[Gateway:<br/>JWT signature<br/>verification]
-        A2 --> A3[Validation<br/>✓ RSA-2048 signature<br/>✓ Token not expired<br/>✓ Scopes match]
+        A2 --> A3[Validation<br/>RSA-2048 signature<br/>Token not expired<br/>Scopes match]
         A3 --> A4[2ms<br/>validation] --> A5[Forward to<br/>Campaign Service]
     end
 
     subgraph EVENTS ["Events API<br/>Volume Priority (0.3ms total)"]
         direction LR
         E1[Client Request<br/>Pre-signed URL<br/>with HMAC] --> E2[Gateway:<br/>HMAC-SHA256<br/>verification]
-        E2 --> E3[Validation<br/>✓ Signature valid<br/>✓ Not expired<br/>0.3ms]
+        E2 --> E3[Validation<br/>Signature valid<br/>Not expired<br/>0.3ms]
         E3 --> E4[Forward to<br/>Kafka async]
     end
 

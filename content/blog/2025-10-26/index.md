@@ -1,7 +1,7 @@
 +++
 authors = [ "Yuriy Polyulya" ]
 title = "Caching, Auctions & Budget Control: Revenue Optimization at Scale"
-description = "Building the data layer that enables 1M+ QPS with sub-10ms reads through L1/L2 cache hierarchy achieving 87.5% hit rate. Deep dive into eCPM-based auction mechanisms for fair price comparison across CPM/CPC/CPA models, and distributed budget pacing using Redis atomic counters with proven ≤1% overspend guarantee."
+description = "Building the data layer that enables 1M+ QPS with sub-10ms reads through L1/L2 cache hierarchy achieving 85% hit rate. Deep dive into eCPM-based auction mechanisms for fair price comparison across CPM/CPC/CPA models, and distributed budget pacing using Redis atomic counters with proven ≤1% overspend guarantee."
 date = 2025-10-26
 slug = "ads-platform-part-3-data-revenue"
 draft = false
@@ -27,7 +27,7 @@ Real-time ad platforms operate under extreme constraints: serve 1M+ queries per 
 1. **Cache performance**: Can we serve 1M QPS without overwhelming the database?
    - Problem: Database reads take 40-60ms. At 1M QPS, that's 40-60K concurrent DB connections.
    - Constraint: Only 10ms latency budget for user profile and feature lookups
-   - Solution needed: Multi-tier caching with 87.5%+ cache hit rate (only 12.5% query database)
+   - Solution needed: Multi-tier caching with 85%+ cache hit rate (only 15% query database)
 
 2. **Auction fairness**: How do we compare CPM bid with CPC bid - which is worth more?
    - Problem: Different pricing models (CPM/CPC/CPA) aren't directly comparable
@@ -56,7 +56,7 @@ Miss any of these and revenue suffers:
 
 This post builds the three data systems that enable revenue optimization:
 
-- **Distributed Caching Architecture** - L1/L2 cache tiers with intelligent invalidation strategies. Achieving 87.5% cache hit rate with 3.88ms average latency (only 12.5% requests query database). Technology choices: Caffeine (L1 in-process), Valkey (L2 distributed), CockroachDB (persistent database). Trade-offs between consistency, latency, and cost.
+- **Distributed Caching Architecture** - L1/L2 cache tiers with intelligent invalidation strategies. Achieving 85% cache hit rate with 4.25ms average latency (only 15% requests query database). Technology choices: Caffeine (L1 in-process), Valkey (L2 distributed), CockroachDB (persistent database). Trade-offs between consistency, latency, and cost.
 
 - **Auction Mechanism Design** - eCPM normalization for fair comparison across CPM/CPC/CPA pricing models. First-price vs second-price auction analysis. Why first-price auctions won in modern programmatic advertising (2017-2019 industry shift). How predicted CTR converts CPC bids into comparable eCPM for ranking.
 
@@ -80,7 +80,7 @@ Let's explore how each system is designed and how they work together.
 
 ### Multi-Tier Cache Hierarchy
 
-To achieve high cache hit rates with sub-10ms latency, implement two cache tiers plus database (target: **87.5% cache hit rate** avoiding database queries, with 20% L2 coverage):
+To achieve high cache hit rates with sub-10ms latency, implement two cache tiers plus database (target: **85% cache hit rate** avoiding database queries, with 25% L2 coverage):
 
 **Technology Selection: Cache Tier Choices**
 
@@ -716,20 +716,20 @@ Let \\(H_i\\) be the **conditional** hit rate of cache tier \\(i\\):
 
 $$H_{cache} = H_1 + (1 - H_1) \times H_2$$
 
-**Target configuration (20% L2 coverage as shown in optimization table below):**
+**Target configuration (25% L2 coverage as shown in optimization table below):**
 - \\(H_1 = 0.60\\) (60% served from L1 in-process cache)
-- \\(H_2 = 0.6875\\) (68.75% **conditional** hit rate - hits L2 given L1 miss)
-  - L2 serves: \\(0.40 \times 0.6875 = 27.5\%\\) of total requests
-- **Combined cache hit rate = 87.5%** (60% + 27.5%)
-- **Database queries = 12.5%** (cache miss → query CockroachDB)
+- \\(H_2 = 0.625\\) (62.5% **conditional** hit rate - hits L2 given L1 miss)
+  - L2 serves: \\(0.40 \times 0.625 = 25\%\\) of total requests
+- **Combined cache hit rate = 85%** (60% + 25%)
+- **Database queries = 15%** (cache miss → query CockroachDB)
 
 **Data Availability:**
 
-Of the 12.5% requests that miss both caches and query the database:
-- **99%+ have data** (11.875% of total) - established users with profiles
-- **~1% genuinely missing** (0.125% of total) - new users, anonymous users, deleted profiles
+Of the 15% requests that miss both caches and query the database:
+- **99%+ have data** (14.85% of total) - established users with profiles
+- **~1% genuinely missing** (0.15% of total) - new users, anonymous users, deleted profiles
 
-**Effective data found rate: 99.875%** (87.5% from cache + 11.875% from database)
+**Effective data found rate: 99.85%** (85% from cache + 14.85% from database)
 
 **Average Latency:**
 
@@ -737,9 +737,9 @@ $$\mathbb{E}[L] = H_1 L_1 + (1-H_1)H_2 L_2 + (1-H_1)(1-H_2) L_{db}$$
 
 With latencies \\(L_1 = 0.001ms\\), \\(L_2 = 5ms\\), \\(L_{db} = 20ms\\):
 
-$$\mathbb{E}[L] = 0.60 \times 0.001 + 0.40 \times 0.6875 \times 5 + 0.40 \times 0.3125 \times 20 = 3.88ms$$
+$$\mathbb{E}[L] = 0.60 \times 0.001 + 0.40 \times 0.625 \times 5 + 0.40 \times 0.375 \times 20 = 4.25ms$$
 
-**Key Insight:** 87.5% cache hit rate means only 12.5% of requests query the database (20ms penalty). This is the critical metric - not whether data exists (which is ~100% for established users), but whether we can serve it from cache.
+**Key Insight:** 85% cache hit rate means only 15% of requests query the database (20ms penalty). This is the critical metric - not whether data exists (which is ~100% for established users), but whether we can serve it from cache.
 
 ### Cache Cost Optimization: The Economic Tradeoff
 
@@ -2538,8 +2538,8 @@ This post explored the three critical data systems that enable real-time ad plat
 | Layer | Technology | Latency | Use Case | Cache Hit Rate |
 |-------|------------|---------|----------|----------------|
 | **L1 Cache** | Caffeine (in-process) | 0.001ms | Hot user profiles | 60% |
-| **L2 Cache** | Valkey (distributed) | 5ms | Warm data, feature vectors | 27.5% (conditional) |
-| **Database** | CockroachDB | 20ms | Source of truth (cache miss) | 12.5% of requests |
+| **L2 Cache** | Valkey (distributed) | 5ms | Warm data, feature vectors | 25% |
+| **Database** | CockroachDB | 20ms | Source of truth (cache miss) | 15% of requests |
 
 **Key decisions:**
 - **Cache-aside pattern**: Application controls caching (vs cache-through)
@@ -2548,9 +2548,9 @@ This post explored the three critical data systems that enable real-time ad plat
 - **Read-heavy optimization**: 95% read, 5% write workload
 
 **Performance impact:**
-- **87.5% cache hit rate** (L1: 60% + L2: 27.5%)
-- **12.5% database queries** (cache miss)
-- Avg latency: \\(0.60 × 0.001ms + 0.275 × 5ms + 0.125 × 20ms = 3.88ms\\)
+- **85% cache hit rate** (L1: 60% + L2: 25%)
+- **15% database queries** (cache miss)
+- Avg latency: \\(0.60 × 0.001ms + 0.25 × 5ms + 0.15 × 20ms = 4.25ms\\)
 - vs database-only: ~40-60ms average
 - **10-15× latency reduction** enables sub-10ms budget for User Profile and Feature Store
 
@@ -2615,9 +2615,9 @@ $$
 **Integration: How These Three Systems Work Together**
 
 1. **Request arrives** (t=0ms)
-2. **L1 cache lookup** for user profile (0.5ms) → 70% hit rate
+2. **L1 cache lookup** for user profile (0.5ms) → 60% hit rate
 3. **L2 Redis lookup** if L1 miss (2ms) → 25% of total requests
-4. **L3 database** if both miss (30ms) → 5% of total requests
+4. **L3 database** if both miss (30ms) → 15% of total requests
 5. **ML inference** using cached features (40ms for CTR prediction)
 6. **RTB auction** completes (100ms for external DSP bids)
 7. **Unified auction** compares eCPM across sources (3ms)
@@ -2647,13 +2647,13 @@ $$
 
 | System | Without Optimization | With Optimization | Impact |
 |--------|---------------------|-------------------|---------|
-| **Caching** | 40-60ms DB reads | 3.88ms avg (87.5% cache hit) | 10-15× faster reads |
+| **Caching** | 40-60ms DB reads | 4.25ms avg (85% cache hit) | 10-15× faster reads |
 | **Auction** | Incomparable bids | Fair eCPM comparison | 15-25% revenue lift |
 | **Budget** | Centralized DB check (50-100ms) | Redis atomic counters (3ms) | 17-30× faster spends |
 
 **Key Architectural Insights:**
 
-1. **Multi-tier caching isn't just optimization - it's mandatory**: With 87.5% cache hit rate, only 12.5% of requests incur database reads (20ms). Without caching, all 1M QPS would query the database (40-60ms each), consuming the entire 150ms latency budget. The platform simply cannot function without aggressive caching.
+1. **Multi-tier caching isn't just optimization - it's mandatory**: With 85% cache hit rate, only 15% of requests incur database reads (20ms). Without caching, all 1M QPS would query the database (40-60ms each), consuming the entire 150ms latency budget. The platform simply cannot function without aggressive caching.
 
 2. **Atomic operations require careful technology selection**: Redis was chosen over Memcached (30% more expensive) specifically for DECRBY atomic counters. Without atomic operations, budget pacing has race conditions leading to unbounded overspend.
 

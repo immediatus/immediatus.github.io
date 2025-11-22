@@ -244,9 +244,9 @@ From [Part 1's latency budget](/blog/ads-platform-part-1-foundation-architecture
 | Gateway | Latency Overhead | Memory per Pod | Operational Complexity | Kubernetes-Native |
 |---------|------------------|----------------|------------------------|-------------------|
 | **Envoy Gateway** | **2-4ms** | 50-80MB | Low (Envoy config only) | Gateway API native |
-| **Kong** | 10-15ms | 150-200MB | Medium (plugin ecosystem learning curve) | ⚠️ CRD-based |
+| **Kong** | 10-15ms | 150-200MB | Medium (plugin ecosystem learning curve) | CRD-based |
 | **Traefik** | 5-8ms | 100-120MB | Medium (label-based config, less flexible) | Gateway API support |
-| **NGINX Ingress** | 3-6ms | 80-100MB | Medium (annotation-heavy, error-prone) | ⚠️ Annotation-based |
+| **NGINX Ingress** | 3-6ms | 80-100MB | Medium (annotation-heavy, error-prone) | Annotation-based |
 
 **Kong rejected:** 10-15ms latency (7-10% of budget), 150-200MB memory, different proxy tech from service mesh (Kong Lua + Istio Envoy = 20-30ms combined overhead). **NGINX rejected:** annotation-based config error-prone (`nginx.ingress.kubernetes.io/rate-limit` typo fails silently), no native gRPC support, external rate-limit sidecar complexity. **Traefik rejected:** label-based config insufficient for RTB's sophisticated timeout/header transformation requirements.
 
@@ -1222,13 +1222,13 @@ Critical path is RTB's 100ms (parallel, not additive).
 
 **Region: us-east-1** (400K QPS capacity)
 
-**Kubernetes Cluster**: 60 nodes
+**Kubernetes Cluster**: 75 nodes
 - Ad Server: 120 pods (3.3K QPS per pod)
-- User Profile: 40 pods
+- User Profile: 80 pods (5K QPS per pod with 60% L1/25% L2/15% L3 hit rates)
 - ML Inference: 30 pods (GPU-backed)
 - RTB Gateway: 50 pods
 - Budget Service: 20 pods
-- Other services: 80 pods
+- Other services: 100 pods
 
 **Data Layer**:
 - CockroachDB: 20 nodes (raft replicas)
@@ -1251,6 +1251,61 @@ Critical path is RTB's 100ms (parallel, not additive).
 - **Reserved Instances**: 70% of base capacity (200 pods)
 - **Spot Instances**: 30% of burst capacity (100 pods)
 - **Auto-scaling**: Handles traffic spikes 1.5× capacity
+
+**Hedge Request Cost Impact:**
+
+From [Part 1's Defense Strategy 3](/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail), hedge requests are configured for User Profile Service to protect against network jitter.
+
+**Additional infrastructure cost:**
+- **Baseline User Profile capacity**: 240 pods across 3 regions (80 per region)
+- **Hedge request load**: ~5% additional read traffic (hedges trigger only when primary exceeds P95 latency)
+- **Required capacity increase**: +4 pods per region (+12 total) to maintain headroom
+- **Cost impact**: +5% User Profile Service infrastructure
+
+**Total deployment cost impact:**
+- User Profile represents ~19% of total compute (240 of ~1,260 total pods across 3 regions)
+- 5% increase on 19% = **~0.95% total infrastructure cost increase**
+- **Trade-off justification**: This marginal cost (~1% infrastructure budget) buys 30-40% P99.9 latency reduction on critical User Profile path, preventing revenue loss from SLO violations
+
+**Why this is cost-effective:**
+- User Profile reads are cache-heavy (60% L1 hit, 25% L2 hit) - additional load costs < 1ms per hedged request
+- Client-side only implementation - requires only gRPC client configuration, no server architecture changes
+- Preventing P99.9 tail latency violations (which could push total latency >200ms mobile timeout) protects revenue on high-value traffic
+- Production-validated: 30-40% P99.9 improvement at Google, Global Payments, and Grafana
+
+**Implementation requirements:**
+
+gRPC native hedging configuration (from [Part 1](/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail)):
+- Service configuration specifies maximum attempts (2 = primary + one hedge)
+- Hedging delay set to P95 latency threshold (3ms for User Profile Service)
+- Service allowlist restricts hedging to read-only, idempotent methods only (UserProfileService, FeatureStoreService)
+
+Service mesh integration (Linkerd/Istio):
+- Leverage built-in latency-aware load balancing (EWMA or least-request algorithms)
+- Service mesh automatically routes hedge requests to faster replicas
+- No custom load balancing logic required
+
+**Monitoring metrics required:**
+- `hedge_request_rate`: Percentage of requests that triggered hedge (target: 5%, alert if >15%)
+- `hedge_win_rate`: Percentage where hedge response arrived first (target: 5-10%, investigate if >20%)
+- `user_profile_p99_latency`: Track primary request latency to detect degradation
+- `circuit_breaker_state`: Monitor circuit breaker status (closed/open/half-open)
+
+**Circuit breaker configuration:**
+- Monitor hedge rate over rolling 60-second window
+- If hedge rate exceeds 15-20% for sustained period, disable hedging for 5 minutes
+- Prevents cascading failures during system degradation (when all requests exceed P95 threshold)
+- Additional safety: disable hedging during multi-region failover
+
+**Cache coherence trade-off:**
+- Accept up to 60-second staleness from L1 in-process cache inconsistency between replicas
+- For critical updates (GDPR opt-out, account suspension), implement active invalidation via L2 cache eviction events
+- This is fundamental distributed caching challenge, not specific to hedging
+
+**Server-side requirements:**
+- Implement cooperative cancellation handling (check cancellation token and abort work)
+- Ensures cancelled requests release resources (cache locks, DB connections, CPU)
+- Without proper cancellation handling, compute cost remains 2× instead of achieving 1.05× target
 
 ---
 
@@ -1285,6 +1340,7 @@ Let's verify the final architecture meets the requirements established in Part 1
 - ZGC: Eliminated 41-55ms GC pauses (now <2ms)
 - gRPC: Saved 2-5ms per service call vs REST/JSON
 - Linkerd: 5-10ms overhead vs Istio's 15-25ms
+- Hedge requests: 30-40% P99.9 tail latency reduction on User Profile path ([Google 40%](https://cacm.acm.org/research/the-tail-at-scale/), [Global Payments 30%](https://aws.amazon.com/blogs/database/how-global-payments-inc-improved-their-tail-latency-using-request-hedging-with-amazon-dynamodb/)), protecting against network jitter (~1% infrastructure cost with circuit breaker safety)
 
 ### Requirement 2: Scale (1M+ QPS)
 
