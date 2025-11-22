@@ -1222,7 +1222,7 @@ Hedging executes requests multiple times on the server. gRPC documentation expli
 - **Benefit:** P99.9 latency protection against network jitter - reduces tail latency by 30-40% on hedged paths, validated by production measurements:
   - [Google tied requests](https://cacm.acm.org/research/the-tail-at-scale/): 40% reduction at P99.9 in real production system
   - [Global Payments with AWS DynamoDB](https://aws.amazon.com/blogs/database/how-global-payments-inc-improved-their-tail-latency-using-request-hedging-with-amazon-dynamodb/): 30% reduction at P99
-  - [Grafana Tempo distributed tracing](https://grafana.com/blog/2021/11/23/how-we-reduced-tail-latency-in-grafana-tempo-by-nearly-50/): 45% reduction in tail latency
+  - [Grafana Tempo distributed tracing](https://grafana.com/blog/2021/08/27/grafana-tempo-1.1-released-new-hedged-requests-reduce-latency-by-45/): 45% reduction in tail latency
 
 **Implementation approach:**
 
