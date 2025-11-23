@@ -808,6 +808,27 @@ $$T_{total} = T_{network} + T_{gateway} + T_{services} + T_{serialization}$$
 
 *Specific technology selection (gateway products, configuration, and deployment patterns) is covered in [Part 5](/blog/ads-platform-part-5-implementation/).*
 
+**Service-Level SLA Summary**
+
+Consolidated latency targets driving technology selection, deployment architecture, and monitoring:
+
+| Service | Target Latency | Percentile | Critical Path | Notes |
+|---------|---------------|------------|---------------|-------|
+| **Overall Orchestrator** | **150ms** | **P99** | **Yes** | **End-to-end SLO** (143ms avg, 145ms p99 actual) |
+| Network Overhead | 10ms | Average | Yes | Client→Edge (5ms) + Edge→Service (5ms) |
+| API Gateway | 5ms | Average | Yes | Auth (2ms) + Rate Limit (1ms) + Routing (2ms) |
+| User Profile Service | 10ms | Target | Yes | Identity + contextual data retrieval |
+| Integrity Check | <5ms | Target | Yes | Fraud prevention (first defense layer) |
+| Ad Selection Service | 15ms | Target | Parallel | Candidate retrieval from storage |
+| Feature Store | 10ms | P99 | Parallel | ML feature lookup (degrades at >15ms) |
+| ML Inference Service | 40ms | Target | Parallel | CTR prediction for auction ranking (65ms total ML path) |
+| RTB Auction Service | 50-70ms | Operational | Yes | External DSP coordination (100ms p95, 120ms p99 hard) |
+| Auction Logic | 3ms | Average | Yes | eCPM ranking + winner selection |
+| Budget Check | 3ms (5ms p99) | Average | Yes | Atomic spend control with strong consistency |
+| Response Serialization | 5ms | Average | Yes | Ad response formatting |
+
+**Critical path:** Network (10ms) → Gateway (5ms) → User Profile (10ms) + Integrity (5ms) → **RTB dominates at 100ms** (ML completes at 65ms in parallel) → Auction (3ms) + Budget (3ms) + Serialization (5ms) = **143ms average, 145ms p99**
+
 ### Rate Limiting: Volume-Based Traffic Control
 
 Rate limiting protects infrastructure from overload while ensuring fair resource allocation across clients. This section covers the architectural pattern for distributed rate limiting at 1M+ QPS scale.

@@ -750,11 +750,104 @@ With fraud detection protecting against malicious traffic and critical testing v
 4. **Trade-offs**:
    - More replicas = better fault tolerance but higher cost and write latency
    - Fewer replicas = lower cost but reduced resilience
-   - Write latency increases with geographic spread (cross-region = 50-150ms vs same-region = 5-20ms)
+   - Write latency increases with geographic spread (cross-region = 60-225ms vs same-region = 5-20ms)
 
-**Write path:** Writes acknowledged when quorum of replicas confirm (Raft consensus). Cross-region write latency ranges 50-150ms (dominated by network RTT).
+**Write path:** Writes acknowledged when quorum of replicas confirm (Raft consensus). Cross-region write latency ranges 60-225ms (dominated by network RTT).
 
 **Read path:** Reads served by nearest replica with bounded staleness for eventually-consistent reads (stale reads acceptable for most use cases). Strong-consistency reads must hit the leaseholder (higher latency, but guaranteed fresh data).
+
+**Multi-Region Coordination Model**
+
+Consistency modes, read routing, and latency impacts per data type:
+
+<style>
+#tbl_multiregion_coord + table th:first-of-type  { width: 18%; }
+#tbl_multiregion_coord + table th:nth-of-type(2) { width: 16%; }
+#tbl_multiregion_coord + table th:nth-of-type(3) { width: 20%; }
+#tbl_multiregion_coord + table th:nth-of-type(4) { width: 23%; }
+#tbl_multiregion_coord + table th:nth-of-type(5) { width: 23%; }
+</style>
+<div id="tbl_multiregion_coord"></div>
+
+| Data Type | Storage | Consistency Mode | Read Routing | Write Latency Impact |
+|-----------|---------|------------------|--------------|---------------------|
+| **Billing Ledger** | CockroachDB | Strong (linearizable) | Leaseholder only (cross-region) | 60-225ms (quorum across regions) |
+| **Campaign Configs** | CockroachDB | Strong (linearizable) | Leaseholder only (cross-region) | 60-225ms (quorum across regions) |
+| **User Profiles** | CockroachDB | Eventual (bounded staleness) | Nearest replica (local region) | 60-225ms (async after quorum) |
+| **Budget Counters** | Redis (regional) | Local strong (per-region) | Local region only (no replication) | <1ms (in-region atomic ops) |
+| **User Sessions** | Redis (regional) | Local strong (per-region) | Local region only (no replication) | <1ms (in-region atomic ops) |
+| **ML Features** | Redis (regional) | Eventual (cache) | Local region only (rebuilt from Kafka) | <1ms (local write, eventual consistency) |
+
+**Key insights:** Financial data accepts 60-225ms writes for strong consistency. User Profiles use local replicas (5-10ms reads, seconds staleness). Budget Counters achieve <1ms via regional isolation, accepting bounded loss during failures.
+
+**Cross-Region Write Latency Matrix**
+
+Measured round-trip time (RTT) between region pairs, showing physical network constraints:
+
+<style>
+#tbl_region_latency + table {
+    border-collapse: collapse;
+    margin: 1.5em 0;
+}
+#tbl_region_latency + table th:first-of-type  { width: 25%; text-align: left; }
+#tbl_region_latency + table th:nth-of-type(2) { width: 18%; }
+#tbl_region_latency + table th:nth-of-type(3) { width: 18%; }
+#tbl_region_latency + table th:nth-of-type(4) { width: 18%; }
+#tbl_region_latency + table th:nth-of-type(5) { width: 21%; }
+#tbl_region_latency + table th {
+    text-align: center;
+    font-weight: bold;
+    background-color: #f5f5f5;
+    padding: 8px;
+}
+#tbl_region_latency + table td:first-of-type {
+    font-weight: bold;
+    background-color: #f5f5f5;
+    text-align: left;
+}
+#tbl_region_latency + table td {
+    text-align: center;
+    padding: 8px;
+}
+#tbl_region_latency + table tr:nth-child(1) td:nth-child(2),
+#tbl_region_latency + table tr:nth-child(2) td:nth-child(3),
+#tbl_region_latency + table tr:nth-child(3) td:nth-child(4),
+#tbl_region_latency + table tr:nth-child(4) td:nth-child(5) {
+    background-color: #e8f4f8;
+    font-weight: bold;
+}
+</style>
+<div id="tbl_region_latency"></div>
+
+| From ↓ / To → | US-East-1 | US-West-2 | EU-West-1 | AP-Southeast-1 |
+|---------------|-----------|-----------|-----------|----------------|
+| **US-East-1** | **5-10ms** | 60-70ms | 65-75ms | 210-225ms |
+| **US-West-2** | 60-70ms | **5-10ms** | 115-125ms | 160-170ms |
+| **EU-West-1** | 65-75ms | 115-125ms | **5-10ms** | 170-180ms |
+| **AP-Southeast-1** | 210-225ms | 160-170ms | 170-180ms | **5-10ms** |
+
+Write latency = slowest region in quorum set. Strong consistency (Billing, Campaigns): 60-225ms quorum writes. Eventual consistency (Profiles): 5-10ms local write, async propagation. Redis: <1ms local-only, no cross-region sync.
+
+**Read Routing Strategy**
+
+<style>
+#tbl_read_routing + table th:first-of-type  { width: 20%; }
+#tbl_read_routing + table th:nth-of-type(2) { width: 20%; }
+#tbl_read_routing + table th:nth-of-type(3) { width: 28%; }
+#tbl_read_routing + table th:nth-of-type(4) { width: 32%; }
+</style>
+<div id="tbl_read_routing"></div>
+
+| Data Type | Read Type | Routing Logic | Latency (Regional / Cross-Region) |
+|-----------|-----------|---------------|-----------------------------------|
+| **Billing Ledger** | Strong read | Route to leaseholder (may be cross-region) | 5-10ms (local) / 60-225ms (remote) |
+| **Campaign Configs** | Strong read | Route to leaseholder (may be cross-region) | 5-10ms (local) / 60-225ms (remote) |
+| **User Profiles** | Stale read (default) | Nearest replica (always local) | 5-10ms (local only) |
+| **User Profiles** | Fresh read (rare) | Route to leaseholder (may be cross-region) | 5-10ms (local) / 60-225ms (remote) |
+| **Budget Counters** | Atomic read | Local Redis only (no cross-region) | <1ms (local only) |
+| **ML Features** | Cache read | Local Redis only (no cross-region) | <1ms (local only) |
+
+**Trade-off:** User profile updates written to US-East (5-10ms) may appear stale in EU-West for seconds due to replication lag. Acceptable for targeting (outdated interests don't impact revenue materially), but cross-region strong reads (65-75ms) would violate 10ms User Profile SLA.
 
 **Redis (Budget Pre-Allocation, User Sessions):**
 
@@ -1185,7 +1278,7 @@ Budget pre-allocation (Redis) solves fast local enforcement, but billing ledgers
 
 CockroachDB provides near-external consistency using Hybrid Logical Clocks: $$HLC = (pt, c)$$ where pt = physical time, c = logical counter.
 
-**Guarantee:** Causally related transactions get correctly ordered timestamps via Raft consensus. CockroachDB's HLC uncertainty interval is dynamically bounded - legacy deployments use 500ms max_offset (default), but modern deployments with AWS Time Sync achieve **<2ms uncertainty** (500× improvement, see CockroachDB issue #75564). Independent transactions within this uncertainty window may have ambiguous ordering, but this is acceptable - even with 2ms uncertainty, network latency (50-150ms) already dominates, and causally related events (same campaign) are correctly ordered.
+**Guarantee:** Causally related transactions get correctly ordered timestamps via Raft consensus. CockroachDB's HLC uncertainty interval is dynamically bounded - legacy deployments use 500ms max_offset (default), but modern deployments with AWS Time Sync achieve **<2ms uncertainty** (500× improvement, see CockroachDB issue #75564). Independent transactions within this uncertainty window may have ambiguous ordering, but this is acceptable - even with 2ms uncertainty, network latency (60-225ms) already dominates, and causally related events (same campaign) are correctly ordered.
 
 **Requirements met:**
 - SOX/MiFID regulatory compliance (chronologically ordered financial records, 5-7 year retention)
@@ -1258,8 +1351,8 @@ graph LR
 graph TB
     ADV[Budget Service<br/>Ad Server]
 
-    ADV -->|"1. Direct write<br/>Transactional"| CRDB[("CockroachDB<br/>Operational Ledger<br/>90-day hot")]
-    ADV -->|"2. Publish event<br/>Async"| KAFKA[("Kafka<br/>Financial Events")]
+    ADV -->|"1 - Direct write<br/>Transactional"| CRDB[("CockroachDB<br/>Operational Ledger<br/>90-day hot")]
+    ADV -->|"2 - Publish event<br/>Async"| KAFKA[("Kafka<br/>Financial Events")]
     KAFKA -->|"Stream"| CH[("ClickHouse<br/>Immutable Audit Log<br/>7-year retention")]
 
     RECON[Reconciliation Job<br/>Daily 2:00 AM UTC]
@@ -1371,6 +1464,157 @@ Retention policy reduces storage costs while maintaining compliance accessibilit
 - **Active ClickHouse storage** (0-7 years): 180TB at standard ClickHouse rates
 - **Cold storage** (>7 years): S3 Glacier at ~2% of active storage cost
 - **Query capability**: Athena or ClickHouse external tables provide SQL interface to cold data (seconds latency acceptable for historical compliance queries)
+
+### Budget Reconciliation & Advertiser Compensation Workflow
+
+> **Architectural Driver: Financial Accuracy** - Automated discrepancy detection, retroactive correction, and advertiser compensation workflows ensure billing accuracy ≤1% while maintaining trust. Manual intervention only for exceptions >2% of budget.
+
+**The Problem: Budget Overspend & Underspend Edge Cases**
+
+Despite bounded micro-ledger (BML) architecture with 0.5-1% inaccuracy bounds, edge cases cause billing discrepancies:
+
+**Root causes:**
+1. **Redis failover**: Regional failure with unsynced counter state (15% under-delivery risk per Part 4 multi-region section)
+2. **Network partitions**: Split-brain scenario where regions can't sync budget state (bounded by allocation window: max 5min × allocation rate)
+3. **Clock skew beyond bounds**: HLC uncertainty >2ms in legacy deployments (rare with AWS Time Sync, but possible during NTP failures)
+4. **Race conditions at day boundary**: Multiple regions allocating final budget chunks simultaneously (mitigated by 200ms dead zone, but not eliminated)
+5. **Software bugs**: Event emission failures, counter drift, schema evolution issues
+
+**Financial trust requirement:** This platform targets ≤1% budget variance (stricter than industry-wide ad discrepancy standards of 1-10%, per IAB guidelines). Enterprise advertisers set hard daily budgets and expect strict enforcement. Advertisers tolerate 1-2% variance without complaint, escalate at 2-5%, and demand refunds/credits >5%. Automation required to handle 95%+ of cases without manual intervention.
+
+**Preventive Measures During Edge Cases**
+
+Real-time throttling bounds overspend during active failures (reconciliation handles post-hoc correction):
+
+**Network partition throttling:** Detect sync failure (CockroachDB heartbeat >120s, Redis lag >5s) → reduce allocation to 50% rate per region. With throttling: 3 regions at 50% = 0.175% overspend ($17.50 on $10K daily budget for 5-min window). Without throttling: 0.7% overspend ($70). Throttling reduces exposure by 75%.
+
+**Clock skew protection:** 200ms dead zone at day boundaries (23:59:59.900 to 00:00:00.100) prevents double-allocation when region clocks differ by ±200ms.
+
+**Race condition mitigation (low budget <5%):** Pessimistic locking (CockroachDB SELECT FOR UPDATE) serializes allocation requests. Failed regions retry with 50% allocation size, accepting uneven distribution over overspend.
+
+**Reconciliation Architecture**
+
+The system uses a four-stage pipeline to detect, classify, correct, and compensate for budget discrepancies:
+
+{% mermaid() %}
+graph TB
+    subgraph "Stage 1: Detection (Every 5 min)"
+        REDIS[("Redis Counters<br/>Live Spend")]
+        CRDB[("CockroachDB<br/>Billing Ledger")]
+
+        RECON_LIVE[Live Reconciliation Job<br/>Compare Redis vs CockroachDB]
+        REDIS --> RECON_LIVE
+        CRDB --> RECON_LIVE
+
+        RECON_LIVE -->|Δ ≤ 1%| OK1[No action]
+        RECON_LIVE -->|1% < Δ ≤ 2%| WARN[Log warning]
+        RECON_LIVE -->|Δ > 2%| ALERT[P2 Alert]
+    end
+
+    subgraph "Stage 2: Classification (Daily 2 AM UTC)"
+        DAILY[Daily Reconciliation<br/>Final spend vs budget]
+        CRDB --> DAILY
+
+        DAILY -->|Exact match| OK2[No action]
+        DAILY -->|Underspend| UNDER{Amount?}
+        DAILY -->|Overspend| OVER{Amount?}
+
+        UNDER -->|< 1%| ACCEPT_U[Accept<br/>Log only]
+        UNDER -->|≥ 1%| CREDIT[Issue Credit]
+
+        OVER -->|≤ 1%| ACCEPT_O[Accept<br/>Bounded by design]
+        OVER -->|> 1%| REFUND[Issue Refund]
+    end
+
+    subgraph "Stage 3: Correction"
+        CREDIT --> LEDGER_ADJ[Ledger Adjustment<br/>CockroachDB]
+        REFUND --> LEDGER_ADJ
+
+        LEDGER_ADJ --> AUDIT[Audit Log Entry<br/>Immutable ClickHouse]
+    end
+
+    subgraph "Stage 4: Compensation"
+        AUDIT -->|Underspend ≥ 1%| AUTO_CREDIT[Automated Credit<br/>Advertiser Account]
+        AUDIT -->|Overspend > 1%| AUTO_REFUND[Automated Refund<br/>Payment Gateway]
+
+        AUTO_CREDIT --> NOTIFY[Email Notification<br/>+ Dashboard Update]
+        AUTO_REFUND --> NOTIFY
+
+        NOTIFY -->|Any > 2%| MANUAL_REVIEW[Manual Review<br/>Finance Team]
+    end
+
+    classDef detection fill:#e3f2fd,stroke:#1976d2
+    classDef classification fill:#fff3e0,stroke:#f57c00
+    classDef correction fill:#e8f5e9,stroke:#388e3c
+    classDef compensation fill:#f3e5f5,stroke:#7b1fa2
+
+    class RECON_LIVE,REDIS,CRDB detection
+    class DAILY,UNDER,OVER classification
+    class LEDGER_ADJ,AUDIT correction
+    class AUTO_CREDIT,AUTO_REFUND,NOTIFY,MANUAL_REVIEW compensation
+{% end %}
+
+**Stage 1: Discrepancy Detection (Live + Daily)**
+
+**Live (every 5 min):** Compare Redis counters vs CockroachDB ledger. Thresholds: ≤1% no action, 1-2% log warning, >2% P2 alert.
+
+**Daily (2 AM UTC):** End-of-day reconciliation of final spend vs budget. Classify as UNDERSPEND/OVERSPEND/EXACT. Process only variances >0.5%.
+
+**Stage 2: Classification & Decision Logic**
+
+**Underspend scenarios:**
+
+| Variance | Root Cause | Action | Justification |
+|----------|-----------|--------|---------------|
+| <0.5% | Normal allocation granularity | Accept | Advertiser unlikely to notice |
+| 0.5-1% | Redis sync lag, allocation rounding | Accept + log | Within industry tolerance |
+| 1-5% | Regional failover (bounded loss) | **Issue credit** | Advertiser paid for undelivered impressions |
+| >5% | Software bug or manual pause | **Issue credit + investigate** | Significant revenue loss to advertiser |
+
+**Overspend scenarios:**
+
+| Variance | Root Cause | Action | Justification |
+|----------|-----------|--------|---------------|
+| ≤0.5% | BML inaccuracy bound (by design) | Accept | Within contractual SLA (≤1%) |
+| 0.5-1% | Day boundary race, clock skew | Accept + log | Within industry tolerance |
+| 1-2% | Network partition, extended sync failure | **Issue refund** | Advertiser charged for unauthorized spend |
+| >2% | Software bug (counter drift, event loss) | **Issue refund + P1 incident** | Contractual breach, potential legal risk |
+
+**Key principle:** Conservative advertiser protection. Under-delivery requires credit. Over-delivery requires refund even within 1% bound.
+
+**Stage 3: Retroactive Correction**
+
+All corrections recorded as immutable audit trail. Atomic transaction: (1) Insert adjustment entry (type, amount, reason_code, timestamps, audit_reference), (2) Update campaign summary (corrected_spend, correction_count, timestamp), (3) Emit to ClickHouse via Kafka.
+
+**ClickHouse audit trail:** Permanent record with correction_id, campaign/advertiser IDs, financial data (budget, actual, variance), classification (OVERSPEND/UNDERSPEND), root_cause, compensation_status, timestamps, metadata. Partitioned by month, append-only.
+
+**Stage 4: Advertiser Compensation Automation**
+
+**Credits (underspend ≥1%):** Calculate → apply to account balance → record transaction → email notification → dashboard update.
+
+**Refunds (overspend >1%):** Calculate → submit to payment gateway (Stripe/Braintree) → record transaction → email notification → dashboard shows 5-10 day ETA.
+
+**Manual review (>2% variance):** Create Jira ticket, Slack #finance-alerts, flag account "Under Review", hold new campaigns. Finance team verifies root cause, confirms calculation, reviews payment history, approves/rejects compensation, documents resolution.
+
+**Advertiser Dashboard Impact**
+
+Campaign detail view shows: campaign ID/name/date, budget commitment, actual delivery, variance ($ and %), status flag (Exact/Under-delivered/Over-delivered with color coding).
+
+**Correction display (≥1% variance):** Compensation type/amount, timestamp (local + UTC), status (Applied/Pending/Under Review), plain-language explanation (e.g., "infrastructure maintenance" not "Redis failover"), resolution action, next steps.
+
+**Example:** $10K budget, $8.5K actual → amber "Under-delivered" flag, $1.5K credit applied, message: "Delivery interrupted due to infrastructure maintenance. We've automatically credited $1,500 to your account balance. This credit is available immediately."
+
+**Platform metrics displayed:** "98.2% campaigns within ±1% (target 98%), 99.6% within ±2%, avg correction time 6 hours, 97% automated".
+
+**Error Budget & Monitoring**
+
+**Financial accuracy SLO:** 98% campaigns ±1% (target, aligns with Fluency benchmark), 99.5% ±2% (tolerance), 99.9% ±5% (escalation), <0.1% exceed ±5% (breach).
+
+**Monitoring:** Daily variance distribution (30-day window): campaign counts by variance tier (1%, 2%, 5%), avg variance, P95/P99.
+
+**Compensation metrics:** Credits 2-3% daily (median $15-50), refunds 0.1-0.5%, manual review <0.05%, total cost 0.2-0.3% gross revenue.
+
+**ROI:** $50K annual cost prevents $500K+ legal risk, saves $100K finance overhead, reduces 2-5% churn → 5-10× return.
 
 ---
 
