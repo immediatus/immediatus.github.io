@@ -121,7 +121,7 @@ Before diving into non-functional requirements, we need to establish the three *
 
 **Why this matters:** Mobile apps timeout after 150-200ms. Users expect ads to load instantly - if your ad is still loading when the page renders, you show a blank space and earn no revenue.
 
-Amazon's 2006 study found that every 100ms of added latency costs ~1% of sales[^amazon-latency]. In advertising, this translates directly: slower ads = fewer impressions = less revenue.
+Amazon's 2006 study found that every 100ms of added latency costs ~1% of sales (this widely-cited metric originates from Amazon's internal A/B testing, first publicly mentioned by Greg Linden and later referenced by Marissa Mayer at Google; see Kohavi & Longbotham 2007, ["Online Controlled Experiments at Large Scale"](https://ai.stanford.edu/~ronnyk/2009controlledExperimentsOnTheWebSurvey.pdf)). In advertising, this translates directly: slower ads = fewer impressions = less revenue.
 
 At our target scale of 1M queries per second, breaching the 150ms timeout threshold means mobile apps give up waiting, resulting in blank ad slots and complete revenue loss on those requests.
 
@@ -188,7 +188,7 @@ Strict latency budgets are critical: incremental service calls ("only 10ms each"
 - **Total end-to-end SLO:** 150ms p95
 - **Internal services budget:** ~50ms (network, gateway, user profile, ad selection)
 - **RTB external calls:** ~100ms (industry standard timeout)
-- **ML inference:** ~40ms (GPU model serving)
+- **ML inference:** ~40ms (CPU-based GBDT serving)
 
 The 150ms total accommodates industry-standard RTB timeout (100ms) while maintaining responsive user experience. Internal services are optimized for <50ms to leave budget for external DSP calls.
 
@@ -821,7 +821,7 @@ Consolidated latency targets driving technology selection, deployment architectu
 | Integrity Check | <5ms | Target | Yes | Fraud prevention (first defense layer) |
 | Ad Selection Service | 15ms | Target | Parallel | Candidate retrieval from storage |
 | Feature Store | 10ms | P99 | Parallel | ML feature lookup (degrades at >15ms) |
-| ML Inference Service | 40ms | Target | Parallel | CTR prediction for auction ranking (65ms total ML path) |
+| ML Inference Service | 40ms | Budget | Parallel | CTR prediction for auction ranking (~20ms actual GBDT inference, 40ms budget includes overhead) |
 | RTB Auction Service | 50-70ms | Operational | Yes | External DSP coordination (100ms p95, 120ms p99 hard) |
 | Auction Logic | 3ms | Average | Yes | eCPM ranking + winner selection |
 | Budget Check | 3ms (5ms p99) | Average | Yes | Atomic spend control with strong consistency |
@@ -948,7 +948,7 @@ graph TB
 - **Integrity Check (5ms)**: Lightweight fraud detection using Bloom filter (known bad IPs), device fingerprint validation, and basic behavioral rules. Runs BEFORE expensive RTB calls to prevent wasting bandwidth on bot traffic. Multi-tier fraud detection is detailed in [Part 4](/blog/ads-platform-part-4-production/#fraud-detection-pattern-based-abuse-detection). Blocks 20-30% of fraudulent requests here.
 - **Feature Store (10ms)**: Retrieves pre-computed behavioral features (1-hour click rate, 7-day CTR, etc.) from distributed feature cache. Used only by ML path.
 - **Ad Selection (15ms)**: Queries **internal ad database** (transactional database) for top 100 candidates from direct deals, guaranteed campaigns, and house ads. Filters by user profile and features. Does NOT include RTB ads (those come from external DSPs).
-- **ML Inference (40ms)**: GBDT model predicts CTR for internal ad candidates. Converts base CPM to eCPM using formula: `eCPM = predicted_CTR × base_CPM × 1000`. Output: List of internal ads with eCPM scores.
+- **ML Inference (40ms budget, ~20ms actual)**: GBDT model predicts CTR for internal ad candidates (~20ms inference). Converts base CPM to eCPM using formula: `eCPM = predicted_CTR × base_CPM × 1000`. Output: List of internal ads with eCPM scores. The 40ms budget allocation provides safety margin.
 - **RTB Auction (100ms)**: Broadcasts OpenRTB request to 50+ external DSPs, collects bids. DSPs do their own ML internally. Output: List of external bids with prices.
 - **Synchronization Point**: System waits here until BOTH paths complete. ML path (85ms total from start) finishes 35ms before RTB path (120ms total from start). Internal ads are cached while waiting for external RTB bids.
 - **Final Auction (8ms avg, 10ms p99)**: Runs unified auction combining ML-scored internal ads (Source 1) with external RTB bids (Source 2). Selects winner with highest eCPM across both sources (3ms), then atomically checks and deducts campaign budget via atomic distributed cache operations (3ms avg, 5ms p99), plus overhead (2ms). Winner could be internal OR external ad.
@@ -999,7 +999,7 @@ The critical path analysis above assumes all services operate within their laten
 
 > **Architectural Driver: Availability** - Serving a less-optimal ad quickly beats serving no ad at all. When services breach latency budgets, degrade gracefully through fallback layers rather than timing out.
 
-**Example scenario:** ML inference allocated 40ms, but GPU load spikes push p99 latency to 80ms. Options:
+**Example scenario:** ML inference allocated 40ms, but CPU load spikes push p99 latency to 80ms. Options:
 - **Wait for slow ML response:** Violates 150ms SLA → mobile timeouts → blank ads → 100% revenue loss
 - **Skip ML entirely:** Serve random ad → 100% revenue loss from poor targeting
 - **Degrade gracefully:** Serve cached predictions → ~8% revenue loss, but ad still served
@@ -1132,7 +1132,7 @@ $$
 \end{aligned}
 $$
 
-Asymmetric thresholds (5ms tolerance vs 5ms buffer, 60s vs 300s duration) prevent oscillation between states. Example: GPU latency spike trips circuit at t=60s, switches to cached predictions; after 5min of healthy p99<35ms latency, circuit closes and resumes GPU inference.
+Asymmetric thresholds (5ms tolerance vs 5ms buffer, 60s vs 300s duration) prevent oscillation between states. Example: CPU latency spike trips circuit at t=60s, switches to cached predictions; after 5min of healthy p99<35ms latency, circuit closes and resumes normal GBDT inference.
 
 **Monitoring Degradation State:**
 
@@ -1140,17 +1140,17 @@ Track composite degradation score: \\(Score = \sum_{i \in \text{services}} w_i \
 
 **Testing Degradation Strategy:**
 
-Validate via chaos engineering: (1) Inject 50ms latency to 10% ML requests, verify circuit trips and -8% revenue impact matches prediction; (2) Terminate 50% GPU nodes, confirm graceful degradation within 60s; (3) Quarterly regional failover drills validating <30% revenue loss and measuring recovery time.
+Validate via chaos engineering: (1) Inject 50ms latency to 10% ML requests, verify circuit trips and -8% revenue impact matches prediction; (2) Terminate 50% ML inference pods, confirm graceful degradation within 60s; (3) Quarterly regional failover drills validating <30% revenue loss and measuring recovery time.
 
 **Trade-off Articulation:**
 
 **Why degrade rather than scale?**
 
-You might ask: "Why not just auto-scale GPU instances when latency spikes?"
+You might ask: "Why not just auto-scale ML inference pods when latency spikes?"
 
-**Problem:** Provisioning new GPU instances takes **30-40 seconds** with modern tooling (NVIDIA Model Streamer, Alluxio caching, pre-warmed container images) - instance boot + model loading into VRAM. During traffic spikes, you'll still breach SLAs for 30+ seconds before new capacity comes online.
+**Problem:** Provisioning new CPU pods takes **15-30 seconds** with modern tooling (pre-warmed container images, model pre-loading) - instance boot + model loading into memory + JVM warmup. During traffic spikes, you'll still breach SLAs for 15-30 seconds before new capacity comes online.
 
-**Note:** Without optimization (legacy deployments, cold container pulls, full model loading from object storage), cold start can take **90-120 seconds**. The 30-40s baseline assumes modern best practices: pre-warmed images, model streaming, and persistent VRAM caching across instance restarts.
+**Note:** Without optimization (cold container pulls, full model loading from object storage, cold JVM), cold start can take **60-90 seconds**. The 15-30s baseline assumes modern best practices: pre-warmed images, model streaming, and container image caching.
 
 **Cost-benefit comparison:**
 
@@ -1164,13 +1164,13 @@ You might ask: "Why not just auto-scale GPU instances when latency spikes?"
 
 | Strategy | Latency Impact | Revenue Impact | Cost |
 |----------|---------------|----------------|------|
-| **Wait for GPU**<br/>(no degradation) | 150ms<br/>total → timeout | -100%<br/>on timed-out requests | None |
-| **Scale GPU instances** | 90s of 80ms<br/>latency → partial timeouts | -40%<br/>during scale-up window | +30-50% GPU baseline for burst capacity |
+| **Wait for CPU**<br/>(no degradation) | 150ms<br/>total → timeout | -100%<br/>on timed-out requests | None |
+| **Scale CPU instances** | 30s of 80ms<br/>latency → partial timeouts | -15%<br/>during scale-up window | +20-30% CPU baseline for burst capacity |
 | **Degrade to cached predictions** | 5ms<br/>immediate | -8%<br/>targeting accuracy | None |
 
-**Decision:** Degradation costs less (-8% vs -40%) and reacts faster (immediate vs 90s).
+**Decision:** Degradation costs less (-8% vs -15%) and reacts faster (immediate vs 30s).
 
-**But we still auto-scale!** Degradation buys time for auto-scaling to provision capacity. Once new GPU instances are healthy (90s later), circuit closes and we return to normal operation.
+**But we still auto-scale!** Degradation buys time for auto-scaling to provision capacity. Once new CPU pods are healthy (30s later), circuit closes and we return to normal operation.
 
 **Degradation is a bridge, not a destination.**
 
@@ -1234,7 +1234,7 @@ Hedging executes requests multiple times on the server. gRPC documentation expli
 - **Budget Service**: Write operations cause double-spend (campaign charged $10 instead of $5 when both primary and hedge complete)
 - **Any mutation operation**: INSERT, UPDATE, DELETE operations execute twice → data corruption
 - **RTB Gateway**: External calls already expensive; doubling would double DSP costs and violate rate limits
-- **ML Inference**: Compute-bound, replicas equally loaded; hedging wastes GPU cycles without benefit
+- **ML Inference**: Compute-bound, replicas equally loaded; hedging wastes CPU cycles without benefit
 
 **Implementation safety:** Use explicit service allowlist in gRPC configuration to prevent accidental hedging. Only enable for services explicitly designed as read-only and idempotent (UserProfileService, FeatureStoreService).
 

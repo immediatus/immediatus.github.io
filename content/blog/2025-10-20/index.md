@@ -399,6 +399,40 @@ $$T_{dsp} = \text{min}\left(P_{95}(H_{dsp}), T_{global}\right)$$
 
 where \\(P_{95}(H_{dsp})\\) is the 95th percentile latency for each DSP, capped at \\(T_{global} = 100ms\\).
 
+**Implementation Details:**
+
+**Data Structure:** [HdrHistogram](https://github.com/HdrHistogram/HdrHistogram) (High Dynamic Range Histogram)
+- **Why not t-digest?** HdrHistogram provides exact percentile calculations with bounded memory (O(1) per recording), while t-digest uses approximation. For timeout decisions affecting revenue, we need precision.
+- **Memory footprint:** ~2KB per DSP histogram (50 DSPs × 2KB = 100KB per Ad Server instance)
+- **Configuration:** Track 1-1000ms range with 2 significant digits precision
+
+**Storage & Update:**
+- **Location:** In-memory per Ad Server instance (not Redis) - each instance tracks its own latency view
+- **Update frequency:** Real-time on every DSP response (asynchronous update, no blocking)
+- **Aggregation window:** Rolling 5-minute window (balances responsiveness vs stability)
+- **Persistence:** Not required - histograms rebuild from live traffic within minutes after instance restart
+
+**Cold Start Handling:**
+- **New DSPs:** Default timeout = 100ms (global max) until 100 samples collected
+- **After restart:** Use global default (100ms) for first 60 seconds, then switch to histogram-based
+- **Minimum sample size:** Require 100 responses before using P95 (prevents single outlier from setting timeout)
+
+**Operational Flow:**
+
+Each Ad Server instance maintains an in-memory map of DSP identifiers to their latency histograms. When a DSP response arrives, the latency is recorded asynchronously into that DSP's histogram without blocking the critical path. When initiating a new RTB request, the system queries the histogram for that DSP's P95 latency - if the histogram exists and has sufficient samples (≥100), use the P95 value capped at 100ms; otherwise, use the global default of 100ms.
+
+**Example Scenario:**
+- DSP-A consistently responds in 60-70ms → P95 = 68ms → timeout set to 68ms
+- DSP-B highly variable (50-150ms) → P95 = 142ms → timeout capped at 100ms
+- DSP-C (new) with only 30 samples → timeout = 100ms (default until 100 samples)
+
+This allows fast, reliable DSPs to contribute to lower overall latency (saving 20-30ms on the critical path) while protecting against slow DSPs that would violate the budget.
+
+**Trade-off Analysis:**
+- **Pro:** Fast DSPs get lower timeouts (60-70ms) → platform can return responses 20-30ms earlier
+- **Con:** Slow DSPs get cut off earlier → potential revenue loss if they have high bids
+- **Monitoring:** Track "timeout revenue loss" metric (bids that arrived late but would have won)
+
 **Strategy 3: Progressive Auction**
 
 - Run preliminary auction at 80ms with available bids
@@ -959,6 +993,183 @@ The 100ms RTB timeout aligns with **industry-standard practices**, but achieving
 - **Regional DSP participation**: 60-70ms practical response time enables 92-95% response rates within geographic clusters
 - **Selective global participation**: High-value DSPs (Google AdX, Magnite) called globally despite latency risk, justified by revenue contribution
 - **Physics compliance**: Acknowledges that NY→Asia (200-300ms RTT) makes global broadcast impossible; regional sharding is not optional
+
+### Cascading Timeout Strategy: Maximizing Revenue from Slow Bidders
+
+> **Architectural Driver: Revenue Optimization** - The traditional approach (wait 100ms for all DSP responses before running auction) leaves revenue on the table. A cascading auction mechanism harvests fast responses for low-latency users while still capturing late bids for revenue optimization.
+
+**The Problem with Single-Timeout Auctions:**
+
+Traditional RTB integration uses a single timeout: wait until 100ms deadline, collect all responses, run one unified auction. This creates a tradeoff:
+
+- **Low timeout (50ms)**: Fast user experience, but lose 15-20% revenue from slow DSPs
+- **High timeout (100ms)**: Maximum revenue capture, but violates latency budget for fast bidders
+
+**The Cascading Solution: Staged Bid Harvesting**
+
+Instead of a binary timeout, implement a **progressive auction ladder** that runs multiple auctions at different thresholds:
+
+**Stage 1 - Fast Track Auction (50ms deadline):**
+- **Goal**: Deliver ad to latency-sensitive users as quickly as possible
+- **Participants**: Fast DSPs (typically 70-80% of regional bidders) + internal ML-scored ads
+- **Latency**: 50ms RTB + 15ms overhead = 65ms total (well within 150ms SLO)
+- **Revenue capture**: 85-90% of maximum possible revenue
+- **User experience**: Optimal (ad renders immediately)
+
+**Stage 2 - Revenue Maximization Auction (80-100ms deadline):**
+- **Goal**: Harvest remaining bids from slower but valuable DSPs
+- **Participants**: All Stage 1 bids PLUS late arrivals (20-30% slower DSPs)
+- **Latency**: 100ms RTB + 15ms overhead = 115ms total (marginal for 150ms SLO)
+- **Revenue capture**: 100% of maximum possible revenue (full bid pool)
+- **User decision**: Not shown to user (Stage 1 ad already delivered)
+
+**Stage 3 - Absolute Cutoff (120ms hard deadline):**
+- **Goal**: Prevent P99 tail latency violations
+- **Action**: Force timeout on any remaining open DSP connections
+- **Rationale**: Responses after 120ms cannot fit within 150ms SLO (15ms overhead + budget + response)
+- **Fallback**: Internal inventory + House Ads (if Stage 1/2 failed)
+
+**Cascading Auction Flow:**
+
+{% mermaid() %}
+sequenceDiagram
+    participant User
+    participant AdServer
+    participant DSPs as 50 DSPs
+    participant Analytics
+
+    Note over AdServer: t=0ms: Request arrives
+    AdServer->>DSPs: Broadcast bid requests (parallel)
+
+    Note over AdServer: t=50ms: Stage 1 Checkpoint
+    DSPs-->>AdServer: Fast responses (70-80% of DSPs)
+    AdServer->>AdServer: Run Stage 1 auction<br/>(ML ads + fast DSP bids)
+    AdServer->>User: Deliver winning ad (Stage 1)
+    AdServer->>Analytics: Log Stage 1 winner
+
+    Note over AdServer: t=100ms: Stage 2 Checkpoint (async)
+    DSPs-->>AdServer: Late responses (remaining 20-30%)
+    AdServer->>AdServer: Run Stage 2 auction<br/>(all bids collected)
+    AdServer->>Analytics: Log revenue differential<br/>(Stage2 eCPM - Stage1 eCPM)
+
+    alt Stage 2 winner significantly better (>5% eCPM)
+        AdServer->>AdServer: Upgrade billing to Stage 2 winner
+        Note over AdServer: Publisher gets higher revenue<br/>User already saw Stage 1 ad
+    else Stage 2 winner not materially better
+        AdServer->>AdServer: Keep Stage 1 billing
+    end
+
+    Note over AdServer: t=120ms: Stage 3 Absolute Cutoff
+    AdServer->>DSPs: Cancel remaining connections
+    AdServer->>Analytics: Log P99 protection trigger
+{% end %}
+
+**Operational Flow:**
+
+**Phase 1 - Request Initiation (t=0ms):**
+- Ad server broadcasts bid requests to all DSPs simultaneously
+- Does NOT wait for responses before proceeding
+- Sets up three independent timeout handlers (50ms, 100ms, 120ms)
+
+**Phase 2 - Fast Track Harvest (t=50ms):**
+- Collect all DSP responses received so far (typically 70-80% response rate)
+- Combine with internal ML-scored ads
+- Run unified auction across collected bids
+- **Critical decision:** Select winner and deliver to user immediately
+- Do NOT wait for remaining 20-30% of slow DSPs
+
+**Phase 3 - Revenue Optimization (t=100ms, async):**
+- Continue collecting late DSP responses in background
+- User has already received ad from Phase 2 (no blocking)
+- Run second auction with complete bid pool (fast + late responses)
+- Compare Stage 2 winner to Stage 1 winner
+- Decision logic:
+  - If Stage 2 eCPM > Stage 1 eCPM × 1.05 (5% threshold): Upgrade billing
+  - Else: Keep Stage 1 billing (differential too small to matter)
+- **Key insight:** User experience based on Stage 1, publisher revenue based on Stage 2
+
+**Phase 4 - Safety Cutoff (t=120ms, forced):**
+- Absolute deadline to prevent P99 tail violations
+- Forcibly terminate any remaining open DSP connections
+- Prevents requests from exceeding 150ms total SLO
+- Fallback: If both Stage 1 and Stage 2 failed, serve internal inventory or House Ad
+
+**Revenue Impact Analysis:**
+
+Real-world latency distributions show diminishing returns beyond 50ms:
+
+| Timeout | DSP Response Rate | Revenue Capture | Latency Impact |
+|---------|-------------------|-----------------|----------------|
+| 30ms | 45-55% | 70-75% | Optimal UX, significant revenue loss |
+| 50ms | 70-80% | 85-90% | Excellent UX, minor revenue loss |
+| 80ms | 90-95% | 95-98% | Acceptable UX, minimal revenue loss |
+| 100ms | 95-97% | 99-100% | Marginal UX, maximum revenue |
+| 120ms+ | 98-100% | 100% | Poor UX, violates SLO |
+
+**Key insight:** Going from 50ms to 100ms adds 50ms latency but only captures an extra 10-15% revenue. The cascading approach gets both - 50ms user experience AND 100% revenue capture.
+
+**Why This Works:**
+
+1. **User sees fast ad**: Stage 1 delivers in 65ms total (50ms RTB + 15ms overhead)
+2. **Publisher gets maximum revenue**: Stage 2 billing uses highest bid from full auction
+3. **DSP fairness**: All DSPs get chance to participate (within physics constraints)
+4. **P99 protection**: 120ms absolute cutoff prevents tail latency violations
+
+**Analytics and Optimization:**
+
+Track Stage 1 vs Stage 2 revenue differential to optimize timeout thresholds. Daily analytics should measure:
+
+**Key metrics:**
+- Total auctions per day where Stage 2 winner differs from Stage 1
+- Aggregate revenue left on table (sum of all eCPM differentials)
+- Average eCPM differential (Stage 2 minus Stage 1)
+- P95 differential (identifies outliers where slow DSPs significantly outbid)
+
+**Data collection:**
+- Log both Stage 1 and Stage 2 auction results for every request
+- Track which DSP won in each stage
+- Calculate eCPM difference when winners differ
+- Aggregate daily for trend analysis
+
+**Typical findings:**
+- Revenue differential: 2-5% average when Stage 2 winner differs (Stage 2 bids slightly higher)
+- Frequency: 15-25% of auctions have different Stage 2 winner (slow DSP wins)
+- Optimization signal: If average differential >5%, consider extending Stage 1 timeout from 50ms to 60ms
+- Trade-off: Each 10ms extension increases latency but reduces revenue loss by 2-3%
+
+**When to Use Single-Stage vs Cascading:**
+
+**Single-stage auction (80-100ms) makes sense when:**
+- User tolerance is high (desktop vs mobile)
+- Geographic region has low latency variance (all DSPs respond <70ms)
+- Revenue optimization is primary goal (sacrificing latency acceptable)
+
+**Cascading auction (50ms + 100ms) makes sense when:**
+- Mobile users with low latency tolerance
+- Geographic region has high latency variance (20-30ms spread between DSPs)
+- User experience is critical (e-commerce, high-value inventory)
+
+**Our choice:** Cascading auctions for mobile inventory (70% of traffic), single-stage for desktop (30%).
+
+**Trade-off Articulation:**
+
+This cascading approach is not free - it adds operational complexity:
+
+**Complexity added:**
+- Dual auction logic (fast track + revenue max)
+- Async bid collection and timeout orchestration
+- Revenue differential tracking and optimization
+- Billing reconciliation (which auction determines final price?)
+
+**Complexity justified by:**
+- 30-50ms latency improvement for 70-80% of requests
+- 0% revenue loss (vs 10-15% with naive fast cutoff)
+- Better P99 protection (absolute 120ms cutoff prevents tail violations)
+
+**Implementation requirements:**
+- Async programming model (CompletableFuture, reactive streams)
+- Careful timeout management (cascading timeouts, connection pooling)
+- Analytics infrastructure (track Stage 1 vs 2 differentials)
 
 ### Egress Bandwidth Cost Optimization: Predictive DSP Timeouts
 
@@ -2045,25 +2256,102 @@ $$y = W_{int8} \cdot x_{int8} \times scale + zero\\_point$$
 - 2-4x inference speedup (INT8 ops faster)
 - Accuracy loss: <1% AUC degradation (TensorFlow Lite benchmarks)
 
-**3. GPU Acceleration**
+**3. CPU-Based GBDT Inference: Architecture Decision**
 
-Deploy on NVIDIA T4 GPUs:
-- FP32 throughput: 65 TFLOPS
-- INT8 throughput: 130 TOPS (2x faster)
+**Why CPU-Only for Day 1 GBDT:**
 
-**Throughput and Latency Analysis:**
+GBDT models (LightGBM/XGBoost) are CPU-optimized for inference workloads. External research confirms CPU achieves 10-20ms inference latency for GBDT models at production scale, well within our 40ms budget:
 
-| Compute Type | Throughput | Latency | SLA Compliance |
-|--------------|------------|---------|----------------|
-| **CPU inference** | 100 req/sec per core | 100ms+ | Violates <40ms SLA |
-| **GPU inference (T4)** | 1,280 req/sec per GPU | <40ms | Meets SLA |
+- LightGBM documentation: ["GPU often not faster for inference due to data transfer overhead"](https://lightgbm.readthedocs.io/en/latest/GPU-Performance.html)
+- Production case study: [Whatnot reduced GBDT p99 from 700ms to <200ms on CPU](https://medium.com/whatnot-engineering/6x-faster-ml-inference-why-online-batch-16cbf1203947) with optimizations
+- Intel optimization guide: [CPU inference latency for GBDT](https://www.intel.com/content/www/us/en/developer/articles/technical/faster-xgboost-light-gbm-catboost-inference-on-cpu.html) achieves sub-10ms with daal4py
 
-**Key advantages of GPU inference:**
-- **12.8× higher throughput** per compute unit enables serving more traffic with fewer resources
-- **2.5× better latency** (40ms vs 100ms) meets stringent real-time requirements
-- **Similar infrastructure efficiency** at scale - GPU throughput gains offset hardware costs
+**Throughput and Latency Analysis (GBDT-specific):**
 
-**Decision:** GPU inference is the only viable option for meeting <40ms latency SLA at high QPS. CPU inference cannot achieve required latency regardless of scale.
+| Compute Type | Throughput (GBDT) | Latency | Infrastructure Cost | Operational Complexity |
+|--------------|-------------------|---------|---------------------|------------------------|
+| **CPU inference (optimized)** | 50-200 req/sec per core | 10-20ms | Baseline (1.0×) | Low (standard deployment) |
+| **GPU inference (T4)** | 1,000-1,500 req/sec per GPU | 8-15ms | 1.5-2× CPU cost | Medium (GPU orchestration) |
+
+**Decision Rationale:**
+
+We chose **CPU-only architecture** for our Day 1 GBDT deployment:
+
+**Advantages (why CPU):**
+- **Sufficient latency:** 10-20ms GBDT inference fits within 40ms budget with 2× safety margin
+- **Cost efficiency:** At 1M QPS, CPU infrastructure costs 30-40% less than GPU for GBDT workloads (see [Part 3 cost analysis](/blog/ads-platform-part-3-data-revenue/#infrastructure-cost-optimization))
+- **Operational simplicity:** No GPU driver management, CUDA versions, or specialized orchestration
+- **Easier scaling:** Standard Kubernetes HPA on CPU/memory metrics (vs GPU-specific autoscaling)
+- **Lower risk:** CPU deployment expertise widely available vs GPU ML infrastructure specialists
+
+**Trade-offs (what we give up):**
+- **Throughput:** 4-8× lower throughput per compute unit (50-200 vs 1,000+ req/sec)
+  - *Impact:* Need more pods (1,500-3,000 vs 400-600 GPU pods), but total cost still lower
+- **Future model constraints:** Limits model evolution to CPU-compatible architectures
+  - *Mitigation:* Distilled DNNs with INT8 quantization achieve 10-15ms on CPU (see evolution path below)
+- **Latency ceiling:** 10-20ms floor vs 8-15ms on GPU
+  - *Impact:* Minimal - our 40ms budget has 2× headroom either way
+
+**Evolution Path: Adding DNN Reranking on CPU**
+
+Our Day-1 CPU architecture supports planned model evolution *without* infrastructure rebuild:
+
+**Phase 2 (6-12 months): Two-Stage Ranking on CPU**
+
+1. **Stage 1 - GBDT Candidate Generation (5-10ms):**
+   - Current architecture, reduce 10M ads → 200 top candidates
+   - CPU-based, unchanged from Day 1
+
+2. **Stage 2 - Distilled DNN Reranking (10-15ms):**
+   - Lightweight neural network scores top-200 candidates only
+   - **Runs on same CPU infrastructure** using INT8 quantization + ONNX runtime
+   - Proven latency: [DistilBERT achieves p50 <10ms on CPU](https://getstream.io/blog/optimize-transformer-inference/) with quantization
+   - [ONNX quantization achieves 15ms](https://medium.com/nixiesearch/how-to-compute-llm-embeddings-3x-faster-with-model-quantization-25523d9b4ce5) (3.5× improvement from unoptimized)
+
+**Total two-stage latency:** 5-10ms (GBDT) + 10-15ms (distilled DNN) = **15-25ms** (within 40ms budget)
+
+**Requirements for CPU-based DNN evolution:**
+- INT8 quantization (4× model size reduction, 25-50% latency improvement)
+- Knowledge distillation (teacher-student training to compress large DNN)
+- ONNX Runtime with CPU optimizations (AVX instructions)
+- Model size constraint: DistilBERT-class models (60-100M parameters), not large transformers (billions)
+
+**What this evolution path gives up:**
+
+We are **explicitly choosing** to constrain model complexity to what runs efficiently on CPU. This means:
+
+- **Model size ceiling:** Limited to ~100M parameter models (DistilBERT, small BERT variants)
+  - Cannot run large transformers (BERT-Large 340M, GPT-style models billions of parameters)
+  - *Business impact:* May leave 1-2% AUC improvement on table vs unlimited model complexity
+
+- **Research flexibility:** Cannot easily experiment with latest large models from research
+  - Must wait for distilled/compressed versions or conduct distillation ourselves
+  - *Timeline impact:* 2-4 month lag to productionize cutting-edge model architectures
+
+- **Vendor lock-in risk:** No experience with GPU ML infrastructure if we need it later
+  - Migrating to GPU architecture would require 3-6 months of infrastructure work
+  - *Mitigation:* Decision is reversible, but expensive to reverse
+
+**Why we accept these trade-offs:**
+
+At 1M QPS serving 400M DAU, our priorities are:
+
+1. **Cost efficiency** (CPU saves 30-40% infrastructure cost = millions annually)
+2. **Operational stability** (simpler infrastructure = fewer outages)
+3. **Team velocity** (standard deployment = faster iteration)
+
+The 1-2% AUC ceiling we might hit in 12-18 months is worth the operational and cost benefits today. We can revisit the GPU decision if/when model quality plateaus.
+
+**Alternative: When to choose GPU instead?**
+
+GPU makes sense for teams with different constraints:
+
+- **Scenario 1:** <100K QPS scale where GPU premium is affordable (cost difference negligible)
+- **Scenario 2:** Modeling team already expert in GPU ML infrastructure (no learning curve)
+- **Scenario 3:** Business model justifies 2-3% AUC improvement regardless of cost (high LTV verticals)
+- **Scenario 4:** Research-driven culture that needs latest model architectures immediately
+
+For our use case (1M QPS, cost-sensitive, operationally focused), CPU is the pragmatic choice.
 
 ### Feature Store: Tecton Architecture
 
@@ -2928,7 +3216,7 @@ graph LR
 
 This monitoring and retraining infrastructure ensures model quality remains high despite natural drift. The 7-step automated pipeline, combined with multi-signal drift detection, maintains AUC ≥ 0.75 with minimal manual intervention. A/B testing provides statistical rigor for model comparisons, while fast rollback (< 5 min) protects against bad deployments.
 
-**Key Insight:** Production ML is an ongoing engineering challenge, not a one-time deployment. Without continuous monitoring and automated retraining, model accuracy degradation costs 8-12% revenue within 12 weeks. The investment in MLOps infrastructure ($50K engineering + $10K/year infrastructure) pays for itself within 2-3 months through prevented revenue loss.
+**Key Insight:** Production ML is an ongoing engineering challenge, not a one-time deployment. Without continuous monitoring and automated retraining, model accuracy degradation costs 8-12% revenue within 12 weeks. The investment in MLOps infrastructure (1-2 engineers for 2-3 months + minimal ongoing infrastructure cost) pays for itself within 2-3 months through prevented revenue loss.
 
 ---
 
