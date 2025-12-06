@@ -532,7 +532,7 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1);
+  padding: var(--space-15);
   background: var(--surface-elevated);
   border-radius: var(--radius-md);
   font-size: 0.75rem;
