@@ -1,11 +1,14 @@
 <header id="site-nav">
-  <nav aria-label="Main navigation">
-    <ul>
-      {% for link in config.extra.nav.links %}
-        <li>
-          <a href="{{ link.url | safe | replace(from='$BASE_URL', to=get_url(path='')) | safe }}"><i data-feather="{{ link.icon }}" class="ico"></i>&nbsp;{{ link.name }}</a>
-        </li>
-      {% endfor %}
-    </ul>
-  </nav>
+    <nav aria-label="Main navigation">
+        <ul>
+            {% for link in config.extra.nav.links %}
+            <li>
+                <a href="{{ link.url | safe | replace(from='$BASE_URL', to=get_url(path='')) | safe }}">
+                    <i data-feather="{{ link.icon }}" class="ico"></i>&nbsp;{{link.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        <div id="cookies-preferences"><a href="#" id="open_preferences_center"><i data-feather="settings" class="ico"></i>&nbsp;Cookies</a></div>
+    </nav>
 </header>
