@@ -11,7 +11,7 @@ This is a personal blog to share author's thoughts and ideas. The main focus is 
 ### Author:
 
 <aside>
-    {{ image(url_min="about/author.jpeg", no_hover=true, full=true)}}
+    {{ image(url_min="about/author.jpeg", no_hover=true, full=true) }}
     <div style="display: flex;justify-content: space-between;margin: 10px 20px;">
         <a href="https://www.linkedin.com/in/polyulya/">{{ ico(name="linkedin")}}</a>
         <a href="https://twitter.com/polyulya">{{ ico(name = "twitter")}}</a>
