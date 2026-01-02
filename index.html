@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="This is personal blog about the human side of engineering. About learning, growing, and sharing experiences along the way. Authored by Yuriy Polyulya." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Midset Footprint" />
+  <meta property="og:title" content="Beyond the Blueprint - Midset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;" />
+  <meta property="og:description" content="" />
+
+  <title>Beyond the Blueprint - Midset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+
+  <script defer src="https://e-mindset.space/js/katex.min.js"></script>
+  <script defer src="https://e-mindset.space/js/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script src="https://e-mindset.space/js/feather.min.js"></script>
+  <!--
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  -->
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<h1>Beyond the Blueprint</h1>
+
+<p>This is personal blog about the human side of engineering. About learning, growing, and sharing experiences along the way. Authored by Yuriy Polyulya.</p>
+
+<div class="blog-nav">
+  <a class="blog-nav-link" href="https://e-mindset.space/tags">Filter by tag</a>
+  <span class="nav-sep">•</span>
+  <a class="blog-nav-link" href="https://e-mindset.space/series">View all series</a>
+  <span class="nav-sep">•</span>
+  <span class="blog-sort">Newest first ↓</span>
+</div>
+
+<div class="blog-list">
+  
+
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+    
+
+    
+      
+        
+        
+
+        
+        
+        
+
+        
+          
+        
+          
+            
+              
+                
+              
+            
+              
+                
+              
+            
+          
+        
+
+        
+
+        
+        <article class="series-block">
+          <div class="series-block-header">
+            <span class="series-icon"></span>
+            <a href="https://e-mindset.space/series/microlearning-platform/" class="series-title">
+              Mobile-First Microlearning Platform at Hyper-Scale
+            </a>
+            <span class="series-count">2 parts</span>
+          </div>
+
+          
+            <div class="series-block-description">
+              Design a production-grade mobile-first video learning platform for 3M-10M DAU. Deep dive into performance targets, content delivery at scale, distributed state management, ML personalization, microservices architecture, and production operations at hyper-scale.
+            </div>
+          
+
+          <div class="series-posts-list">
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 1</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/microlearning-platform-part1-foundation/">Why Social Video Beats Traditional E-Learning: The Mobile Learning Problem</a></h2>
+                    <p>700 million users worldwide learn through short-form mobile video. When users watch 20 videos in 12 minutes, 3-second buffering becomes a dealbreaker. Exploring the architectural challenge of instant video switching at 3-10M DAU scale.</p>
+                </div>
+              </div>
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 2</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/microlearning-platform-part2-performance-envelope/">Engineering the Performance Envelope: The Math Behind 300ms Latency</a></h2>
+                    <p>Defining the complete performance envelope for a mobile-first microlearning platform at 3M-10M DAU: latency budgets, capacity planning, critical bottlenecks, and cost-performance trade-offs for all 5 architectural drivers.</p>
+                </div>
+              </div>
+            
+          </div>
+
+          
+            <small class="series-meta">
+              <time datetime="2025-11-22T00:00:00+00:00" pubdate>22 November 2025</time>
+              
+        <span class="meta-separator">•</span>
+        
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/video-streaming/">#video-streaming</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/microlearning/">#microlearning</a></li>
+          </ul>
+        
+
+            </small>
+        </article>
+
+      
+    
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+        
+          
+        
+      
+    
+
+    
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+        
+      
+    
+
+    
+      
+        
+        
+
+        
+        
+        
+
+        
+          
+            
+              
+                
+              
+            
+              
+                
+              
+            
+              
+                
+              
+            
+              
+                
+              
+            
+              
+                
+              
+            
+          
+        
+          
+        
+
+        
+
+        
+        <article class="series-block">
+          <div class="series-block-header">
+            <span class="series-icon"></span>
+            <a href="https://e-mindset.space/series/architecting-ads-platforms/" class="series-title">
+              Architecting Real-Time Ads Platform
+            </a>
+            <span class="series-count">5 parts</span>
+          </div>
+
+          
+            <div class="series-block-description">
+              A comprehensive series exploring the design and architecture of real-time advertising platforms. From system foundations and ML inference pipelines to auction mechanisms and production operations, we dive deep into building systems that handle 1M+ QPS while maintaining sub-150ms latency at P99.
+            </div>
+          
+
+          <div class="series-posts-list">
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 1</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/ads-platform-part-1-foundation-architecture/">Real-Time Ads Platform: System Foundation &amp; Latency Engineering</a></h2>
+                    <p>Building the architectural foundation for ad platforms serving 1M+ QPS with 150ms P95 latency. Deep dive into requirements analysis, latency budgeting across critical paths, resilience through graceful degradation, and P99 tail latency defense using low-pause GC technology.</p>
+                </div>
+              </div>
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 2</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/ads-platform-part-2-rtb-ml-pipeline/">Dual-Source Revenue Engine: OpenRTB &amp; ML Inference Pipeline</a></h2>
+                    <p>Implementing the dual-source architecture that generates 30-48% more revenue by parallelizing internal ML-scored inventory (65ms) with external RTB auctions (100ms). Deep dive into OpenRTB protocol implementation, GBDT-based CTR prediction, feature engineering, and timeout handling strategies at 1M+ QPS.</p>
+                </div>
+              </div>
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 3</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/ads-platform-part-3-data-revenue/">Caching, Auctions &amp; Budget Control: Revenue Optimization at Scale</a></h2>
+                    <p>Building the data layer that enables 1M+ QPS with sub-10ms reads through L1&#x2F;L2 cache hierarchy achieving 85% hit rate. Deep dive into eCPM-based auction mechanisms for fair price comparison across CPM&#x2F;CPC&#x2F;CPA models, and distributed budget pacing using Redis atomic counters with proven ≤1% overspend guarantee.</p>
+                </div>
+              </div>
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 4</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/ads-platform-part-4-production/">Production Operations: Fraud, Multi-Region &amp; Operational Excellence</a></h2>
+                    <p>Taking ad platforms from design to production at scale. Deep dive into pattern-based fraud detection (20-30% bot filtering), active-active multi-region deployment with 2-5min failover, zero-downtime schema evolution, clock synchronization for financial ledgers, observability with error budgets, zero-trust security, and chaos engineering validation.</p>
+                </div>
+              </div>
+            
+              <div class="series-post-item">
+                <span class="part-indicator">Part 5</span>
+                <div class="series-post-content">
+                  <h2><a class="link-page" href="https://e-mindset.space/blog/ads-platform-part-5-implementation/">Complete Implementation Blueprint: Technology Stack &amp; Architecture Guide</a></h2>
+                    <p>Series capstone: complete technology stack with decision rationale. Why each choice matters (Java 21 + ZGC for GC pauses, CockroachDB for cost efficiency, Linkerd for latency). Includes cluster sizing, configuration patterns, system integration, and implementation roadmap. Validates all requirements met. Reference architecture for 1M+ QPS real-time ads platforms.</p>
+                </div>
+              </div>
+            
+          </div>
+
+          
+            <small class="series-meta">
+              <time datetime="2025-10-15T00:00:00+00:00" pubdate>15 October 2025</time>
+              
+        <span class="meta-separator">•</span>
+        
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/system-architecture/">#system-architecture</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/ads-tech/">#ads-tech</a></li>
+          </ul>
+        
+
+            </small>
+        </article>
+
+      
+    
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+        
+      
+        
+          
+        
+      
+    
+
+    
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+        
+      
+        
+          
+        
+      
+    
+
+    
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+        
+      
+        
+          
+        
+      
+    
+
+    
+  
+    
+    
+
+    
+    
+      
+
+      
+      
+        
+      
+        
+          
+        
+      
+    
+
+    
+  
+    
+    
+
+    
+    
+
+    
+      
+        
+        <article>
+          <h2><a class="link-page" href="https://e-mindset.space/blog/engineering-robust-intelligence-ai-collectives/">Engineering Robust Intelligence in AI Collectives</a></h2>
+            <p>How to engineer resilient decision-making in multi-agent AI systems. Explores weighted voting, robust aggregation, and governance architectures with mathematical frameworks and practical implementation ideas.</p>
+            <small>
+              <time datetime="2025-08-09T00:00:00+00:00" pubdate>09 August 2025</time>
+              
+        <span class="meta-separator">•</span>
+        
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/decision-making/">#decision-making</a></li>
+          </ul>
+        
+
+            </small>
+        </article>
+      
+    
+  
+    
+    
+
+    
+    
+
+    
+      
+        
+        <article>
+          <h2><a class="link-page" href="https://e-mindset.space/blog/adversarial-intuition-antifragile-ai-systems/">Adversarial Intuition: Engineering Anti-Fragile Decision-Making in Human-LLM Systems</a></h2>
+            <p>How engineers can develop frameworks for decision-making that become stronger when LLM systems fail, building cognitive resilience through adversarial thinking and dynamic trust calibration.</p>
+            <small>
+              <time datetime="2025-07-28T00:00:00+00:00" pubdate>28 July 2025</time>
+              
+        <span class="meta-separator">•</span>
+        
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/mindset/">#mindset</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/decision-making/">#decision-making</a></li>
+          </ul>
+        
+
+            </small>
+        </article>
+      
+    
+  
+    
+    
+
+    
+    
+
+    
+      
+        
+        <article>
+          <h2><a class="link-page" href="https://e-mindset.space/blog/engineering-mindset-distributed-intelligence/">The Engineering Mindset in the Age of Distributed Intelligence</a></h2>
+            <p>As AI transitions into a cognitive partner role, here are insights on the evolving engineering mindset.</p>
+            <small>
+              <time datetime="2025-04-18T00:00:00+00:00" pubdate>18 April 2025</time>
+              
+        <span class="meta-separator">•</span>
+        
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/mindset/">#mindset</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a></li>
+              <li><a class="tag" href="https://e-mindset.space/tags/cognitive-translation/">#cognitive-translation</a></li>
+          </ul>
+        
+
+            </small>
+        </article>
+      
+    
+  
+    
+    
+
+    
+    
+
+    
+      
+        
+        <article>
+          <h2><a class="link-page" href="https://e-mindset.space/blog/2024-03-12/">Ideas about definition of mindset</a></h2>
+            <p>Based on the assumption that mindset exists and can be defined.</p>
+            <small>
+              <time datetime="2024-03-12T00:00:00+00:00" pubdate>12 March 2024</time>
+              
+        <span class="meta-separator">•</span>
+        
+          <ul class="tags">
+              <li><a class="tag" href="https://e-mindset.space/tags/mindset/">#mindset</a></li>
+          </ul>
+        
+
+            </small>
+        </article>
+      
+    
+  
+</div>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script>
+  feather.replace();
+</script>
+
+</body>
+</html>
