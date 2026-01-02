@@ -414,7 +414,13 @@ Where:
 **Key Assumptions**: This models learning as a continuous process and forgetting as simple linear decay. It's a useful simplification of complex, non-linear cognitive phenomena that actually govern human skill acquisition and retention.
 
 **Learning Function**:
-$$\mathcal{L} = \beta_1 \cdot \text{CausalGap}(M_H, M_{LLM}) + \beta_2 \cdot \text{ConfidenceError}(M_{LLM}, S_{adv}) + \beta_3 \cdot \text{ConsistencyViolation}(M_{LLM}) + \beta_4 \cdot \text{StakeAmplification}(\text{context})$$
+$$
+\begin{aligned}
+\mathcal{L} &= \beta_1 \cdot \text{CausalGap}(M_H, M_{LLM}) + \\\\
+&+ \beta_2 \cdot \text{ConfidenceError}(M_{LLM}, S_{adv}) + \\\\
+&+ \beta_3 \cdot \text{ConsistencyViolation}(M_{LLM}) + \\\\
+&+ \beta_4 \cdot \text{StakeAmplification}(\text{context})
+\end{aligned}$$
 
 Where:
 - \\(\beta_i \geq 0\\): Non-negative weighting coefficients (with \\(\sum \beta_i = 1\\) for normalization)
