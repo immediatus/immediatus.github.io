@@ -10,9 +10,9 @@
   --bg-subtle: #f8f6f4;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --text: #4a5568;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
+  --text: #374151;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
   --border: #e8e5e1;
   --border-strong: #d4d1cc;
 
@@ -962,6 +962,12 @@ nav a:focus-visible {
   background: var(--peach-light);
   border-color: var(--peach);
   color: #92400e;
+}
+
+.info {
+  background: var(--mint-light);
+  border-color: var(--mint);
+  color: #047857;
 }
 
 .statement-container p:last-child {

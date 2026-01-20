@@ -8,7 +8,7 @@ draft = false
 
 
 [taxonomies]
-tags = ["distributed-systems", "caching-strategies", "auction-mechanisms", "ads-tech"]
+tags = ["distributed-systems", "caching", "auction-mechanisms", "ads-tech"]
 series = ["architecting-ads-platforms"]
 
 [extra]

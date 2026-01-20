@@ -10,6 +10,12 @@
   <a class="blog-nav-link" href="{{ get_url(path='tags') }}">Filter by tag</a>
   <span class="nav-sep">•</span>
   <a class="blog-nav-link" href="{{ get_url(path='series') }}">View all series</a>
+  {% if config.generate_feeds %}
+  <span class="nav-sep">•</span>
+  <a class="blog-nav-link" href="{{ get_url(path='atom.xml',trailing_slash=false)|safe }}">Atom</a>
+  <span class="nav-sep">•</span>
+  <a class="blog-nav-link" href="{{ get_url(path='rss.xml',trailing_slash=false)|safe }}">RSS</a>
+  {% endif %}
   <span class="nav-sep">•</span>
   <span class="blog-sort">Newest first ↓</span>
 </div>

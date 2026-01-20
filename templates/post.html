@@ -29,6 +29,13 @@
   </div>
 {% endif %}
 
+{% if page.extra.info %}
+  <div class="statement-container info">
+    <strong class="big">🛈 Info:</strong>
+    {{ page.extra.info | markdown | safe }}
+  </div>
+{% endif %}
+
 
 {% if page.extra.toc %}
   <div class="toc-list">

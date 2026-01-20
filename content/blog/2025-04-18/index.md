@@ -13,7 +13,7 @@ tags = ["mindset", "ai", "cognitive-translation"]
 [extra]
 toc = false
 disclaimer = """
-This post builds on the ideas in my previous post about the <a href="/blog/2024-03-12-ideas-about-definition-of-mindset/">Engineering Mindset</a>, and explores how this mindset is evolving as we team up with artificial intelligence.
+This post builds on the ideas in my previous post about the <a href="/blog/2024-03-12/">Engineering Mindset</a>, and explores how this mindset is evolving as we team up with artificial intelligence.
 
 **Meta-Cognitive Note:** This post itself exemplifies the cognitive partnership framework it describes. The concept of "cognitive impedance mismatch" emerged through adversarial reasoning sessions between my intuition and AI pattern recognition. Most significantly, the "cognitive translation" concept crystallized through the recursive process of translating ideas between my intention and AI understanding — making this post both theory and living demonstration of distributed cognitive augmentation in practice.
 """
