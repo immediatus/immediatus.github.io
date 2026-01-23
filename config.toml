@@ -8,7 +8,7 @@ compile_sass = true
 build_search_index = true
 
 # The title of the site
-title = "Midset Footprint"
+title = "Mindset Footprint"
 
 # The default author for pages
 author = "Yuriy Polyulya"
