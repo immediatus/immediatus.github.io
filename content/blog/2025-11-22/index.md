@@ -475,9 +475,6 @@ These failure modes map directly to the user experiences you saw above:
 - **Sarah** exposes #4 (Cold start caps growth)
 - **All three** are affected by #5 (Consistency bugs) and #6 (Costs end company)
 
-
-| **4. 3x ROI Threshold** | {% katex() %}\text{ROI} = \frac{\Delta R_{\text{annual}}}{C_{\text{annual}}} \geq 3.0{% end %} | Minimum 3x return to justify architectural shifts | One-way door migrations require 3x buffer for opportunity cost, technical risk, and uncertainty. |
-
 ## The Six Failure Modes: Detailed Analysis
 
 Consumer platforms fail in predictable sequence. Each failure mode unlocks the next constraint. (See Quick Reference table in opening section for overview.)
@@ -992,9 +989,9 @@ Where L = queue depth, λ = arrival rate (req/s), W = latency (seconds)
 | Scenario | λ (req/s) | W (latency) | L (queue depth) | Change |
 | :--- | ---: | ---: | ---: | :--- |
 | **Baseline** | 1,000 | 370ms | 370 requests | - |
-| **Optimized** | 1,000 | 100ms | 100 requests | -27% |
+| **Optimized** | 1,000 | 100ms | 100 requests | -73% |
 
-**Infrastructure impact:** Reducing latency from 370ms to 100ms frees 27% of connection capacity, allowing same hardware to serve more traffic.
+**Infrastructure impact:** Reducing latency from 370ms to 100ms frees 73% of connection capacity (queue depth drops from 370 to 100 requests), allowing same hardware to serve more traffic.
 
 **Applies to:** Protocol choice, GPU quotas, Cold start, Cost optimization
 ### Measuring Uncertainty Before Betting
@@ -1398,7 +1395,7 @@ The analysis quantifies what's at stake: $20.87M/year revenue at risk at 10M DAU
 
 **DECISION:** Should we spend $1.93M/year to reduce latency and optimize infrastructure?
 
-The $1.93M investment protecting $20.87M revenue represents a 10.8× return. However, this ROI only holds if latency is the binding constraint. If users abandon due to poor content quality, optimizing latency destroys capital.
+At 3M DAU, the $1.93M/year investment protects $5.23M/year revenue, yielding 2.7× ROI (below the 3× threshold). At 10M DAU, the same analysis yields $20.87M protected at $2.95M cost = 7.1× ROI (well above threshold). This ROI only holds if latency is the binding constraint. If users abandon due to poor content quality, optimizing latency destroys capital.
 
 **CONSTRAINT:** Revenue protected scales linearly with DAU, but infrastructure costs are largely fixed.
 
@@ -1473,29 +1470,30 @@ For infrastructure investment \\(I\\) yielding latency reduction \\(\Delta t = t
 
 where \\(\Delta F = F(t_{\text{before}}) - F(t_{\text{after}})\\) using the Weibull abandonment CDF.
 
-**TRADE-OFF:** Same $1M investment has 100× different ROI depending on platform scale.
+**TRADE-OFF:** Same $1M investment has dramatically different ROI depending on platform scale.
 
-**Multi-scale analysis:** $1M infrastructure cost to save 50ms (500ms to 450ms at p95):
+**Multi-scale analysis:** $1M infrastructure cost to save 270ms (370ms to 100ms, protocol migration):
 
-| Scale | DAU | F(0.50s) | F(0.45s) | ΔF | Revenue Protected | Payback | Annual ROI | Decision |
+| Scale | DAU | F(0.37s) | F(0.10s) | ΔF | Revenue Protected | Payback | Annual ROI | Decision |
 |-------|-----|----------|----------|-----|-------------------|---------|------------|----------|
-| **Seed** | 100K | 0.01265 | 0.00996 | 0.00269 | $0.16M/year | **73 months** | 0.16× | Reject |
-| **Series A** | 1M | 0.01265 | 0.00996 | 0.00269 | $1.64M/year | **7.3 months** | 1.64× | Marginal |
-| **Growth** | 10M | 0.01265 | 0.00996 | 0.00269 | $16.40M/year | **0.7 months** | 16.4× | Accept |
+| **Seed** | 100K | 0.00639 | 0.00032 | 0.00606 | $0.013M/year | **>10 years** | 0.01× | Reject |
+| **Series A** | 1M | 0.00639 | 0.00032 | 0.00606 | $0.127M/year | **95 months** | 0.13× | Reject |
+| **Series B** | 3M | 0.00639 | 0.00032 | 0.00606 | $0.38M/year | **32 months** | 0.38× | Marginal |
+| **Growth** | 10M | 0.00639 | 0.00032 | 0.00606 | $1.27M/year | **9.5 months** | 1.27× | Consider |
 
-**Calculation for 1M DAU (worked example):**
+**Calculation for 3M DAU (worked example):**
 
 {% katex(block=true) %}
 \begin{aligned}
-F(0.50\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.50}{3.39}\right)^{2.28}\right] = 0.01265 \\
-F(0.45\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.45}{3.39}\right)^{2.28}\right] = 0.00996 \\
-\Delta F &= 0.01265 - 0.00996 = 0.00269 \quad \text{(0.27 percentage points)} \\
-R &= 1\,000\,000 \times 365 \times 0.00269 \times \$0.0573 = \$1.64\text{M/year} \\
-\text{Payback} &= \frac{\$1\,000\,000}{\$1.64\text{M} / 12} = 7.3\text{ months}
+F(0.37\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.37}{3.39}\right)^{2.28}\right] = 0.00639 \text{ (0.639\%)} \\
+F(0.10\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.10}{3.39}\right)^{2.28}\right] = 0.00032 \text{ (0.032\%)} \\
+\Delta F &= 0.00639 - 0.00032 = 0.00606 \quad \text{(0.606 percentage points)} \\
+R &= 3\,000\,000 \times 365 \times 0.00606 \times \$0.0573 = \$0.38\text{M/year} \\
+\text{Payback} &= \frac{\$1\,000\,000}{\$0.38\text{M} / 12} = 32\text{ months}
 \end{aligned}
 {% end %}
 
-**OUTCOME:** At 100K DAU, 73-month payback is unacceptable (focus on user growth, not optimization). At 10M DAU, 0.7-month payback is obvious investment.
+**OUTCOME:** At 100K DAU, latency optimization fails badly (0.01× ROI). At 10M DAU, ROI reaches 1.27× - still below 3× threshold. This is why latency optimization alone has limited ROI - the full value comes from protocol migration which unlocks connection migration ($2.32M @3M DAU), DRM prefetch ($0.30M), and base latency ($0.38M) together totaling $3.00M @3M DAU for 1.6× ROI, reaching 5.0× ROI at 10M DAU.
 
 **Optimization thresholds:**
 - **VC-backed startups:** Require 3× annual ROI (4-month payback), only viable at ≥3M DAU (with corrected values)

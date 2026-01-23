@@ -184,9 +184,9 @@ Before breaking down revenue components, we need to derive the $2.32M connection
 - TCP reconnect latency: 1,650ms (3-way handshake + TLS)
 - QUIC migration latency: 50ms (seamless)
 - Weibull abandonment using {% katex() %}\lambda=3.39\text{s}, k=2.28{% end %}:
-  - \\(F(1.65\text{s}) = 16.1\\%\\) (empirically observed: 17.6% including UX friction during loading spinner)
-  - \\(F(0.05\text{s}) = 0.04\\%\\)
-  - **Delta: ~17.6% abandonment prevented**
+  - \\(F(1.65\text{s}) = 17.6\\%\\) (Weibull model; empirical observations validate this rate when including UX friction from loading spinner)
+  - \\(F(0.05\text{s}) = 0.01\\%\\)
+  - **Delta: ~17.6% abandonment prevented per transition**
 
 **Step 4: Annual revenue impact**
 - 630K transitions/day × 17.61% = 110,943 abandonments prevented/day
