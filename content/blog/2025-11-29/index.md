@@ -184,8 +184,8 @@ Before breaking down revenue components, we need to derive the $2.32M connection
 - TCP reconnect latency: 1,650ms (3-way handshake + TLS)
 - QUIC migration latency: 50ms (seamless)
 - Weibull abandonment using {% katex() %}\lambda=3.39\text{s}, k=2.28{% end %}:
-  - \\(F(1.65\text{s}) = 16.1\%\\) (empirically observed: 17.6% including UX friction during loading spinner)
-  - \\(F(0.05\text{s}) = 0.04\%\\)
+  - \\(F(1.65\text{s}) = 16.1\\%\\) (empirically observed: 17.6% including UX friction during loading spinner)
+  - \\(F(0.05\text{s}) = 0.04\\%\\)
   - **Delta: ~17.6% abandonment prevented**
 
 **Step 4: Annual revenue impact**
@@ -500,7 +500,7 @@ Results:
 - Ops: 1.5× baseline (manageable at 8-10 engineers)
 - Reach: 92-95% optimal, 5-8% degraded
 
-Revenue analysis: Using Law 2 (Weibull): WebRTC at 150ms yields \\(F(0.15s) = 0.10\\%\\) abandonment vs TCP+HLS baseline at 370ms with \\(F(0.37s) = 0.64\\%\\) abandonment. Savings: \\(\Delta F = 0.54\text{pp}\\). Using Law 1: \\(R_{\text{base}} = 3\text{M} \times 365 \times 0.0054 \times \\$0.0573 = \\$0.34\text{M/year}\\). Adding connection migration (\\$2.32\\text{M} \\times 95\\%\\text{ reach} = \\$2.20\\text{M}\\)): **Total \\$2.54\\text{M/year}**. ROI: \\(\\$2.54\text{M} \\div \\$1.2\text{M} = 2.1\\times\\) at 3M DAU.
+Revenue analysis: Using Law 2 (Weibull): WebRTC at 150ms yields \\(F(0.15s) = 0.10\\%\\) abandonment vs TCP+HLS baseline at 370ms with \\(F(0.37s) = 0.64\\%\\) abandonment. Savings: \\(\Delta F = 0.54\text{pp}\\). Using Law 1: \\(R_{\text{base}} = 3\text{M} \times 365 \times 0.0054 \times \\$0.0573 = \\$0.34\text{M/year}\\). Adding connection migration \\(\\$2.32\text{M} \times 95\\%\\text{ reach} = \\$2.20\\text{M}\\)): **Total \\(\\$2.54\\text{M/year}\\)**. ROI: \\(\\$2.54\text{M} \\div \\$1.2\text{M} = 2.1\times\\) at 3M DAU.
 
 ---
 
