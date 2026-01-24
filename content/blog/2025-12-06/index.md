@@ -17,7 +17,7 @@ series_description = "In distributed systems, solving the right problem at the w
 
 +++
 
-The previous posts established the constraint sequence: latency kills demand, protocol locks physics. Both optimize the demand side - how fast Kira gets her video. Now we reach the supply side: **GPU quotas kill creator experience**. Without creators, there's no content. Without content, latency optimization is irrelevant - fast delivery of nothing is still nothing.
+The previous posts established the constraint sequence: [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/), [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). Both optimize the demand side - how fast Kira gets her video. Now we reach the supply side: **GPU quotas kill creator experience**. Without creators, there's no content. Without content, latency optimization is irrelevant - fast delivery of nothing is still nothing.
 
 ---
 
@@ -81,7 +81,7 @@ If you can't confidently answer YES, encoding latency is NOT your constraint. Th
 - Creator ratio: 1.0% at 3M DAU = 30,000 creators
 - Creator ratio: 1.0% at 50M DAU = 500,000 creators
 - 5% annual creator churn from poor upload experience
-- 1 creator = 10,000 learner-days of content consumption per year
+- 1 creator = 10,000 learner-days of content consumption per year (derivation: average creator produces 50 videos/year × 200 views/video = 10,000 view-days; comparable to YouTube creator economics where mid-tier creators average 5K-20K views per video)
 
 **The creator experience problem:**
 
@@ -97,7 +97,7 @@ Marcus finishes recording a tutorial. He hits upload. How long until his video i
 
 ### Creator Patience Model (Adapted Weibull)
 
-Creator patience differs fundamentally from viewer patience. Viewers abandon in milliseconds (Weibull \\(\lambda=3.39\\)s, \\(k=2.28\\) from latency analysis). Creators tolerate longer delays but have hard thresholds:
+Creator patience differs fundamentally from viewer patience. Viewers abandon in milliseconds (Weibull \\(\lambda=3.39\\)s, \\(k=2.28\\) from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/)). Creators tolerate longer delays but have hard thresholds:
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -280,7 +280,7 @@ sequenceDiagram
 \end{aligned}
 {% end %}
 
-Negligible client-side cost, saves bandwidth and encoding for 3-5% of uploads (accidental duplicates, re-uploads after perceived failures).
+Negligible client-side cost, saves bandwidth and encoding for an estimated 3-5% of uploads (based on industry benchmarks for user-generated content platforms: accidental duplicates, re-uploads after perceived failures, cross-device re-uploads).
 
 ### File Validation
 
@@ -300,22 +300,13 @@ Before spending GPU cycles on encoding, validate the upload:
 
 Rejecting a 600MB file after upload wastes bandwidth. Rejecting it client-side saves everyone time.
 
-### ARCHITECTURAL REALITY
-
-**Presigned URL expiration:**
-- 15-minute validity balances security (short window) vs UX (time to complete upload)
-- Slow connections may need URL refresh mid-upload
-- Implementation: Client requests new URL if upload exceeds 10 minutes
-
-**Chunked upload complexity:**
-- Client must track chunk state (localStorage or IndexedDB)
-- Server must handle out-of-order chunk arrival
-- Multipart completion requires listing all parts (API call overhead)
-
-**Deduplication hash collision:**
-- SHA-256 collision probability: {% katex() %}2^{-128}{% end %} (negligible)
-- False positive risk: Zero in practice
-- False negative risk: Different files with same hash (cryptographically impossible at scale)
+> **Architectural Reality:** Upload infrastructure has hidden complexity that breaks at scale.
+>
+> **Presigned URL expiration:** 15-minute validity balances security vs UX. Slow connections need URL refresh mid-upload - client must request new URL if upload exceeds 10 minutes.
+>
+> **Chunked upload complexity:** Client must track chunk state (localStorage or IndexedDB), server must handle out-of-order arrival, and multipart completion requires listing all parts (API call overhead).
+>
+> **Deduplication hash collision:** SHA-256 collision probability is {% katex() %}2^{-128}{% end %} (negligible). False positive risk is zero in practice.
 
 ---
 
@@ -429,7 +420,7 @@ graph TD
 \end{aligned}
 {% end %}
 
-With 2.5× buffer for queue management, quota requests, and operational margin: **50 g4dn.xlarge instances** at peak capacity.
+With 2.5× buffer for queue management, quota requests, and operational margin: **50 g4dn.xlarge instances** at peak capacity. Buffer derivation: 19 peak instances × 2.5 = 47.5 ≈ 50, where 2.5× accounts for queue smoothing (1.3×), AWS quota headroom (1.2×), and instance failure tolerance (1.6×) - multiplicative: 1.3 × 1.2 × 1.6 ≈ 2.5.
 
 ### GPU Instance Comparison
 
@@ -451,52 +442,13 @@ With 2.5× buffer for queue management, quota requests, and operational margin: 
 
 **Decision: AWS** - Ecosystem integration (S3, ECS, CloudFront), consistent pricing, best availability. Multi-cloud adds complexity without proportional benefit at this scale.
 
-### ARCHITECTURAL REALITY
-
-**GPU quota bottleneck:**
-
-This is the constraint that kills creator experience.
-
-| Provider | Default Quota | Required | Gap |
-| :--- | :--- | :--- | :--- |
-| AWS (g4dn) | 8 vCPUs/region | 200 vCPUs (50 instances) | 25× under-provisioned |
-| GCP (T4) | 8 GPUs/region | 50 GPUs | 6× under-provisioned |
-| Azure (NC-series) | 12 vCPUs/region | 200 vCPUs | 17× under-provisioned |
-
-**Quota request timeline:**
-- Submit request: Day 0
-- Initial review: 1-2 business days
-- Approval (if straightforward): 3-5 business days
-- Approval (if requires justification): 5-10 business days
-
-**Mitigation strategy:**
-1. Request quota 2 weeks before launch
-2. Request in multiple regions (us-east-1 AND us-west-2)
-3. Have fallback plan if denied (see Encoding Orchestration section)
-
-**Saturday peak problem:**
-
-| Time Window | % Daily Uploads | Uploads | Raw Instances | With 2.5× Buffer |
-| :--- | :--- | :--- | :--- | :--- |
-| Sat 2-6 PM | 30% | 15K in 4 hours | 19 | **50** |
-| Sun 10 AM-2 PM | 15% | 7.5K in 4 hours | 10 | **25** |
-| Weekday evening | 10% | 5K in 4 hours | 7 | **17** |
-
-*Raw instances = uploads per hour ÷ 200 videos/instance/hour. Buffer accounts for queue management, quota limits, and operational margin.*
-
-Without auto-scaling, Saturday peak overwhelms baseline capacity:
-
-{% katex(block=true) %}
-\begin{aligned}
-\text{Baseline capacity} &= 11\,\text{instances} \times 200\,\text{videos/hour} = 2{,}200/\text{hour} \\
-\text{Saturday incoming} &= 15\text{K} / 4\,\text{hours} = 3{,}750/\text{hour} \\
-\text{Queue growth} &= 3{,}750 - 2{,}200 = 1{,}550\,\text{videos/hour} \\
-\text{By hour 4} &= 1{,}550 \times 4 = 6{,}200\,\text{video backlog} \\
-\text{Wait time} &= \frac{6{,}200}{2{,}200/\text{hour}} = 2.8\,\text{hours}
-\end{aligned}
-{% end %}
-
-Marcus uploads at 5:30 PM (hour 3.5 of the Saturday peak). He sees "Processing in ~2 hours." He opens YouTube.
+> **Architectural Reality:** GPU quotas - not encoding speed - kill creator experience.
+>
+> **Default quotas are 6-25× under-provisioned:** AWS gives 8 vCPUs/region by default, but you need 200 (50 instances) for Saturday peak. Request quota 2 weeks before launch, in multiple regions, with a fallback plan if denied.
+>
+> **Saturday peak math:** 30% of daily uploads (15K) arrive in 4 hours. Baseline capacity handles 2,200/hour. Queue grows at 1,550/hour, creating 6,200 video backlog and 2.8-hour wait times. Marcus uploads at 5:30 PM, sees "Processing in ~2 hours," and opens YouTube.
+>
+> **Quota request timeline:** 3-5 business days if straightforward, 5-10 days if justification required.
 
 ---
 
@@ -648,22 +600,13 @@ sequenceDiagram
     CDN-->>Lambda: Warming complete (3 shields)
 {% end %}
 
-### ARCHITECTURAL REALITY
-
-**Global push (Option A) failure mode:**
-- 90% of bandwidth wasted on PoPs that never serve the video
-- New creators with 10 followers don't need 200-PoP distribution
-- Cost scales with uploads, not views (wrong unit economics)
-
-**Lazy pull (Option B) failure mode:**
-- First-viewer latency penalty violates <300ms SLO
-- High-profile creators (100K+ followers) trigger simultaneous cache misses across 50+ PoPs
-- Origin thundering herd on viral content
-
-**Geo-aware (Option C) optimizations:**
-- New creators (no history): Default to origin region + 2 nearest shields
-- Viral detection: If views exceed 10× normal in first 5 minutes, trigger global push
-- Time-zone awareness: Weight recent views higher (European creator uploading at 2 PM CET triggers EU shield warming first)
+> **Architectural Reality:** Both extremes of cache warming fail at scale.
+>
+> **Global push fails:** 90% of bandwidth wasted on PoPs that never serve the video. New creators with 10 followers don't need 200-PoP distribution. Cost scales with uploads, not views (wrong unit economics).
+>
+> **Lazy pull fails:** First-viewer latency penalty violates <300ms SLO. High-profile creators trigger simultaneous cache misses across 50+ PoPs, causing origin thundering herd.
+>
+> **Geo-aware wins:** New creators get origin + 2 nearest shields. Viral detection (10× views in 5 minutes) triggers global push. Time-zone awareness weights recent views higher.
 
 ---
 
@@ -822,9 +765,7 @@ Beyond time-coded captions, the system generates a plain text transcript by conc
 
 Captions complete 4 seconds before encoding. Zero added latency to publish pipeline.
 
-### ARCHITECTURAL REALITY
-
-**Accuracy varies by audio quality:** Clear audio achieves 97%+, while background noise or multiple speakers drops to 80-90%. The creator review workflow (confidence-based flagging) is the accuracy backstop - 10-15% of videos need correction.
+> **Architectural Reality:** ASR accuracy is not a fixed number - it varies by audio quality. Clear audio achieves 97%+, while background noise or multiple speakers drops to 80-90%. The creator review workflow (confidence-based flagging) is the accuracy backstop - 10-15% of videos need correction.
 
 ---
 
@@ -1006,28 +947,7 @@ Beyond retention curves, track which segments get replayed:
 | **A/B test results** | CTR/completion by variant | <30s |
 | **Estimated earnings** | Views × $0.75/1K | <30s |
 
-### ARCHITECTURAL REALITY
-
-**Stream processing cost:**
-- Kafka: $3K/month (managed, 3 brokers)
-- Flink: $8K/month (managed, 4 task managers)
-- ClickHouse: $4K/month (3-node cluster)
-- Total: $15K/month (see Batch vs Stream Processing section for cost justification)
-
-**Latency breakdown:**
-
-{% katex(block=true) %}
-\begin{aligned}
-\text{Client to Kafka} &= 50\,\text{ms (mobile network)} \\
-\text{Kafka to Flink} &= 100\,\text{ms (consumer poll)} \\
-\text{Flink processing} &= 500\,\text{ms (windowed aggregation)} \\
-\text{Flink to Redis} &= 50\,\text{ms (write)} \\
-\text{Dashboard poll} &= 5{,}000\,\text{ms (5s refresh)} \\
-\text{Total} &= 5{,}700\,\text{ms} \approx 6\,\text{s typical}
-\end{aligned}
-{% end %}
-
-Actual latency is 6 seconds, well under the 30s requirement. The 30s budget provides margin for processing spikes and network variance.
+> **Architectural Reality:** Stream processing costs $15K/month (Kafka $3K + Flink $8K + ClickHouse $4K), but delivers 6-second latency - well under the 30s requirement. The 30s budget provides margin for processing spikes. Batch processing would save $10K/month but deliver 15-minute latency, breaking Marcus's iteration workflow.
 
 ---
 
@@ -1191,11 +1111,7 @@ graph TD
 
 **Predictive scaling:** Schedule scale-out 30 minutes before expected peaks. Don't wait for queue to grow.
 
-### ARCHITECTURAL REALITY
-
-**GPU quotas are the real bottleneck** - not encoding speed. Default quota (8 vCPUs = 2 instances = 400 videos/hour) cannot handle Saturday peak (3,750/hour). See GPU Quota Management section for request strategy.
-
-**Extreme spikes** (viral creator uploads 100 videos): Queue fairly, show accurate ETA, don't promise what you can't deliver.
+> **Architectural Reality:** GPU quotas are the real bottleneck - not encoding speed. Default quota (8 vCPUs = 2 instances = 400 videos/hour) cannot handle Saturday peak (3,750/hour). For extreme spikes (viral creator uploads 100 videos): queue fairly, show accurate ETA, don't promise what you can't deliver.
 
 ---
 
@@ -1286,27 +1202,13 @@ The 3× threshold applies to incremental optimizations with alternatives. Creato
 | **Caption only >30s videos** | 40% | Short videos lose accessibility |
 | **Self-hosted Whisper at scale** | 29% at 100K+/day | Operational complexity (see ASR Provider Comparison) |
 
-### ARCHITECTURAL REALITY
-
-**Caption cost is non-negotiable:**
-- WCAG compliance requires captions
-- Cannot reduce coverage without legal/accessibility risk
-- $625/day ($228K/year) is the floor
-
-**Analytics cost is non-negotiable:**
-- <30s latency requires stream processing
-- Batch would save $10K/month but break creator iteration workflow
-- Creator retention ($859K/year conservative; up to $2.58M using behavioral cohort) justifies $180K/year analytics spend
-
-**Scaling projections:**
-
-| Scale | Uploads/Day | Pipeline Cost/Month | Cost/DAU |
-| :--- | :--- | :--- | :--- |
-| 3M DAU | 50K | $38.6K | $0.0129 |
-| 10M DAU | 167K | $105K | $0.0105 |
-| 50M DAU | 833K | $420K | $0.0084 |
-
-Pipeline cost per DAU **decreases** with scale due to fixed analytics costs amortizing across more users.
+> **Architectural Reality:** Two costs are non-negotiable.
+>
+> **Captions ($228K/year floor):** WCAG compliance requires captions. Cannot reduce coverage without legal/accessibility risk.
+>
+> **Analytics ($180K/year):** <30s latency requires stream processing. Batch would save $10K/month but break creator iteration workflow. Creator retention ($859K/year conservative) justifies the spend.
+>
+> **Scaling benefit:** Pipeline cost per DAU decreases with scale ($0.0129 at 3M → $0.0084 at 50M) as fixed analytics costs amortize.
 
 ---
 

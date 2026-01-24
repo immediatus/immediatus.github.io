@@ -17,7 +17,7 @@ series_description = "In distributed systems, solving the right problem at the w
 
 +++
 
-Short-form video platforms require sub-300ms swipe latency to match TikTok and Instagram. Above 300ms, users abandon before forming habits - the Session Tax analyzed in "Latency Kills Demand."
+Short-form video platforms require sub-300ms swipe latency to match TikTok and Instagram. Above 300ms, users abandon before forming habits - the Session Tax analyzed in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/).
 
 Most teams approach this as a performance optimization problem. They spend six months and $2M on CDN edge workers, video compression, and frontend optimization. They squeeze every millisecond out of application code. Yet when users swipe, the loading spinner persists.
 
@@ -33,11 +33,11 @@ Breaking 300ms requires a different protocol with fundamentally different latenc
 
 This protocol analysis only matters if ALL of these are true:
 
-- Latency kills demand (validated) - Revenue impact quantified (>$5M/year from abandonment via Weibull analysis; see "Latency Kills Demand" for full methodology showing $5.23M @3M DAU [Daily Active Users] total constraint impact)
+- Latency kills demand (validated) - Revenue impact quantified (>$5M/year from abandonment via Weibull analysis; see [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) for full methodology showing $5.23M @3M DAU [Daily Active Users] total constraint impact)
 - UX mitigation tested and ruled out - A/B test showed perception multiplier \\(\hat{\theta} > 0.70\\) (95% CI), insufficient to achieve <300ms perceived latency at current baseline
 - Supply is flowing - Not constrained by creator tools or encoding capacity (30K+ active creators, content worth watching)
 - Volume justifies complexity - >100K DAU (Daily Active Users) to afford dual-stack infrastructure costs (1.8× operational complexity)
-- Budget exists - Infrastructure budget >$2M/year, can absorb 1.8 times operational complexity
+- Budget exists - Infrastructure budget >$2M/year, can absorb 1.8× operational complexity
 - Engineering capacity - Dedicated team for 18-month migration + 18-month stabilization
 
 If ANY of these are false, skip this post:
@@ -46,7 +46,7 @@ If ANY of these are false, skip this post:
 - **UX mitigation not tested**: Without A/B testing to measure perception multiplier \\(\theta\\), testing UX first (6 weeks, $0.10M) before committing to protocol migration ($6.45M over 3 years) is necessary
 - **Early-stage (<50K DAU)**: TCP+HLS (HTTP Live Streaming) is sufficient for product-market fit validation - dual-stack complexity is 20%+ of infrastructure budget at this stage
 - **Supply-constrained**: If creator upload latency p95 > 120s (2-hour encoding queue), focus on creator tools and encoding capacity - latency optimization is premature when supply is the bottleneck
-- **Limited budget (<$2M/year)**: Dual-stack operational complexity (1.8 times ops load) requires dedicated team - better to accept 370ms TCP+HLS and optimize within constraints
+- **Limited budget (<$2M/year)**: Dual-stack operational complexity (1.8× ops load) requires dedicated team - better to accept 370ms TCP+HLS and optimize within constraints
 - **B2B/Enterprise market**: Higher latency tolerance (500-1000ms acceptable for mandated training) - protocol optimization delivers lower ROI (Return on Investment) than compliance, SSO (Single Sign-On), LMS (Learning Management System) integration
 
 ---
@@ -156,9 +156,13 @@ Before applying the Four Laws, we need to derive the $1.64M/year infrastructure 
 - A/B testing & canary infrastructure: $20K/year
 - **Infrastructure total: $220K/year**
 
-**Total Annual Dual-Stack Cost: $1.44M + $0.22M = $1.66M ≈ $1.64M/year**
+**Total Annual Dual-Stack Cost: $1.44M + $0.22M = $1.66M/year** (rounded to $1.64M in subsequent calculations)
 
 After migration completes (18 months), costs drop to ~$1.2M/year as single-stack QUIC operations are simpler than TCP+HLS (no HLS manifest complexity, unified connection management).
+
+> **Architectural Reality:** The dual-stack tax is unavoidable. Safari/iOS (42% of mobile) lacks MoQ support and corporate firewalls (5% of users) block UDP - both require fallbacks. You cannot "skip to QUIC-only" without abandoning these users. 1.8× ops complexity is the cost of reaching 100% of your market.
+>
+> **The 18-month timeline is non-negotiable:** Client SDK changes require app store review cycles (iOS: 2-4 weeks per release). Gradual rollout (1% → 10% → 50% → 100%) catches edge cases. Attempting faster migration creates production incidents that cost more than waiting.
 
 ---
 
@@ -217,7 +221,7 @@ Before completing the revenue breakdown, we need to derive the $0.31M DRM prefet
 
 This value scales linearly: @10M DAU = $1.03M/year, @50M DAU = $5.17M/year.
 
-This optimization requires MoQ support (QUIC multiplexing), so it only applies to 58% of users (Safari/iOS doesn't support MoQ as of 2025).
+This optimization requires MoQ support (QUIC multiplexing), so it only applies to 58% of users (Safari/iOS lacks WebTransport API required for MoQ as of 2025, though Safari partially supports QUIC transport on macOS).
 
 ---
 
@@ -330,6 +334,10 @@ All scenarios include 42% Safari/iOS limitation (partial MoQ support).
 Sensitivity Logic:
 Even in the pessimistic scenario (25% UDP blocked + 42% Safari), protocol migration generates positive ROI at scale. However, at 3M DAU, all scenarios fall below the 3× threshold - suggesting defer until 15M+ DAU where Safari-adjusted ROI exceeds 3.0×. The primary risks are: (1) runway exhaustion before reaching scale, (2) Safari adding MoQ support (making early migration premature), (3) UDP throttling variance in new markets.
 
+> **Architectural Reality:** UDP blocking is geography-dependent. US/EU residential sees 2-3% blocked, corporate networks 25-35%, APAC markets 15-40%. Measure your actual traffic before committing to QUIC-first architecture.
+>
+> **The 8% estimate is a planning number, not a guarantee.** Deploy QUIC with HLS fallback first, measure actual fallback rates from production telemetry. If fallback exceeds 15%, reconsider the dual-stack investment.
+
 ### The Ceiling of Client-Side Tactics
 
 If the TCP+HLS baseline is 370ms *before* adding edge cache, DRM, and routing overhead, the p95 will inevitably drift toward 500ms+. At that point, client-side skeleton loaders are masking a fundamentally broken experience.
@@ -360,7 +368,7 @@ Low-Latency HLS (LL-HLS) provides an intermediate path: cutting TCP+HLS latency 
 | :--- | :--- | :--- | :--- | :--- |
 | TCP + Standard HLS | 529ms | 1.0 times (baseline) | $0 | Revenue ($2.30M/year at abandonment) |
 | TCP + LL-HLS | 280ms | 1.2 times | $0.40M one-time | Connection migration, 0-RTT |
-| QUIC + MoQ | 100ms | 1.8 times | $1.64M/year | Nothing (if 5-6 engineer team available) |
+| QUIC + MoQ | 100ms | 1.8× | $1.64M/year | Nothing (if 5-6 engineer team available) |
 
 How LL-HLS works:
 
@@ -404,11 +412,11 @@ THE CONSTRAINT: LL-HLS buys 12-18 months, but hits ceiling at scale:
 
 - Mobile-first platforms: LL-HLS requires persistent connections (battery drain on cellular)
 - International expansion: TCP still suffers packet loss on high-RTT paths (150ms India-to-US becomes 300ms at p95)
-- Team growth: At 15+ engineers, 1.8 times ops load becomes manageable - LL-HLS bridge becomes technical debt
+- Team growth: At 15+ engineers, 1.8× ops load becomes manageable - LL-HLS bridge becomes technical debt
 
 When LL-HLS is correct decision:
 
-- Team size: 3-5 engineers (can't absorb 1.8 times ops load yet)
+- Team size: 3-5 engineers (can't absorb 1.8× ops load yet)
 - Traffic profile: Regional (North America or Europe only)
 - Business model: Need to prove annual impact before $1.64M/year infrastructure investment
 
@@ -436,7 +444,7 @@ Most protocol discussions present "TCP+HLS vs QUIC+MoQ vs WebRTC" as the only op
 | TCP + Standard HLS | 529ms | $0.40M | 1.0 times (baseline) | Excellent (100%) | None (TCP works everywhere) | YES (cost-optimal) |
 | TCP + LL-HLS | 280ms | $0.80M | 1.2 times | Excellent (100%) | None (TCP works everywhere) | YES (balanced) |
 | QUIC + WebRTC | 150ms | $1.20M | 1.5 times | Good (92-95%) | UDP throttling (5-8% fail) | YES (latency + reach trade-off) |
-| QUIC + MoQ | 100ms | $1.64M | 1.8 times | Moderate (88-92%) | UDP throttling (8-12% fail) | YES (latency-optimal) |
+| QUIC + MoQ | 100ms | $1.64M | 1.8× | Moderate (88-92%) | UDP throttling (8-12% fail) | YES (latency-optimal) |
 | Custom Protocol | 80ms | $5M+ | 3.0 times+ | Poor (requires app) | Network traversal issues | NO (dominated by QUIC) |
 
 Pareto optimality definition: Solution A dominates solution B if A is no worse than B in all objectives AND strictly better in at least one. The Pareto frontier contains all non-dominated solutions.
@@ -477,7 +485,7 @@ Advantages over LL-HLS:
 
 Advantages over QUIC+MoQ:
 - 27% lower cost ($1.20M vs $1.64M)
-- 20% lower ops complexity (1.5 times vs 1.8 times)
+- 20% lower ops complexity (1.5× vs 1.8×)
 - Better UDP traversal (92-95% vs 88-92%)
 
 Disadvantages:
@@ -528,7 +536,7 @@ Feasibility analysis:
 | TCP + HLS | 0% (satisfies) | $0.40M (satisfies) | 1.0 times (satisfies) | YES |
 | LL-HLS | 0% (satisfies) | $0.80M (satisfies) | 1.2 times (satisfies) | YES |
 | WebRTC | 8% (satisfies if \\(\theta_{\max} = 10\\%\\)) | $1.20M (satisfies) | 1.5 times (satisfies) | YES (conditional) |
-| QUIC+MoQ | 8% (satisfies if \\(\theta_{\max} = 10\\%\\)) | $1.64M (VIOLATES) | 1.8 times (VIOLATES) | NO |
+| QUIC+MoQ | 8% (satisfies if \\(\theta_{\max} = 10\\%\\)) | $1.64M (VIOLATES) | 1.8× (VIOLATES) | NO |
 
 Interpretation: At $1.50M budget and 1.6 times ops capacity, QUIC+MoQ is infeasible despite being Pareto optimal. WebRTC becomes the latency-optimal solution within constraints.
 
@@ -553,7 +561,7 @@ graph TD
     UDP1 -->|No must work everywhere| LLHLS2[TCP + LL-HLS<br/>$0.80M, 280ms<br/>Universal compatibility]
 
     High --> Team2{Team Size?}
-    Team2 -->|< 10 engineers| WebRTC2[QUIC + WebRTC<br/>$1.20M, 150ms<br/>Team can't absorb 1.8 times]
+    Team2 -->|< 10 engineers| WebRTC2[QUIC + WebRTC<br/>$1.20M, 150ms<br/>Team can't absorb 1.8×]
     Team2 -->|>= 10 engineers| Mobile{Mobile-First Platform?}
 
     Mobile -->|Yes needs connection migration| MoQ[QUIC + MoQ<br/>$1.64M, 100ms<br/>Latency-optimal]
@@ -574,7 +582,7 @@ graph TD
 Key insights from decision tree:
 
 Budget dominates at <$1.50M: TCP-based solutions (HLS, LL-HLS) are rational choices
-Team size gates QUIC adoption: 1.5-1.8 times ops load requires 8-10+ engineers
+Team size gates QUIC adoption: 1.5-1.8× ops load requires 8-10+ engineers
 WebRTC emerges as pragmatic middle ground: 92% of optimal latency at 73% of MoQ cost
 Mobile-first platforms must pay for MoQ: Connection migration ($2.32M/year value @3M DAU, scales to $38.67M @50M DAU) only works with QUIC
 
@@ -801,7 +809,7 @@ Exhaust software optimization first before migrating protocols.
 
 After validating that latency kills demand, six scenarios exist where protocol optimization destroys capital.
 
-The general constraint validation framework is covered in "Latency Kills Demand." The following protocol-specific extensions show when QUIC+MoQ migration wastes capital even when latency is validated as a constraint.
+The general constraint validation framework is covered in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/). The following protocol-specific extensions show when QUIC+MoQ migration wastes capital even when latency is validated as a constraint.
 
 Decision gate - protocol migration requires ALL of these:
 1. Latency validated as active constraint
@@ -924,7 +932,7 @@ Before diving into the latency budget analysis, we establish the notation used t
 | \\(N\\) | Daily active user count | users/day | 3M = 3,000,000 |
 | \\(T\\) | Annual active user-days (\\(365\\) days/year) | user-days/year | 365 |
 | \\(r\\) | Blended lifetime value per user-month | $/user-month | $1.72 |
-| \\(R\\) | Annual annual impact by latency improvement | $/year | $0.38M to $3.01M @3M DAU; $6.33M to $50.17M @50M DAU |
+| \\(R\\) | Annual revenue impact from latency improvement | $/year | $0.38M to $3.01M @3M DAU; $6.33M to $50.17M @50M DAU |
 | \\(B\\) | Latency budget (target threshold for abandonment control) | milliseconds (ms) | 300ms |
 | \\(\Delta_{\text{budget}}\\) | Budget status: \\((L - B)/B \times 100\\%\\) (over/under threshold) | percentage (%) | +76% (over budget) |
 | \\(\mathbb{E}[X]\\) | Expected value (mean) of random variable \\(X\\) | varies | e.g., 204ms |
@@ -965,7 +973,7 @@ where \\(C_i(p)\\) is the \\(p\\)-th percentile latency of component \\(i\\) (pr
 
 Mathematical caveat on summation notation:
 
-The summation \\(L(p) = \sum C_i(p)\\) is written for conceptual clarity, but this equality holdsonly under the assumption that component latencies are independent random variables**. In practice, components exhibit strong correlation (unpopular content triggers simultaneous cache miss, DRM cold start, and prefetch miss). Therefore, we rely on empirically measured scenarios (\\(L_{50} = 175\,\text{ms}\\), \\(L_{95} = 529\,\text{ms}\\), \\(L_{99} = 1\,185\,\text{ms}\\) from production telemetry) rather than computing percentile sums from independent components.
+The summation \\(L(p) = \sum C_i(p)\\) is written for conceptual clarity, but this equality holds only under the assumption that component latencies are independent random variables. In practice, components exhibit strong correlation (unpopular content triggers simultaneous cache miss, DRM cold start, and prefetch miss). Therefore, we rely on empirically measured scenarios (\\(L_{50} = 175\,\text{ms}\\), \\(L_{95} = 529\,\text{ms}\\), \\(L_{99} = 1\,185\,\text{ms}\\) from production telemetry) rather than computing percentile sums from independent components.
 
 Modeling Approach: Three Representative Scenarios
 
@@ -1113,20 +1121,24 @@ The 970ms problem: First 4 components contribute 970ms (82% of total), but attem
 
 The 80/20 insight: First 4 components contribute 970ms (82%). But only Protocol + TTFB (370ms combined) affect 100% of requests. Edge cache and ML prefetch only affect 15-25% of traffic.
 
-Protocol (370ms baseline) affects all users. QUIC+MoQ migration costs $1.64M but delivers 270ms savings on every request. For teams capable of handling 1.8 times ops complexity, this is highest leverage.
+Protocol (370ms baseline) affects all users. QUIC+MoQ migration costs $1.64M but delivers 270ms savings on every request. For teams capable of handling 1.8× ops complexity, this is highest leverage.
 
 ### Why Protocol Matters: The 270ms Differential
 
-Protocol choice alone determines 80-270ms of the 300ms budget(27-90% of total):
+Protocol choice alone determines 80-270ms of the 300ms budget (27-90% of total):
 
 | Protocol Stack | Handshake | Delivery | Total | Budget Status |
 | :--- | :--- | :--- | :--- | :--- |
 | TCP+HLS (baseline) | 150ms (TCP 3-way 100ms + TLS 50ms) | 220ms (playlist + chunk + encode + transmit) | 370ms | 23% OVER |
 | QUIC+MoQ (optimized) | 50ms (0-RTT, includes TLS) | 50ms (no playlist, frame-level) | 100ms | 67% UNDER |
 
-**Protocol savings**: 370ms - 100ms = 270ms (73% latency reduction)**
+**Protocol savings:** 370ms - 100ms = 270ms (73% latency reduction)
 
-**The architectural insight**: Protocol choice isn't an optimization - it's a prerequisite**. TCP+HLS violates the 300ms budget before adding edge caching, DRM, multi-region routing, or ML prefetch. QUIC+MoQ frees 200ms of budget for these components.
+**The architectural insight:** Protocol choice isn't an optimization - it's a prerequisite. TCP+HLS violates the 300ms budget before adding edge caching, DRM, multi-region routing, or ML prefetch. QUIC+MoQ frees 200ms of budget for these components.
+
+> **Architectural Reality:** The 270ms is theoretical maximum, not guaranteed. Actual savings depend on network conditions - rural users with 150ms RTT see less benefit than urban users with 30ms RTT. First-time visitors don't get 0-RTT benefits. Safari users get 0ms benefit (forced to HLS fallback).
+>
+> **Protocol migration doesn't fix bad CDN placement.** QUIC can't teleport packets faster than light. If your nearest edge is 100ms RTT away, that's your floor. Multi-region CDN deployment is prerequisite, not follow-on optimization.
 
 ### Revenue Impact: Why 270ms Matters
 
@@ -1169,7 +1181,7 @@ Skip protocol migration if:
 - **<100K DAU**: TCP+HLS infrastructure costs $0.40M/year, QUIC+MoQ costs $1.64M/year
   - At 50K DAU, annual impact by protocol switch  approximately  $1.60M/year
   - Infrastructure increase: $1.24M/year
-  - Net benefit: $0.36M/year (ROI: 1.3 times - not worth 18-month migration effort)
+  - Net benefit: $0.36M/year (ROI: 1.3× - not worth 18-month migration effort)
 
 - **Budget <$2M/year total**: Dual-stack requires 23% of infrastructure budget ($1.64M of $7.20M at scale)
   - At <$2M budget, protocol migration consumes 80%+ of infrastructure spend
@@ -1326,7 +1338,7 @@ To reduce p95 latency from 529ms to 300ms (target), six optimizations must work 
 | :--- | :--- | :--- | :--- | :--- |
 | 1. QUIC 0-RTT (vs TCP+TLS) | -100ms | -50ms | 5% firewall-blocked (+20ms penalty) | $0 (protocol change) |
 | 2. MoQ frame delivery (vs HLS chunk) | -170ms | -170ms | Safari needs HLS fallback (42% users get 220ms) | Dual-stack complexity |
-| 3. Regional shields (coalesce origin) | 0ms | -150ms (reduce 200ms to 50ms miss) | 3.5 times infrastructure cost | +$61.6K/mo |
+| 3. Regional shields (coalesce origin) | 0ms | -150ms (reduce 200ms to 50ms miss) | 3.5× infrastructure cost | +$61.6K/mo |
 | 4. DRM pre-fetch | -71ms | -71ms | 25% unpredicted videos still block 95ms | $9.6K/day prefetch bandwidth |
 | 5. ML prefetch | -75ms | -225ms | New users (18% sessions) get 31% hit rate | $9.6K/day bandwidth |
 | 6. Multi-region deployment | -15ms | -30ms | GDPR data residency constraints | +$61.6K/mo |
@@ -1339,11 +1351,11 @@ The architectural reality: Even with all six optimizations, p95 is 4ms over budg
 - 4ms over budget affects revenue by <0.01% (statistically insignificant)
 - Perfectionism is the enemy of shipping
 
-The prioritization insight: Protocol choice (optimizations 1+2) delivers 270ms of the 431ms total savings (63%). This is why this part focuses on protocol - it's the highest-leverage architectural decision.
+The prioritization insight: Protocol choice (optimizations 1+2) delivers 270ms of the 431ms total savings (63%). This is why protocol choice is the highest-leverage architectural decision.
 
-### This Part's Focus: Protocol Wars
+### Protocol Wars: The Focus
 
-This part focuses on protocol-layer latency (handshake + frame delivery):
+This analysis focuses on protocol-layer latency (handshake + frame delivery):
 
 1. TCP vs QUIC: Why 0-RTT saves 100ms vs TCP's 3-way handshake
 2. HLS vs MoQ: Why frame delivery saves 170ms vs chunk-based streaming
@@ -1598,12 +1610,12 @@ REVENUE IMPACT TABLE (using Law 1: Universal Revenue Formula):
 
 | Option | Users Affected | Latency | F(t) Abandonment | ΔF vs Baseline | User Impact | Decision |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| A: HLS-only | 1.56M Android (52%) | 220ms vs 50ms | 0.197% vs 0.007% | +0.190pp | -$1.08M/year loss | Reject |
+| A: HLS-only | 1.17M Android (52% of mobile) | 220ms vs 50ms | 0.197% vs 0.007% | +0.190pp | -$0.81M/year loss | Reject |
 | B: MoQ+HLS dual-stack | 150K firewall-blocked (5%) | 320ms vs 300ms | 0.462% vs 0.399% | +0.063pp | -$34.5K/year loss | Accept |
 
-ROI COMPARISON: Option B (dual-stack) saves $1.05M annually ($1.08M avoided loss from HLS-only, minus $34.5K firewall penalty).
+ROI COMPARISON: Option B (dual-stack) saves $0.78M annually ($0.81M avoided loss from HLS-only, minus $34.5K firewall penalty).
 
-DECISION: Accept 20ms budget violation for 5% of firewall-blocked users to protect $1.05M/year revenue from Android users. The 1.8 times operational complexity (maintaining both MoQ and HLS) is justified by the revenue protection.
+DECISION: Accept 20ms budget violation for 5% of firewall-blocked users to protect $0.78M/year revenue from Android users. The 1.8× operational complexity (maintaining both MoQ and HLS) is justified by the revenue protection.
 
 ### MoQ Deployment Challenges
 
@@ -1633,9 +1645,13 @@ Platform must maintain both protocols:
 - MoQ for 95% of users (50ms TTFB)
 - HLS for Safari + firewall-blocked (220ms TTFB)
 - Detection logic (100ms overhead)
-- Total infrastructure: 1.8 times complexity vs HLS-only
+- Total infrastructure: 1.8× complexity vs HLS-only
 
 Trade-off accepted: Operational complexity worth $1.05M annual revenue protection.
+
+> **Architectural Reality:** MoQ is not "just better HLS" - it's a fundamentally different system. Different encoding format (frame-based vs chunk-based), different CDN configuration (persistent connections vs request/response), different monitoring (stream health vs request latency). You're operating two video delivery systems, not one improved system.
+>
+> **The Cloudflare dependency is real.** As of 2026, only Cloudflare has production MoQ support. AWS CloudFront roadmap says 2026+ with no firm date. If Cloudflare raises prices, you have no multi-vendor leverage. Negotiate 3-year fixed pricing before committing to MoQ.
 
 ---
 
@@ -1933,6 +1949,10 @@ R_{\text{DRM}} &= 3\text{M} \times 0.00481 \times \$0.0573 \times 365 = \$0.31\t
 
 *ROI @50M DAU:* $5.17M ÷ $1.50M = 3.45× return (viable above the 3× threshold).
 
+> **Architectural Reality:** DRM provider selection is a 3-year commitment. Switching from Widevine to FairPlay requires re-encrypting your entire video library. License migration breaks all cached client licenses (users must re-authenticate). Plan for multi-DRM from day one, even if you only implement one initially.
+>
+> **Pre-fetch accuracy degrades with catalog size.** At 10K videos, ML predicts top-3 with 65%+ accuracy. At 100K videos, accuracy drops to 45-50%. At 1M videos, pre-fetching becomes statistically ineffective without user intent signals. Scale your pre-fetch budget with catalog size, not user count.
+
 ---
 
 ## Platform Capabilities Unlocked by Protocol Choice
@@ -1986,11 +2006,6 @@ Using Law 1 and Law 2, solving for \\(N_{\text{threshold}} = C_{\text{protocol}}
 | 2.1M | $6.72M/year | $1.00M/year | +572% | Strong ROI |
 
 ---
-
-Protocol optimization establishes the latency foundation. With the sub-300ms baseline achieved, the next constraint emerges: GPU Encoding Capacity.
-
-The next part (GPU quotas kill supply) examines how cloud GPU quotas become the creator retention bottleneck once demand is flowing, and when encoding infrastructure investment justifies creator churn prevention.
-
 
 ### Sensitivity to Platform Context
 
