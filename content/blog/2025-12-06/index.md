@@ -87,7 +87,14 @@ If you can't confidently answer YES, encoding latency is NOT your constraint. Th
 
 Marcus finishes recording a tutorial. He hits upload. How long until his video is live and discoverable? On YouTube, the answer is "minutes to hours." For a platform competing for creator attention, every second matters. If Marcus waits 10 minutes for encoding while his competitor's video goes live in 30 seconds, he learns where to upload next.
 
-**The goal:** Sub-30-second upload-to-live latency. The rest of this post derives what that requires:
+**The goal:** Sub-30-second Upload-to-Live Latency (supply-side). This is distinct from the 300ms Video Start Latency (demand-side) analyzed in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) and [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). The terminology distinction matters:
+
+| Metric | Target | Perspective | Measured From | Measured To |
+| :--- | :--- | :--- | :--- | :--- |
+| Video Start Latency | <300ms p95 | Viewer (demand) | User taps play | First frame rendered |
+| Upload-to-Live Latency | <30s p95 | Creator (supply) | Upload completes | Video discoverable |
+
+The rest of this post derives what sub-30-second Upload-to-Live Latency requires:
 
 1. **Direct-to-S3 uploads** - Bypass app servers with presigned URLs
 2. **GPU transcoding** - Hardware-accelerated encoding for ABR (Adaptive Bitrate) quality variants
@@ -139,17 +146,28 @@ High \\(k_c = 4.5\\) (vs viewer \\(k = 2.28\\)) indicates creators tolerate dela
 
 ### Self-Diagnosis: Is Encoding Latency Causal in YOUR Platform?
 
+The following tests are structured as MECE (Mutually Exclusive, Collectively Exhaustive) criteria. Each test evaluates a distinct dimension: attribution (stated reason), survival (retention curve), behavior (observed actions), and dose-response (gradient effect). Pass/fail thresholds use statistical significance standards matching the causality validation in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/).
+
 | Test | PASS (Encoding is Constraint) | FAIL (Encoding is Proxy) | Your Platform |
 | :--- | :--- | :--- | :--- |
-| **Creator funnel attribution** | Exit surveys show "slow upload" in top 3 churn reasons | Churn reasons: monetization, audience, competition | |
-| **Encoding stratification** | Fast-encoding cohort has >20% higher 90-day retention | Retention identical across encoding tiers | |
-| **Competitor comparison** | Creators who try competitors cite speed as factor | Creators cite revenue share, discovery, tools | |
-| **Upload abandonment** | >5% of uploads abandoned mid-process | <2% abandonment (uploads complete, creators still leave) | |
-| **Return rate after slow upload** | Creators who experience >2min encoding have <50% return rate | Return rate independent of encoding speed | |
+| **1. Stated attribution** | Exit surveys: "slow upload" ranks in top 3 churn reasons with >15% mention rate | "Slow upload" mention rate <5% OR ranks below monetization, audience, tools | |
+| **2. Survival analysis (encoding stratification)** | Cox proportional hazards model: fast-encoding cohort (p50 <30s) shows HR < 0.80 vs slow cohort (p50 >120s) for 90-day churn, with 95% CI excluding 1.0 and log-rank test p<0.05 | HR confidence interval includes 1.0 (no significant survival difference) OR log-rank p>0.10 | |
+| **3. Behavioral signal** | >5% of uploads abandoned mid-process (before completion) AND abandoners have >3x churn rate vs completers | <2% mid-process abandonment OR abandonment rate uncorrelated with subsequent churn | |
+| **4. Dose-response gradient** | Monotonic relationship: 90-day retention decreases with each encoding tier (<30s > 30-60s > 60-120s > >120s), Spearman rho < -0.7, p<0.05 | Non-monotonic pattern (middle tier has lowest retention) OR rho > -0.5 | |
+| **5. Within-creator analysis** | Same creator's return probability after slow upload (<50%) vs fast upload (>80%): odds ratio >2.0, McNemar test p<0.05 | Within-creator odds ratio <1.5 OR McNemar p>0.10 (return rate independent of encoding speed) | |
+
+**Statistical methodology notes:**
+
+- **Test 2 (Survival analysis)**: Use Cox proportional hazards regression with encoding speed as the exposure variable. The hazard ratio (HR) represents the relative risk of churn for slow-encoding creators vs fast-encoding creators. HR < 0.80 means fast-encoding creators have at least 20% lower churn hazard. Verify proportional hazards assumption with Schoenfeld residuals.
+
+- **Test 4 (Dose-response)**: Spearman rank correlation tests monotonicity without assuming linearity. A strong negative correlation (rho < -0.7) indicates that worse encoding consistently predicts worse retention across all tiers.
+
+- **Test 5 (Within-creator)**: Paired analysis controls for creator quality (same creator, different experiences). McNemar's test is appropriate for paired binary outcomes (returned/did not return).
 
 **Decision Rule:**
-- **≥3 PASS:** Encoding latency is causal. Proceed with GPU pipeline optimization.
-- **≤2 PASS:** Encoding is proxy for other issues. Fix monetization, discovery, or content tools BEFORE investing $38K/month in encoding infrastructure.
+- **4-5 PASS:** Strong causal evidence. Encoding latency directly drives creator churn. Proceed with GPU pipeline optimization.
+- **3 PASS:** Moderate evidence. Encoding is likely causal but consider confounders. Validate with natural experiment (e.g., GPU outage) before major investment.
+- **≤2 PASS:** Weak or no evidence. Encoding is proxy for other issues (monetization, discovery, content quality). Fix root causes BEFORE investing $38K/month in encoding infrastructure.
 
 **The constraint:** AWS defaults to 8 GPU instances per region. How many do we actually need? That depends on upload volume, encoding speed, and peak patterns - all derived in the sections that follow.
 
@@ -1260,21 +1278,52 @@ Six scenarios where the math says "optimize" but reality says "wait":
 
 **Blast Radius Formula:**
 
+The supply-side blast radius derives from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/)'s universal formula, adapted for creator economics:
+
 {% katex(block=true) %}
-R_{\text{blast}} = \text{Creators}_{\text{affected}} \times \text{Content Multiplier} \times P(\text{failure}) \times T_{\text{recovery}}
+R_{\text{blast}} = \text{DAU}_{\text{affected}} \times \text{LTV} \times P(\text{failure}) \times T_{\text{recovery}}
 {% end %}
 
-**Example: Analytics Architecture at 3M DAU**
+For creator pipeline decisions, we substitute the creator-specific LTV derived from the content multiplier and daily ARPU established in the foundation analysis:
 
 {% katex(block=true) %}
 \begin{aligned}
-R_{\text{blast}} &= 30{,}000\,\text{creators} \times 10{,}000\,\text{learner-days} \times 0.10 \times 0.5\,\text{years} \\
-&= 15\text{M learner-days} \times \$0.0573 \\
-&= \$859\text{K blast radius}
+\text{Creator LTV}_{\text{annual}} &= \text{Content Multiplier} \times \text{Daily ARPU} \\
+&= 10{,}000\,\text{learner-days/year} \times \$0.0573/\text{learner-day} \\
+&= \$573/\text{creator/year}
 \end{aligned}
 {% end %}
 
-Choosing batch analytics (saves $120K/year) but discovering creators need real-time feedback creates $859K recovery cost. The one-way door demands 100× more analysis than GPU instance selection.
+**Example: Analytics Architecture Decision at 3M DAU**
+
+Decision: Choose batch processing (saves $120K/year) vs stream processing ($180K/year).
+
+If batch is wrong (creators need real-time feedback for iteration workflow), the recovery requires 6-month migration back to stream processing. During recovery, creator churn accelerates due to broken feedback loop.
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{Batch savings during recovery} &= \$120\text{K/year} \times 0.5\,\text{years} = \$60\text{K} \\[0.5em]
+\text{Blast radius calculation:} \\
+R_{\text{blast}} &= \text{Creators} \times \text{Creator LTV} \times P(\text{batch wrong}) \times T_{\text{recovery}} \\
+&= 30{,}000 \times \$573/\text{year} \times 0.10 \times 0.5\,\text{years} \\
+&= \$859\text{K}
+\end{aligned}
+{% end %}
+
+**Decision analysis:**
+
+| Component | Value | Derivation |
+| :--- | :--- | :--- |
+| Batch annual savings | $120K/year | $10K/month (stream $15K - batch $5K) |
+| Savings during T_recovery | $60K | $120K × 0.5 years |
+| Creator LTV (annual) | $573/creator | 10K learner-days × $0.0573 ARPU |
+| P(batch wrong) | 10% | Estimated: creator workflow dependency on real-time feedback |
+| T_recovery | 6 months | Migration from batch to stream architecture |
+| Total creators at risk | 30,000 | 1% of 3M DAU |
+| **Blast radius** | **$859K** | 30K × $573 × 0.10 × 0.5 |
+| **Downside leverage** | **14.3×** | $859K blast / $60K saved during recovery |
+
+The 14.3× downside leverage means: for every $1 saved by choosing batch, you risk $14.30 if batch turns out to be wrong. This asymmetry demands the 100× analysis rigor applied to one-way doors. The $120K/year savings only justifies batch if P(batch wrong) < 7% ($60K ÷ $859K), which requires high confidence that creators do not need real-time feedback.
 
 ---
 
@@ -1350,18 +1399,9 @@ Sarah takes a diagnostic quiz. Within 100ms, the platform generates a personaliz
 
 ### Connection to Constraint Sequence
 
-| Mode | Constraint | Status |
-| :--- | :--- | :--- |
-| 1 | Latency kills demand | Addressed |
-| 2 | Protocol locks physics | Addressed |
-| 3 | GPU quotas kill supply | Addressed (this post) |
-| 4 | Cold start caps growth | Next |
-| 5 | Consistency bugs destroy trust | Pending |
-| 6 | Costs end company | Ongoing |
-
 Creator experience is the supply side of the platform equation. Without Marcus's tutorials, Kira has nothing to learn. Without fast encoding and real-time analytics, Marcus migrates to YouTube.
 
-The <30s creator pipeline protects $859K/year in creator retention value at 3M DAU (conservative 1% active uploaders; $2.58M using 3% behavioral cohort), scaling to $14.3M/year at 50M DAU. GPU quotas are the hidden constraint - request them early, plan multi-region fallback, and never promise what you can't deliver.
+The <30s creator pipeline protects $859K/year in creator retention value at 3M DAU (1% active uploaders who regularly trigger encoding pipelines), scaling to $14.3M/year at 50M DAU. GPU quotas are the hidden constraint - request them early, plan multi-region fallback, and never promise what you can't deliver.
 
 ---
 
@@ -1373,4 +1413,4 @@ Three lessons emerge from the creator pipeline:
 
 **Caption cost dominates creator pipeline economics.** At $0.0125/minute, ASR is 48% of pipeline cost. Self-hosted Whisper only becomes cost-effective above 100K uploads/day. Accept the API cost at smaller scale.
 
-**Real-time analytics is a creator retention moat.** The $15K/month stream processing cost protects $859K/year in creator retention value (conservative; $2.58M using behavioral cohort). Batch processing saves money but breaks the Saturday iteration workflow that keeps creators engaged.
+**Real-time analytics is a creator retention moat.** The $15K/month stream processing cost protects $859K/year in creator retention value (1% active uploaders). Batch processing saves money but breaks the Saturday iteration workflow that keeps creators engaged.

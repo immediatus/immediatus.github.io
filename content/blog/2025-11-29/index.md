@@ -31,23 +31,29 @@ Breaking 300ms requires a different protocol with fundamentally different latenc
 
 ## Prerequisites: When This Analysis Applies
 
-This protocol analysis only matters if ALL of these are true:
+This protocol analysis only matters if ALL prerequisites are true. The prerequisites are structured as MECE (Mutually Exclusive, Collectively Exhaustive) criteria across six dimensions: causality validation, UX optimization status, supply health, scale threshold, budget capacity, and team capacity.
 
-- Latency kills demand (validated) - Revenue impact quantified (>$5M/year from abandonment via Weibull analysis; see [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) for full methodology showing $5.23M @3M DAU [Daily Active Users] total constraint impact)
-- UX mitigation tested and ruled out - A/B test showed perception multiplier \\(\hat{\theta} > 0.70\\) (95% CI), insufficient to achieve <300ms perceived latency at current baseline
-- Supply is flowing - Not constrained by creator tools or encoding capacity (30K+ active creators, content worth watching)
-- Volume justifies complexity - >100K DAU (Daily Active Users) to afford dual-stack infrastructure costs (1.8× operational complexity)
-- Budget exists - Infrastructure budget >$2M/year, can absorb 1.8× operational complexity
-- Engineering capacity - Dedicated team for 18-month migration + 18-month stabilization
+**Prerequisites (ALL must be true):**
 
-If ANY of these are false, skip this post:
+| Dimension | Prerequisite | Validation Method | Threshold |
+| :--- | :--- | :--- | :--- |
+| **1. Causality validated** | Latency causes abandonment (not correlation) | Within-user fixed-effects regression from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) | Beta > 0, p<0.05; revenue impact >$3M/year |
+| **2. UX mitigation ruled out** | Client-side tactics insufficient | A/B test of skeleton loaders, prefetch, perceived latency | Perception multiplier theta > 0.70 (95% CI excludes values that would achieve <300ms perceived) |
+| **3. Supply is flowing** | Not constrained by creator tools | Creator upload queue and churn metrics | Queue p95 <120s AND creator monthly churn <10% AND >30K active creators |
+| **4. Scale justifies complexity** | Volume amortizes dual-stack costs | DAU threshold analysis | >100K DAU (dual-stack overhead <20% of infrastructure budget) |
+| **5. Budget exists** | Can absorb operational complexity | Infrastructure budget vs 1.8x ops load | Budget >$2M/year AND can allocate 23% to protocol layer |
+| **6. Team capacity** | Dedicated migration team available | Engineering headcount and skill assessment | 5-6 engineers available for 18-month migration + 18-month stabilization |
 
-- **Latency impact not quantified**: Without measured latency-driven abandonment from analytics, optimizing protocol based on "feeling" that users want speed is speculation
-- **UX mitigation not tested**: Without A/B testing to measure perception multiplier \\(\theta\\), testing UX first (6 weeks, $0.10M) before committing to protocol migration ($6.45M over 3 years) is necessary
-- **Early-stage (<50K DAU)**: TCP+HLS (HTTP Live Streaming) is sufficient for product-market fit validation - dual-stack complexity is 20%+ of infrastructure budget at this stage
-- **Supply-constrained**: If creator upload latency p95 > 120s (2-hour encoding queue), focus on creator tools and encoding capacity - latency optimization is premature when supply is the bottleneck
-- **Limited budget (<$2M/year)**: Dual-stack operational complexity (1.8× ops load) requires dedicated team - better to accept 370ms TCP+HLS and optimize within constraints
-- **B2B/Enterprise market**: Higher latency tolerance (500-1000ms acceptable for mandated training) - protocol optimization delivers lower ROI (Return on Investment) than compliance, SSO (Single Sign-On), LMS (Learning Management System) integration
+**Failure conditions (if ANY is true, skip this analysis):**
+
+| Dimension | Failure Signal | Action Instead |
+| :--- | :--- | :--- |
+| **Causality not validated** | No within-user regression OR regression shows beta <= 0 OR p>0.05 | Run causality analysis first; do not invest based on correlation |
+| **UX not tested** | No A/B test of perception interventions OR theta < 0.70 achievable | Test UX mitigations first (6 weeks, $0.10M) before protocol migration ($4.92M over 3 years) |
+| **Early-stage** | <50K DAU | TCP+HLS sufficient for PMF validation; dual-stack complexity >20% of budget at this scale |
+| **Supply-constrained** | Creator upload p95 >120s OR creator churn >20%/mo | Fix creator pipeline per [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) before demand-side optimization |
+| **Limited budget** | Infrastructure budget <$2M/year | Accept 370ms TCP+HLS; optimize within constraints via LL-HLS bridge |
+| **B2B/Enterprise market** | >50% mandated/compliance-driven usage | Higher latency tolerance (500-1000ms acceptable); prioritize SSO, SCORM, LMS integration over protocol |
 
 ---
 
@@ -175,14 +181,14 @@ Before breaking down revenue components, we need to derive the $2.32M connection
 **Calculation:**
 
 **Step 1: Mobile user base**
-- 3M DAU × 75% mobile = 2.25M mobile users/day
+- 3M DAU × 70% mobile = 2.1M mobile users/day
 
 **Step 2: Network transitions**
-- Average transitions per mobile user: 0.28/day
+- Average transitions per mobile user: 0.30/day
   - Morning commute (WiFi → cellular)
   - Lunch break (cellular → WiFi)
   - Evening commute (cellular → WiFi)
-- **Total daily transitions: 2.25M × 0.28 = 630K/day**
+- **Total daily transitions: 2.1M × 0.30 = 630K/day**
 
 **Step 3: Abandonment during reconnection**
 - TCP reconnect latency: 1,650ms (3-way handshake + TLS)
@@ -257,7 +263,7 @@ Critical: This ROI is scale-dependent. At 100K DAU, `ROI ≈ 1.0×`, failing the
 
 ## Deconstructing the Latency Budget
 
-The latency analysis established that latency kills demand ($5.23M annual impact @3M DAU). Understanding where that latency comes from and why protocol choice is the binding constraint requires deconstructing the latency budget.
+The latency analysis established that latency kills demand ($3.74M annual impact @3M DAU). Understanding where that latency comes from and why protocol choice is the binding constraint requires deconstructing the latency budget.
 
 The goal: 300ms p95 budget.
 
@@ -288,6 +294,115 @@ The decision:
 - Pay $1.64M/year for QUIC+MoQ dual-stack complexity to unlock full protocol value ($2.72M Safari-adjusted annual impact @3M DAU: $0.22M base latency + $2.32M connection migration [17.6% abandonment during network transitions, 630K daily mobile transitions] + $0.18M DRM prefetch; scales to $45.33M @50M DAU)
 
 Critical context: This is Safari-adjusted revenue (42% of mobile users on iOS cannot use MoQ features). At 1M DAU (1/3 the scale), the revenue is ~$0.91M/year - which does NOT justify $1.64M/year infrastructure investment. Protocol optimization has a volume threshold of ~15M DAU where ROI exceeds 3×, below which TCP+HLS is the rational choice.
+
+**VISUALIZATION: Handshake RTT Comparison (Packet-Level)**
+
+The following sequence diagrams detail the packet-level interactions that create the 370ms vs 100ms latency discrepancy. Each arrow represents an actual network packet. Timing assumes 50ms round-trip time (typical for mobile networks). The diagrams use standard protocol notation: TCP sequence/acknowledgment numbers, TLS record types, and QUIC frame types as defined in RFC 9000 (QUIC) and RFC 8446 (TLS 1.3).
+
+**Diagram 1: TCP+HLS Cold Start Sequence**
+
+This diagram shows the serial dependency chain in legacy protocol stacks. TCP must complete before TLS can begin, and TLS must complete before HTTP requests can be sent. The three phases (TCP handshake, TLS handshake, HLS fetch) execute sequentially, accumulating latency.
+
+{% mermaid() %}
+sequenceDiagram
+    participant C as Kira's Phone
+    participant S as Video Server (CDN Edge)
+
+    Note over C,S: TCP+HLS Cold Start: 220ms baseline, 370ms production
+
+    rect rgb(255, 235, 235)
+    Note over C,S: Phase 1 - TCP 3-Way Handshake (1 RTT = 50ms)
+    C->>S: SYN (seq=1000, mss=1460, window=65535)
+    Note right of S: t=0ms
+    S-->>C: SYN-ACK (seq=2000, ack=1001, mss=1460)
+    Note left of C: t=25ms
+    C->>S: ACK (seq=1001, ack=2001)
+    Note right of S: t=50ms - TCP established
+    end
+
+    rect rgb(255, 245, 220)
+    Note over C,S: Phase 2 - TLS 1.2 Handshake (2 RTT = 100ms)
+    C->>S: ClientHello (version=TLS1.2, cipher_suites[24], random[32])
+    Note right of S: t=50ms
+    S-->>C: ServerHello + Certificate + ServerKeyExchange + ServerHelloDone
+    Note left of C: t=75ms (4 records, approx 3KB)
+    C->>S: ClientKeyExchange + ChangeCipherSpec + Finished
+    Note right of S: t=100ms
+    S-->>C: ChangeCipherSpec + Finished
+    Note left of C: t=150ms - Encrypted channel ready
+    end
+
+    rect rgb(235, 245, 255)
+    Note over C,S: Phase 3 - HLS Playlist + Segment Fetch (1.4 RTT = 70ms)
+    C->>S: GET /live/abc123/master.m3u8 HTTP/1.1
+    Note right of S: t=150ms
+    S-->>C: 200 OK (Content-Type: application/vnd.apple.mpegurl, 847 bytes)
+    Note left of C: t=175ms - Parse playlist, select 720p variant
+    C->>S: GET /live/abc123/720p/seg0.ts HTTP/1.1
+    Note right of S: t=180ms
+    S-->>C: 200 OK (Content-Type: video/MP2T, first 188-byte packet)
+    Note left of C: t=220ms - First frame decodable
+    end
+
+    Note over C,S: Total: 50ms (TCP) + 100ms (TLS) + 70ms (HLS) = 220ms baseline
+    Note over C,S: Production p95: 370ms with variance - 23% over 300ms budget
+{% end %}
+
+**Diagram 2: QUIC+MoQ Cold Start and 0-RTT Resumption Sequence**
+
+This diagram shows how QUIC eliminates the serial dependency by integrating transport and encryption into a single handshake. TLS 1.3 cryptographic parameters are carried in QUIC CRYPTO frames, allowing connection establishment and encryption negotiation to complete in a single round-trip. For returning users, 0-RTT resumption allows application data (video request) to be sent in the very first packet using a Pre-Shared Key (PSK) from a previous session.
+
+{% mermaid() %}
+sequenceDiagram
+    participant C as Kira's Phone
+    participant S as Video Server (CDN Edge)
+
+    Note over C,S: QUIC+MoQ Cold Start: 50ms baseline, 100ms production
+
+    rect rgb(230, 255, 235)
+    Note over C,S: Phase 1 - QUIC 1-RTT with Integrated TLS 1.3 (50ms total)
+    C->>S: Initial[CRYPTO: ClientHello, supported_versions, key_share] (dcid=0x7B2A, pkt 0)
+    Note right of S: t=0ms - TLS ClientHello embedded in CRYPTO frame
+    S-->>C: Initial[CRYPTO: ServerHello] + Handshake[EncryptedExt, Cert, CertVerify, Finished]
+    Note left of C: t=25ms - Server identity proven, handshake keys derived
+    C->>S: Handshake[CRYPTO: Finished] + 1-RTT[STREAM 4: MoQ SUBSCRIBE track=video/abc123]
+    Note right of S: t=50ms - App data sent with handshake completion
+    end
+
+    rect rgb(220, 248, 230)
+    Note over C,S: Phase 2 - MoQ Stream Delivery (pipelined, no additional RTT)
+    S-->>C: 1-RTT[STREAM 4: SUBSCRIBE_OK] + [STREAM 4: OBJECT hdr (track, group, id)]
+    S-->>C: 1-RTT[STREAM 4: Video GOP data (keyframe + P-frames)]
+    Note left of C: t=75ms - First frame decodable, no playlist fetch needed
+    end
+
+    Note over C,S: Total: 50ms (QUIC+TLS integrated) + 0ms (MoQ pipelined) = 50ms baseline
+    Note over C,S: Production p95: 100ms with variance - 67% under 300ms budget
+
+    Note over C,S: QUIC 0-RTT Resumption for Returning Users
+
+    rect rgb(235, 240, 255)
+    Note over C,S: 0-RTT Early Data using PSK from previous session
+    C->>S: Initial[ClientHello + psk_identity] + 0-RTT[STREAM 4: MoQ SUBSCRIBE]
+    Note right of S: t=0ms - App data in FIRST packet, encrypted with resumption key
+    S-->>C: Initial[ServerHello] + Handshake[Finished] + 1-RTT[OBJECT: video frame data]
+    Note left of C: t=25ms - Video data arrives before full handshake completes
+    end
+
+    Note over C,S: 0-RTT saves 50ms for 60% of returning users
+    Note over C,S: Security note: Replay-safe for idempotent video requests
+{% end %}
+
+**Packet-Level Comparison Summary**
+
+The table below summarizes the packet-level differences between the two protocol stacks. RTT savings compound because each eliminated round-trip removes both the request transmission time and the response wait time.
+
+| Aspect | TCP+TLS+HLS | QUIC+MoQ | Latency Savings |
+| :--- | :--- | :--- | :--- |
+| Connection setup | SYN, SYN-ACK, ACK (3 packets, 1 RTT) | Initial[ClientHello], Initial+Handshake response (2 packets) | 1 RTT eliminated |
+| Encryption negotiation | Separate TLS handshake after TCP (4+ records, 2 RTT) | TLS 1.3 embedded in QUIC CRYPTO frames (same packets) | 1 RTT eliminated |
+| First application data | Sent after TLS Finished, then playlist fetch required | Piggybacked on Handshake Finished packet | 0.5 RTT eliminated |
+| Returning user optimization | Full TCP+TLS required (no session resumption benefit for latency) | 0-RTT: application data encrypted in first packet using PSK | 1.5 RTT eliminated |
 
 ---
 
@@ -364,11 +479,18 @@ Teams unable to absorb QUIC+MoQ's 1.8× operational complexity face a constraint
 
 Low-Latency HLS (LL-HLS) provides an intermediate path: cutting TCP+HLS latency roughly in half (to ~280ms p95) without QUIC's operational overhead. Validated at Apple (who wrote the HLS spec), this delivers substantial latency reduction at a fraction of the operational complexity.
 
-| Stack | p95 Latency | Ops Load | Migration Cost | Limitations |
+| Stack | Video Start Latency (p95) | Ops Load | Migration Cost | Limitations |
 | :--- | :--- | :--- | :--- | :--- |
 | TCP + Standard HLS | 529ms | 1.0 times (baseline) | $0 | Revenue ($2.30M/year at abandonment) |
-| TCP + LL-HLS | 280ms | 1.2 times | $0.40M one-time | Connection migration, 0-RTT |
-| QUIC + MoQ | 100ms | 1.8× | $1.64M/year | Nothing (if 5-6 engineer team available) |
+| TCP + LL-HLS | 280ms | 1.2 times | $0.40M one-time | No connection migration, no 0-RTT |
+| QUIC + MoQ | 100ms | 1.8× | $1.64M/year | None (if 5-6 engineer team available) |
+
+**Latency reduction attribution:**
+
+| Protocol | Video Start Latency | Primary Reduction Mechanism | Secondary Mechanisms |
+| :--- | :--- | :--- | :--- |
+| **LL-HLS (280ms)** | 280ms p95 | Manifest overhead elimination (200ms chunks vs 2s chunks reduces TTFB from 220ms to 50ms) | HTTP/2 server push saves 100ms playlist RTT; persistent connections avoid per-chunk TLS overhead |
+| **MoQ (100ms)** | 100ms p95 | UDP-based delivery with 0-RTT resumption (eliminates TCP 3-way handshake + TLS overhead = 150ms saved) | QUIC multiplexing enables parallel DRM fetch; connection migration preserves state across network changes |
 
 How LL-HLS works:
 
@@ -439,13 +561,15 @@ Most protocol discussions present "TCP+HLS vs QUIC+MoQ vs WebRTC" as the only op
 
 ### The Four-Protocol Pareto Frontier
 
-| Protocol Stack | p95 Latency | Annual Cost | Ops Complexity | Mobile Support | Network Constraints | Pareto Optimal? |
+| Protocol Stack | Video Start Latency (p95) | Annual Cost | Ops Complexity | Mobile Support | Network Constraints | Pareto Optimal? |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | TCP + Standard HLS | 529ms | $0.40M | 1.0 times (baseline) | Excellent (100%) | None (TCP works everywhere) | YES (cost-optimal) |
 | TCP + LL-HLS | 280ms | $0.80M | 1.2 times | Excellent (100%) | None (TCP works everywhere) | YES (balanced) |
 | QUIC + WebRTC | 150ms | $1.20M | 1.5 times | Good (92-95%) | UDP throttling (5-8% fail) | YES (latency + reach trade-off) |
 | QUIC + MoQ | 100ms | $1.64M | 1.8× | Moderate (88-92%) | UDP throttling (8-12% fail) | YES (latency-optimal) |
 | Custom Protocol | 80ms | $5M+ | 3.0 times+ | Poor (requires app) | Network traversal issues | NO (dominated by QUIC) |
+
+*All latency figures represent Video Start Latency (time from user tap to first frame rendered), not network RTT or server processing time.*
 
 Pareto optimality definition: Solution A dominates solution B if A is no worse than B in all objectives AND strictly better in at least one. The Pareto frontier contains all non-dominated solutions.
 
@@ -770,7 +894,7 @@ Engineering comparison: "Optimized TCP+HLS" vs "Baseline QUIC+MoQ"
 | Latency (returning user) | 320ms (speculative load) | 50ms (0-RTT + prefetch) | QUIC 270ms faster |
 | Connection migration | Not supported (1.65s reconnect) | Seamless (50ms) | QUIC +$2.32M value @3M DAU |
 | Annual cost | $0.70M (software) + $0.40M/year (edge) = $1.10M | $1.64M/year | QUIC +$0.54M/year |
-| Revenue protected | ~$1.60M/year @3M DAU (170ms → 520ms) | ~$3.01M/year @3M DAU (100ms → 520ms) | QUIC +$1.41M |
+| Revenue protected | ~$1.60M/year @3M DAU (170ms → 520ms) | ~$2.72M/year @3M DAU Safari-adjusted (100ms → 520ms) | QUIC +$1.12M |
 
 Decision framework:
 
@@ -886,17 +1010,17 @@ If ANY constraint is violated, the "optimal" solution kills the company. This is
 Battle-tested at 3M DAU: Same microlearning platform from latency kills demand analysis after latency was validated as the demand constraint.
 
 Prerequisites validated:
-- Latency kills demand: $5.23M annual impact @3M DAU (scaling to $87.17M @50M DAU, from latency analysis)
+- Latency kills demand: $3.74M annual impact @3M DAU (scaling to $62.32M @50M DAU, from latency analysis)
 - Volume: 3M DAU (with 2.1M mobile DAU) justifies $1.64M/year dual-stack complexity
 - Budget: $7.20M/year infrastructure budget can absorb 23% for protocol optimization
 - Supply flowing: 30K active creators, 3.2M videos (not constrained by encoding capacity)
 - Product-market fit: 68% D1 retention when playback succeeds (content is compelling)
 
 The decision (scale-dependent):
-- TCP+HLS: 370ms latency (23% over 300ms budget) to lose $0.38M/year @3M DAU (scales to $6.34M @50M DAU)
-- QUIC+MoQ: 100ms latency (67% under 300ms budget) to protect $3.01M/year @3M DAU (scales to $50.17M @50M DAU)
-- **ROI @3M DAU**: Pay $1.64M to protect $3.01M (1.8× return, defer optimization)
-- **ROI @50M DAU**: Pay $1.64M to protect $50.17M (30.6× return, strongly justified)
+- TCP+HLS: 370ms latency (23% over 300ms budget) to lose $0.38M/year @3M DAU (scales to $6.33M @50M DAU)
+- QUIC+MoQ: 100ms latency (67% under 300ms budget) to protect $2.72M/year @3M DAU Safari-adjusted (scales to $45.33M @50M DAU)
+- **ROI @3M DAU**: Pay $1.64M to protect $2.72M (1.7× return, defer optimization)
+- **ROI @50M DAU**: Pay $1.64M to protect $45.33M (27.6× return, strongly justified)
 
 The protocol lock - Blast Radius analysis:
 This decision is permanent for 3 years (18-month migration + 18-month stabilization). Choosing wrong means the platform is locked into unfixable physics limits for that duration. This is a one-way door with maximum Blast Radius - there is no incremental rollback path.
@@ -932,7 +1056,7 @@ Before diving into the latency budget analysis, we establish the notation used t
 | \\(N\\) | Daily active user count | users/day | 3M = 3,000,000 |
 | \\(T\\) | Annual active user-days (\\(365\\) days/year) | user-days/year | 365 |
 | \\(r\\) | Blended lifetime value per user-month | $/user-month | $1.72 |
-| \\(R\\) | Annual revenue impact from latency improvement | $/year | $0.38M to $3.01M @3M DAU; $6.33M to $50.17M @50M DAU |
+| \\(R\\) | Annual revenue impact from latency improvement | $/year | $0.38M to $2.72M @3M DAU (Safari-adjusted); $6.33M to $45.33M @50M DAU |
 | \\(B\\) | Latency budget (target threshold for abandonment control) | milliseconds (ms) | 300ms |
 | \\(\Delta_{\text{budget}}\\) | Budget status: \\((L - B)/B \times 100\\%\\) (over/under threshold) | percentage (%) | +76% (over budget) |
 | \\(\mathbb{E}[X]\\) | Expected value (mean) of random variable \\(X\\) | varies | e.g., 204ms |
