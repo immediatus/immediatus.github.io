@@ -807,7 +807,7 @@ where:
 
 **Component 3: Revenue Loss from Latency**
 
-Every cache miss adds ~15ms latency (database read vs cache hit). As established in [Part 1](/blog/ads-platform-part-1-architecture/#driver-1-latency-150ms-p95-end-to-end), Amazon's study found 100ms latency = 1% revenue loss.
+Every cache miss adds ~15ms latency (database read vs cache hit). As established in [Part 1](/blog/ads-platform-part-1-foundation-architecture/#driver-1-latency-150ms-p95-end-to-end), Amazon's study found 100ms latency = 1% revenue loss.
 
 $$C_{latency}(S) = R_{monthly} \times (1 - H(S)) \times \frac{\Delta L}{100ms} \times 0.01$$
 

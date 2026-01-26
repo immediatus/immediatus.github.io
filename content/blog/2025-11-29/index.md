@@ -108,25 +108,9 @@ Important: This is NOT a reversible migration. Falling back to HLS means sacrifi
 Decision gate: Do not migrate if platform runway is <24 months. The migration itself consumes 18 months. Platforms cannot afford to die mid-surgery.
 
 
-### Dependency Map: The Six Failure Modes
+### Why Protocol Is Step 2
 
-Platforms die in a predictable sequence. Platforms cannot effectively optimize costs for users already lost to latency.
-
-The sequential roadmap:
-- Latency kills demand – Users abandon before experiencing content quality
-- Protocol locks physics – Transport protocols define the minimum achievable latency (this analysis)
-- GPU quotas kill supply – Infrastructure limits prevent content encoding throughput
-- Cold start caps growth – Geographic expansion is throttled by empty caches
-- Consistency bugs destroy trust – Distributed race conditions corrupt user state
-- Costs end company – Burn rate exceeds unit economics, ending the company
-
-Why protocol is step 2:
-
-Protocol choice acts as a physics gate. It determines the floor for all subsequent optimizations.
-
-1. Irreversible (One-Way Door): Protocol migrations take 18 months to implement and stabilize. Unlike costs or supply, protocols cannot be tuned incrementally.
-2. Unlocks Capabilities: QUIC enables connection migration and DRM (Digital Rights Management) prefetch multiplexing. These optimizations are physically impossible on TCP.
-3. Governance: Protocol determines whether client-side tactics (latency optimization) are effective or mathematically irrelevant.
+Protocol choice is a physics gate determining the floor for all subsequent optimizations. Unlike costs or supply, protocols cannot be tuned incrementally - migrations take 18 months. QUIC enables connection migration and DRM prefetch multiplexing that are physically impossible on TCP.
 
 ### Framework: The Four Laws Applied to Protocol Choice
 
@@ -166,9 +150,9 @@ Before applying the Four Laws, we need to derive the $1.64M/year infrastructure 
 
 After migration completes (18 months), costs drop to ~$1.2M/year as single-stack QUIC operations are simpler than TCP+HLS (no HLS manifest complexity, unified connection management).
 
-> **Architectural Reality:** The dual-stack tax is unavoidable. Safari/iOS (42% of mobile) lacks MoQ support and corporate firewalls (5% of users) block UDP - both require fallbacks. You cannot "skip to QUIC-only" without abandoning these users. 1.8× ops complexity is the cost of reaching 100% of your market.
->
-> **The 18-month timeline is non-negotiable:** Client SDK changes require app store review cycles (iOS: 2-4 weeks per release). Gradual rollout (1% → 10% → 50% → 100%) catches edge cases. Attempting faster migration creates production incidents that cost more than waiting.
+The dual-stack tax is unavoidable. Safari/iOS (42% of mobile) lacks MoQ support and corporate firewalls (5% of users) block UDP - both require fallbacks. You cannot "skip to QUIC-only" without abandoning these users. 1.8× ops complexity is the cost of reaching 100% of your market.
+
+The 18-month timeline is non-negotiable. Client SDK changes require app store review cycles (iOS: 2-4 weeks per release). Gradual rollout (1% → 10% → 50% → 100%) catches edge cases. Faster migration creates production incidents that cost more than waiting.
 
 ---
 
@@ -258,6 +242,112 @@ Now we apply the Four Laws framework with Safari-adjusted numbers:
 | 4. ROI Threshold | Infrastructure cost ($1.64M) vs Revenue ($2.72M Safari-adjusted @3M DAU: $0.22M base latency + $2.32M connection migration + $0.18M DRM prefetch). | 1.66× ROI @3M DAU (Below 3× threshold - requires scale; becomes 7.2× ROI @50M DAU with $45.33M revenue vs $6.26M total infrastructure). |
 
 Critical: This ROI is scale-dependent. At 100K DAU, `ROI ≈ 1.0×`, failing the threshold. Protocol optimization is a high-volume play requiring >15M DAU to clear the 3× ROI hurdle.
+
+### Mixed-Mode Latency: The Real-World p95
+
+The 300ms target assumes homogeneous protocol deployment. Reality is fragmented: 42% of mobile users (Safari/iOS) experience HLS latency while 58% experience MoQ latency. What is the **actual blended p95** users experience?
+
+**The Mixture Distribution Problem:**
+
+The blended p95 is NOT simply \\((0.42 \times 529\text{ms}) + (0.58 \times 100\text{ms}) = 280\text{ms}\\). That's the expected value, not the 95th percentile. For a mixture of two populations, we must find the latency \\(L\\) where 95% of ALL users have latency below \\(L\\).
+
+**Population Latency Distributions:**
+
+| Segment | Population Share | p50 Latency | p95 Latency | Protocol |
+| :--- | :--- | :--- | :--- | :--- |
+| MoQ users (Android Chrome, desktop) | 58% | 70ms | 100ms | QUIC+MoQ |
+| HLS users (Safari/iOS, fallback) | 42% | 280ms | 529ms | TCP+HLS |
+
+**Calculating the Blended p95:**
+
+To find the blended p95, we need \\(P(\text{latency} < L_{\text{blended}}) = 0.95\\):
+
+{% katex(block=true) %}
+\begin{aligned}
+P(L < x) &= P(\text{MoQ}) \cdot P(L_{\text{MoQ}} < x) + P(\text{HLS}) \cdot P(L_{\text{HLS}} < x) \\[8pt]
+0.95 &= 0.58 \cdot P(L_{\text{MoQ}} < x) + 0.42 \cdot P(L_{\text{HLS}} < x)
+\end{aligned}
+{% end %}
+
+At \\(x = 100\\)ms (MoQ p95): \\(P = 0.58 \times 0.95 + 0.42 \times 0.04 = 0.568\\) (only 57% below)
+
+At \\(x = 280\\)ms (HLS p50): \\(P = 0.58 \times 1.0 + 0.42 \times 0.50 = 0.790\\) (79% below)
+
+At \\(x = 400\\)ms (HLS p80): \\(P = 0.58 \times 1.0 + 0.42 \times 0.80 = 0.916\\) (92% below)
+
+At \\(x = 480\\)ms (HLS p92): \\(P = 0.58 \times 1.0 + 0.42 \times 0.92 = 0.966\\) (97% below)
+
+**Interpolating:** The blended p95 ≈ **430ms** (where 95% of all users experience latency below this threshold).
+
+| Metric | MoQ-Only | HLS-Only | Blended (Real-World) |
+| :--- | :--- | :--- | :--- |
+| p50 latency | 70ms | 280ms | **148ms** |
+| p95 latency | 100ms | 529ms | **430ms** |
+| Budget status | 67% under | 76% over | **43% over** |
+
+**Impact on Universal Revenue Formula:**
+
+The [Universal Revenue Formula](/blog/microlearning-platform-part1-foundation/) calculates abandonment-driven revenue loss:
+
+{% katex(block=true) %}
+\Delta R = N \times T \times \Delta F \times r
+{% end %}
+
+With mixed-mode deployment, we calculate **weighted abandonment** across both populations using the Weibull model (\\(\lambda = 3.39\\)s, \\(k = 2.28\\)):
+
+{% katex(block=true) %}
+\begin{aligned}
+F_{\text{MoQ}}(0.100\text{s}) &= 1 - \exp\left[-\left(\frac{0.100}{3.39}\right)^{2.28}\right] = 0.0324\% \\[6pt]
+F_{\text{HLS}}(0.529\text{s}) &= 1 - \exp\left[-\left(\frac{0.529}{3.39}\right)^{2.28}\right] = 1.440\% \\[6pt]
+F_{\text{blended}} &= 0.58 \times 0.0324\% + 0.42 \times 1.440\% = \mathbf{0.624\%}
+\end{aligned}
+{% end %}
+
+**Revenue impact comparison:**
+
+| Scenario | p95 Latency | Abandonment Rate | Annual Revenue Loss @3M DAU |
+| :--- | :--- | :--- | :--- |
+| **TCP+HLS only** | 529ms | 1.440% | $0.90M/year |
+| **QUIC+MoQ only** (theoretical) | 100ms | 0.032% | $0.02M/year |
+| **Mixed-mode (real-world)** | 430ms | 0.624% | $0.39M/year |
+| **Target** | 300ms | 0.400% | $0.25M/year |
+
+**The 300ms Target Reconciliation:**
+
+The 300ms target is achievable for **58% of users** (MoQ-capable). For the remaining 42% (Safari/iOS), the platform must either:
+
+1. **Accept degraded experience:** Safari users get 529ms p95 (76% over budget), contributing disproportionate abandonment (1.44% vs 0.03%)
+2. **Invest in LL-HLS for Safari:** Reduce Safari p95 from 529ms to 280ms, cutting Safari abandonment from 1.44% to 0.34%
+3. **Wait for Safari MoQ support:** Apple's WebTransport API is in draft (2025); production support uncertain
+
+**LL-HLS Safari Optimization Analysis:**
+
+| Metric | Without LL-HLS | With LL-HLS | Improvement |
+| :--- | :--- | :--- | :--- |
+| Safari p95 | 529ms | 280ms | -249ms |
+| Safari abandonment | 1.440% | 0.340% | -1.10pp |
+| Blended p95 | 430ms | 256ms | -174ms |
+| Blended abandonment | 0.624% | 0.162% | -0.46pp |
+| Annual revenue protected | — | $0.29M/year | @3M DAU |
+| LL-HLS migration cost | — | $0.40M one-time | — |
+| ROI | — | 0.72× year 1, 2.2× year 2 | — |
+
+**Strategic Implication:**
+
+The mixed-mode reality means the platform operates with TWO effective p95 targets:
+
+{% katex(block=true) %}
+\begin{aligned}
+L_{95}^{\text{MoQ}} &\leq 100\text{ms} \quad \text{(58\% of users, achievable)} \\
+L_{95}^{\text{HLS}} &\leq 300\text{ms} \quad \text{(42\% of users, requires LL-HLS)}
+\end{aligned}
+{% end %}
+
+The single "300ms target" from Part 1 is a **blended aspiration**. Real-world physics creates a bimodal latency distribution where MoQ users experience 3× better performance than Safari users. This fragmentation will persist until Safari adopts MoQ (WebTransport) or the platform accepts permanent Safari degradation.
+
+The 300ms target is marketing; 430ms blended p95 is physics. Safari's 42% market share means nearly half your mobile users experience 5× worse latency than Android users. This isn't a bug to fix—it's a platform constraint to manage.
+
+Revenue attribution matters: the $2.72M Safari-adjusted revenue already accounts for this fragmentation. The $0.22M base latency component reflects only the 58% MoQ-capable users. Don't double-count the Safari limitation—it's baked into the Safari-adjusted calculations throughout this analysis.
 
 ---
 
@@ -449,9 +539,9 @@ All scenarios include 42% Safari/iOS limitation (partial MoQ support).
 Sensitivity Logic:
 Even in the pessimistic scenario (25% UDP blocked + 42% Safari), protocol migration generates positive ROI at scale. However, at 3M DAU, all scenarios fall below the 3× threshold - suggesting defer until 15M+ DAU where Safari-adjusted ROI exceeds 3.0×. The primary risks are: (1) runway exhaustion before reaching scale, (2) Safari adding MoQ support (making early migration premature), (3) UDP throttling variance in new markets.
 
-> **Architectural Reality:** UDP blocking is geography-dependent. US/EU residential sees 2-3% blocked, corporate networks 25-35%, APAC markets 15-40%. Measure your actual traffic before committing to QUIC-first architecture.
->
-> **The 8% estimate is a planning number, not a guarantee.** Deploy QUIC with HLS fallback first, measure actual fallback rates from production telemetry. If fallback exceeds 15%, reconsider the dual-stack investment.
+UDP blocking is geography-dependent. US/EU residential sees 2-3% blocked, corporate networks 25-35%, APAC markets 15-40%. Measure your actual traffic before committing to QUIC-first architecture.
+
+The 8% estimate is a planning number, not a guarantee. Deploy QUIC with HLS fallback first, measure actual fallback rates from production telemetry. If fallback exceeds 15%, reconsider the dual-stack investment.
 
 ### The Ceiling of Client-Side Tactics
 
@@ -995,7 +1085,7 @@ If ANY condition fails, defer. Six scenarios where the math says "optimize" but 
 | Regulatory deadline | {% katex() %}C_{\text{fine}} = \$9.1\text{M} > R_{\text{protected}} = \$0.38\text{M @3M DAU}{% end %}| Protocol first | Compliance first | External deadline dominates |
 | UDP blocking 85% | {% katex() %}P(\text{UDP blocked}) = 0.85 > 0.30{% end %}| QUIC optimal | LL-HLS pragmatic | Network constraint makes optimal infeasible |
 
-The unifying principle: Constraint Satisfaction Problems (CSP) impose hard bounds that dominate economic optimization. Before running the revenue math, check:
+Constraint Satisfaction Problems (CSP) impose hard bounds that dominate economic optimization. Before running the revenue math, check:
 
 Sequence constraint: Is this the active bottleneck? (Theory of Constraints)
 Time constraint: \\(T_{\text{runway}} \geq 2 \times T_{\text{migration}}\\)? (One-way door safety)
@@ -1024,6 +1114,18 @@ The decision (scale-dependent):
 
 The protocol lock - Blast Radius analysis:
 This decision is permanent for 3 years (18-month migration + 18-month stabilization). Choosing wrong means the platform is locked into unfixable physics limits for that duration. This is a one-way door with maximum Blast Radius - there is no incremental rollback path.
+
+**Check Impact Matrix (from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/)):**
+
+QUIC+MoQ migration satisfies **Check 5 (Latency)** while stressing **Check 1 (Economics)**:
+
+| Scale | Revenue Protected | Cost | Net Impact | Check 1 Status |
+| :--- | :--- | :--- | :--- | :--- |
+| 1M DAU | $0.91M | $1.64M | -$0.73M | **FAILS** |
+| 2M DAU | $1.81M | $1.64M | +$0.17M | PASSES (marginal) |
+| 3M DAU | $2.72M | $1.64M | +$1.08M | PASSES |
+
+**Decision gate:** Do not begin QUIC+MoQ migration below ~1.8M DAU where Check 1 (Economics) would fail. The protocol that fixes latency can bankrupt you at insufficient scale.
 
 This context is not universal - protocol optimization only applies when:
 - Latency kills demand validated (quantified via Weibull analysis and within-user regression)
@@ -1260,9 +1362,9 @@ Protocol choice alone determines 80-270ms of the 300ms budget (27-90% of total):
 
 **The architectural insight:** Protocol choice isn't an optimization - it's a prerequisite. TCP+HLS violates the 300ms budget before adding edge caching, DRM, multi-region routing, or ML prefetch. QUIC+MoQ frees 200ms of budget for these components.
 
-> **Architectural Reality:** The 270ms is theoretical maximum, not guaranteed. Actual savings depend on network conditions - rural users with 150ms RTT see less benefit than urban users with 30ms RTT. First-time visitors don't get 0-RTT benefits. Safari users get 0ms benefit (forced to HLS fallback).
->
-> **Protocol migration doesn't fix bad CDN placement.** QUIC can't teleport packets faster than light. If your nearest edge is 100ms RTT away, that's your floor. Multi-region CDN deployment is prerequisite, not follow-on optimization.
+The 270ms is theoretical maximum, not guaranteed. Actual savings depend on network conditions - rural users with 150ms RTT see less benefit than urban users with 30ms RTT. First-time visitors don't get 0-RTT benefits. Safari users get 0ms benefit (forced to HLS fallback).
+
+Protocol migration doesn't fix bad CDN placement. QUIC can't teleport packets faster than light. If your nearest edge is 100ms RTT away, that's your floor. Multi-region CDN deployment is prerequisite, not follow-on optimization.
 
 ### Revenue Impact: Why 270ms Matters
 
@@ -1361,7 +1463,7 @@ At different scales, accept different protocol trade-offs:
 | 100K-300K DAU (Pre-migration) | TCP+HLS optimized, aggressive caching | $0.80M | 320-370ms | Abandonment >$3M/year, budget >$2M |
 | >300K DAU (Migration threshold) | QUIC+MoQ dual-stack | $1.64M | 100-150ms | ROI >3×, runway >24 months |
 
-The key insight: TCP+HLS can reach 300K DAU with aggressive optimization (multi-CDN, edge caching, DRM pre-fetch on TCP). Protocol migration is for crossing the 300ms ceiling, not for early-stage growth.
+TCP+HLS can reach 300K DAU with aggressive optimization (multi-CDN, edge caching, DRM pre-fetch on TCP). Protocol migration is for crossing the 300ms ceiling, not for early-stage growth.
 
 Engineering questions:
 - "What's our current latency with TCP+HLS fully optimized?" (Measure ceiling before switching protocols)
@@ -1372,29 +1474,9 @@ If TCP+HLS gets us to next funding milestone (Series B at 300K DAU), defer proto
 
 ---
 
-### What Early-Stage Signals Tell Me This Is Premature?
+### Early-Stage Signals This Is Premature
 
-Red flags that protocol migration is the wrong priority RIGHT NOW:
-
-**Signal 1: Latency kills demand not validated**
-- Latency-driven abandonment hasn't been measured with analytics
-- User feedback doesn't mention startup speed
-- What to do instead: Instrument playback events, run A/B tests, validate latency as constraint first
-
-**Signal 2: Volume below break-even threshold (<300K DAU)**
-- Revenue protected <$5M/year (doesn't justify $1.64M infrastructure cost)
-- What to do instead: Optimize TCP+HLS to 320-370ms, defer until >300K DAU
-
-**Signal 3: Budget constraints (<$2M/year infrastructure)**
-- Dual-stack would consume >50% of infrastructure budget
-- What to do instead: Accept TCP+HLS ceiling, focus on capital-efficient growth
-
-**Signal 4: Engineering capacity constraints (<5 engineers)**
-- Can't maintain dual-stack without blocking features
-- What to do instead: Stay on TCP+HLS, invest in revenue-critical features
-
-**Signal 5: Runway <24 months**
-- Can't complete 18-month migration + stabilization
+Red flags: latency abandonment not validated (no A/B tests), volume <300K DAU (revenue protected <$5M/year), budget <$2M/year (dual-stack >50% of spend), engineering team <5 engineers, or runway <24 months.
 - What to do instead: Defer protocol, focus on extending runway
 
 **Signal 6: Browser reality (>60% Safari traffic)**
@@ -1583,7 +1665,7 @@ Versus maintaining QUIC with 100ms timeout detection:
 
 We accept the 7% budget violation for 5% of users because forcing all users to HLS would cost $7.50M+/year in abandonment-driven revenue loss.
 
-> Architectural Driver: Latency + Revenue Optimization - Protocol selection is not about choosing the "best" technology - it's about maximizing revenue under physics constraints. QUIC 0-RTT beats TCP by 2.2* (110ms -> 50ms) but 5% of users hit firewall blocks. The dual-stack architecture (MoQ + HLS fallback) accepts 320ms for the edge case to prevent $7.50M annual loss from forcing 95% of users to slower HLS. Multi-region deployment is mandatory, not optional - speed of light physics (NY-London: 28ms theoretical, 80-100ms BGP reality) means protocol optimization alone cannot deliver sub-300ms globally.
+Protocol selection is not about choosing the "best" technology - it's about maximizing revenue under physics constraints. QUIC 0-RTT beats TCP by 2.2× (110ms → 50ms) but 5% of users hit firewall blocks. The dual-stack architecture (MoQ + HLS fallback) accepts 320ms for the edge case to prevent $7.50M annual loss from forcing 95% of users to slower HLS. Multi-region deployment is mandatory - speed of light physics (NY-London: 28ms theoretical, 80-100ms BGP reality) means protocol optimization alone cannot deliver sub-300ms globally.
 
 ---
 
@@ -1771,11 +1853,11 @@ Platform must maintain both protocols:
 - Detection logic (100ms overhead)
 - Total infrastructure: 1.8× complexity vs HLS-only
 
-Trade-off accepted: Operational complexity worth $1.05M annual revenue protection.
+The 1.8× operational complexity is worth $1.05M annual revenue protection.
 
-> **Architectural Reality:** MoQ is not "just better HLS" - it's a fundamentally different system. Different encoding format (frame-based vs chunk-based), different CDN configuration (persistent connections vs request/response), different monitoring (stream health vs request latency). You're operating two video delivery systems, not one improved system.
->
-> **The Cloudflare dependency is real.** As of 2026, only Cloudflare has production MoQ support. AWS CloudFront roadmap says 2026+ with no firm date. If Cloudflare raises prices, you have no multi-vendor leverage. Negotiate 3-year fixed pricing before committing to MoQ.
+MoQ is not "just better HLS" - it's a fundamentally different system. Different encoding format (frame-based vs chunk-based), different CDN configuration (persistent connections vs request/response), different monitoring (stream health vs request latency). You're operating two video delivery systems, not one improved system.
+
+The Cloudflare dependency is real. As of 2026, only Cloudflare has production MoQ support. AWS CloudFront roadmap says 2026+ with no firm date. If Cloudflare raises prices, you have no multi-vendor leverage. Negotiate 3-year fixed pricing before committing to MoQ.
 
 ---
 
@@ -1826,15 +1908,16 @@ TCP approach (BREAKS):
 - Result: 1.65s reconnect (TCP 3-way handshake + TLS), 17.6% abandon
 
 QUIC approach (SURVIVES):
-- Connection identifier = Connection ID (random 64-bit number)
+- Connection identifier = Connection ID (variable length, typically 8 bytes per RFC 9000)
 - Network transition → Source IP changes → Connection ID unchanged → Video continues
+- Path validation: PATH_CHALLENGE (8-byte random) → PATH_RESPONSE (echo) per RFC 9000 §8.2
 - Result: 50ms path migration, 0% abandon
 
 COMPARISON TABLE:
 
 | Aspect | TCP/TLS (HLS) | QUIC (MoQ) | Benefit |
 | :--- | :--- | :--- | :--- |
-| Connection Identity | 4-tuple (src IP, src port, dst IP, dst port) | Connection ID (64-bit random) | Survives IP changes |
+| Connection Identity | 4-tuple (src IP, src port, dst IP, dst port) | Connection ID (8-byte, per RFC 9000) | Survives IP changes |
 | WiFi ↔ 4G Transition | Breaks connection, requires re-handshake | Migrates connection, same ID | Zero interruption |
 | Handshake Penalty | 100ms (TCP 3-way) + 50ms (TLS 1.3) = 150ms | 0ms (connection preserved) | 150ms saved |
 | Rebuffering Time | 2-3 seconds (drain buffer + reconnect + refill) | 0 seconds (continuous streaming) | No visible stutter |
@@ -1849,25 +1932,26 @@ sequenceDiagram
     participant Cell as 4G Network
     participant Server as Video Server
 
-    Note over User,Server: Initial connection over WiFi
-    User->>WiFi: QUIC Connection ID: 0x7A3F (established)
-    WiFi->>Server: Video streaming (Connection ID: 0x7A3F)
+    Note over User,Server: Initial connection over WiFi (RFC 9000 §9)
+    User->>WiFi: QUIC packet [CID: 0x7A3F8B2E4D1C9F0A]
+    WiFi->>Server: Video streaming [CID: 0x7A3F8B2E4D1C9F0A]
     Server-->>WiFi: Video frames delivered
     WiFi-->>User: Playback smooth
 
     Note over User: Kira walks toward locker room
-    Note over WiFi,Cell: Network handoff occurs
+    Note over WiFi,Cell: Network handoff (IP changes)
 
-    User->>Cell: Switch to 4G (new IP: 172.20.10.3)
-    User->>Cell: PATH_CHALLENGE frame (Connection ID: 0x7A3F)
-    Cell->>Server: PATH_CHALLENGE (new path, same ID)
-    Server->>Server: Validate: Connection ID matches
-    Server->>Cell: PATH_RESPONSE (path validated)
-    Cell->>User: PATH_RESPONSE received
+    User->>Cell: New path (IP: 172.20.10.3)
+    Note over User: Generate 8-byte challenge: 0xA1B2C3D4E5F60718
+    User->>Cell: PATH_CHALLENGE [data: 0xA1B2C3D4E5F60718]
+    Cell->>Server: PATH_CHALLENGE [CID: 0x7A3F8B2E4D1C9F0A, data: 0xA1B2C3D4E5F60718]
+    Server->>Server: Validate: CID known, path reachable (RFC 9000 §8.2)
+    Server->>Cell: PATH_RESPONSE [data: 0xA1B2C3D4E5F60718]
+    Cell->>User: PATH_RESPONSE [echo verified]
 
-    Note over User,Server: Connection migrated (same ID, new path)
-    User->>Cell: Continue streaming (Connection ID: 0x7A3F)
-    Cell->>Server: Video requests (new IP, same connection)
+    Note over User,Server: Path validated - migration complete
+    User->>Cell: Continue streaming [CID: 0x7A3F8B2E4D1C9F0A]
+    Cell->>Server: Video requests (new IP, same CID)
     Server-->>Cell: Video frames (no interruption)
     Cell-->>User: Playback continues seamlessly
 
@@ -2073,9 +2157,9 @@ R_{\text{DRM}} &= 3\text{M} \times 0.00481 \times \$0.0573 \times 365 = \$0.31\t
 
 *ROI @50M DAU:* $5.17M ÷ $1.50M = 3.45× return (viable above the 3× threshold).
 
-> **Architectural Reality:** DRM provider selection is a 3-year commitment. Switching from Widevine to FairPlay requires re-encrypting your entire video library. License migration breaks all cached client licenses (users must re-authenticate). Plan for multi-DRM from day one, even if you only implement one initially.
->
-> **Pre-fetch accuracy degrades with catalog size.** At 10K videos, ML predicts top-3 with 65%+ accuracy. At 100K videos, accuracy drops to 45-50%. At 1M videos, pre-fetching becomes statistically ineffective without user intent signals. Scale your pre-fetch budget with catalog size, not user count.
+DRM provider selection is a 3-year commitment. Switching from Widevine to FairPlay requires re-encrypting your entire video library. License migration breaks all cached client licenses (users must re-authenticate). Plan for multi-DRM from day one, even if you only implement one initially.
+
+Pre-fetch accuracy degrades with catalog size. At 10K videos, ML predicts top-3 with 65%+ accuracy. At 100K videos, accuracy drops to 45-50%. At 1M videos, pre-fetching becomes statistically ineffective without user intent signals. Scale your pre-fetch budget with catalog size, not user count.
 
 ---
 
@@ -2110,7 +2194,7 @@ The protocol spectrum (full range of viable options):
 | QUIC+HLS | 220ms | +50% | 1.5× | Partial QUIC benefits |
 | QUIC+MoQ | 100–175ms | +70% | 1.8× | Full mobile-first solution |
 
-Key insight: This is not binary. Incremental migration paths exist based on budget, scale, and latency requirements.
+This is not binary. Incremental migration paths exist based on budget, scale, and latency requirements.
 
 ---
 
@@ -2162,6 +2246,10 @@ Model assumptions:
 
 ## Protocol Unlocks Supply Constraints
 
-Protocol optimization establishes the latency foundation. With the sub-300ms baseline achieved, the next constraint emerges: **GPU Encoding Capacity**.
+Protocol optimization establishes the latency foundation. Once the sub-300ms baseline is achieved, the next constraint emerges: **GPU Encoding Capacity**.
+
+At 3M DAU, latency (Mode 1) remains the active constraint with 1.66× ROI—below the 3× threshold. Protocol migration (Mode 2) may be underway but not yet complete. Theory of Constraints says focus on the active bottleneck.
+
+However, "focus" doesn't mean "ignore the future." GPU quota provisioning takes 4-8 weeks. If you wait until protocol migration completes to start supply-side infrastructure, creators experience delays during the transition. The next part explains when to **prepare** supply-side infrastructure (strategic investment) versus when to **solve** supply-side constraints (operational necessity)—a distinction that determines whether the investment is smart planning or premature optimization.
 
 The next part (**GPU quotas kill supply**) examines how cloud GPU quotas become the creator retention bottleneck once demand is flowing, and when encoding infrastructure investment justifies creator churn prevention.

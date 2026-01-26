@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Why GPU Quotas Kill Creators When You Scale"
-description = "With demand-side latency solved, supply becomes the constraint. Fast delivery of nothing is still nothing. GPU quotas—not GPU speed—determine whether creators wait 30 seconds or 3 hours. This is the third constraint, where the hidden bottleneck is cloud provider defaults."
+description = "While demand-side latency is being solved, supply infrastructure must be prepared. Fast delivery of nothing is still nothing. GPU quotas—not GPU speed—determine whether creators wait 30 seconds or 3 hours. This is the third constraint in the sequence—invest in it now so it doesn't become a bottleneck when protocol migration completes."
 date = 2025-12-06
 slug = "microlearning-platform-part3-creator-pipeline"
 
@@ -17,24 +17,35 @@ series_description = "In distributed systems, solving the right problem at the w
 
 +++
 
-The previous posts established the constraint sequence: [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/), [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). Both optimize the demand side - how fast Kira gets her video. Now we reach the supply side: **GPU quotas kill creator experience**. Without creators, there's no content. Without content, latency optimization is irrelevant - fast delivery of nothing is still nothing.
+The previous posts established the constraint sequence: [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/), [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). Both address the demand side—how fast Kira gets her video. With protocol migration underway, we must prepare the supply side: **GPU quotas kill creator experience**. Without creators, there's no content. Without content, latency optimization is irrelevant—fast delivery of nothing is still nothing.
+
+Theory of Constraints says focus on the active bottleneck. At 3M DAU, demand (latency) is still active per Protocol Choice analysis. So why discuss supply now? Because preparing the next constraint while solving the current one prevents gaps. GPU quota provisioning takes weeks. If we wait until demand is solved to start supply-side infrastructure, creators experience delays during the transition. The investment in Part 3 is strategic preparation, not premature optimization.
 
 ---
 
 ## Prerequisites: When This Analysis Applies
 
-This creator pipeline analysis only matters if ALL of these are true:
+This creator pipeline analysis matters in two scenarios:
 
-- **Demand-side latency solved** - Protocol choice made, p95 <300ms achievable (not blocked by physics ceiling)
+**Scenario A: Preparing the next constraint** (recommended at 3M DAU)
+- **Demand-side actively being solved** - Protocol migration underway, p95 <300ms achievable after migration completes
+- **Supply will become the constraint** - When demand improves, creator churn becomes the limiting factor
+- **Lead time required** - GPU quota provisioning takes 4-8 weeks; start now so infrastructure is ready
+- **Capital available** - Can invest $38K/month without slowing protocol migration
+
+**Scenario B: Supply is already the active constraint** (applies at higher scale)
+- **Demand-side latency solved** - Protocol choice made, p95 <300ms achieved
 - **Supply is the active constraint** - Creator churn >5%/year from upload experience, encoding queue >30s p95
-- **Volume justifies complexity** - >1M DAU to afford GPU infrastructure costs
+- **Volume justifies complexity** - >10M DAU where supply-side ROI approaches 3× threshold
+
+Common requirements for both scenarios:
 - **Creator ratio meaningful** - >0.5% of users create content (>5,000 active creators at 1M DAU)
 - **Budget exists** - Infrastructure budget can absorb $38K/month creator pipeline costs
 
 If ANY of these are false, skip this analysis:
 
-- **Demand-side unsolved**: If p95 latency >300ms, users abandon before seeing creator content. Fix protocol first.
-- **Supply not constrained**: If creator churn <3%/year and encoding queue <15s, creator experience isn't bleeding revenue
+- **Demand-side unsolved AND not in progress**: If p95 latency >300ms and no migration planned, users abandon before seeing creator content. Fix protocol first.
+- **Supply not constrained AND won't be soon**: If creator churn <3%/year and encoding queue <15s, and you're not scaling rapidly, defer this investment
 - **Early-stage (<500K DAU)**: Simple encoding (CPU-based, 2-minute queue) is sufficient for PMF validation
 - **Low creator ratio (<0.3%)**: Platform is consumption-focused, not creator-focused. Different economics apply.
 - **Limited budget (<$20K/month)**: Accept slower encoding, defer real-time analytics
@@ -66,12 +77,20 @@ If you can't confidently answer YES, encoding latency is NOT your constraint. Th
 | :--- | :--- | :--- |
 | **1. Universal Revenue** | \\(\Delta R = \text{Creators Lost} \times \text{Content Multiplier} \times \text{ARPU}\\). At 3M DAU: 1,500 creators × 10K learner-days × $0.0573 = $859K/year | $859K/year protected @3M DAU (scales to $14.3M @50M DAU) |
 | **2. Weibull Model** | Creator patience follows different curve than viewer patience. Encoding >30s triggers "broken" perception; >2min triggers platform abandonment. | 5% annual creator churn from poor upload experience |
-| **3. Theory of Constraints** | Supply becomes binding AFTER demand-side latency solved. If latency still kills demand, creator optimization is premature. | Sequence: Latency → Protocol → **GPU Quotas** → Cold Start |
-| **4. ROI Threshold** | Pipeline cost $38.6K/month vs $859K/year protected = 1.9× ROI @3M DAU. Becomes 2.3× @10M DAU, 2.8× @50M DAU. | Below 3× threshold at all scales; strategic value exceeds ROI |
+| **3. Theory of Constraints** | Supply becomes binding AFTER demand-side latency solved. At 3M DAU, latency (Mode 1) is still the active constraint per [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). GPU quotas (Mode 3) investment is **preparing the next constraint**, not solving the current one. | Sequence: Latency → Protocol → **GPU Quotas** → Cold Start. Invest in Mode 3 infrastructure while Mode 1/2 migration is underway. |
+| **4. ROI Threshold** | Pipeline cost $38.6K/month vs $859K/year protected = 1.9× ROI @3M DAU. Becomes 2.3× @10M DAU, 2.8× @50M DAU. | Below 3× threshold at all scales—this is a strategic investment, not an ROI-justified operational expense. |
 
-**Scale-dependent insight:** At 3M DAU, creator pipeline ROI is 1.9× (below 3× threshold). This suggests:
-- If capital-constrained: Defer real-time analytics, use batch processing ($15K/month savings)
-- If capital-available: Proceed - creator experience is strategic moat, not just ROI calculation
+**Scale-dependent insight:** At 3M DAU, creator pipeline ROI is 1.9× (below 3× threshold). Why invest when latency is still the active constraint?
+
+Theory of Constraints allows **preparing** the next constraint while solving the current one when:
+1. **Current constraint is being addressed** - Protocol migration (Mode 2) is underway; demand-side will be solved
+2. **Lead time exists** - GPU quota provisioning takes 4-8 weeks; supply-side infrastructure must be ready BEFORE demand-side completes or creators experience delays the moment demand improves
+3. **Capital is not diverted** - $38K/month (2.3% of $1.64M protocol investment) doesn't slow protocol migration
+
+The distinction: **Solving** a non-binding constraint destroys capital. **Preparing** the next constraint prevents it from becoming a bottleneck when the current constraint clears.
+
+- If capital-constrained: Defer—focus 100% on protocol migration. Accept that creators will experience delays when demand-side clears until supply-side catches up.
+- If capital-available: Proceed—creator infrastructure ready when protocol migration completes. No gap between demand improvement and supply capability.
 
 ---
 
@@ -133,7 +152,123 @@ The step function above is a simplification. Creators exhibit modified Weibull b
 F_{\text{creator}}(t; \lambda_c, k_c) = 1 - \exp\left[-\left(\frac{t}{\lambda_c}\right)^{k_c}\right], \quad \lambda_c = 90\text{s}, \; k_c = 4.5
 {% end %}
 
-High \\(k_c = 4.5\\) (vs viewer \\(k = 2.28\\)) indicates creators tolerate delays until a threshold, then abandon rapidly. This is the "cliff" behavior vs viewers' gradual decay.
+High \\(k_c = 4.5\\) (vs viewer \\(k_v = 2.28\\)) indicates creators tolerate delays until a threshold, then abandon rapidly. This is the "cliff" behavior vs viewers' gradual decay.
+
+### Technical Bridge: Viewer vs Creator Patience Distributions
+
+The series uses two distinct statistical models for patience—one for viewers (Part 1) and one for creators (Part 3). This section clarifies the mathematical relationship between them and derives different "Revenue at Risk" profiles for each cohort.
+
+**Unified Notation (to avoid confusion):**
+
+| Symbol | Viewer (Demand-Side) | Creator (Supply-Side) | Units |
+| :--- | :--- | :--- | :--- |
+| \\(\lambda\\) | \\(\lambda_v = 3.39\\)s | \\(\lambda_c = 90\\)s | seconds |
+| \\(k\\) | \\(k_v = 2.28\\) | \\(k_c = 4.5\\) | dimensionless |
+| \\(F(t)\\) | \\(F_v(t)\\) = viewer abandonment CDF | \\(F_c(t)\\) = creator abandonment CDF | probability |
+| \\(h(t)\\) | \\(h_v(t)\\) = viewer hazard rate | \\(h_c(t)\\) = creator hazard rate | 1/second |
+| \\(t\\) | Video Start Latency (100ms–1s) | Upload-to-Live Latency (30s–300s) | seconds |
+| \\(\hat{\beta}\\) | 0.73 (logistic coefficient) | N/A (no within-creator β estimated) | log-odds |
+| \\(n\\) | 47,382 events | Requires instrumentation | count |
+
+**Why Different Shape Parameters (\\(k_v\\) vs \\(k_c\\))?**
+
+The shape parameter \\(k\\) in the Weibull distribution controls how the hazard rate evolves over time:
+
+{% katex(block=true) %}
+h(t; \lambda, k) = \frac{k}{\lambda}\left(\frac{t}{\lambda}\right)^{k-1}
+{% end %}
+
+- \\(k = 1\\): Constant hazard (exponential distribution—memoryless)
+- \\(1 < k < 3\\): **Gradual acceleration** (viewers: \\(k_v = 2.28\\))
+- \\(k > 3\\): **Cliff behavior** (creators: \\(k_c = 4.5\\))
+
+**Hazard Rate Comparison:**
+
+{% katex(block=true) %}
+\begin{aligned}
+h_v(t) &= \frac{2.28}{3.39}\left(\frac{t}{3.39}\right)^{1.28} \quad \text{(viewers: gradual acceleration)} \\[8pt]
+h_c(t) &= \frac{4.5}{90}\left(\frac{t}{90}\right)^{3.5} \quad \text{(creators: cliff at threshold)}
+\end{aligned}
+{% end %}
+
+| Time Point | Viewer \\(h_v(t)\\) | Creator \\(h_c(t)\\) | Interpretation |
+| :--- | :--- | :--- | :--- |
+| \\(t = 0.3\lambda\\) | 0.15/s | 0.0004/s | Viewers already at risk; creators safe |
+| \\(t = 0.7\lambda\\) | 0.46/s | 0.012/s | Viewers accelerating; creators still safe |
+| \\(t = 1.0\lambda\\) | 0.67/s | 0.05/s | Viewers in danger zone; creators notice |
+| \\(t = 1.3\lambda\\) | 0.93/s | 0.14/s | Viewers abandoning; creators frustrated |
+| \\(t = 1.5\lambda\\) | 1.12/s | 0.28/s | **Cliff**: Creator hazard now rising rapidly |
+
+At \\(t = \lambda\\) (characteristic tolerance), viewers have already accumulated significant risk (\\(F_v(\lambda_v) = 63.2\\%\\)), while creators are only beginning to notice delays (\\(F_c(\lambda_c) = 63.2\\%\\) by definition, but at 90s not 3.4s). The \\(k_c = 4.5\\) shape means creator hazard stays near zero until approaching the threshold, then spikes.
+
+**Connecting Logistic Regression (\\(\hat{\beta}\\)) to Weibull (\\(k\\))**
+
+Part 1 establishes causality via within-user fixed-effects logistic regression (\\(\hat{\beta} = 0.73\\)). How does this relate to the Weibull shape parameter?
+
+The logistic coefficient \\(\hat{\beta}\\) measures the log-odds increase in abandonment when latency exceeds a threshold (300ms). The Weibull \\(k\\) parameter measures how rapidly hazard accelerates with time. They capture related but distinct phenomena:
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{Logistic (threshold effect):} \quad & \log\left(\frac{P(\text{abandon}|t > 300\text{ms})}{P(\text{abandon}|t < 300\text{ms})}\right) = \hat{\beta} = 0.73 \\[8pt]
+\text{Weibull (continuous hazard):} \quad & \frac{h(t_2)}{h(t_1)} = \left(\frac{t_2}{t_1}\right)^{k-1}
+\end{aligned}
+{% end %}
+
+**Approximate relationship:** For viewers at the 300ms threshold:
+
+{% katex(block=true) %}
+\exp(\hat{\beta}) = 2.1 \approx \left(\frac{F_v(0.35\text{s})}{F_v(0.25\text{s})}\right) = \frac{0.00442}{0.00212} = 2.08 \quad \checkmark
+{% end %}
+
+The logistic \\(\hat{\beta}\\) is consistent with Weibull \\(k_v = 2.28\\) at the 300ms decision boundary. Both models agree: viewers are ~2× more likely to abandon above threshold.
+
+**Revenue at Risk Profiles: Viewer vs Creator**
+
+The different patience distributions create fundamentally different revenue risk profiles:
+
+| Dimension | Viewer (Demand-Side) | Creator (Supply-Side) |
+| :--- | :--- | :--- |
+| **Frequency** | High (every session, ~20/day) | Low (per upload, ~1.5/week for active creators) |
+| **Threshold** | Low (300ms feels slow) | High (30s is acceptable, 120s triggers comparison) |
+| **Hazard profile** | Gradual acceleration (\\(k_v = 2.28\\)) | Cliff behavior (\\(k_c = 4.5\\)) |
+| **Time scale** | Milliseconds (100ms–1,000ms) | Minutes (30s–300s) |
+| **Revenue mechanism** | Direct: \\(\Delta R_v = N \cdot \Delta F_v \cdot r \cdot T\\) | Indirect: \\(\Delta R_c = C_{\text{lost}} \cdot M \cdot r \cdot T\\) |
+| **Multiplier** | 1× (one user = one user) | 10,000× (one creator = 10K learner-days/year) |
+| **Sensitivity** | Every 100ms compounds | Binary: <30s OK, >120s triggers churn |
+| **Recovery** | Next session (high frequency) | Platform switch (low frequency, high switching cost) |
+
+**Revenue at Risk Formula Comparison:**
+
+{% katex(block=true) %}
+\begin{aligned}
+R_{\text{at-risk}}^{\text{viewer}} &= \underbrace{N}_{\text{DAU}} \cdot \underbrace{T}_{\text{365 days}} \cdot \underbrace{\int_{t_1}^{t_2} f_v(t) \, dt}_{\text{abandonment mass}} \cdot \underbrace{r}_{\text{ARPU/day}} \\[12pt]
+R_{\text{at-risk}}^{\text{creator}} &= \underbrace{N \cdot \rho}_{\text{creators}} \cdot \underbrace{T}_{\text{365 days}} \cdot \underbrace{\int_{t_1}^{t_2} f_c(t) \, dt}_{\text{churn mass}} \cdot \underbrace{M \cdot r}_{\text{content multiplier × ARPU}}
+\end{aligned}
+{% end %}
+
+where \\(\rho = 0.01\\) (1% creator ratio) and \\(M = 10{,}000\\) learner-days/creator/year.
+
+**Worked Example: 100ms Viewer Improvement vs 30s Creator Improvement**
+
+*Viewer optimization (370ms → 270ms):*
+{% katex(block=true) %}
+\Delta R_v = 3\text{M} \times 365 \times [F_v(0.37) - F_v(0.27)] \times \$0.0573 = 3\text{M} \times 365 \times 0.00352 \times 0.0573 = \$221\text{K/year}
+{% end %}
+
+*Creator optimization (90s → 60s):*
+{% katex(block=true) %}
+\Delta R_c = 30{,}000 \times [F_c(90) - F_c(60)] \times 10{,}000 \times \$0.0573 = 30{,}000 \times 0.582 \times 10{,}000 \times 0.0573 / 365 = \$274\text{K/year}
+{% end %}
+
+**Interpretation:** A 100ms viewer improvement and a 30s creator improvement have similar revenue impact (~$220-270K/year at 3M DAU), but operate on completely different time scales and mechanisms. Viewer optimization is about compounding small gains across billions of sessions. Creator optimization is about preventing cliff-edge churn events that cascade through the content multiplier.
+
+Viewer patience (\\(k_v = 2.28\\)) and creator patience (\\(k_c = 4.5\\)) require different optimization strategies:
+
+**Viewers:** Optimize continuously. Every 100ms matters because hazard accelerates gradually. Invest in protocol optimization, edge caching, and prefetching—gains compound across high-frequency sessions.
+
+**Creators:** Optimize to threshold. Sub-30s encoding is parity; >120s is catastrophic. Binary investment decision: either meet the 30s bar or accept 5%+ annual churn. Intermediate improvements (90s → 60s) have limited value because \\(k_c = 4.5\\) keeps hazard low until the cliff.
+
+Part 1's within-user \\(\hat{\beta} = 0.73\\) validates viewer latency as causal. Part 3's creator model requires separate causality validation (within-creator odds ratio). Don't assume viewer causality transfers to creators—different populations, different mechanisms, different confounders.
 
 **Revenue impact per encoding delay tier:**
 
@@ -190,14 +325,21 @@ sequenceDiagram
     participant S3
     participant Lambda
 
-    Client->>API: POST /uploads (filename, size, content-type)
-    API->>API: Validate file (size <500MB, format MP4/MOV)
-    API->>API: Generate presigned URL (15-min expiry)
-    API-->>Client: { uploadUrl, uploadId, fields }
+    Client->>API: POST /uploads/initiate { filename, size, contentType }
+    API->>API: Validate (size <500MB, format MP4/MOV)
+    API->>S3: CreateMultipartUpload
+    S3-->>API: { UploadId: "abc123" }
+    API->>API: Generate presigned URLs for parts (15-min expiry each)
+    API-->>Client: { uploadId: "abc123", partUrls: [...], partSize: 5MB }
 
-    Client->>S3: PUT presigned URL (multipart)
+    loop For each 5MB chunk
+        Client->>S3: PUT presigned partUrl[i]
+        S3-->>Client: { ETag: "etag-i" }
+    end
     Note over Client,S3: Direct upload - no app server
 
+    Client->>API: POST /uploads/complete { uploadId, parts: [{partNum, ETag}...] }
+    API->>S3: CompleteMultipartUpload
     S3->>Lambda: S3 Event Notification (ObjectCreated)
     Lambda->>Lambda: Validate, create encoding job
     Lambda-->>Client: WebSocket: "Processing started"
@@ -278,14 +420,14 @@ sequenceDiagram
     participant S3
 
     Client->>Client: Calculate SHA-256(file) [client-side]
-    Client->>API: POST /uploads/check { hash: "a1b2c3..." }
+    Client->>API: POST /uploads/check { hash: "a1b2c3d4e5f6..." }
 
-    alt Hash exists
-        API-->>Client: { exists: true, videoId: "existing-123" }
-        Note over Client: Skip upload, link to existing
+    alt Hash exists in content-addressable store
+        API-->>Client: { exists: true, videoId: "v_abc123" }
+        Note over Client: Skip upload, link to existing video
     else Hash not found
-        API-->>Client: { exists: false, uploadUrl: "..." }
-        Client->>S3: Upload file
+        API-->>Client: { exists: false }
+        Note over Client: Proceed with /uploads/initiate flow
     end
 {% end %}
 
@@ -318,13 +460,13 @@ Before spending GPU cycles on encoding, validate the upload:
 
 Rejecting a 600MB file after upload wastes bandwidth. Rejecting it client-side saves everyone time.
 
-> **Architectural Reality:** Upload infrastructure has hidden complexity that breaks at scale.
->
-> **Presigned URL expiration:** 15-minute validity balances security vs UX. Slow connections need URL refresh mid-upload - client must request new URL if upload exceeds 10 minutes.
->
-> **Chunked upload complexity:** Client must track chunk state (localStorage or IndexedDB), server must handle out-of-order arrival, and multipart completion requires listing all parts (API call overhead).
->
-> **Deduplication hash collision:** SHA-256 collision probability is {% katex() %}2^{-128}{% end %} (negligible). False positive risk is zero in practice.
+Upload infrastructure has hidden complexity that breaks at scale:
+
+**Presigned URL expiration:** 15-minute validity per part URL balances security vs UX. Slow connections need URL refresh mid-upload—client calls `/uploads/initiate` again if part URLs expire.
+
+**Chunked upload complexity:** Client must track chunk state (localStorage or IndexedDB) including `uploadId`, `partNum`, and `ETag` per completed part. Server must handle out-of-order arrival, and `CompleteMultipartUpload` requires all `{partNum, ETag}` pairs.
+
+**Deduplication hash collision:** SHA-256 collision probability is {% katex() %}2^{-128}{% end %} (negligible). False positive risk is zero in practice.
 
 ---
 
@@ -460,13 +602,13 @@ With 2.5× buffer for queue management, quota requests, and operational margin: 
 
 **Decision: AWS** - Ecosystem integration (S3, ECS, CloudFront), consistent pricing, best availability. Multi-cloud adds complexity without proportional benefit at this scale.
 
-> **Architectural Reality:** GPU quotas - not encoding speed - kill creator experience.
->
-> **Default quotas are 6-25× under-provisioned:** AWS gives 8 vCPUs/region by default, but you need 200 (50 instances) for Saturday peak. Request quota 2 weeks before launch, in multiple regions, with a fallback plan if denied.
->
-> **Saturday peak math:** 30% of daily uploads (15K) arrive in 4 hours. Baseline capacity handles 2,200/hour. Queue grows at 1,550/hour, creating 6,200 video backlog and 2.8-hour wait times. Marcus uploads at 5:30 PM, sees "Processing in ~2 hours," and opens YouTube.
->
-> **Quota request timeline:** 3-5 business days if straightforward, 5-10 days if justification required.
+GPU quotas - not encoding speed - kill creator experience.
+
+**Default quotas are 6-25× under-provisioned:** AWS gives 8 vCPUs/region by default, but you need 200 (50 instances) for Saturday peak. Request quota 2 weeks before launch, in multiple regions, with a fallback plan if denied.
+
+**Saturday peak math:** 30% of daily uploads (15K) arrive in 4 hours. Baseline capacity handles 2,200/hour. Queue grows at 1,550/hour, creating 6,200 video backlog and 2.8-hour wait times. Marcus uploads at 5:30 PM, sees "Processing in ~2 hours," and opens YouTube.
+
+**Quota request timeline:** 3-5 business days if straightforward, 5-10 days if justification required.
 
 ---
 
@@ -618,13 +760,13 @@ sequenceDiagram
     CDN-->>Lambda: Warming complete (3 shields)
 {% end %}
 
-> **Architectural Reality:** Both extremes of cache warming fail at scale.
->
-> **Global push fails:** 90% of bandwidth wasted on PoPs that never serve the video. New creators with 10 followers don't need 200-PoP distribution. Cost scales with uploads, not views (wrong unit economics).
->
-> **Lazy pull fails:** First-viewer latency penalty violates <300ms SLO. High-profile creators trigger simultaneous cache misses across 50+ PoPs, causing origin thundering herd.
->
-> **Geo-aware wins:** New creators get origin + 2 nearest shields. Viral detection (10× views in 5 minutes) triggers global push. Time-zone awareness weights recent views higher.
+Both extremes of cache warming fail at scale:
+
+**Global push fails:** 90% of bandwidth wasted on PoPs that never serve the video. New creators with 10 followers don't need 200-PoP distribution. Cost scales with uploads, not views (wrong unit economics).
+
+**Lazy pull fails:** First-viewer latency penalty violates <300ms SLO. High-profile creators trigger simultaneous cache misses across 50+ PoPs, causing origin thundering herd.
+
+**Geo-aware wins:** New creators get origin + 2 nearest shields. Viral detection (10× views in 5 minutes) triggers global push. Time-zone awareness weights recent views higher.
 
 ---
 
@@ -783,7 +925,7 @@ Beyond time-coded captions, the system generates a plain text transcript by conc
 
 Captions complete 4 seconds before encoding. Zero added latency to publish pipeline.
 
-> **Architectural Reality:** ASR accuracy is not a fixed number - it varies by audio quality. Clear audio achieves 97%+, while background noise or multiple speakers drops to 80-90%. The creator review workflow (confidence-based flagging) is the accuracy backstop - 10-15% of videos need correction.
+ASR accuracy is not a fixed number - it varies by audio quality. Clear audio achieves 97%+, while background noise or multiple speakers drops to 80-90%. The creator review workflow (confidence-based flagging) is the accuracy backstop - 10-15% of videos need correction.
 
 ---
 
@@ -870,7 +1012,7 @@ The retention curve calculation groups progress events into 5-second buckets by 
 | 0:45 | 520 | 52% |
 | 0:55 | 450 | 45% |
 
-Key insight: The 68% to 45% drop between 0:32 and 0:55 shows the pivot table explanation loses 23% of viewers.
+The 68% to 45% drop between 0:32 and 0:55 shows the pivot table explanation loses 23% of viewers.
 
 ### Batch vs Stream Processing
 
@@ -965,7 +1107,7 @@ Beyond retention curves, track which segments get replayed:
 | **A/B test results** | CTR/completion by variant | <30s |
 | **Estimated earnings** | Views × $0.75/1K | <30s |
 
-> **Architectural Reality:** Stream processing costs $15K/month (Kafka $3K + Flink $8K + ClickHouse $4K), but delivers 6-second latency - well under the 30s requirement. The 30s budget provides margin for processing spikes. Batch processing would save $10K/month but deliver 15-minute latency, breaking Marcus's iteration workflow.
+Stream processing costs $15K/month (Kafka $3K + Flink $8K + ClickHouse $4K), but delivers 6-second latency - well under the 30s requirement. The 30s budget provides margin for processing spikes. Batch processing would save $10K/month but deliver 15-minute latency, breaking Marcus's iteration workflow.
 
 ---
 
@@ -1129,7 +1271,7 @@ graph TD
 
 **Predictive scaling:** Schedule scale-out 30 minutes before expected peaks. Don't wait for queue to grow.
 
-> **Architectural Reality:** GPU quotas are the real bottleneck - not encoding speed. Default quota (8 vCPUs = 2 instances = 400 videos/hour) cannot handle Saturday peak (3,750/hour). For extreme spikes (viral creator uploads 100 videos): queue fairly, show accurate ETA, don't promise what you can't deliver.
+GPU quotas are the real bottleneck - not encoding speed. Default quota (8 vCPUs = 2 instances = 400 videos/hour) cannot handle Saturday peak (3,750/hour). For extreme spikes (viral creator uploads 100 videos): queue fairly, show accurate ETA, don't promise what you can't deliver.
 
 ---
 
@@ -1177,7 +1319,7 @@ Using the Universal Revenue Formula (Law 1) and 3× ROI threshold (Law 4):
 | **10M DAU** | 100,000 | 5,000 | $2.87M/year | $1.26M/year | **2.3×** | Below 3× |
 | **50M DAU** | 500,000 | 25,000 | $14.3M/year | $5.04M/year | **2.8×** | Below 3× |
 
-**Critical insight:** Creator pipeline ROI never exceeds 3× threshold at any scale analyzed. This suggests:
+Creator pipeline ROI never exceeds 3× threshold at any scale analyzed. This suggests:
 
 1. **Strategic value exceeds ROI calculation**: Creator experience is a competitive moat (YouTube comparison), not just an ROI optimization
 2. **Indirect effects not captured**: Creator churn → content gap → viewer churn (multiplicative, not additive)
@@ -1209,7 +1351,7 @@ The 3× threshold applies to incremental optimizations with alternatives. Creato
 | **GPU +50%** | Instance price increase | $40.8K/month | +6% |
 | **Self-hosted Whisper** | At 100K uploads | $52.1K/month | +35% (but scales better) |
 
-**Key insight:** Caption cost dominates. A 20% Deepgram price increase has more impact than a 50% GPU price increase.
+Caption cost dominates. A 20% Deepgram price increase has more impact than a 50% GPU price increase.
 
 ### Cost Optimization Opportunities
 
@@ -1220,13 +1362,13 @@ The 3× threshold applies to incremental optimizations with alternatives. Creato
 | **Caption only >30s videos** | 40% | Short videos lose accessibility |
 | **Self-hosted Whisper at scale** | 29% at 100K+/day | Operational complexity (see ASR Provider Comparison) |
 
-> **Architectural Reality:** Two costs are non-negotiable.
->
-> **Captions ($228K/year floor):** WCAG compliance requires captions. Cannot reduce coverage without legal/accessibility risk.
->
-> **Analytics ($180K/year):** <30s latency requires stream processing. Batch would save $10K/month but break creator iteration workflow. Creator retention ($859K/year conservative) justifies the spend.
->
-> **Scaling benefit:** Pipeline cost per DAU decreases with scale ($0.0129 at 3M → $0.0084 at 50M) as fixed analytics costs amortize.
+Two costs are non-negotiable:
+
+**Captions ($228K/year floor):** WCAG compliance requires captions. Cannot reduce coverage without legal/accessibility risk.
+
+**Analytics ($180K/year):** <30s latency requires stream processing. Batch would save $10K/month but break creator iteration workflow. Creator retention ($859K/year conservative) justifies the spend.
+
+Pipeline cost per DAU decreases with scale ($0.0129 at 3M → $0.0084 at 50M) as fixed analytics costs amortize.
 
 ---
 
@@ -1263,7 +1405,7 @@ Six scenarios where the math says "optimize" but reality says "wait":
 | **Caption budget rejected** | Finance denies $625/day | WCAG non-negotiable (>$100K lawsuits) | Escalate as compliance |
 | **Analytics team unavailable** | No Kafka/Flink expertise | Real-time requires specialists | Use batch ($5K/mo, 30-60min latency) |
 
-**Unifying principle:** Creator pipeline is the THIRD constraint. Solving supply before demand is capital destruction. The sequence matters.
+Creator pipeline is the THIRD constraint. Solving supply before demand is capital destruction. The sequence matters.
 
 ---
 
@@ -1324,6 +1466,17 @@ R_{\text{blast}} &= \text{Creators} \times \text{Creator LTV} \times P(\text{bat
 | **Downside leverage** | **14.3×** | $859K blast / $60K saved during recovery |
 
 The 14.3× downside leverage means: for every $1 saved by choosing batch, you risk $14.30 if batch turns out to be wrong. This asymmetry demands the 100× analysis rigor applied to one-way doors. The $120K/year savings only justifies batch if P(batch wrong) < 7% ($60K ÷ $859K), which requires high confidence that creators do not need real-time feedback.
+
+**Check Impact Matrix (from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/)):**
+
+The analytics architecture decision illustrates the **Check 2 (Supply) ↔ Check 1 (Economics)** tension:
+
+| Choice | Satisfies | Stresses | Net Economic Impact |
+| :--- | :--- | :--- | :--- |
+| **Stream** | Check 2 (Supply: real-time feedback) | Check 1 (Economics: +$120K/year) | Prevents $859K blast radius |
+| **Batch** | Check 1 (Economics: saves $120K/year) | Check 2 (Supply: delayed feedback) | Risks $859K if creators need real-time |
+
+The "cheaper" batch option can make Check 1 fail worse than stream if creator churn materializes. One-way doors require multi-check analysis—optimizing one check while ignoring second-order effects on other checks is how platforms die while hitting local KPIs.
 
 ---
 
