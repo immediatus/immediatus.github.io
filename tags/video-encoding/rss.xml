@@ -1,0 +1,1168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Mindset Footprint - video-encoding</title>
+      <link>https://e-mindset.space</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://e-mindset.space/tags/video-encoding/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sat, 06 Dec 2025 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Why GPU Quotas Kill Creators When You Scale</title>
+          <pubDate>Sat, 06 Dec 2025 00:00:00 +0000</pubDate>
+          <author>Yuriy Polyulya</author>
+          <link>https://e-mindset.space/blog/microlearning-platform-part3-creator-pipeline/</link>
+          <guid>https://e-mindset.space/blog/microlearning-platform-part3-creator-pipeline/</guid>
+          <description xml:base="https://e-mindset.space/blog/microlearning-platform-part3-creator-pipeline/">&lt;p&gt;The previous posts established the constraint sequence: &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part1-foundation&#x2F;&quot;&gt;Latency Kills Demand&lt;&#x2F;a&gt;, &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part2-video-delivery&#x2F;&quot;&gt;Protocol Choice Locks Physics&lt;&#x2F;a&gt;. Both address the demand side—how fast Kira gets her video. With protocol migration underway, we must prepare the supply side: &lt;strong&gt;GPU quotas kill creator experience&lt;&#x2F;strong&gt;. Without creators, there’s no content. Without content, latency optimization is irrelevant—fast delivery of nothing is still nothing.&lt;&#x2F;p&gt;
+&lt;p&gt;Theory of Constraints says focus on the active bottleneck. At 3M DAU, demand (latency) is still active per Protocol Choice analysis. So why discuss supply now? Because preparing the next constraint while solving the current one prevents gaps. GPU quota provisioning takes weeks. If we wait until demand is solved to start supply-side infrastructure, creators experience delays during the transition. The investment in Part 3 is strategic preparation, not premature optimization.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;prerequisites-when-this-analysis-applies&quot;&gt;Prerequisites: When This Analysis Applies&lt;&#x2F;h2&gt;
+&lt;p&gt;This creator pipeline analysis matters in two scenarios:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Scenario A: Preparing the next constraint&lt;&#x2F;strong&gt; (recommended at 3M DAU)&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Demand-side actively being solved&lt;&#x2F;strong&gt; - Protocol migration underway, p95 &amp;lt;300ms achievable after migration completes&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Supply will become the constraint&lt;&#x2F;strong&gt; - When demand improves, creator churn becomes the limiting factor&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Lead time required&lt;&#x2F;strong&gt; - GPU quota provisioning takes 4-8 weeks; start now so infrastructure is ready&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Capital available&lt;&#x2F;strong&gt; - Can invest $38K&#x2F;month without slowing protocol migration&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Scenario B: Supply is already the active constraint&lt;&#x2F;strong&gt; (applies at higher scale)&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Demand-side latency solved&lt;&#x2F;strong&gt; - Protocol choice made, p95 &amp;lt;300ms achieved&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Supply is the active constraint&lt;&#x2F;strong&gt; - Creator churn &amp;gt;5%&#x2F;year from upload experience, encoding queue &amp;gt;30s p95&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Volume justifies complexity&lt;&#x2F;strong&gt; - &amp;gt;10M DAU where supply-side ROI approaches 3× threshold&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Common requirements for both scenarios:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Creator ratio meaningful&lt;&#x2F;strong&gt; - &amp;gt;0.5% of users create content (&amp;gt;5,000 active creators at 1M DAU)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Budget exists&lt;&#x2F;strong&gt; - Infrastructure budget can absorb $38K&#x2F;month creator pipeline costs&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;If ANY of these are false, skip this analysis:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Demand-side unsolved AND not in progress&lt;&#x2F;strong&gt;: If p95 latency &amp;gt;300ms and no migration planned, users abandon before seeing creator content. Fix protocol first.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Supply not constrained AND won’t be soon&lt;&#x2F;strong&gt;: If creator churn &amp;lt;3%&#x2F;year and encoding queue &amp;lt;15s, and you’re not scaling rapidly, defer this investment&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Early-stage (&amp;lt;500K DAU)&lt;&#x2F;strong&gt;: Simple encoding (CPU-based, 2-minute queue) is sufficient for PMF validation&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Low creator ratio (&amp;lt;0.3%)&lt;&#x2F;strong&gt;: Platform is consumption-focused, not creator-focused. Different economics apply.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Limited budget (&amp;lt;$20K&#x2F;month)&lt;&#x2F;strong&gt;: Accept slower encoding, defer real-time analytics&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;pre-flight-diagnostic&quot;&gt;Pre-Flight Diagnostic&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;The Diagnostic Question:&lt;&#x2F;strong&gt; “If encoding completed in &amp;lt;30 seconds tomorrow (magic wand), would creator churn drop below 3%?”&lt;&#x2F;p&gt;
+&lt;p&gt;If you can’t confidently answer YES, encoding latency is NOT your constraint. Three scenarios where creator pipeline optimization wastes capital:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;1. Monetization drives churn, not encoding&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signal: Creators leave for platforms with better revenue share, not faster encoding&lt;&#x2F;li&gt;
+&lt;li&gt;Reality check: YouTube pays $3-5 CPM, your platform pays $0.75&#x2F;1K views. Speed won’t fix economics.&lt;&#x2F;li&gt;
+&lt;li&gt;Example: Vine had instant publishing but died because creators couldn’t monetize. TikTok learned this - their Creator Fund launched within 2 years of US expansion.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;2. Content quality is the constraint&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signal: Top 10% of creators have &amp;lt;2% churn; bottom 50% have &amp;gt;15% churn&lt;&#x2F;li&gt;
+&lt;li&gt;Reality check: Fast encoding of bad content is still bad content. The algorithm surfaces quality, not recency.&lt;&#x2F;li&gt;
+&lt;li&gt;Action: Invest in creator education and content tools before encoding infrastructure.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;3. Audience discovery is broken&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signal: New creator videos get &amp;lt;100 views in first week regardless of encoding speed&lt;&#x2F;li&gt;
+&lt;li&gt;Reality check: If the recommendation system doesn’t surface new creators, they leave. Twitch streamers don’t quit because of encoding - they quit because nobody watches.&lt;&#x2F;li&gt;
+&lt;li&gt;Action: Fix cold-start recommendation before optimizing upload pipeline.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;applying-the-four-laws-framework&quot;&gt;Applying the Four Laws Framework&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Law&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Application to Creator Pipeline&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Result&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;1. Universal Revenue&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(\Delta R = \text{Creators Lost} \times \text{Content Multiplier} \times \text{ARPU}\). At 3M DAU: 1,500 creators × 10K learner-days × $0.0573 = $859K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$859K&#x2F;year protected @3M DAU (scales to $14.3M @50M DAU)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;2. Weibull Model&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Creator patience follows different curve than viewer patience. Encoding &amp;gt;30s triggers “broken” perception; &amp;gt;2min triggers platform abandonment.&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5% annual creator churn from poor upload experience&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;3. Theory of Constraints&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Supply becomes binding AFTER demand-side latency solved. At 3M DAU, latency (Mode 1) is still the active constraint per &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part2-video-delivery&#x2F;&quot;&gt;Protocol Choice Locks Physics&lt;&#x2F;a&gt;. GPU quotas (Mode 3) investment is &lt;strong&gt;preparing the next constraint&lt;&#x2F;strong&gt;, not solving the current one.&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Sequence: Latency → Protocol → &lt;strong&gt;GPU Quotas&lt;&#x2F;strong&gt; → Cold Start. Invest in Mode 3 infrastructure while Mode 1&#x2F;2 migration is underway.&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;4. ROI Threshold&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Pipeline cost $38.6K&#x2F;month vs $859K&#x2F;year protected = 1.9× ROI @3M DAU. Becomes 2.3× @10M DAU, 2.8× @50M DAU.&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Below 3× threshold at all scales—this is a strategic investment, not an ROI-justified operational expense.&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Scale-dependent insight:&lt;&#x2F;strong&gt; At 3M DAU, creator pipeline ROI is 1.9× (below 3× threshold). Why invest when latency is still the active constraint?&lt;&#x2F;p&gt;
+&lt;p&gt;Theory of Constraints allows &lt;strong&gt;preparing&lt;&#x2F;strong&gt; the next constraint while solving the current one when:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Current constraint is being addressed&lt;&#x2F;strong&gt; - Protocol migration (Mode 2) is underway; demand-side will be solved&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Lead time exists&lt;&#x2F;strong&gt; - GPU quota provisioning takes 4-8 weeks; supply-side infrastructure must be ready BEFORE demand-side completes or creators experience delays the moment demand improves&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Capital is not diverted&lt;&#x2F;strong&gt; - $38K&#x2F;month (2.3% of $1.64M protocol investment) doesn’t slow protocol migration&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;The distinction: &lt;strong&gt;Solving&lt;&#x2F;strong&gt; a non-binding constraint destroys capital. &lt;strong&gt;Preparing&lt;&#x2F;strong&gt; the next constraint prevents it from becoming a bottleneck when the current constraint clears.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;If capital-constrained: Defer—focus 100% on protocol migration. Accept that creators will experience delays when demand-side clears until supply-side catches up.&lt;&#x2F;li&gt;
+&lt;li&gt;If capital-available: Proceed—creator infrastructure ready when protocol migration completes. No gap between demand improvement and supply capability.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;&lt;strong&gt;Scale context from latency analysis:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;3M DAU baseline, scaling to 50M DAU target&lt;&#x2F;li&gt;
+&lt;li&gt;$0.0573&#x2F;day ARPU (blended freemium)&lt;&#x2F;li&gt;
+&lt;li&gt;Creator ratio: 1.0% at 3M DAU = 30,000 creators&lt;&#x2F;li&gt;
+&lt;li&gt;Creator ratio: 1.0% at 50M DAU = 500,000 creators&lt;&#x2F;li&gt;
+&lt;li&gt;5% annual creator churn from poor upload experience&lt;&#x2F;li&gt;
+&lt;li&gt;1 creator = 10,000 learner-days of content consumption per year (derivation: average creator produces 50 videos&#x2F;year × 200 views&#x2F;video = 10,000 view-days; comparable to YouTube creator economics where mid-tier creators average 5K-20K views per video)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;The creator experience problem:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Marcus finishes recording a tutorial. He hits upload. How long until his video is live and discoverable? On YouTube, the answer is “minutes to hours.” For a platform competing for creator attention, every second matters. If Marcus waits 10 minutes for encoding while his competitor’s video goes live in 30 seconds, he learns where to upload next.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The goal:&lt;&#x2F;strong&gt; Sub-30-second Upload-to-Live Latency (supply-side). This is distinct from the 300ms Video Start Latency (demand-side) analyzed in &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part1-foundation&#x2F;&quot;&gt;Latency Kills Demand&lt;&#x2F;a&gt; and &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part2-video-delivery&#x2F;&quot;&gt;Protocol Choice Locks Physics&lt;&#x2F;a&gt;. The terminology distinction matters:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Metric&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Target&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Perspective&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Measured From&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Measured To&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Video Start Latency&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;300ms p95&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Viewer (demand)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;User taps play&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;First frame rendered&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Upload-to-Live Latency&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s p95&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Creator (supply)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Upload completes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Video discoverable&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;The rest of this post derives what sub-30-second Upload-to-Live Latency requires:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Direct-to-S3 uploads&lt;&#x2F;strong&gt; - Bypass app servers with presigned URLs&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;GPU transcoding&lt;&#x2F;strong&gt; - Hardware-accelerated encoding for ABR (Adaptive Bitrate) quality variants&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Cache warming&lt;&#x2F;strong&gt; - Pre-position content at edge locations before first view&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;ASR captions&lt;&#x2F;strong&gt; - Automatic Speech Recognition for accessibility and SEO&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Real-time analytics&lt;&#x2F;strong&gt; - Creator feedback loop under 30 seconds&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h3 id=&quot;creator-patience-model-adapted-weibull&quot;&gt;Creator Patience Model (Adapted Weibull)&lt;&#x2F;h3&gt;
+&lt;p&gt;Creator patience differs fundamentally from viewer patience. Viewers abandon in milliseconds (Weibull \(\lambda=3.39\)s, \(k=2.28\) from &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part1-foundation&#x2F;&quot;&gt;Latency Kills Demand&lt;&#x2F;a&gt;). Creators tolerate longer delays but have hard thresholds:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+F_{\text{creator}}(t) &amp;= \begin{cases}
+0 &amp; t &lt; 30\text{s (acceptable)} \\
+0.05 &amp; 30\text{s} \leq t &lt; 60\text{s (minor frustration)} \\
+0.15 &amp; 60\text{s} \leq t &lt; 120\text{s (frustrated)} \\
+0.65 &amp; 120\text{s} \leq t &lt; 300\text{s (likely to abandon)} \\
+0.95 &amp; t \geq 300\text{s (platform comparison triggered)}
+\end{cases}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Threshold derivation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&amp;lt;30s&lt;&#x2F;strong&gt;: YouTube Studio publishes in ~30s. Meeting this bar = parity.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;30-60s&lt;&#x2F;strong&gt;: Creator notices delay but continues. 5% open competitor tab.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;60-120s&lt;&#x2F;strong&gt;: “This is slow” perception. 15% actively comparing alternatives.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;120-300s&lt;&#x2F;strong&gt;: “Something is wrong” perception. 65% search alternatives.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;&amp;gt;300s&lt;&#x2F;strong&gt;: Platform comparison triggered. 95% will try competitor for next upload.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Mathematical connection to viewer Weibull:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The step function above is a simplification. Creators exhibit modified Weibull behavior with much higher \(\lambda\) (tolerance) but sharper \(k\) (threshold effect):&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;F_{\text{creator}}(t; \lambda_c, k_c) = 1 - \exp\left[-\left(\frac{t}{\lambda_c}\right)^{k_c}\right], \quad \lambda_c = 90\text{s}, \; k_c = 4.5&lt;&#x2F;script&gt;
+&lt;p&gt;High \(k_c = 4.5\) (vs viewer \(k_v = 2.28\)) indicates creators tolerate delays until a threshold, then abandon rapidly. This is the “cliff” behavior vs viewers’ gradual decay.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;technical-bridge-viewer-vs-creator-patience-distributions&quot;&gt;Technical Bridge: Viewer vs Creator Patience Distributions&lt;&#x2F;h3&gt;
+&lt;p&gt;The series uses two distinct statistical models for patience—one for viewers (Part 1) and one for creators (Part 3). This section clarifies the mathematical relationship between them and derives different “Revenue at Risk” profiles for each cohort.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Unified Notation (to avoid confusion):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Symbol&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Viewer (Demand-Side)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Creator (Supply-Side)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Units&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(\lambda\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(\lambda_v = 3.39\)s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(\lambda_c = 90\)s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;seconds&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(k\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(k_v = 2.28\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(k_c = 4.5\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;dimensionless&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(F(t)\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(F_v(t)\) = viewer abandonment CDF&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(F_c(t)\) = creator abandonment CDF&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;probability&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(h(t)\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(h_v(t)\) = viewer hazard rate&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(h_c(t)\) = creator hazard rate&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1&#x2F;second&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(t\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Video Start Latency (100ms–1s)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Upload-to-Live Latency (30s–300s)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;seconds&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(\hat{\beta}\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.73 (logistic coefficient)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;N&#x2F;A (no within-creator β estimated)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;log-odds&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(n\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;47,382 events&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Requires instrumentation&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;count&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Why Different Shape Parameters (\(k_v\) vs \(k_c\))?&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The shape parameter \(k\) in the Weibull distribution controls how the hazard rate evolves over time:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;h(t; \lambda, k) = \frac{k}{\lambda}\left(\frac{t}{\lambda}\right)^{k-1}&lt;&#x2F;script&gt;
+&lt;ul&gt;
+&lt;li&gt;\(k = 1\): Constant hazard (exponential distribution—memoryless)&lt;&#x2F;li&gt;
+&lt;li&gt;\(1 &amp;lt; k &amp;lt; 3\): &lt;strong&gt;Gradual acceleration&lt;&#x2F;strong&gt; (viewers: \(k_v = 2.28\))&lt;&#x2F;li&gt;
+&lt;li&gt;\(k &amp;gt; 3\): &lt;strong&gt;Cliff behavior&lt;&#x2F;strong&gt; (creators: \(k_c = 4.5\))&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Hazard Rate Comparison:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+h_v(t) &amp;= \frac{2.28}{3.39}\left(\frac{t}{3.39}\right)^{1.28} \quad \text{(viewers: gradual acceleration)} \\[8pt]
+h_c(t) &amp;= \frac{4.5}{90}\left(\frac{t}{90}\right)^{3.5} \quad \text{(creators: cliff at threshold)}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Time Point&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Viewer \(h_v(t)\)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Creator \(h_c(t)\)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Interpretation&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(t = 0.3\lambda\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.15&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.0004&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Viewers already at risk; creators safe&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(t = 0.7\lambda\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.46&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.012&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Viewers accelerating; creators still safe&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(t = 1.0\lambda\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.67&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.05&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Viewers in danger zone; creators notice&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(t = 1.3\lambda\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.93&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.14&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Viewers abandoning; creators frustrated&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;\(t = 1.5\lambda\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1.12&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.28&#x2F;s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Cliff&lt;&#x2F;strong&gt;: Creator hazard now rising rapidly&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;At \(t = \lambda\) (characteristic tolerance), viewers have already accumulated significant risk (\(F_v(\lambda_v) = 63.2\%\)), while creators are only beginning to notice delays (\(F_c(\lambda_c) = 63.2\%\) by definition, but at 90s not 3.4s). The \(k_c = 4.5\) shape means creator hazard stays near zero until approaching the threshold, then spikes.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Connecting Logistic Regression (\(\hat{\beta}\)) to Weibull (\(k\))&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Part 1 establishes causality via within-user fixed-effects logistic regression (\(\hat{\beta} = 0.73\)). How does this relate to the Weibull shape parameter?&lt;&#x2F;p&gt;
+&lt;p&gt;The logistic coefficient \(\hat{\beta}\) measures the log-odds increase in abandonment when latency exceeds a threshold (300ms). The Weibull \(k\) parameter measures how rapidly hazard accelerates with time. They capture related but distinct phenomena:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Logistic (threshold effect):} \quad &amp; \log\left(\frac{P(\text{abandon}|t &gt; 300\text{ms})}{P(\text{abandon}|t &lt; 300\text{ms})}\right) = \hat{\beta} = 0.73 \\[8pt]
+\text{Weibull (continuous hazard):} \quad &amp; \frac{h(t_2)}{h(t_1)} = \left(\frac{t_2}{t_1}\right)^{k-1}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Approximate relationship:&lt;&#x2F;strong&gt; For viewers at the 300ms threshold:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\exp(\hat{\beta}) = 2.1 \approx \left(\frac{F_v(0.35\text{s})}{F_v(0.25\text{s})}\right) = \frac{0.00442}{0.00212} = 2.08 \quad \checkmark&lt;&#x2F;script&gt;
+&lt;p&gt;The logistic \(\hat{\beta}\) is consistent with Weibull \(k_v = 2.28\) at the 300ms decision boundary. Both models agree: viewers are ~2× more likely to abandon above threshold.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Revenue at Risk Profiles: Viewer vs Creator&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The different patience distributions create fundamentally different revenue risk profiles:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Dimension&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Viewer (Demand-Side)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Creator (Supply-Side)&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Frequency&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High (every session, ~20&#x2F;day)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Low (per upload, ~1.5&#x2F;week for active creators)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Threshold&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Low (300ms feels slow)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High (30s is acceptable, 120s triggers comparison)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Hazard profile&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Gradual acceleration (\(k_v = 2.28\))&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Cliff behavior (\(k_c = 4.5\))&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Time scale&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Milliseconds (100ms–1,000ms)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Minutes (30s–300s)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Revenue mechanism&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Direct: \(\Delta R_v = N \cdot \Delta F_v \cdot r \cdot T\)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Indirect: \(\Delta R_c = C_{\text{lost}} \cdot M \cdot r \cdot T\)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Multiplier&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1× (one user = one user)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10,000× (one creator = 10K learner-days&#x2F;year)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Sensitivity&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Every 100ms compounds&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Binary: &amp;lt;30s OK, &amp;gt;120s triggers churn&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Recovery&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Next session (high frequency)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Platform switch (low frequency, high switching cost)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Revenue at Risk Formula Comparison:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+R_{\text{at-risk}}^{\text{viewer}} &amp;= \underbrace{N}_{\text{DAU}} \cdot \underbrace{T}_{\text{365 days}} \cdot \underbrace{\int_{t_1}^{t_2} f_v(t) \, dt}_{\text{abandonment mass}} \cdot \underbrace{r}_{\text{ARPU&#x2F;day}} \\[12pt]
+R_{\text{at-risk}}^{\text{creator}} &amp;= \underbrace{N \cdot \rho}_{\text{creators}} \cdot \underbrace{T}_{\text{365 days}} \cdot \underbrace{\int_{t_1}^{t_2} f_c(t) \, dt}_{\text{churn mass}} \cdot \underbrace{M \cdot r}_{\text{content multiplier × ARPU}}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;where \(\rho = 0.01\) (1% creator ratio) and \(M = 10{,}000\) learner-days&#x2F;creator&#x2F;year.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Worked Example: 100ms Viewer Improvement vs 30s Creator Improvement&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Viewer optimization (370ms → 270ms):&lt;&#x2F;em&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\Delta R_v = 3\text{M} \times 365 \times [F_v(0.37) - F_v(0.27)] \times \$0.0573 = 3\text{M} \times 365 \times 0.00352 \times 0.0573 = \$221\text{K&#x2F;year}&lt;&#x2F;script&gt;
+&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Creator optimization (90s → 60s):&lt;&#x2F;em&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\Delta R_c = 30{,}000 \times [F_c(90) - F_c(60)] \times 10{,}000 \times \$0.0573 = 30{,}000 \times 0.582 \times 10{,}000 \times 0.0573 &#x2F; 365 = \$274\text{K&#x2F;year}&lt;&#x2F;script&gt;
+&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Interpretation:&lt;&#x2F;strong&gt; A 100ms viewer improvement and a 30s creator improvement have similar revenue impact (~$220-270K&#x2F;year at 3M DAU), but operate on completely different time scales and mechanisms. Viewer optimization is about compounding small gains across billions of sessions. Creator optimization is about preventing cliff-edge churn events that cascade through the content multiplier.&lt;&#x2F;p&gt;
+&lt;p&gt;Viewer patience (\(k_v = 2.28\)) and creator patience (\(k_c = 4.5\)) require different optimization strategies:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Viewers:&lt;&#x2F;strong&gt; Optimize continuously. Every 100ms matters because hazard accelerates gradually. Invest in protocol optimization, edge caching, and prefetching—gains compound across high-frequency sessions.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Creators:&lt;&#x2F;strong&gt; Optimize to threshold. Sub-30s encoding is parity; &amp;gt;120s is catastrophic. Binary investment decision: either meet the 30s bar or accept 5%+ annual churn. Intermediate improvements (90s → 60s) have limited value because \(k_c = 4.5\) keeps hazard low until the cliff.&lt;&#x2F;p&gt;
+&lt;p&gt;Part 1’s within-user \(\hat{\beta} = 0.73\) validates viewer latency as causal. Part 3’s creator model requires separate causality validation (within-creator odds ratio). Don’t assume viewer causality transfers to creators—different populations, different mechanisms, different confounders.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Revenue impact per encoding delay tier:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Encoding Time&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;\(F_{\text{creator}}\)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Creators Lost @3M DAU&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Content Lost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Annual Revenue Impact&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0 learner-days&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;30-60s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;75&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;750K learner-days&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$43K&#x2F;year&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;60-120s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;15%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;225&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2.25M learner-days&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$129K&#x2F;year&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;gt;120s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;65%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;975&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;9.75M learner-days&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$559K&#x2F;year&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h3 id=&quot;self-diagnosis-is-encoding-latency-causal-in-your-platform&quot;&gt;Self-Diagnosis: Is Encoding Latency Causal in YOUR Platform?&lt;&#x2F;h3&gt;
+&lt;p&gt;The following tests are structured as MECE (Mutually Exclusive, Collectively Exhaustive) criteria. Each test evaluates a distinct dimension: attribution (stated reason), survival (retention curve), behavior (observed actions), and dose-response (gradient effect). Pass&#x2F;fail thresholds use statistical significance standards matching the causality validation in &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part1-foundation&#x2F;&quot;&gt;Latency Kills Demand&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Test&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;PASS (Encoding is Constraint)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;FAIL (Encoding is Proxy)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Your Platform&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;1. Stated attribution&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Exit surveys: “slow upload” ranks in top 3 churn reasons with &amp;gt;15% mention rate&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“Slow upload” mention rate &amp;lt;5% OR ranks below monetization, audience, tools&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;2. Survival analysis (encoding stratification)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Cox proportional hazards model: fast-encoding cohort (p50 &amp;lt;30s) shows HR &amp;lt; 0.80 vs slow cohort (p50 &amp;gt;120s) for 90-day churn, with 95% CI excluding 1.0 and log-rank test p&amp;lt;0.05&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;HR confidence interval includes 1.0 (no significant survival difference) OR log-rank p&amp;gt;0.10&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;3. Behavioral signal&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;gt;5% of uploads abandoned mid-process (before completion) AND abandoners have &amp;gt;3x churn rate vs completers&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;2% mid-process abandonment OR abandonment rate uncorrelated with subsequent churn&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;4. Dose-response gradient&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Monotonic relationship: 90-day retention decreases with each encoding tier (&amp;lt;30s &amp;gt; 30-60s &amp;gt; 60-120s &amp;gt; &amp;gt;120s), Spearman rho &amp;lt; -0.7, p&amp;lt;0.05&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Non-monotonic pattern (middle tier has lowest retention) OR rho &amp;gt; -0.5&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;5. Within-creator analysis&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Same creator’s return probability after slow upload (&amp;lt;50%) vs fast upload (&amp;gt;80%): odds ratio &amp;gt;2.0, McNemar test p&amp;lt;0.05&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Within-creator odds ratio &amp;lt;1.5 OR McNemar p&amp;gt;0.10 (return rate independent of encoding speed)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Statistical methodology notes:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Test 2 (Survival analysis)&lt;&#x2F;strong&gt;: Use Cox proportional hazards regression with encoding speed as the exposure variable. The hazard ratio (HR) represents the relative risk of churn for slow-encoding creators vs fast-encoding creators. HR &amp;lt; 0.80 means fast-encoding creators have at least 20% lower churn hazard. Verify proportional hazards assumption with Schoenfeld residuals.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Test 4 (Dose-response)&lt;&#x2F;strong&gt;: Spearman rank correlation tests monotonicity without assuming linearity. A strong negative correlation (rho &amp;lt; -0.7) indicates that worse encoding consistently predicts worse retention across all tiers.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Test 5 (Within-creator)&lt;&#x2F;strong&gt;: Paired analysis controls for creator quality (same creator, different experiences). McNemar’s test is appropriate for paired binary outcomes (returned&#x2F;did not return).&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Decision Rule:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;4-5 PASS:&lt;&#x2F;strong&gt; Strong causal evidence. Encoding latency directly drives creator churn. Proceed with GPU pipeline optimization.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;3 PASS:&lt;&#x2F;strong&gt; Moderate evidence. Encoding is likely causal but consider confounders. Validate with natural experiment (e.g., GPU outage) before major investment.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;≤2 PASS:&lt;&#x2F;strong&gt; Weak or no evidence. Encoding is proxy for other issues (monetization, discovery, content quality). Fix root causes BEFORE investing $38K&#x2F;month in encoding infrastructure.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;The constraint:&lt;&#x2F;strong&gt; AWS defaults to 8 GPU instances per region. How many do we actually need? That depends on upload volume, encoding speed, and peak patterns - all derived in the sections that follow.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;upload-architecture&quot;&gt;Upload Architecture&lt;&#x2F;h2&gt;
+&lt;p&gt;Marcus records a 60-second tutorial on his phone. The file is 87MB - 1080p at 30fps, H.264 encoded by the device (typical bitrate: ~11 Mbps). Between hitting “upload” and seeing “processing complete,” every second of delay erodes his confidence in the platform.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The goal:&lt;&#x2F;strong&gt; Direct-to-S3 upload bypassing app servers, with chunked resumability for unreliable mobile networks.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;presigned-url-flow&quot;&gt;Presigned URL Flow&lt;&#x2F;h3&gt;
+&lt;p&gt;Traditional upload flow routes bytes through the application server - consuming bandwidth, blocking connections, and adding latency. Presigned URLs eliminate this entirely:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    sequenceDiagram
+    participant Client
+    participant API
+    participant S3
+    participant Lambda
+
+    Client-&gt;&gt;API: POST &#x2F;uploads&#x2F;initiate { filename, size, contentType }
+    API-&gt;&gt;API: Validate (size &lt;500MB, format MP4&#x2F;MOV)
+    API-&gt;&gt;S3: CreateMultipartUpload
+    S3--&gt;&gt;API: { UploadId: &quot;abc123&quot; }
+    API-&gt;&gt;API: Generate presigned URLs for parts (15-min expiry each)
+    API--&gt;&gt;Client: { uploadId: &quot;abc123&quot;, partUrls: [...], partSize: 5MB }
+
+    loop For each 5MB chunk
+        Client-&gt;&gt;S3: PUT presigned partUrl[i]
+        S3--&gt;&gt;Client: { ETag: &quot;etag-i&quot; }
+    end
+    Note over Client,S3: Direct upload - no app server
+
+    Client-&gt;&gt;API: POST &#x2F;uploads&#x2F;complete { uploadId, parts: [{partNum, ETag}...] }
+    API-&gt;&gt;S3: CompleteMultipartUpload
+    S3-&gt;&gt;Lambda: S3 Event Notification (ObjectCreated)
+    Lambda-&gt;&gt;Lambda: Validate, create encoding job
+    Lambda--&gt;&gt;Client: WebSocket: &quot;Processing started&quot;
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Presigned URL mechanics:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{URL} &amp;= \text{S3\_endpoint} + \text{object\_key} + \text{signature} \\
+\text{signature} &amp;= \text{HMAC-SHA256}(\text{secret\_key}, \text{string\_to\_sign}) \\
+\text{expiry} &amp;= 15\,\text{minutes (security vs UX balance)}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Benefits:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;No app server bandwidth&lt;&#x2F;strong&gt; - 87MB goes directly to S3, not through your $0.50&#x2F;hour instances&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Client-side progress&lt;&#x2F;strong&gt; - Native upload progress tracking (23% to 45% to 78% to 100%)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Horizontal scaling&lt;&#x2F;strong&gt; - S3 handles unlimited concurrent uploads without load balancer changes&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;chunked-upload-with-resumability&quot;&gt;Chunked Upload with Resumability&lt;&#x2F;h3&gt;
+&lt;p&gt;Mobile networks fail. Marcus is uploading from a coffee shop with spotty WiFi. At 60% complete (52MB transferred), the connection drops.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The problem:&lt;&#x2F;strong&gt; Without resumability, Marcus restarts from 0%. Three failed attempts, and he tries YouTube instead.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The solution:&lt;&#x2F;strong&gt; S3 Multipart Upload breaks the 87MB file into 5MB chunks (17 full chunks + 1 partial = 18 total):&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Chunks&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Count&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Size Each&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cumulative&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Status&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Retry Count&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;1-10&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;50MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Completed&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;11&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;55MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Completed&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2 (network retry)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;12-17&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;6&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;85MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Completed&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;18&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;87MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Completed&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Implementation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Parameter&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Value&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Rationale&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Chunk size&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;S3 minimum, balances retry cost vs overhead&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Max retries per chunk&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Limits total retry time&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Retry backoff&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Exponential (1s, 2s, 4s)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Prevents thundering herd&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Resume window&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;24 hours&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Multipart upload ID validity period&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;State tracking (client-side):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{progress} &amp;= \frac{\sum_{i=1}^{n} \text{completed}_i}{\text{total\_chunks}} \\
+\text{ETA} &amp;= \frac{\text{remaining\_bytes}}{\text{avg\_throughput}_{30s}}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;Marcus sees: “Uploading… 67% (58MB of 87MB) - 12 seconds remaining”&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Alternative: TUS Protocol&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;For teams wanting a standard resumable upload protocol, &lt;a href=&quot;https:&#x2F;&#x2F;tus.io&#x2F;&quot;&gt;TUS&lt;&#x2F;a&gt; provides:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Protocol-level resumability (not S3-specific)&lt;&#x2F;li&gt;
+&lt;li&gt;Cross-platform client libraries&lt;&#x2F;li&gt;
+&lt;li&gt;Server implementation flexibility&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Trade-off: TUS requires server-side storage before S3 transfer, adding one hop. For direct-to-cloud, S3 multipart is more efficient.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;content-deduplication&quot;&gt;Content Deduplication&lt;&#x2F;h3&gt;
+&lt;p&gt;Marcus accidentally uploads the same video twice. Without deduplication, the platform:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Wastes upload bandwidth (87MB × 2)&lt;&#x2F;li&gt;
+&lt;li&gt;Pays for encoding twice (GPU cost per video derived in next section)&lt;&#x2F;li&gt;
+&lt;li&gt;Stores duplicate files (S3 Standard: $0.023&#x2F;GB&#x2F;month × 2)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Solution:&lt;&#x2F;strong&gt; Content-addressable storage using SHA-256 hash:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    sequenceDiagram
+    participant Client
+    participant API
+    participant S3
+
+    Client-&gt;&gt;Client: Calculate SHA-256(file) [client-side]
+    Client-&gt;&gt;API: POST &#x2F;uploads&#x2F;check { hash: &quot;a1b2c3d4e5f6...&quot; }
+
+    alt Hash exists in content-addressable store
+        API--&gt;&gt;Client: { exists: true, videoId: &quot;v_abc123&quot; }
+        Note over Client: Skip upload, link to existing video
+    else Hash not found
+        API--&gt;&gt;Client: { exists: false }
+        Note over Client: Proceed with &#x2F;uploads&#x2F;initiate flow
+    end
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Hash calculation cost:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{SHA-256 throughput} &amp;\approx 500\,\text{MB&#x2F;s (modern mobile CPU)} \\
+\text{87MB hash time} &amp;= \frac{87}{500} = 0.17\,\text{seconds}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;Negligible client-side cost, saves bandwidth and encoding for an estimated 3-5% of uploads (based on industry benchmarks for user-generated content platforms: accidental duplicates, re-uploads after perceived failures, cross-device re-uploads).&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;file-validation&quot;&gt;File Validation&lt;&#x2F;h3&gt;
+&lt;p&gt;Before spending GPU cycles on encoding, validate the upload:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Check&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Threshold&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Failure Action&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;File size&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;500MB&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Reject with “File too large”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Duration&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;5 minutes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Reject with “Video exceeds 5-minute limit”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Format&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;MP4, MOV, WebM&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Reject with “Unsupported format”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Codec&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;H.264, H.265, VP9&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Transcode if needed (adds latency)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Resolution&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;≥720p&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Warn “Low quality - consider re-recording”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Validation timing:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Client-side: Format, size (instant feedback)&lt;&#x2F;li&gt;
+&lt;li&gt;Server-side: Duration, codec (after upload, before encoding)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Rejecting a 600MB file after upload wastes bandwidth. Rejecting it client-side saves everyone time.&lt;&#x2F;p&gt;
+&lt;p&gt;Upload infrastructure has hidden complexity that breaks at scale:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Presigned URL expiration:&lt;&#x2F;strong&gt; 15-minute validity per part URL balances security vs UX. Slow connections need URL refresh mid-upload—client calls &lt;code&gt;&#x2F;uploads&#x2F;initiate&lt;&#x2F;code&gt; again if part URLs expire.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Chunked upload complexity:&lt;&#x2F;strong&gt; Client must track chunk state (localStorage or IndexedDB) including &lt;code&gt;uploadId&lt;&#x2F;code&gt;, &lt;code&gt;partNum&lt;&#x2F;code&gt;, and &lt;code&gt;ETag&lt;&#x2F;code&gt; per completed part. Server must handle out-of-order arrival, and &lt;code&gt;CompleteMultipartUpload&lt;&#x2F;code&gt; requires all &lt;code&gt;{partNum, ETag}&lt;&#x2F;code&gt; pairs.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Deduplication hash collision:&lt;&#x2F;strong&gt; SHA-256 collision probability is &lt;script type=&quot;math&#x2F;tex&quot;&gt;2^{-128}&lt;&#x2F;script&gt;
+ (negligible). False positive risk is zero in practice.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;parallel-encoding-pipeline&quot;&gt;Parallel Encoding Pipeline&lt;&#x2F;h2&gt;
+&lt;p&gt;Marcus’s 60-second 1080p video needs to play smoothly on Kira’s iPhone over 5G, Sarah’s Android on hospital WiFi, and a viewer in rural India on 3G. This requires Adaptive Bitrate (ABR) streaming - multiple quality variants that the player switches between based on network conditions.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The performance target:&lt;&#x2F;strong&gt; Encode 60s 1080p video to 4-quality ABR ladder in &amp;lt;20 seconds.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cpu-vs-gpu-encoding&quot;&gt;CPU vs GPU Encoding&lt;&#x2F;h3&gt;
+&lt;p&gt;The economics are counterintuitive. GPU instances cost less AND encode faster:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Instance&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Type&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Hourly Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Encoding Speed&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;60s Video Time&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cost per Video&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;c5.4xlarge&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;CPU (16 vCPU)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.68&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.5× realtime&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;120 seconds&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.023&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;g4dn.xlarge&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;GPU (T4)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.526&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3-4× realtime&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;15-20 seconds&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.003&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Why GPUs win:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{CPU cost per video} &amp;= \frac{\$0.68&#x2F;\text{hr}}{3600\,\text{s}} \times 120\,\text{s} = \$0.023 \\
+\text{GPU cost per video} &amp;= \frac{\$0.526&#x2F;\text{hr}}{3600\,\text{s}} \times 18\,\text{s} = \$0.003 \\
+\text{GPU savings} &amp;= 87\% \text{ cost reduction, } 6.7\times \text{ faster}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;NVIDIA’s NVENC hardware encoder on the T4 GPU handles video encoding in dedicated silicon, leaving CUDA cores free for other work. A single T4 supports 4 simultaneous encoding sessions - perfect for parallel ABR generation.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;abr-ladder-configuration&quot;&gt;ABR Ladder Configuration&lt;&#x2F;h3&gt;
+&lt;p&gt;Four quality variants cover the network spectrum:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Quality&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Resolution&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Bitrate&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Target Network&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Use Case&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;1080p&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1920×1080&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5 Mbps&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;WiFi, 5G&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Kira at home, full quality&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;720p&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1280×720&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2.5 Mbps&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;4G LTE&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Marcus on commute&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;480p&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;854×480&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1 Mbps&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3G, congested 4G&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Sarah in hospital basement&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;360p&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;640×360&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;500 Kbps&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2G, satellite&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Rural India fallback&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Encoding parameters (H.264 for compatibility):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Parameter&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Value&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Rationale&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Codec&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;H.264 (libx264 &#x2F; NVENC)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Universal playback support&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Profile&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Better compression efficiency&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Preset&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Medium&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Quality&#x2F;speed balance&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Keyframe interval&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2 seconds&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Enables fast seeking&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;B-frames&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Compression efficiency&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Why H.264 over H.265:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;H.265 offers 30% better compression&lt;&#x2F;li&gt;
+&lt;li&gt;But: +20% encoding time, limited older device support&lt;&#x2F;li&gt;
+&lt;li&gt;Decision: H.264 for uploads (broad compatibility), consider H.265 for high-traffic videos where bandwidth savings justify re-encoding&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;parallel-encoding-architecture&quot;&gt;Parallel Encoding Architecture&lt;&#x2F;h3&gt;
+&lt;p&gt;A single g4dn.xlarge encodes all 4 qualities simultaneously:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph TD
+    subgraph &quot;g4dn.xlarge (NVIDIA T4)&quot;
+        Source[Source: 1080p 60s] --&gt; Split[FFmpeg Split]
+        Split --&gt; E1[NVENC Session 1&lt;br&#x2F;&gt;1080p @ 5Mbps]
+        Split --&gt; E2[NVENC Session 2&lt;br&#x2F;&gt;720p @ 2.5Mbps]
+        Split --&gt; E3[NVENC Session 3&lt;br&#x2F;&gt;480p @ 1Mbps]
+        Split --&gt; E4[NVENC Session 4&lt;br&#x2F;&gt;360p @ 500Kbps]
+
+        E1 --&gt; Mux[HLS Muxer]
+        E2 --&gt; Mux
+        E3 --&gt; Mux
+        E4 --&gt; Mux
+
+        Mux --&gt; Output[ABR Ladder&lt;br&#x2F;&gt;master.m3u8]
+    end
+
+    Output --&gt; S3[S3 Upload]
+    S3 --&gt; CDN[CDN Distribution]
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Timeline breakdown:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Phase&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Duration&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cumulative&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Source download from S3&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Parallel 4-quality encode&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;15s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;17s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;HLS segment packaging&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;18s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;S3 upload (all variants)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;20s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Total: 20 seconds&lt;&#x2F;strong&gt; (within &amp;lt;30s budget, leaving 10s margin for queue wait)&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;throughput-calculation&quot;&gt;Throughput Calculation&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Per-instance capacity:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Videos per hour} &amp;= \frac{3600\,\text{s}}{18\,\text{s&#x2F;video}} = 200\,\text{videos&#x2F;instance&#x2F;hour} \\
+\text{Daily capacity (1 instance)} &amp;= 200 \times 24 = 4{,}800\,\text{videos&#x2F;day}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Fleet sizing for 50K uploads&#x2F;day:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Baseline instances} &amp;= \frac{50{,}000}{4{,}800} = 10.4 \approx 11\,\text{instances} \\
+\text{Saturday peak rate} &amp;= \frac{15{,}000\,\text{videos}}{4\,\text{hours}} = 3{,}750&#x2F;\text{hr} \\
+\text{Peak instances needed} &amp;= \frac{3{,}750}{200} = 19\,\text{instances}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;With 2.5× buffer for queue management, quota requests, and operational margin: &lt;strong&gt;50 g4dn.xlarge instances&lt;&#x2F;strong&gt; at peak capacity. Buffer derivation: 19 peak instances × 2.5 = 47.5 ≈ 50, where 2.5× accounts for queue smoothing (1.3×), AWS quota headroom (1.2×), and instance failure tolerance (1.6×) - multiplicative: 1.3 × 1.2 × 1.6 ≈ 2.5.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;gpu-instance-comparison&quot;&gt;GPU Instance Comparison&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;GPU&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Instance&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Hourly Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;NVENC Sessions&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Encoding Speed&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Best For&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;NVIDIA T4&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;g4dn.xlarge&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.526&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;4&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3-4× realtime&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Cost-optimized batch&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;NVIDIA V100&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;p3.2xlarge&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$3.06&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5-6× realtime&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;ML training + encoding&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;NVIDIA A10G&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;g5.xlarge&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$1.006&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;7&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;4-5× realtime&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High-throughput&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Decision: T4 (g4dn.xlarge)&lt;&#x2F;strong&gt; - Best cost&#x2F;performance ratio for encoding-only workloads. V100&#x2F;A10G justified only if combining with ML inference.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cloud-provider-comparison&quot;&gt;Cloud Provider Comparison&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Provider&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Instance&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;GPU&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Hourly Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Availability&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;AWS&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;g4dn.xlarge&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;T4&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.526&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High (most regions)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;GCP&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;n1-standard-4 + T4&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;T4&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.70&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Medium&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Azure&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;NC4as_T4_v3&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;T4&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.526&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Medium&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Decision: AWS&lt;&#x2F;strong&gt; - Ecosystem integration (S3, ECS, CloudFront), consistent pricing, best availability. Multi-cloud adds complexity without proportional benefit at this scale.&lt;&#x2F;p&gt;
+&lt;p&gt;GPU quotas - not encoding speed - kill creator experience.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Default quotas are 6-25× under-provisioned:&lt;&#x2F;strong&gt; AWS gives 8 vCPUs&#x2F;region by default, but you need 200 (50 instances) for Saturday peak. Request quota 2 weeks before launch, in multiple regions, with a fallback plan if denied.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Saturday peak math:&lt;&#x2F;strong&gt; 30% of daily uploads (15K) arrive in 4 hours. Baseline capacity handles 2,200&#x2F;hour. Queue grows at 1,550&#x2F;hour, creating 6,200 video backlog and 2.8-hour wait times. Marcus uploads at 5:30 PM, sees “Processing in ~2 hours,” and opens YouTube.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Quota request timeline:&lt;&#x2F;strong&gt; 3-5 business days if straightforward, 5-10 days if justification required.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;cache-warming-for-new-uploads&quot;&gt;Cache Warming for New Uploads&lt;&#x2F;h2&gt;
+&lt;p&gt;Marcus uploads his video at 2:10 PM. Within 5 minutes, 50 followers start watching. The video exists only at the origin (us-west-2). The first viewer in Tokyo triggers a cold cache miss.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;What is a CDN shield?&lt;&#x2F;strong&gt; A shield is a regional caching layer between edge PoPs (Points of Presence - the 200+ locations closest to end users) and the origin. Instead of 200 edges all requesting from origin, 4-6 shields aggregate requests. The request path flows from Edge to Shield to Origin. This reduces origin load and improves cache efficiency.&lt;&#x2F;p&gt;
+&lt;p&gt;First-viewer latency breakdown:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Latency}_{\text{cold}} &amp;= \text{Tokyo edge (miss)} + \text{ap-northeast-1 shield (miss)} + \text{us-west-2 origin} \\
+&amp;= 10\,\text{ms} + 80\,\text{ms} + 150\,\text{ms} \\
+&amp;= 240\,\text{ms} \text{ (cross-Pacific RTT)}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;By viewer 50, the video is cached at Tokyo edge. But viewers 1-10 paid the cold-start penalty. For a creator with global followers, this first-viewer experience matters.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;three-cache-warming-strategies&quot;&gt;Three Cache Warming Strategies&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Option A: Global Push-Based Warming&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Push new video to all 200+ edge PoPs immediately upon encoding completion.&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Egress per upload} &amp;= 200\,\text{PoPs} \times 2\,\text{MB (avg video)} = 400\,\text{MB} \\
+\text{Daily egress} &amp;= 50\text{K uploads} \times 400\,\text{MB} = 20\,\text{TB&#x2F;day} \\
+\text{Monthly cost} &amp;= 20\,\text{TB} \times 30\,\text{days} \times \$0.08&#x2F;\text{GB} = \$48\text{K&#x2F;month} = \$576\text{K&#x2F;year}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Benefit:&lt;&#x2F;strong&gt; Zero cold-start penalty. All viewers get &amp;lt;50ms edge latency.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Problem:&lt;&#x2F;strong&gt; 90% of bandwidth is wasted. Average video is watched in 10-20 PoPs, not 200.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;&lt;strong&gt;Option B: Lazy Pull-Based Caching&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Do nothing. First viewer in each region triggers cache-miss-and-fill.&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{CDN cache hit rate} &amp;\approx 98.3\% \text{ (typical for video with regional shields)} \\
+\text{Origin hit rate} &amp;= 1.7\% \\
+\text{Daily origin fetches} &amp;= 60\text{M views} \times 1.7\% = 1.02\text{M fetches} \\
+\text{Monthly egress} &amp;= 1.02\text{M} \times 2\,\text{MB} \times 30 = 61.2\,\text{TB} \\
+\text{Monthly cost} &amp;= 61.2\,\text{TB} \times \$0.08&#x2F;\text{GB} = \$4.9\text{K&#x2F;month} = \$59\text{K&#x2F;year}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Benefit:&lt;&#x2F;strong&gt; Minimal egress cost. Only actual views trigger caching.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Problem:&lt;&#x2F;strong&gt; First 10 viewers per region pay 200-280ms cold-start latency. For creators with engaged audiences, this violates the &amp;lt;300ms SLO.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;&lt;strong&gt;Option C: Geo-Aware Selective Warming (DECISION)&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Predict where Marcus’s followers concentrate based on historical view data. Pre-warm only the regional shields serving those followers.&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    subgraph &quot;Encoding Complete&quot;
+        Video[New Video] --&gt; Analyze[Analyze Creator&#x27;s&lt;br&#x2F;&gt;Follower Geography]
+    end
+
+    subgraph &quot;Historical Data&quot;
+        Analyze --&gt; Data[Marcus: 80% US&lt;br&#x2F;&gt;15% EU, 5% APAC]
+    end
+
+    subgraph &quot;Selective Warming&quot;
+        Data --&gt; Shield1[us-east-1 shield&lt;br&#x2F;&gt;Pre-warm]
+        Data --&gt; Shield2[us-west-2 shield&lt;br&#x2F;&gt;Pre-warm]
+        Data --&gt; Shield3[eu-west-1 shield&lt;br&#x2F;&gt;Pre-warm]
+        Data -.-&gt; Shield4[ap-northeast-1&lt;br&#x2F;&gt;Lazy fill]
+    end
+
+    style Shield1 fill:#90EE90
+    style Shield2 fill:#90EE90
+    style Shield3 fill:#90EE90
+    style Shield4 fill:#FFE4B5
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Cost calculation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Shields warmed} &amp;= 3 \text{ (top regions by follower \%)} \\
+\text{Egress per upload} &amp;= 3 \times 2\,\text{MB} = 6\,\text{MB} \\
+\text{Daily egress} &amp;= 50\text{K} \times 6\,\text{MB} = 300\,\text{GB&#x2F;day} \\
+\text{Monthly cost} &amp;= 300\,\text{GB} \times 30 \times \$0.08 = \$720&#x2F;\text{month} = \$8.6\text{K&#x2F;year}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Coverage:&lt;&#x2F;strong&gt; 80-90% of viewers get instant edge cache hit (via warmed shields). 10-20% trigger lazy fill from shields to local edge.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;roi-analysis&quot;&gt;ROI Analysis&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Strategy&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Annual Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cold-Start Penalty&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Revenue Impact&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;A: Global Push&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$576K&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;None (all edges warm)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0 loss&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;B: Lazy Pull&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$59K&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1.7% of views (origin fetches)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;~$51K loss*&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;C: Geo-Aware&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$8.6K&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0.3% of views (non-warmed regions)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;~$9K loss*&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;em&gt;Revenue loss derivation: Cold-start views × F(240ms) abandonment (0.21%) × $0.0573 ARPU × 365 days. Example for Option B: 60M × 1.7% × 0.21% × $0.0573 × 365 = $51K&#x2F;year.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Net benefit calculation (C vs A):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Cost savings} &amp;= \$576\text{K} - \$8.6\text{K} = \$567\text{K&#x2F;year} \\
+\text{Additional revenue loss (C vs A)} &amp;= \$9\text{K} - \$0 = \$9\text{K&#x2F;year} \\
+\text{Net benefit} &amp;= \$567\text{K} - \$9\text{K} = \$558\text{K&#x2F;year}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Decision:&lt;&#x2F;strong&gt; Option C (Geo-Aware Selective Warming) - Pareto optimal at 98% of benefit for 1.5% of cost. Two-way door (reversible in 1 week). ROI: $558K net benefit ÷ $8.6K cost = &lt;strong&gt;65× return&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;implementation&quot;&gt;Implementation&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Follower geography analysis:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The system queries the last 30 days of view data for each creator, grouping by region to calculate percentage distribution. For each creator, it returns the top 3 regions by view count. Marcus’s query might return: US-East (45%), EU-West (30%), APAC-Southeast (15%). These percentages drive the shield warming priority order.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Warm-on-encode Lambda trigger:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    sequenceDiagram
+    participant S3
+    participant Lambda
+    participant Analytics
+    participant CDN
+
+    S3-&gt;&gt;Lambda: Encoding complete event
+    Lambda-&gt;&gt;Analytics: Get creator follower regions
+    Analytics--&gt;&gt;Lambda: [us-east-1: 45%, us-west-2: 35%, eu-west-1: 15%]
+
+    par Parallel shield warming
+        Lambda-&gt;&gt;CDN: Warm us-east-1 shield
+        Lambda-&gt;&gt;CDN: Warm us-west-2 shield
+        Lambda-&gt;&gt;CDN: Warm eu-west-1 shield
+    end
+
+    CDN--&gt;&gt;Lambda: Warming complete (3 shields)
+&lt;&#x2F;pre&gt;
+&lt;p&gt;Both extremes of cache warming fail at scale:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Global push fails:&lt;&#x2F;strong&gt; 90% of bandwidth wasted on PoPs that never serve the video. New creators with 10 followers don’t need 200-PoP distribution. Cost scales with uploads, not views (wrong unit economics).&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Lazy pull fails:&lt;&#x2F;strong&gt; First-viewer latency penalty violates &amp;lt;300ms SLO. High-profile creators trigger simultaneous cache misses across 50+ PoPs, causing origin thundering herd.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Geo-aware wins:&lt;&#x2F;strong&gt; New creators get origin + 2 nearest shields. Viral detection (10× views in 5 minutes) triggers global push. Time-zone awareness weights recent views higher.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;caption-generation-asr-integration&quot;&gt;Caption Generation (ASR Integration)&lt;&#x2F;h2&gt;
+&lt;p&gt;Marcus’s VLOOKUP tutorial includes spoken explanation: “Select the cell where you want the result, then type equals VLOOKUP, open parenthesis…”&lt;&#x2F;p&gt;
+&lt;p&gt;Captions serve three purposes:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Accessibility:&lt;&#x2F;strong&gt; Required for deaf&#x2F;hard-of-hearing users (WCAG 2.1 AA compliance)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Comprehension:&lt;&#x2F;strong&gt; 40% improvement in retention when captions are available&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;SEO:&lt;&#x2F;strong&gt; Google indexes caption text, improving video discoverability&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;Requirements:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;95%+ accuracy (specialized terminology: “VLOOKUP”, “pivot table”, “CONCATENATE”)&lt;&#x2F;li&gt;
+&lt;li&gt;&amp;lt;30s generation time (parallel with encoding, not sequential)&lt;&#x2F;li&gt;
+&lt;li&gt;Creator review workflow for flagged low-confidence terms&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;asr-provider-comparison&quot;&gt;ASR Provider Comparison&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Provider&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cost&#x2F;Minute&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Accuracy&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Custom Vocabulary&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Latency&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;AWS Transcribe&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.024&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;95-97%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Yes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10-20s for 60s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Google Speech-to-Text&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.024&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;95-97%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Yes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10-20s for 60s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Deepgram&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.0125&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;93-95%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Yes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5-10s for 60s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Whisper (self-hosted)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;GPU cost&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;95-98%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Fine-tuning required&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;30-60s for 60s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h3 id=&quot;cost-optimization-analysis&quot;&gt;Cost Optimization Analysis&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Target:&lt;&#x2F;strong&gt; &amp;lt;$0.005&#x2F;video (at 50K uploads&#x2F;day = $250&#x2F;day budget)&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Current reality:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{AWS Transcribe} &amp;= \$0.024&#x2F;\text{min} \times 1\,\text{min avg} = \$0.024&#x2F;\text{video} \\
+\text{Daily cost} &amp;= 50\text{K} \times \$0.024 = \$1{,}200&#x2F;\text{day} \\
+\text{Budget gap} &amp;= \$1{,}200 - \$250 = \$950&#x2F;\text{day over budget}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Options:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Option&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cost&#x2F;Video&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Daily Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;vs Budget&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Trade-off&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;AWS Transcribe&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.024&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$1,200&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;4.8× over&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Highest accuracy&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Deepgram&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.0125&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$625&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2.5× over&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2-3% lower accuracy&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Self-hosted Whisper&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.009&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$442&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1.8× over&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;GPU fleet management&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Deepgram + Sampling&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.006&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$300&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1.2× over&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Only transcribe 50%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Decision:&lt;&#x2F;strong&gt; Deepgram for all videos, accept 2.5× budget overrun ($625&#x2F;day vs $250 target). The alternative (reducing caption coverage) violates accessibility requirements.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Self-hosted Whisper economics:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Whisper processing} &amp;= 1\times \text{ realtime on g4dn.xlarge} \\
+\text{Videos&#x2F;hour&#x2F;instance} &amp;= 60 \\
+\text{Instances for 50K&#x2F;day} &amp;= \frac{50{,}000}{60 \times 24} = 35\,\text{instances} \\
+\text{Daily GPU cost} &amp;= 35 \times 24 \times \$0.526 = \$442&#x2F;\text{day}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;Self-hosted Whisper costs $442&#x2F;day vs Deepgram’s $625&#x2F;day - a 29% savings. But:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Requires dedicated GPU fleet management&lt;&#x2F;li&gt;
+&lt;li&gt;Competes with encoding workload for GPU quota&lt;&#x2F;li&gt;
+&lt;li&gt;Custom vocabulary requires fine-tuning infrastructure&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Conclusion:&lt;&#x2F;strong&gt; Self-hosted becomes cost-effective at &amp;gt;100K uploads&#x2F;day. At 50K, operational complexity outweighs 29% savings.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Scale-dependent decision:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Scale&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Deepgram&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Whisper&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Whisper Savings&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Decision&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;50K&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$625&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$442&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$67K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Deepgram&lt;&#x2F;strong&gt; (ops complexity &amp;gt; savings)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;100K&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$1,250&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$884&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$133K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Break-even (evaluate ops capacity)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;200K&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$2,500&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$1,768&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$267K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Whisper&lt;&#x2F;strong&gt; (savings justify complexity)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Decision:&lt;&#x2F;strong&gt; Deepgram at 50K&#x2F;day. Two-way door (switch providers in 2 weeks). Revisit Whisper at 100K+ when ROI exceeds 3× threshold.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;custom-vocabulary&quot;&gt;Custom Vocabulary&lt;&#x2F;h3&gt;
+&lt;p&gt;ASR models struggle with domain-specific terminology:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Spoken&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Default Transcription&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;With Custom Vocabulary&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;“VLOOKUP”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“V lookup” or “V look up”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“VLOOKUP”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;“eggbeater kick”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“egg beater kick”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“eggbeater kick”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;“sepsis protocol”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“sepsis protocol”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“sepsis protocol” (correct)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;“CONCATENATE”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“concatenate”&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“CONCATENATE”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Vocabulary management:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Platform-level: Excel functions, common athletic terms, medical terminology&lt;&#x2F;li&gt;
+&lt;li&gt;Creator-level: Creator uploads custom terms for their domain&lt;&#x2F;li&gt;
+&lt;li&gt;Accuracy improvement: 95% to 97% for specialized content&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;creator-review-workflow&quot;&gt;Creator Review Workflow&lt;&#x2F;h3&gt;
+&lt;p&gt;Even with 95% accuracy, 5% of terms are wrong. For a 60-second video with 150 words, that’s 7-8 errors.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Confidence-based flagging:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph TD
+    ASR[ASR Processing] --&gt; Confidence{Word Confidence?}
+
+    Confidence --&gt;|≥80%| Accept[Auto-accept]
+    Confidence --&gt;|&lt;80%| Flag[Flag for Review]
+
+    Accept --&gt; VTT[Generate VTT]
+    Flag --&gt; Review[Creator Review UI]
+
+    Review --&gt; Edit[Creator edits 2-3 terms]
+    Edit --&gt; VTT
+
+    VTT --&gt; Publish[Publish with captions]
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Review UI design:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Show video with auto-generated captions&lt;&#x2F;li&gt;
+&lt;li&gt;Highlight low-confidence words in yellow&lt;&#x2F;li&gt;
+&lt;li&gt;Inline editing (click word to type correction)&lt;&#x2F;li&gt;
+&lt;li&gt;Marcus reviews 2-3 flagged terms in 15 seconds&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Target:&lt;&#x2F;strong&gt; &amp;lt;30 seconds creator time for caption review (most videos need 0-3 corrections)&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;webvtt-output-format&quot;&gt;WebVTT Output Format&lt;&#x2F;h3&gt;
+&lt;p&gt;The ASR output is formatted as WebVTT (Web Video Text Tracks), the standard caption format for web video. Each caption segment includes a timestamp range and the corresponding text. For Marcus’s VLOOKUP tutorial, the first three segments might span 0:00-0:03 (“Select the cell where you want the result”), 0:03-0:07 (“then type equals VLOOKUP, open parenthesis”), and 0:07-0:11 (“The first argument is the lookup value”).&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Storage and delivery:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;VTT file stored in S3 alongside video segments&lt;&#x2F;li&gt;
+&lt;li&gt;CDN-cached (small file, high cache hit rate)&lt;&#x2F;li&gt;
+&lt;li&gt;Fetched in parallel with first video segment&lt;&#x2F;li&gt;
+&lt;li&gt;Player renders captions synchronized with playback&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;transcript-generation-for-seo&quot;&gt;Transcript Generation for SEO&lt;&#x2F;h3&gt;
+&lt;p&gt;Beyond time-coded captions, the system generates a plain text transcript by concatenating all caption segments without timestamps. This creates a searchable document: “Select the cell where you want the result, then type equals VLOOKUP, open parenthesis. The first argument is the lookup value…” and so on for the entire video.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;SEO benefits:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Google indexes transcript text&lt;&#x2F;li&gt;
+&lt;li&gt;Improves search ranking for “VLOOKUP tutorial”&lt;&#x2F;li&gt;
+&lt;li&gt;Screen reader accessibility (full text available)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;caption-pipeline-timing&quot;&gt;Caption Pipeline Timing&lt;&#x2F;h3&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Audio extraction} &amp;= 2\,\text{s} \\
+\text{ASR processing} &amp;= 10\,\text{s (Deepgram, parallel with encoding)} \\
+\text{VTT generation} &amp;= 1\,\text{s} \\
+\text{S3 upload} &amp;= 1\,\text{s} \\
+\text{Total} &amp;= 14\,\text{s (overlapped with 18s encoding)}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;Captions complete 4 seconds before encoding. Zero added latency to publish pipeline.&lt;&#x2F;p&gt;
+&lt;p&gt;ASR accuracy is not a fixed number - it varies by audio quality. Clear audio achieves 97%+, while background noise or multiple speakers drops to 80-90%. The creator review workflow (confidence-based flagging) is the accuracy backstop - 10-15% of videos need correction.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;real-time-analytics-pipeline&quot;&gt;Real-Time Analytics Pipeline&lt;&#x2F;h2&gt;
+&lt;p&gt;Marcus uploads at 2:10 PM. By 6:00 PM, he’s made three content decisions based on analytics:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;2:45 PM:&lt;&#x2F;strong&gt; Retention curve shows 68% to 45% drop at 0:32. He identifies the confusing pivot table explanation.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;4:15 PM:&lt;&#x2F;strong&gt; A&#x2F;B test results: Thumbnail B (showing formula bar) is trending 23% higher click-through - needs 4,000+ more impressions for statistical significance.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;5:30 PM:&lt;&#x2F;strong&gt; Engagement heatmap shows 0:15-0:20 segment replayed 3× average - this is the key technique viewers re-watch.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;Requirement:&lt;&#x2F;strong&gt; &amp;lt;30s latency from view event to dashboard update.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;event-streaming-architecture&quot;&gt;Event Streaming Architecture&lt;&#x2F;h3&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    subgraph &quot;Client&quot;
+        Player[Video Player] --&gt; Event[View Event]
+    end
+
+    subgraph &quot;Ingestion&quot;
+        Event --&gt; Kafka[Kafka&lt;br&#x2F;&gt;60M events&#x2F;day]
+    end
+
+    subgraph &quot;Processing&quot;
+        Kafka --&gt; Flink[Apache Flink&lt;br&#x2F;&gt;Stream Processing]
+        Flink --&gt; Agg[Real-time&lt;br&#x2F;&gt;Aggregation]
+    end
+
+    subgraph &quot;Storage&quot;
+        Agg --&gt; Redis[Redis&lt;br&#x2F;&gt;Hot metrics]
+        Agg --&gt; ClickHouse[ClickHouse&lt;br&#x2F;&gt;Analytics DB]
+    end
+
+    subgraph &quot;Serving&quot;
+        Redis --&gt; Dashboard[Creator Dashboard]
+        ClickHouse --&gt; Dashboard
+    end
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Event schema:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Field&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Example&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Purpose&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;event_id&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;UUID&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Deduplication key&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;video_id&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;v_abc123&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Links to video metadata&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;user_id&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;u_xyz789&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Viewer identifier&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;event_type&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;progress&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;One of: start, progress, complete&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;timestamp_ms&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1702400000000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Event time (Unix milliseconds)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;playback_position_ms&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;32000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Current position in video&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;session_id&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;s_def456&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Groups events within single view&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;device_type&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;mobile&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Device category&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;connection_type&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;4g&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Network context&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Event volume:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Daily views} &amp;= 60\text{M} \\
+\text{Events per view} &amp;= 10 \text{ (start, progress×8, complete)} \\
+\text{Daily events} &amp;= 600\text{M} \\
+\text{Events&#x2F;second (avg)} &amp;= \frac{600\text{M}}{86{,}400} = 6{,}944&#x2F;\text{s} \\
+\text{Events&#x2F;second (peak)} &amp;= 20{,}000&#x2F;\text{s} \text{ (3× avg)}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;h3 id=&quot;retention-curve-calculation&quot;&gt;Retention Curve Calculation&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Input:&lt;&#x2F;strong&gt; 1,000 views of Marcus’s video in the last hour&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Aggregation logic:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The retention curve calculation groups progress events into 5-second buckets by dividing the playback position by 5000ms and rounding down. For each bucket, it counts distinct viewers and calculates retention as a percentage of total viewers who started the video. The query filters to the last hour of data to show recent performance.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Output (Marcus sees):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Timestamp&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Viewers&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Retention&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:00&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;100%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:10&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;950&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;95%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:20&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;820&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;82%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:32&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;680&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;68%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:45&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;520&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;52%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:55&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;450&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;45%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;The 68% to 45% drop between 0:32 and 0:55 shows the pivot table explanation loses 23% of viewers.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;batch-vs-stream-processing&quot;&gt;Batch vs Stream Processing&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Approach&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Latency&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Complexity&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Batch (hourly)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;30-60 minutes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$5K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Low&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Batch (15-min)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;15-30 minutes&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$8K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Low&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Stream (Flink)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10-30 seconds&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$15K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Why stream processing despite 3× cost:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The &amp;lt;30s latency requirement is non-negotiable for creator retention. Marcus iterates on content in a 4-hour Saturday window. Hourly batch means he sees analytics for Video 1 only after uploading Video 4.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Cost justification:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Stream processing cost} &amp;= \$15\text{K&#x2F;month} = \$180\text{K&#x2F;year} \\
+\text{Creator LTV} &amp;= 10\text{K learner-days&#x2F;year} \times \$0.0573 \times 2\,\text{year avg tenure} = \$1{,}146 \\
+\text{Creator value} &amp;= 30\text{K creators} \times \$1{,}146 = \$34.4\text{M} \\
+\text{Churn prevented by real-time analytics} &amp;= 2\% \text{ (creators who iterate faster retain longer)} \\
+\text{Revenue protected} &amp;= \$34.4\text{M} \times 2\% = \$688\text{K&#x2F;year} \\
+\text{ROI} &amp;= \frac{\$688\text{K}}{\$180\text{K}} = 3.8\times
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;Note: Real-time analytics ROI is harder to quantify than encoding latency. The primary justification is creator experience parity with YouTube Studio, not isolated ROI.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;a-b-testing-framework&quot;&gt;A&#x2F;B Testing Framework&lt;&#x2F;h3&gt;
+&lt;p&gt;Marcus uploads two versions of his thumbnail. Platform splits traffic:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph TD
+    Upload[Marcus uploads&lt;br&#x2F;&gt;2 thumbnails] --&gt; Split[Traffic Split&lt;br&#x2F;&gt;50&#x2F;50]
+
+    Split --&gt; A[Thumbnail A&lt;br&#x2F;&gt;Formula result]
+    Split --&gt; B[Thumbnail B&lt;br&#x2F;&gt;Formula bar]
+
+    A --&gt; MetricsA[CTR: 4.2%&lt;br&#x2F;&gt;1,500 impressions]
+    B --&gt; MetricsB[CTR: 5.2%&lt;br&#x2F;&gt;1,500 impressions]
+
+    MetricsA --&gt; Stats[Statistical Test]
+    MetricsB --&gt; Stats
+
+    Stats --&gt; Result[Trending: B +23%&lt;br&#x2F;&gt;p = 0.19&lt;br&#x2F;&gt;Need more data]
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Statistical significance calculation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{CTR}_A &amp;= 4.2\% \text{ (n=1,500)} \\
+\text{CTR}_B &amp;= 5.2\% \text{ (n=1,500)} \\
+\Delta &amp;= 1.0\% \text{ absolute} = 23.8\% \text{ relative} \\
+\chi^2 &amp;= 1.67,\; p = 0.19 \text{ (not significant with n=1,500)}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;With only 1,500 impressions per variant, a 1% absolute CTR difference isn’t statistically significant. Marcus needs more traffic or a larger effect.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Minimum sample size for detecting 1% absolute CTR difference (80% power, 95% confidence):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;n \approx \frac{16 \times p(1-p)}{(\text{MDE})^2} = \frac{16 \times 0.045 \times 0.955}{0.01^2} \approx 6{,}900\text{ per variant}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Practical implication:&lt;&#x2F;strong&gt; Marcus’s video needs ~14,000 total impressions before A&#x2F;B test results become reliable. For smaller creators, thumbnail optimization requires either larger effect sizes (&amp;gt;30% relative difference) or longer test durations.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;engagement-heatmap&quot;&gt;Engagement Heatmap&lt;&#x2F;h3&gt;
+&lt;p&gt;Beyond retention curves, track which segments get replayed:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Segment&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Views&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Replays&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Replay Rate&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:00-0:05&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;50&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5% (intro, normal)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:15-0:20&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;920&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;276&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;30% (key technique!)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;0:32-0:37&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;680&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;34&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5% (normal)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Insight:&lt;&#x2F;strong&gt; 0:15-0:20 has 6× normal replay rate. This is the segment where Marcus demonstrates the VLOOKUP formula entry. Viewers re-watch to follow along.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Actionable for Marcus:&lt;&#x2F;strong&gt; Extract this segment as a standalone “Quick Tip” video, or add a visual callout emphasizing the key moment.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;dashboard-metrics-summary&quot;&gt;Dashboard Metrics Summary&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Metric&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Definition&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Update Latency&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Views&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Unique video starts&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Retention curve&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;% viewers at each timestamp&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Completion rate&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;% viewers reaching 95%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Replay segments&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Timestamps with &amp;gt;2× avg replays&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;A&#x2F;B test results&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;CTR&#x2F;completion by variant&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Estimated earnings&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Views × $0.75&#x2F;1K&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;30s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Stream processing costs $15K&#x2F;month (Kafka $3K + Flink $8K + ClickHouse $4K), but delivers 6-second latency - well under the 30s requirement. The 30s budget provides margin for processing spikes. Batch processing would save $10K&#x2F;month but deliver 15-minute latency, breaking Marcus’s iteration workflow.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;encoding-orchestration-and-capacity-planning&quot;&gt;Encoding Orchestration and Capacity Planning&lt;&#x2F;h2&gt;
+&lt;p&gt;When Marcus hits upload, a chain of events fires:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    sequenceDiagram
+    participant S3
+    participant Lambda
+    participant SQS
+    participant ECS
+    participant CDN
+
+    S3-&gt;&gt;Lambda: ObjectCreated event
+    Lambda-&gt;&gt;Lambda: Validate file, extract metadata
+    Lambda-&gt;&gt;SQS: Create encoding job message
+
+    SQS-&gt;&gt;ECS: ECS task pulls job
+    ECS-&gt;&gt;ECS: GPU encoding (18s)
+    ECS-&gt;&gt;S3: Upload encoded segments
+    ECS-&gt;&gt;SQS: Completion message
+
+    SQS-&gt;&gt;Lambda: Trigger post-processing
+    Lambda-&gt;&gt;CDN: Invalidate cache, trigger warming
+    Lambda--&gt;&gt;Client: WebSocket: &quot;Video live!&quot;
+&lt;&#x2F;pre&gt;&lt;h3 id=&quot;event-driven-architecture-benefits&quot;&gt;Event-Driven Architecture Benefits&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Why event-driven (not API polling):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Approach&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Coupling&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Scalability&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Resilience&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;API polling&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Tight (upload waits for encoding)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Limited (connection held)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Poor (timeout = failure)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Event-driven&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Loose (fire and forget)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Unlimited (queue buffers)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High (retry built-in)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Decoupling:&lt;&#x2F;strong&gt; Upload service completes immediately. Marcus sees “Processing…” and can start recording his next video.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Buffering:&lt;&#x2F;strong&gt; Saturday 2 PM spike of 1,000 uploads in 10 minutes? SQS absorbs the burst. ECS tasks drain the queue at their pace.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Resilience:&lt;&#x2F;strong&gt; GPU task crashes mid-encode? Message returns to queue, another task retries. Idempotency key prevents duplicate processing.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;ecs-auto-scaling-configuration&quot;&gt;ECS Auto-Scaling Configuration&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Scaling metric:&lt;&#x2F;strong&gt; SQS &lt;code&gt;ApproximateNumberOfMessages&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Queue Depth&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Action&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Target State&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;50&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Scale in (if &amp;gt;10 tasks)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Baseline&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;50-100&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Maintain&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Normal&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;gt;100&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Scale out (+10 tasks)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Burst&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;gt;500&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Scale out (+20 tasks)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Emergency&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Scaling math:&lt;&#x2F;strong&gt; Using the 200 videos&#x2F;task&#x2F;hour throughput from the capacity calculation:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Queue depth target} &amp;= 100 \text{ (ensures &lt;5 min wait)} \\
+\text{Tasks needed} &amp;= \frac{\text{queue depth} \times 18\,\text{s}}{300\,\text{s target}} = \frac{100 \times 18}{300} = 6\,\text{tasks minimum}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Scale-out trigger:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{If } \frac{\text{queue\_depth}}{\text{current\_tasks}} &gt; 15 \text{ videos&#x2F;task} \Rightarrow \text{add 10 tasks}&lt;&#x2F;script&gt;
+&lt;h3 id=&quot;reserved-vs-on-demand-capacity&quot;&gt;Reserved vs On-Demand Capacity&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Capacity Type&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Instances&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Utilization&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Monthly Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Use Case&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Reserved&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;60% avg&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$2,280 (40% discount)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Baseline weekday traffic&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;On-Demand&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;0-40&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Burst only&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$400-1,600&#x2F;peak day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Saturday&#x2F;Sunday peaks&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Reserved instance calculation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Reserved hourly} &amp;= \$0.526 \times 0.6 = \$0.316&#x2F;\text{hr} \\
+\text{Monthly (10 instances)} &amp;= 10 \times \$0.316 \times 730 = \$2{,}307&#x2F;\text{month}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;On-demand burst calculation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Saturday peak} &amp;= 15\text{K videos in 4 hours} \\
+\text{Total tasks needed} &amp;= \frac{15{,}000}{200 \times 4} = 19\,\text{tasks} \\
+\text{On-demand tasks} &amp;= 19 - 10\,\text{reserved} = 9\,\text{tasks} \\
+\text{Cost per Saturday} &amp;= 9 \times 4 \times \$0.526 = \$19&#x2F;\text{Saturday}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;h3 id=&quot;gpu-quota-management&quot;&gt;GPU Quota Management&lt;&#x2F;h3&gt;
+&lt;p&gt;Building on the quota bottleneck from the architectural section, here are AWS-specific quotas by region:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Region&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Default Quota&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Required&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Request Lead Time&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;us-east-1&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;8 vCPUs (2 g4dn.xlarge)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;200 vCPUs (50 instances)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3-5 business days&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;us-west-2&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;8 vCPUs&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;100 vCPUs (backup region)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3-5 business days&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;eu-west-1&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;8 vCPUs&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;50 vCPUs (EU creators)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;5-7 business days&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Apply the mitigation strategy from the architectural section: request 2 weeks before launch, request 2× expected need, and have fallback regions approved.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;graceful-degradation&quot;&gt;Graceful Degradation&lt;&#x2F;h3&gt;
+&lt;p&gt;When GPU quota is exhausted (queue depth &amp;gt;1,000):&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Option A: CPU Fallback&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Mode&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Encoding Time&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;User Message&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;GPU (normal)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;18s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“Processing…”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;CPU (fallback)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;120s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;“High demand - ready in ~10 minutes”&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Implementation:&lt;&#x2F;strong&gt; Route jobs to c5.4xlarge fleet when queue exceeds threshold.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Option B: Rate Limiting&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Prioritize by creator tier:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Premium creators (paid subscription): GPU queue&lt;&#x2F;li&gt;
+&lt;li&gt;Top creators (&amp;gt;10K followers): GPU queue&lt;&#x2F;li&gt;
+&lt;li&gt;New creators: CPU queue during peak&lt;&#x2F;li&gt;
+&lt;li&gt;Notification: “Video processing may take longer due to high demand”&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;Option C: Multi-Region Encoding&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;If us-east-1 queue &amp;gt;500, route overflow to us-west-2:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph TD
+    Job[Encoding Job] --&gt; Router{Queue Depth?}
+
+    Router --&gt;|&lt;500| East[us-east-1&lt;br&#x2F;&gt;Primary]
+    Router --&gt;|≥500| West[us-west-2&lt;br&#x2F;&gt;Overflow]
+
+    East --&gt; S3East[S3 us-east-1]
+    West --&gt; S3West[S3 us-west-2]
+
+    S3East --&gt; Replicate[Cross-region&lt;br&#x2F;&gt;replication]
+    S3West --&gt; Replicate
+
+    Replicate --&gt; CDN[CloudFront&lt;br&#x2F;&gt;Origin failover]
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Decision:&lt;&#x2F;strong&gt; Option C (multi-region) as primary strategy. Adds 2s latency for replication, but maintains &amp;lt;30s SLO.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;peak-traffic-patterns&quot;&gt;Peak Traffic Patterns&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Time Window&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;% Daily Uploads&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Strategy&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Saturday 2-6 PM&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;30%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Full burst capacity, multi-region&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Sunday 10 AM-2 PM&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;15%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;50% burst capacity&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Weekday 6-9 PM&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Baseline + 20% buffer&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Weekday 2-6 AM&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Minimum (scale-in)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Predictive scaling:&lt;&#x2F;strong&gt; Schedule scale-out 30 minutes before expected peaks. Don’t wait for queue to grow.&lt;&#x2F;p&gt;
+&lt;p&gt;GPU quotas are the real bottleneck - not encoding speed. Default quota (8 vCPUs = 2 instances = 400 videos&#x2F;hour) cannot handle Saturday peak (3,750&#x2F;hour). For extreme spikes (viral creator uploads 100 videos): queue fairly, show accurate ETA, don’t promise what you can’t deliver.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;cost-analysis-creator-pipeline-infrastructure&quot;&gt;Cost Analysis: Creator Pipeline Infrastructure&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;strong&gt;Target:&lt;&#x2F;strong&gt; Creator pipeline (encoding + captions + analytics) within infrastructure budget.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cost-components-at-50k-uploads-day&quot;&gt;Cost Components at 50K Uploads&#x2F;Day&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Component&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Daily Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Monthly Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;% of Pipeline&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;GPU encoding&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$146&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$4,380&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;11%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;ASR captions&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$625&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$18,750&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;48%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Analytics (Kafka+Flink+CH)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$500&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$15,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;38%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;S3 storage&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$2.30&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$69&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;1%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Lambda&#x2F;orchestration&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$15&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$450&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;TOTAL&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;$1,288&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;$38,649&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;100%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h3 id=&quot;cost-per-dau&quot;&gt;Cost Per DAU&lt;&#x2F;h3&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Monthly pipeline cost} &amp;= \$38{,}649 \\
+\text{DAU} &amp;= 3\text{M} \\
+\text{Cost per DAU} &amp;= \frac{\$38{,}649}{3{,}000{,}000} = \$0.0129&#x2F;\text{DAU}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Budget check:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Total infrastructure target: &amp;lt;$0.20&#x2F;DAU (from latency analysis cost optimization driver)&lt;&#x2F;li&gt;
+&lt;li&gt;Creator pipeline: $0.0129&#x2F;DAU (6.5% of total budget)&lt;&#x2F;li&gt;
+&lt;li&gt;Remaining for CDN, compute, ML, etc.: $0.187&#x2F;DAU&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;roi-threshold-validation-law-4&quot;&gt;ROI Threshold Validation (Law 4)&lt;&#x2F;h3&gt;
+&lt;p&gt;Using the Universal Revenue Formula (Law 1) and 3× ROI threshold (Law 4):&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{ROI} = \frac{\Delta R_{\text{annual}}}{C_{\text{annual}}} = \frac{\text{Creator Churn Prevented} \times \text{Content Multiplier} \times \text{ARPU}}{\text{Pipeline Cost}} \geq 3.0&lt;&#x2F;script&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Scale&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: right&quot;&gt;Creators&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: right&quot;&gt;5% Churn Loss&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: right&quot;&gt;Revenue Protected&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: right&quot;&gt;Pipeline Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: right&quot;&gt;ROI&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Threshold&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;3M DAU&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;30,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;1,500&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;$859K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;$464K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;&lt;strong&gt;1.9×&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Below 3×&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;10M DAU&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;100,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;5,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;$2.87M&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;$1.26M&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;&lt;strong&gt;2.3×&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Below 3×&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;50M DAU&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;500,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;25,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;$14.3M&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;$5.04M&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: right&quot;&gt;&lt;strong&gt;2.8×&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Below 3×&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Creator pipeline ROI never exceeds 3× threshold at any scale analyzed. This suggests:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Strategic value exceeds ROI calculation&lt;&#x2F;strong&gt;: Creator experience is a competitive moat (YouTube comparison), not just an ROI optimization&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Indirect effects not captured&lt;&#x2F;strong&gt;: Creator churn → content gap → viewer churn (multiplicative, not additive)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Alternative framing&lt;&#x2F;strong&gt;: What’s the cost of NOT having creators? Platform dies.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;When ROI fails but decision is still correct:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The 3× threshold applies to incremental optimizations with alternatives. Creator pipeline is existential infrastructure - without creators, there’s no platform. The relevant question isn’t “does this exceed 3× ROI?” but “can we operate without this?”&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{If } \frac{\partial \text{Platform}}{\partial \text{Creators}} = 0 \text{ (no creators = no platform), then ROI} \to \infty&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Decision:&lt;&#x2F;strong&gt; Proceed with creator pipeline despite sub-3× ROI. Existence constraints supersede optimization thresholds.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cost-derivations&quot;&gt;Cost Derivations&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;GPU encoding:&lt;&#x2F;strong&gt; 50K videos × 18s = 250 GPU-hours&#x2F;day × $0.526&#x2F;hr + 10% overhead = &lt;strong&gt;$146&#x2F;day&lt;&#x2F;strong&gt; (11% of pipeline)&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;ASR captions:&lt;&#x2F;strong&gt; 50K videos × 1 min × $0.0125&#x2F;min = &lt;strong&gt;$625&#x2F;day&lt;&#x2F;strong&gt; (48% of pipeline - the dominant cost)&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;sensitivity-analysis&quot;&gt;Sensitivity Analysis&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Scenario&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Variable&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Pipeline Cost&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Impact&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Baseline&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;50K uploads, Deepgram&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$38.6K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;-&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Upload 2×&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;100K uploads&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$67.4K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;+75%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;ASR +20%&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Deepgram price increase&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$42.4K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;+10%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;GPU +50%&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Instance price increase&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$40.8K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;+6%&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Self-hosted Whisper&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;At 100K uploads&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$52.1K&#x2F;month&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;+35% (but scales better)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Caption cost dominates. A 20% Deepgram price increase has more impact than a 50% GPU price increase.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cost-optimization-opportunities&quot;&gt;Cost Optimization Opportunities&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Optimization&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Savings&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Trade-off&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Batch caption API calls&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10-15%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Adds 5-10s latency&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Off-peak GPU scheduling&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;20% (spot instances)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Risk of interruption&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Caption only &amp;gt;30s videos&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;40%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Short videos lose accessibility&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Self-hosted Whisper at scale&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;29% at 100K+&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Operational complexity (see ASR Provider Comparison)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Two costs are non-negotiable:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Captions ($228K&#x2F;year floor):&lt;&#x2F;strong&gt; WCAG compliance requires captions. Cannot reduce coverage without legal&#x2F;accessibility risk.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Analytics ($180K&#x2F;year):&lt;&#x2F;strong&gt; &amp;lt;30s latency requires stream processing. Batch would save $10K&#x2F;month but break creator iteration workflow. Creator retention ($859K&#x2F;year conservative) justifies the spend.&lt;&#x2F;p&gt;
+&lt;p&gt;Pipeline cost per DAU decreases with scale ($0.0129 at 3M → $0.0084 at 50M) as fixed analytics costs amortize.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h3 id=&quot;anti-pattern-gpu-infrastructure-before-creator-economics&quot;&gt;Anti-Pattern: GPU Infrastructure Before Creator Economics&lt;&#x2F;h3&gt;
+&lt;p&gt;Consider this scenario: A 200K DAU platform invests $38K&#x2F;month in GPU encoding infrastructure before validating that encoding speed drives creator retention.&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Decision Stage&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Local Optimum (Engineering)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Global Impact (Platform)&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Constraint Analysis&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Initial state&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2-minute encoding queue, 8% creator churn&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2,000 creators, $0.75&#x2F;1K view payout&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Unknown root cause&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Infrastructure investment&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Encoding → 30s (93% improvement)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Creator churn unchanged at 8%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Metric: Encoding optimized&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Cost increases&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Pipeline $0 → $38K&#x2F;month (+$456K&#x2F;year)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Burn rate increases, runway shrinks&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Wrong constraint optimized&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Reality check&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Creators leave for TikTok’s $0.02-0.04 CPM&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Should have improved revenue share&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Encoding wasn’t the constraint&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Terminal state&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Fast encoding, no creators left&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Platform dies with excellent infrastructure&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Local optimum, wrong problem&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;The Vine lesson:&lt;&#x2F;strong&gt; Vine achieved instant video publishing in 2013 - technically superior to competitors. Creators still left because they couldn’t monetize 6-second videos. When TikTok launched, they prioritized Creator Fund ($200M in 2020) within 2 years. Infrastructure follows economics, not the reverse.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The Twitch contrast:&lt;&#x2F;strong&gt; Twitch encoding is notoriously slow (re-encoding can take hours for VODs). Creators stay because of subscriber revenue, bits, and established audiences. Encoding speed is a hygiene factor, not a differentiator.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Correct sequence:&lt;&#x2F;strong&gt; Validate encoding causes churn (instrumented funnel, exit surveys, cohort analysis), THEN invest in GPU infrastructure. Skipping validation gambles $456K&#x2F;year on an unverified assumption.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;when-not-to-optimize-creator-pipeline&quot;&gt;When NOT to Optimize Creator Pipeline&lt;&#x2F;h2&gt;
+&lt;p&gt;Six scenarios where the math says “optimize” but reality says “wait”:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Scenario&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Signal&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Why Defer&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Action&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Demand unsolved&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;p95 &amp;gt;400ms, no protocol migration&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Users abandon before seeing content&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Fix latency first&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Churn not measured&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;No upload→retention attribution&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;May churn for other reasons&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Instrument funnel, prove causality&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Volume &amp;lt;500K DAU&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&amp;lt;5K creators, &amp;lt;10K uploads&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;ROI = 0.4× (fails threshold)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Use CPU encoding for PMF&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;GPU quota not secured&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Launch &amp;lt;2 weeks, no request&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Default 8 instances = 2.8hr queue&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Submit immediately, have CPU fallback&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Caption budget rejected&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Finance denies $625&#x2F;day&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;WCAG non-negotiable (&amp;gt;$100K lawsuits)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Escalate as compliance&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Analytics team unavailable&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;No Kafka&#x2F;Flink expertise&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Real-time requires specialists&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Use batch ($5K&#x2F;mo, 30-60min latency)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Creator pipeline is the THIRD constraint. Solving supply before demand is capital destruction. The sequence matters.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h3 id=&quot;one-way-door-analysis-pipeline-infrastructure-decisions&quot;&gt;One-Way Door Analysis: Pipeline Infrastructure Decisions&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Decision&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Reversibility&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Blast Radius&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Recovery Time&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Analysis Depth&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;GPU instance type (T4 vs A10G)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Two-way&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Low ($50K&#x2F;year delta)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1 week&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Ship &amp;amp; iterate&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;ASR provider (Deepgram vs Whisper)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Two-way&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Medium ($180K&#x2F;year delta)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2 weeks&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;A&#x2F;B test first&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Analytics architecture (Batch vs Stream)&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;One-way&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High ($120K&#x2F;year + 6mo migration)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;6 months&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;100× rigor&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Multi-region encoding&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;One-way&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High (data residency, latency)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3 months&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Full analysis&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Blast Radius Formula:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The supply-side blast radius derives from &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part1-foundation&#x2F;&quot;&gt;Latency Kills Demand&lt;&#x2F;a&gt;’s universal formula, adapted for creator economics:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;R_{\text{blast}} = \text{DAU}_{\text{affected}} \times \text{LTV} \times P(\text{failure}) \times T_{\text{recovery}}&lt;&#x2F;script&gt;
+&lt;p&gt;For creator pipeline decisions, we substitute the creator-specific LTV derived from the content multiplier and daily ARPU established in the foundation analysis:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Creator LTV}_{\text{annual}} &amp;= \text{Content Multiplier} \times \text{Daily ARPU} \\
+&amp;= 10{,}000\,\text{learner-days&#x2F;year} \times \$0.0573&#x2F;\text{learner-day} \\
+&amp;= \$573&#x2F;\text{creator&#x2F;year}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Example: Analytics Architecture Decision at 3M DAU&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Decision: Choose batch processing (saves $120K&#x2F;year) vs stream processing ($180K&#x2F;year).&lt;&#x2F;p&gt;
+&lt;p&gt;If batch is wrong (creators need real-time feedback for iteration workflow), the recovery requires 6-month migration back to stream processing. During recovery, creator churn accelerates due to broken feedback loop.&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\text{Batch savings during recovery} &amp;= \$120\text{K&#x2F;year} \times 0.5\,\text{years} = \$60\text{K} \\[0.5em]
+\text{Blast radius calculation:} \\
+R_{\text{blast}} &amp;= \text{Creators} \times \text{Creator LTV} \times P(\text{batch wrong}) \times T_{\text{recovery}} \\
+&amp;= 30{,}000 \times \$573&#x2F;\text{year} \times 0.10 \times 0.5\,\text{years} \\
+&amp;= \$859\text{K}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Decision analysis:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Component&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Value&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Derivation&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Batch annual savings&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$120K&#x2F;year&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$10K&#x2F;month (stream $15K - batch $5K)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Savings during T_recovery&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$60K&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$120K × 0.5 years&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Creator LTV (annual)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$573&#x2F;creator&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10K learner-days × $0.0573 ARPU&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;P(batch wrong)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;10%&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Estimated: creator workflow dependency on real-time feedback&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;T_recovery&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;6 months&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Migration from batch to stream architecture&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Total creators at risk&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;30,000&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1% of 3M DAU&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Blast radius&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;$859K&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;30K × $573 × 0.10 × 0.5&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Downside leverage&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;14.3×&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$859K blast &#x2F; $60K saved during recovery&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;The 14.3× downside leverage means: for every $1 saved by choosing batch, you risk $14.30 if batch turns out to be wrong. This asymmetry demands the 100× analysis rigor applied to one-way doors. The $120K&#x2F;year savings only justifies batch if P(batch wrong) &amp;lt; 7% ($60K ÷ $859K), which requires high confidence that creators do not need real-time feedback.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Check Impact Matrix (from &lt;a href=&quot;&#x2F;blog&#x2F;microlearning-platform-part1-foundation&#x2F;&quot;&gt;Latency Kills Demand&lt;&#x2F;a&gt;):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The analytics architecture decision illustrates the &lt;strong&gt;Check 2 (Supply) ↔ Check 1 (Economics)&lt;&#x2F;strong&gt; tension:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Choice&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Satisfies&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Stresses&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Net Economic Impact&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Stream&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Check 2 (Supply: real-time feedback)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Check 1 (Economics: +$120K&#x2F;year)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Prevents $859K blast radius&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Batch&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Check 1 (Economics: saves $120K&#x2F;year)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Check 2 (Supply: delayed feedback)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Risks $859K if creators need real-time&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;The “cheaper” batch option can make Check 1 fail worse than stream if creator churn materializes. One-way doors require multi-check analysis—optimizing one check while ignoring second-order effects on other checks is how platforms die while hitting local KPIs.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;summary-achieving-sub-30s-creator-experience&quot;&gt;Summary: Achieving Sub-30s Creator Experience&lt;&#x2F;h2&gt;
+&lt;p&gt;Marcus uploads at 2:10:00 PM. At 2:10:28 PM, his video is live with captions, cached at regional shields, and visible in his analytics dashboard. Twenty-eight seconds, end to end.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;the-five-technical-pillars&quot;&gt;The Five Technical Pillars&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Pillar&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Implementation&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Latency Contribution&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;1. Presigned S3 uploads&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Direct-to-cloud, chunked resumability&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;8s (87MB transfer)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;2. GPU transcoding&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;NVIDIA T4, 4-quality parallel ABR&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;18s (encoding)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;3. Geo-aware cache warming&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;3-shield selective pre-warming&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;2s (parallel with encode)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;4. ASR captions&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Deepgram parallel processing&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;14s (parallel with encode)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;5. Real-time analytics&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Kafka to Flink to ClickHouse&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;6s (after publish)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Total critical path:&lt;&#x2F;strong&gt; 8s upload + 18s encode + 2s publish = &lt;strong&gt;28 seconds&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;quantified-impact&quot;&gt;Quantified Impact&lt;&#x2F;h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Metric&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Value&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Derivation&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Median encoding time&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;20s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;18s encode + 2s overhead&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P95 encoding time&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;28s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Queue wait during normal load&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P99 encoding time&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;45s&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Saturday peak queue backlog&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Creator retention protected&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$859K&#x2F;year @3M DAU&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;1,500 creators × 10K learner-days × $0.0573&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;Pipeline cost&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$0.0129&#x2F;DAU&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;$38.6K&#x2F;month ÷ 3M DAU&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h3 id=&quot;uncertainty-quantification&quot;&gt;Uncertainty Quantification&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Point estimate:&lt;&#x2F;strong&gt; $859K&#x2F;year @3M DAU (conservative, using 1% active uploaders)&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Uncertainty bounds (95% confidence):&lt;&#x2F;strong&gt; Using variance decomposition:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Creator churn rate: 5% ± 2% (measurement uncertainty)&lt;&#x2F;li&gt;
+&lt;li&gt;Content multiplier: 10K ± 3K learner-days (engagement variance)&lt;&#x2F;li&gt;
+&lt;li&gt;ARPU: $0.0573 ± $0.005 (Duolingo actual, market variance)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\sigma_R^2 &amp;= R^2 \left[ \left(\frac{\sigma_{\text{churn}}}{\text{churn}}\right)^2 + \left(\frac{\sigma_{\text{mult}}}{\text{mult}}\right)^2 + \left(\frac{\sigma_{\text{ARPU}}}{\text{ARPU}}\right)^2 \right] \\
+&amp;= (\$859\text{K})^2 \times \left[ (0.4)^2 + (0.3)^2 + (0.087)^2 \right] \\
+&amp;= (\$859\text{K})^2 \times 0.258 \\
+\sigma_R &amp;= \$436\text{K}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;95% Confidence Interval:&lt;&#x2F;strong&gt; $859K ± 1.96 × $436K = &lt;strong&gt;[$0K, $1.71M]&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The wide confidence interval reflects high uncertainty in creator churn attribution. The lower bound of $0 indicates that if creator churn is due to factors OTHER than encoding latency (monetization, audience, competition), the intervention has zero value.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Conditional on:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;[C1] Encoding latency causes churn&lt;&#x2F;strong&gt; (not just correlated) - requires creator funnel instrumentation&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;[C2] Demand-side latency solved&lt;&#x2F;strong&gt; - viewer p95 &amp;lt;300ms, otherwise creators churn due to viewer abandonment&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;[C3] Content quality sufficient&lt;&#x2F;strong&gt; - bad content encoded fast is still bad content&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Falsified if:&lt;&#x2F;strong&gt; A&#x2F;B test (fast encoding vs slow encoding) shows creator retention delta &amp;lt;$423K&#x2F;year (below 1σ threshold: $859K - $436K).&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;what-s-next-cold-start-caps-growth&quot;&gt;What’s Next: Cold Start Caps Growth&lt;&#x2F;h3&gt;
+&lt;p&gt;Sarah takes a diagnostic quiz. Within 100ms, the platform generates a personalized learning path that skips content she already knows.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;The cold start problem:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;New user: Zero watch history&lt;&#x2F;li&gt;
+&lt;li&gt;Prefetch accuracy: 15-20% (vs 40% for returning users)&lt;&#x2F;li&gt;
+&lt;li&gt;40% of new users churn with generic recommendations&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Cold start analysis covers:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Vector similarity search for content matching&lt;&#x2F;li&gt;
+&lt;li&gt;Knowledge graph traversal for prerequisite inference&lt;&#x2F;li&gt;
+&lt;li&gt;Ranking model for relevance scoring&lt;&#x2F;li&gt;
+&lt;li&gt;Cold start mitigation through diagnostic quizzes&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;connection-to-constraint-sequence&quot;&gt;Connection to Constraint Sequence&lt;&#x2F;h3&gt;
+&lt;p&gt;Creator experience is the supply side of the platform equation. Without Marcus’s tutorials, Kira has nothing to learn. Without fast encoding and real-time analytics, Marcus migrates to YouTube.&lt;&#x2F;p&gt;
+&lt;p&gt;The &amp;lt;30s creator pipeline protects $859K&#x2F;year in creator retention value at 3M DAU (1% active uploaders who regularly trigger encoding pipelines), scaling to $14.3M&#x2F;year at 50M DAU. GPU quotas are the hidden constraint - request them early, plan multi-region fallback, and never promise what you can’t deliver.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h3 id=&quot;architectural-lessons&quot;&gt;Architectural Lessons&lt;&#x2F;h3&gt;
+&lt;p&gt;Three lessons emerge from the creator pipeline:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;GPU quotas, not GPU speed, are the bottleneck.&lt;&#x2F;strong&gt; Cloud providers default to 8 instances per region. At 50K uploads&#x2F;day, you need 50. The quota request takes longer than building the encoding pipeline.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Caption cost dominates creator pipeline economics.&lt;&#x2F;strong&gt; At $0.0125&#x2F;minute, ASR is 48% of pipeline cost. Self-hosted Whisper only becomes cost-effective above 100K uploads&#x2F;day. Accept the API cost at smaller scale.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Real-time analytics is a creator retention moat.&lt;&#x2F;strong&gt; The $15K&#x2F;month stream processing cost protects $859K&#x2F;year in creator retention value (1% active uploaders). Batch processing saves money but breaks the Saturday iteration workflow that keeps creators engaged.&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>
