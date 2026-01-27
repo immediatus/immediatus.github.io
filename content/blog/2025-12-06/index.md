@@ -971,7 +971,7 @@ graph LR
 
 | Field | Example | Purpose |
 | :--- | :--- | :--- |
-| event_id | UUID | Deduplication key |
+| event_id | a1b2c3d4e5f6... | **Deterministic deduplication key** (see derivation below) |
 | video_id | v_abc123 | Links to video metadata |
 | user_id | u_xyz789 | Viewer identifier |
 | event_type | progress | One of: start, progress, complete |
@@ -980,6 +980,16 @@ graph LR
 | session_id | s_def456 | Groups events within single view |
 | device_type | mobile | Device category |
 | connection_type | 4g | Network context |
+
+**event_id Derivation (Critical for 0-RTT Replay Protection):**
+
+The `event_id` is NOT a random UUID—it's a deterministic SHA-256 hash that enables idempotent event processing:
+
+{% katex(block=true) %}
+\text{event\_id} = \text{SHA-256}(\text{session\_id} \| \text{video\_id} \| \text{event\_type} \| \text{playback\_position\_ms})
+{% end %}
+
+This design ensures that replayed QUIC 0-RTT packets ([Protocol Choice](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) produce identical `event_id` values, which are deduplicated server-side. Without deterministic event_ids, the analytics pipeline would corrupt retention curves by double-counting replayed views. See "Event Deduplication and 0-RTT Replay Protection" section below for the full deduplication flow.
 
 **Event volume:**
 
@@ -1013,6 +1023,89 @@ The retention curve calculation groups progress events into 5-second buckets by 
 | 0:55 | 450 | 45% |
 
 The 68% to 45% drop between 0:32 and 0:55 shows the pivot table explanation loses 23% of viewers.
+
+### Event Deduplication and 0-RTT Replay Protection
+
+**The Problem:** QUIC 0-RTT resumption ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) sends encrypted application data in the first packet, saving 50ms. However, attackers can replay intercepted packets, potentially causing the same "view" event to be counted multiple times—corrupting retention curves and inflating view counts.
+
+**Why This Matters for Retention Curves:**
+
+If a replayed 0-RTT packet generates a duplicate `progress` event at position 0:32, the retention calculation would count the same viewer twice:
+
+| Without Deduplication | With Deduplication |
+| :--- | :--- |
+| 0:32 bucket: 681 viewers (680 + 1 replay) | 0:32 bucket: 680 viewers (replay filtered) |
+| Retention: 68.1% (inflated) | Retention: 68.0% (accurate) |
+
+At scale (600M events/day), even a 0.1% replay rate would inject 600K false events daily, making A/B test results statistically meaningless.
+
+**The Solution: Deterministic Event IDs**
+
+The `event_id` in the Event Schema is NOT a random UUID—it's a deterministic hash derived from immutable event properties:
+
+{% katex(block=true) %}
+\text{event\_id} = \text{SHA-256}(\text{session\_id} \| \text{video\_id} \| \text{event\_type} \| \text{playback\_position\_ms})
+{% end %}
+
+**Why this works:**
+1. **Deterministic**: Same event always produces the same `event_id`
+2. **Collision-resistant**: SHA-256 collision probability is \\(2^{-128}\\) (negligible)
+3. **Replay-proof**: Replayed 0-RTT packets regenerate identical `event_id`, which deduplicates
+
+**Deduplication Flow:**
+
+{% mermaid() %}
+sequenceDiagram
+    participant C as Client (0-RTT)
+    participant G as API Gateway
+    participant R as Redis (Dedup)
+    participant K as Kafka
+    participant F as Flink
+
+    Note over C,F: Normal Event Flow
+    C->>G: POST /events { event_id: "a1b2c3...", ... }
+    G->>R: SETNX event_id TTL=600s
+    R-->>G: OK (new key)
+    G->>K: Publish event
+    K->>F: Process event
+    F->>F: Update retention curve
+
+    Note over C,F: Replayed 0-RTT Packet (Attack or Retransmit)
+    C->>G: POST /events { event_id: "a1b2c3...", ... }
+    G->>R: SETNX event_id TTL=600s
+    R-->>G: EXISTS (duplicate)
+    G-->>C: 200 OK (idempotent response)
+    Note over G,F: Event NOT forwarded to Kafka
+{% end %}
+
+**Implementation Details:**
+
+| Component | Mechanism | TTL | Cost |
+| :--- | :--- | :--- | :--- |
+| Redis dedup layer | `SETNX event_id` (atomic) | 600 seconds | 5ms latency, $50/month |
+| Kafka exactly-once | Idempotent producer + transactional consumer | N/A | Built-in |
+| Flink watermarks | Late events beyond 10-minute window are dropped | 600 seconds | Built-in |
+
+**Why 600-second TTL:**
+- 0-RTT replay attacks must occur within the PSK (Pre-Shared Key) validity window
+- QUIC PSK typically valid for 7 days, but practical replay window is <10 minutes (network caching)
+- 600s provides 10× safety margin over realistic attack window
+
+**Linking to Protocol Layer:**
+
+The [0-RTT Security Trade-offs](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety) analysis in Part 2 classifies analytics events as "idempotent, replay-safe." This classification depends on the deduplication mechanism described here. Without deterministic `event_id` generation, analytics events would be non-idempotent, and 0-RTT would need to be disabled for the entire analytics path—adding 50ms to every event submission.
+
+**Validation:**
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{Dedup rate (observed)} &= \frac{\text{SETNX failures}}{\text{Total events}} = 0.02\% \\
+\text{Expected (network retransmits)} &\approx 0.01\text{-}0.05\% \\
+\text{Anomaly threshold} &> 0.1\% \text{ (triggers security alert)}
+\end{aligned}
+{% end %}
+
+If dedup rate exceeds 0.1%, it indicates either a replay attack or a client bug generating non-deterministic event_ids—both require investigation.
 
 ### Batch vs Stream Processing
 
@@ -1319,21 +1412,38 @@ Using the Universal Revenue Formula (Law 1) and 3× ROI threshold (Law 4):
 | **10M DAU** | 100,000 | 5,000 | $2.87M/year | $1.26M/year | **2.3×** | Below 3× |
 | **50M DAU** | 500,000 | 25,000 | $14.3M/year | $5.04M/year | **2.8×** | Below 3× |
 
-Creator pipeline ROI never exceeds 3× threshold at any scale analyzed. This suggests:
+Creator pipeline ROI never exceeds 3× threshold at any scale analyzed.
 
-1. **Strategic value exceeds ROI calculation**: Creator experience is a competitive moat (YouTube comparison), not just an ROI optimization
-2. **Indirect effects not captured**: Creator churn → content gap → viewer churn (multiplicative, not additive)
-3. **Alternative framing**: What's the cost of NOT having creators? Platform dies.
+**Why This Differs from Strategic Headroom:**
 
-**When ROI fails but decision is still correct:**
+The [Strategic Headroom framework](/blog/microlearning-platform-part1-foundation/#strategic-headroom-investments) justifies sub-threshold investments when ROI scales super-linearly (fixed costs, linear revenue). Creator Pipeline does NOT qualify:
 
-The 3× threshold applies to incremental optimizations with alternatives. Creator pipeline is existential infrastructure - without creators, there's no platform. The relevant question isn't "does this exceed 3× ROI?" but "can we operate without this?"
+| Criterion | Protocol Migration | Creator Pipeline | Assessment |
+| :--- | :--- | :--- | :--- |
+| ROI @3M DAU | 1.66× | 1.9× | Both below threshold |
+| ROI @10M DAU | 5.5× | 2.3× | Protocol scales; Pipeline doesn't |
+| Scale factor | 3.3× | 1.2× | **Pipeline costs scale with creators** |
+| Cost structure | Fixed ($1.64M) | Variable ($0.0129/DAU) | Linear scaling, not sub-linear |
+
+Creator Pipeline ROI scales only 1.2× (1.9× → 2.3×) because **both revenue and costs scale linearly with creator count**. More creators = more encoding = more costs. The fixed-cost leverage that enables Strategic Headroom doesn't apply.
+
+**Existence Constraint Classification:**
+
+Creator Pipeline requires a different justification: **Existence Constraints**. These apply when:
+
+1. **Platform derivative is zero**: \\(\partial\text{Platform}/\partial\text{Creators} = 0\\) (no creators = no platform)
+2. **No alternative exists**: Cannot substitute with third-party content or delay indefinitely
+3. **Failure is catastrophic**: Unlike latency (degraded experience), creator loss is existential
 
 {% katex(block=true) %}
 \text{If } \frac{\partial \text{Platform}}{\partial \text{Creators}} = 0 \text{ (no creators = no platform), then ROI} \to \infty
 {% end %}
 
-**Decision:** Proceed with creator pipeline despite sub-3× ROI. Existence constraints supersede optimization thresholds.
+**The distinction matters:**
+- **Strategic Headroom** (Protocol): Sub-threshold ROI justified by super-linear scaling at achievable scale
+- **Existence Constraint** (Creator Pipeline): Sub-threshold ROI justified because the alternative is platform death
+
+**Decision:** Proceed with creator pipeline despite sub-3× ROI. Existence constraints supersede optimization thresholds. This is NOT Strategic Headroom—it's a stricter exception where ROI calculation is irrelevant.
 
 ### Cost Derivations
 
@@ -1411,12 +1521,34 @@ Creator pipeline is the THIRD constraint. Solving supply before demand is capita
 
 ### One-Way Door Analysis: Pipeline Infrastructure Decisions
 
-| Decision | Reversibility | Blast Radius | Recovery Time | Analysis Depth |
-| :--- | :--- | :--- | :--- | :--- |
-| **GPU instance type (T4 vs A10G)** | Two-way | Low ($50K/year delta) | 1 week | Ship & iterate |
-| **ASR provider (Deepgram vs Whisper)** | Two-way | Medium ($180K/year delta) | 2 weeks | A/B test first |
-| **Analytics architecture (Batch vs Stream)** | One-way | High ($120K/year + 6mo migration) | 6 months | 100× rigor |
-| **Multi-region encoding** | One-way | High (data residency, latency) | 3 months | Full analysis |
+| Decision | Reversibility | Blast Radius (\\(R_{\text{blast}}\\)) | Recovery Time | Analysis Depth |
+| :--- | :--- | ---: | :--- | :--- |
+| **GPU instance type (T4 vs A10G)** | Two-way | $50K | 1 week | Ship & iterate |
+| **ASR provider (Deepgram vs Whisper)** | Two-way | $180K | 2 weeks | A/B test first |
+| **Analytics architecture (Batch vs Stream)** | One-way | **$859K** | 6 months | 100× rigor |
+| **Multi-region encoding** | One-way | **$429K** | 3 months | Full analysis |
+
+**Blast radius derivations** (using the formula from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#one-way-doors-when-you-cant-turn-back)):
+
+| Decision | Calculation | Result |
+| :--- | :--- | ---: |
+| GPU instance type | $50K/year delta × 1 week recovery ≈ $1K actual, rounded to annual delta | $50K |
+| ASR provider | $180K/year delta × 2 weeks recovery ≈ $7K actual, rounded to annual delta | $180K |
+| Analytics architecture | 30K creators × $573 LTV × 0.10 P(wrong) × 0.5 years | **$859K** |
+| Multi-region encoding | 30K creators × $573 LTV × 0.10 P(wrong) × 0.25 years | **$429K** |
+
+**Architecture Decision Priority (blast radius comparison across series):**
+
+| Decision | Blast Radius | T_recovery | Series Reference | Review Scope |
+| :--- | ---: | :--- | :--- | :--- |
+| **Protocol Migration** (QUIC+MoQ) | $18.58M | 3 years | [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) | **Cross-functional / ARB** |
+| **Database Sharding** | $9.29M | 18 months | [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) | **Cross-functional / ARB** |
+| Analytics Architecture | $0.86M | 6 months | This document | Staff Engineer + Team Lead |
+| Multi-region Encoding | $0.43M | 3 months | This document | Senior Engineer + Tech Lead |
+| ASR Provider | $0.18M | 2 weeks | This document | Tech Lead |
+| GPU Instance Type | $0.05M | 1 week | This document | Engineer |
+
+Protocol Migration blast radius ($18.58M) exceeds Analytics Architecture ($0.86M) by **21.6×**. This asymmetry is why [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) precedes this document in the series—the highest-blast-radius decisions require broader architectural review before the lower-impact decisions can proceed.
 
 **Blast Radius Formula:**
 

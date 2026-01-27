@@ -133,6 +133,18 @@ If you can't confidently answer YES, latency is NOT your constraint. The five sc
 | **100K-1M DAU** | Latency, Costs (profitability) | GPU quotas (supply scaling) | #1 priority (high) - Latency becomes differentiator |
 | **>1M DAU** | Costs (unit economics at scale) | Latency (SLO maintenance) | #2 priority (high) - Must maintain SLOs profitably |
 
+**Logical vs. Chronological Sequence:**
+
+The death sequence (Check #2 before Check #5) describes *failure priority*—what kills the platform first if multiple constraints fail simultaneously. Supply collapse kills faster than latency degradation because fast delivery of nothing is still nothing. However, this series explores constraints in *architectural dependency* order, not failure priority order.
+
+Why? Protocol choice is a physics gate. It determines the latency floor that all subsequent systems—including supply-side infrastructure—must operate within. GPU quota optimization assumes a delivery mechanism exists; that mechanism's performance ceiling is locked by protocol choice for 3-5 years. The creator pipeline (Part 3) delivers encoded content through the protocol layer (Part 2). Optimizing upload-to-live latency without first establishing the delivery floor is optimizing a system whose physics you haven't yet locked.
+
+The distinction:
+- **Failure priority** (death sequence): What to fix first if something breaks NOW—operational triage
+- **Architectural sequence** (series order): What to design first when building—structural dependencies
+
+Protocol migration is an 18-month one-way door requiring 2× runway buffer. GPU quotas are operational levers adjustable within weeks. Design the physics floor before operating the supply chain—even though supply collapse kills faster when both fail simultaneously.
+
 Deploy latency-stratified cohort analysis before making infrastructure decisions. Wrong prioritization costs 6-18 months of wasted engineering.
 
 ### Platform Death Decision Logic
@@ -200,11 +212,25 @@ Don't allocate capital based on roadmaps or best practices. Use this math framew
 | Law | Formula | Parameters | Key Insight |
 | :--- | :--- | :--- | :--- |
 | **1. Universal Revenue** | {% katex() %}\Delta R_{\text{annual}} = \text{DAU} \times \text{LTV}_{\text{monthly}} \times 12 \times \Delta F{% end %} | DAU = 3M, LTV = $1.72/mo, \\(\Delta F\\) = change in abandonment rate | Every constraint bleeds revenue through abandonment. Example derivation in "Converting Milliseconds to Dollars" section. |
-| **2. Weibull Abandonment** | {% katex() %}F(t; \lambda, k) = 1 - \exp\left[-\left(\frac{t}{\lambda}\right)^k\right]{% end %} | \\(\lambda = 3.39\\)s, \\(k = 2.28\\) (see note below) | User patience has increasing hazard rate (impatience accelerates). Attack tail latency (P95/P99) before median. |
+| **2. Weibull Abandonment** | {% katex() %}F_v(t; \lambda_v, k_v) = 1 - \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right]{% end %} | \\(\lambda_v = 3.39\\)s, \\(k_v = 2.28\\) (see note below) | User patience has increasing hazard rate (impatience accelerates). Attack tail latency (P95/P99) before median. |
 | **3. Theory of Constraints** | {% katex() %}C_{\text{active}} = \arg\max_{i \in \mathbf{F}} \left\{ \Delta R_i \right\}{% end %} | Solve constraint with maximum revenue impact. Uses KKT (Karush-Kuhn-Tucker) conditions to identify "binding" vs "slack" constraints - see "Best Possible Given Reality" section later in this document | Only ONE constraint is binding at any time. Optimizing non-binding constraint = capital destruction. |
 | **4. 3x ROI Threshold** | {% katex() %}\text{ROI} = \frac{\Delta R_{\text{annual}}}{C_{\text{annual}}} \geq 3.0{% end %} | Minimum 3x return to justify architectural shifts | One-way door migrations require 3x buffer for opportunity cost, technical risk, and uncertainty. |
 
-*Weibull parameters note: The Weibull distribution models how user patience decays over time. Parameters \\(\lambda = 3.39\\)s [95% CI: 3.12-3.68] and \\(k = 2.28\\) [CI: 2.15-2.42] were estimated via maximum likelihood from n=47,382 abandonment events. Full derivation and goodness-of-fit tests in "Converting Milliseconds to Dollars" section.*
+*Weibull parameters note: The Weibull distribution models how user patience decays over time. Parameters \\(\lambda_v = 3.39\\)s [95% CI: 3.12-3.68] and \\(k_v = 2.28\\) [CI: 2.15-2.42] were estimated via maximum likelihood from n=47,382 abandonment events. Full derivation and goodness-of-fit tests in "Converting Milliseconds to Dollars" section.*
+
+**Parameter Notation:**
+
+This series analyzes two distinct patience distributions—viewers (demand-side) and creators (supply-side). To avoid confusion, parameters carry cohort subscripts throughout:
+
+| Parameter | Viewer (Part 1-2) | Creator (Part 3) | Interpretation |
+| :--- | :--- | :--- | :--- |
+| \\(\lambda\\) (scale) | \\(\lambda_v = 3.39\\)s | \\(\lambda_c = 90\\)s | Characteristic tolerance time |
+| \\(k\\) (shape) | \\(k_v = 2.28\\) | \\(k_c = 4.5\\) | Hazard acceleration rate |
+| \\(F(t)\\) | \\(F_v(t)\\) | \\(F_c(t)\\) | Abandonment CDF |
+| Time scale | 100ms–1,000ms | 30s–300s | Operating regime |
+| Behavior | Gradual decay | Cliff at threshold | Optimization strategy |
+
+**Why \\(k\\) differs:** The shape parameter determines whether patience erodes gradually (\\(k < 3\\)) or collapses at a threshold (\\(k > 3\\)). Viewers experience *compounding frustration* across high-frequency sessions—every 100ms matters. Creators experience *binary tolerance*—acceptable until a threshold, then catastrophic. These different hazard profiles demand different architectural responses (analyzed in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) and [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/)).
 
 ## Meet the Users: Three Personas
 
@@ -274,7 +300,7 @@ ROI = revenue protected / annual cost. Revenue protected is the annual revenue s
 - Subtract overlap: -$0.22M (Safari-adjusted latency component already included in protocol total)
 - **Total: $3.74M/year**
 
-**Worked Example** (Latency optimization calculation): Reducing latency from 370ms to 100ms prevents \\(\Delta F = 0.606\\%\\) abandonment (from Weibull model \\(F(0.37\text{s}) - F(0.10\text{s})\\), see "Converting Milliseconds to Dollars" for complete derivation). Revenue protected = \\(3\text{M DAU} \times 12 \times 0.00606 \times \\$1.72/\text{month} = \\$0.38\text{M/year}\\). Safari browser adjustment: As of 2025, Safari supports QUIC but not MoQ (Media over QUIC), affecting 42% of mobile users who must fall back to HLS. The remaining 58% of mobile users (Android Chrome and other browsers) benefit from full MoQ optimization. Revenue calculations for protocol migration apply this adjustment factor.
+**Worked Example** (Latency optimization calculation): Reducing latency from 370ms to 100ms prevents \\(\Delta F_v = 0.606\\%\\) abandonment (from Weibull model \\(F_v(0.37\text{s}) - F_v(0.10\text{s})\\), see "Converting Milliseconds to Dollars" for complete derivation). Revenue protected = \\(3\text{M DAU} \times 12 \times 0.00606 \times \\$1.72/\text{month} = \\$0.38\text{M/year}\\). Safari browser adjustment: As of 2025, Safari supports QUIC but not MoQ (Media over QUIC), affecting 42% of mobile users who must fall back to HLS. The remaining 58% of mobile users (Android Chrome and other browsers) benefit from full MoQ optimization. Revenue calculations for protocol migration apply this adjustment factor.
 
 Example: 16.7× users (3M → 50M DAU) = only 3.2× costs ($1.93M → $6.26M) because:
 1. CDN tiered pricing provides volume discounts (5.5× cost for 16.7× bandwidth)
@@ -303,6 +329,65 @@ At 3M DAU, infrastructure optimization yields 1.9× ROI - below the 3× threshol
 - If capital-constrained: defer until 10M DAU where ROI hits 4.2× (above threshold).
 - If capital-available: proceed cautiously - 1.9× is below the threshold but above break-even.
 
+### Strategic Headroom Investments
+
+**When is sub-threshold ROI justified?**
+
+Law 4 (3× ROI Threshold) applies to incremental optimizations with reversible alternatives. However, certain investments exhibit **non-linear ROI scaling** where sub-threshold returns at current scale become super-threshold at projected scale. These are "Strategic Headroom" investments—infrastructure bets that prepare the platform for scale it hasn't yet achieved.
+
+**The Non-Linear ROI Model:**
+
+Revenue protection scales linearly with DAU (each user contributes the same \\(\Delta R\\)):
+
+{% katex(block=true) %}
+R_{\text{protected}}(N) = N \times T \times \Delta F \times r
+{% end %}
+
+Infrastructure costs scale sub-linearly (fixed + variable components, see "Infrastructure Cost Scaling" below):
+
+{% katex(block=true) %}
+C_{\text{infra}}(N) = C_{\text{fixed}} + C_{\text{variable}} \cdot \left(\frac{N}{N_0}\right)^{\gamma}, \quad \gamma \approx 0.41
+{% end %}
+
+ROI therefore scales super-linearly:
+
+{% katex(block=true) %}
+\text{ROI}(N) = \frac{R_{\text{protected}}(N)}{C_{\text{infra}}(N)} \propto \frac{N}{C_{\text{fixed}} + C_{\text{variable}} \cdot N^{0.41}}
+{% end %}
+
+**Strategic Headroom Criteria:**
+
+An investment qualifies as Strategic Headroom if ALL conditions hold:
+
+| Criterion | Threshold | Rationale |
+| :--- | :--- | :--- |
+| **Current ROI** | \\(1.0\times < \text{ROI} < 3.0\times\\) | Above break-even but below standard threshold |
+| **Scale multiplier** | \\(\text{ROI}_{10\text{M}} / \text{ROI}_{3\text{M}} > 2.5\times\\) | Non-linear scaling demonstrated |
+| **Projected ROI** | \\(\text{ROI}_{10\text{M}} > 5.0\times\\) | Super-threshold at achievable scale |
+| **Lead time** | Investment requires >6 months to implement | Cannot defer and deploy just-in-time |
+| **Reversibility** | One-way door or high switching cost | Two-way doors don't need early investment |
+
+**Application to This Series:**
+
+| Investment | ROI @3M | ROI @10M | Scale Factor | Lead Time | Classification |
+| :--- | ---: | ---: | ---: | :--- | :--- |
+| LL-HLS Bridge ([Part 2](/blog/microlearning-platform-part2-video-delivery/)) | 1.7× | 5.8× | 3.4× | 3-6 months | **Strategic Headroom** |
+| QUIC+MoQ Migration ([Part 2](/blog/microlearning-platform-part2-video-delivery/)) | 1.66× | 5.5× | 3.3× | 18 months | **Strategic Headroom** |
+| Creator Pipeline ([Part 3](/blog/microlearning-platform-part3-creator-pipeline/)) | 1.9× | 2.3× | 1.2× | 4-8 weeks | **Existence Constraint** (see below) |
+
+**Why Creator Pipeline differs:**
+
+Creator Pipeline ROI scales only 1.2× (1.9× → 2.3×) because both revenue and costs scale with creator count. However, it qualifies under a stricter criterion: **Existence Constraints**. Without creators, there is no platform—the \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\) derivative makes ROI calculation irrelevant. See [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) for full analysis.
+
+**Intellectual Honesty Check:**
+
+This framework does NOT justify sub-threshold investments that:
+- Have ROI < 1.0× at current scale (destroys capital)
+- Have flat ROI scaling (linear costs, linear revenue)
+- Can be implemented just-in-time (<3 months lead time)
+- Are two-way doors (reversible at low cost)
+
+The 3× threshold remains the default. Strategic Headroom is an exception requiring explicit justification across all five criteria.
 
 ### Infrastructure Cost Scaling Calculations
 
@@ -751,13 +836,13 @@ graph TD
 
 **Option A (Edge cache):**
 
-Reduces latency from 450ms to 280ms (p95). Using Weibull CDF (Cumulative Distribution Function) with \\(\lambda = 3.39\\)s, \\(k = 2.28\\):
+Reduces latency from 450ms to 280ms (p95). Using Weibull CDF (Cumulative Distribution Function) with \\(\lambda_v = 3.39\\)s, \\(k_v = 2.28\\):
 
 {% katex(block=true) %}
 \begin{aligned}
-F(450\text{ms}) &= 1 - e^{-(0.45/3.39)^{2.28}} = 1.11\% \quad \text{(abandonment before optimization)} \\
-F(280\text{ms}) &= 1 - e^{-(0.28/3.39)^{2.28}} = 0.31\% \quad \text{(abandonment after optimization)} \\
-\Delta F &= 1.11\% - 0.31\% = 0.80\text{pp} \quad \text{(reduction in abandonment)}
+F_v(450\text{ms}) &= 1 - e^{-(0.45/3.39)^{2.28}} = 1.11\% \quad \text{(abandonment before optimization)} \\
+F_v(280\text{ms}) &= 1 - e^{-(0.28/3.39)^{2.28}} = 0.31\% \quad \text{(abandonment after optimization)} \\
+\Delta F_v &= 1.11\% - 0.31\% = 0.80\text{pp} \quad \text{(reduction in abandonment)}
 \end{aligned}
 {% end %}
 
@@ -1021,7 +1106,7 @@ The 300ms target comes from competitive benchmarks and Weibull abandonment model
 
 **Practical Latency Regimes (Weibull Model):**
 
-| Latency Target | Abandonment F(L) | Regime | Example |
+| Latency Target | Abandonment \\(F_v(L)\\) | Regime | Example |
 | :--- | ---: | :--- | :--- |
 | **100ms** | 0.032% | Best achievable | QUIC+MoQ minimum |
 | **350ms** | 0.563% | Baseline acceptable | TCP+HLS optimized |
@@ -1030,7 +1115,7 @@ The 300ms target comes from competitive benchmarks and Weibull abandonment model
 
 **Revenue Impact at 10M DAU (Weibull-based):**
 
-| Optimization | ΔF (abandonment prevented) | Revenue Protected/Year |
+| Optimization | \\(\Delta F_v\\) (abandonment prevented) | Revenue Protected/Year |
 | :--- | ---: | ---: |
 | 350ms → 100ms (TCP → QUIC) | 0.53pp | $1.11M |
 | 700ms → 350ms (Bad → Baseline) | 2.14pp | $4.48M |
@@ -1072,34 +1157,34 @@ The Weibull distribution captures how abandonment risk accelerates with latency:
 
 {% katex(block=true) %}
 \begin{aligned}
-S(t; \lambda, k) &= \exp\left[-\left(\frac{t}{\lambda}\right)^k\right] && \text{(survival probability)} \\
-F(t; \lambda, k) &= 1 - S(t; \lambda, k) && \text{(abandonment CDF)}
+S_v(t; \lambda_v, k_v) &= \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right] && \text{(survival probability)} \\
+F_v(t; \lambda_v, k_v) &= 1 - S_v(t; \lambda_v, k_v) && \text{(abandonment CDF)}
 \end{aligned}
 {% end %}
 
 where t ≥ 0 is latency in seconds, and:
-- λ = 3.39s = scale parameter (characteristic tolerance)
-- k = 2.28 = shape parameter (k > 1 indicates accelerating impatience)
-- S(t) ∈ [0,1], F(t) ∈ [0,1] (probabilities)
+- \\(\lambda_v\\) = 3.39s = scale parameter (characteristic tolerance)
+- \\(k_v\\) = 2.28 = shape parameter (\\(k_v > 1\\) indicates accelerating impatience)
+- \\(S_v(t) \in [0,1]\\), \\(F_v(t) \in [0,1]\\) (probabilities)
 
 **Parameter Estimation** (Maximum Likelihood, n=47,382 video start events):
 
 | Parameter | Estimate [95% CI] | Interpretation |
 |-----------|------------------|----------------|
-| λ (scale) | 3.39s [3.12, 3.68] | Characteristic tolerance time |
-| k (shape) | 2.28 [2.15, 2.42] | k>1 indicates increasing hazard (impatience accelerates) |
+| \\(\lambda_v\\) (scale) | 3.39s [3.12, 3.68] | Characteristic tolerance time |
+| \\(k_v\\) (shape) | 2.28 [2.15, 2.42] | \\(k_v > 1\\) indicates increasing hazard (impatience accelerates) |
 
 **Function Definitions:**
 
 | Type | Formula | @ t=100ms | @ t=370ms | Abandonment |
 | :--- | :--- | ---: | ---: | ---: |
-| Survival S(t) | {% katex() %}\exp[-(t/\lambda)^k]{% end %} | 0.9997 | 0.9936 | - |
-| CDF F(t) | {% katex() %}1-S(t){% end %} | 0.0324% | 0.6386% | **0.606pp** |
-| Hazard h(t) | {% katex() %}(k/\lambda)(t/\lambda)^{k-1}{% end %} | 0.019/s | 0.069/s | accelerates 3.6× |
+| Survival \\(S_v(t)\\) | {% katex() %}\exp[-(t/\lambda_v)^{k_v}]{% end %} | 0.9997 | 0.9936 | - |
+| CDF \\(F_v(t)\\) | {% katex() %}1-S_v(t){% end %} | 0.0324% | 0.6386% | **0.606pp** |
+| Hazard \\(h_v(t)\\) | {% katex() %}(k_v/\lambda_v)(t/\lambda_v)^{k_v-1}{% end %} | 0.019/s | 0.069/s | accelerates 3.6× |
 
 **Goodness-of-Fit** (validates Weibull model):
 
-**Null Hypothesis:** The observed abandonment times follow the fitted Weibull distribution with λ = 3.39s, k = 2.28.
+**Null Hypothesis:** The observed abandonment times follow the fitted Weibull distribution with \\(\lambda_v = 3.39\\)s, \\(k_v = 2.28\\).
 
 **Sample:** n = 47,382 abandonment events from production telemetry (14-day observation period at 3M DAU scale).
 
@@ -1109,7 +1194,7 @@ where t ≥ 0 is latency in seconds, and:
 
 | Distribution | Parameters (MLE) | KS Statistic | p-value | AD Statistic | Verdict |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Weibull** | λ=3.39s, k=2.28 | D=0.023 | 0.31 | A²=0.42 | **SELECTED** |
+| **Weibull** | \\(\lambda_v\\)=3.39s, \\(k_v\\)=2.28 | D=0.023 | 0.31 | A²=0.42 | **SELECTED** |
 | Exponential | λ=3.2s | D=0.089 | <0.001 | A²=4.71 | REJECTED |
 | Lognormal | μ=7.8, σ=1.2 | D=0.041 | 0.08 | A²=1.21 | REJECTED |
 | Gamma | k=2.1, θ=4.9s | D=0.029 | 0.23 | A²=0.58 | COMPETITIVE |
@@ -1118,13 +1203,13 @@ where t ≥ 0 is latency in seconds, and:
 
 Weibull chosen over Gamma despite similar goodness-of-fit because:
 1. **Theoretical grounding:** Weibull emerges naturally from "weakest link" failure theory (user tolerance breaks at first intolerable delay)
-2. **Interpretability:** Shape parameter k directly quantifies "accelerating impatience" (k > 1)
-3. **Hazard function:** \\(h(t) = (k/\lambda)(t/\lambda)^{k-1}\\) provides actionable insight (abandonment risk increases as \\(t^{1.28}\\))
+2. **Interpretability:** Shape parameter \\(k_v\\) directly quantifies "accelerating impatience" (\\(k_v > 1\\))
+3. **Hazard function:** \\(h_v(t) = (k_v/\lambda_v)(t/\lambda_v)^{k_v-1}\\) provides actionable insight (abandonment risk increases as \\(t^{1.28}\\))
 4. **Industry standard:** Widely used in reliability engineering and session timeout modeling, making cross-study comparison easier
 
-**Result:** 0.606% ± 0.18% of users abandon between 100ms and 370ms latency (calculated: F(0.37s) - F(0.1s) = 0.6386% - 0.0324% = 0.6062%).
+**Result:** 0.606% ± 0.18% of users abandon between 100ms and 370ms latency (calculated: \\(F_v(0.37\text{s}) - F_v(0.1\text{s})\\) = 0.6386% - 0.0324% = 0.6062%).
 
-**Falsifiability:** This model fails if KS test p<0.05 OR k confidence interval includes 1.0 (would indicate constant hazard, contradicting "impatience accelerates").
+**Falsifiability:** This model fails if KS test p<0.05 OR \\(k_v\\) confidence interval includes 1.0 (would indicate constant hazard, contradicting "impatience accelerates").
 
 **Model assumptions explicitly stated:**
 1. **Independence (aggregate level):** User abandonment decisions modeled as independent and identically distributed for aggregate platform-wide abandonment rates. This assumption is valid for revenue estimation at the platform level but breaks down at the component level, where latency failures correlate (e.g., cache misses often co-occur with DRM cold starts for unpopular content). Component-level analysis requires correlation-aware modeling.
@@ -1134,21 +1219,21 @@ Weibull chosen over Gamma despite similar goodness-of-fit because:
 5. **Financial convention:** T = 365 days/year for annual calculations
 6. **Cross-mode independence:** Revenue estimates assume Modes 3-6 (supply, cold start, consistency, costs) are controlled. If any other failure mode dominates, latency optimization ROI may be zero (see "Warning: Non-Linearity" section)
 
-**The Shape Parameter Insight (k=2.28 > 1):**
+**The Shape Parameter Insight (\\(k_v\\)=2.28 > 1):**
 
-The shape parameter k=2.28 reveals **accelerating abandonment risk**. Going from 1s to 2s loses 18.6pp of users, but going from 2s to 3s loses 30.6pp - a 64% increase in abandonment despite the same 1-second delay. This non-linearity is why "every 100ms matters exponentially more as latency grows."
+The shape parameter \\(k_v\\)=2.28 reveals **accelerating abandonment risk**. Going from 1s to 2s loses 18.6pp of users, but going from 2s to 3s loses 30.6pp - a 64% increase in abandonment despite the same 1-second delay. This non-linearity is why "every 100ms matters exponentially more as latency grows."
 
 ### Revenue Calculation Worked Examples
 
 **Example 1: Protocol Latency Reduction (370ms → 100ms)**
 
-Using Weibull parameters λ=3.39s, k=2.28:
+Using Weibull parameters \\(\lambda_v\\)=3.39s, \\(k_v\\)=2.28:
 
 {% katex(block=true) %}
 \begin{aligned}
-F(0.37\text{s}) &= 1 - \exp\left[-\left(\frac{0.37}{3.39}\right)^{2.28}\right] = 0.00639 \\
-F(0.10\text{s}) &= 1 - \exp\left[-\left(\frac{0.10}{3.39}\right)^{2.28}\right] = 0.00033 \\
-\Delta F &= 0.00639 - 0.00033 = 0.00606 \text{ (0.606\%)} \\
+F_v(0.37\text{s}) &= 1 - \exp\left[-\left(\frac{0.37}{3.39}\right)^{2.28}\right] = 0.00639 \\
+F_v(0.10\text{s}) &= 1 - \exp\left[-\left(\frac{0.10}{3.39}\right)^{2.28}\right] = 0.00033 \\
+\Delta F_v &= 0.00639 - 0.00033 = 0.00606 \text{ (0.606\%)} \\
 \end{aligned}
 {% end %}
 
@@ -1177,10 +1262,10 @@ Reducing latency from 370ms to 100ms saves 0.606% of users from abandoning. With
 
 {% katex(block=true) %}
 \begin{aligned}
-F(1.65\text{s}) &= 1 - \exp\left[-\left(\frac{1.65}{3.39}\right)^{2.28}\right] = 0.17605 \\
-F(0.05\text{s}) &= 1 - \exp\left[-\left(\frac{0.05}{3.39}\right)^{2.28}\right] = 0.00007 \\
-\Delta F_{\text{per transition}} &= 0.17605 - 0.00007 = 0.17598 \\
-\Delta F_{\text{effective}} &= 0.21 \times 0.17598 = 0.03696 \text{ (3.70\%)}
+F_v(1.65\text{s}) &= 1 - \exp\left[-\left(\frac{1.65}{3.39}\right)^{2.28}\right] = 0.17605 \\
+F_v(0.05\text{s}) &= 1 - \exp\left[-\left(\frac{0.05}{3.39}\right)^{2.28}\right] = 0.00007 \\
+\Delta F_{v,\text{per transition}} &= 0.17605 - 0.00007 = 0.17598 \\
+\Delta F_{v,\text{effective}} &= 0.21 \times 0.17598 = 0.03696 \text{ (3.70\%)}
 \end{aligned}
 {% end %}
 
@@ -1197,9 +1282,9 @@ Without prefetch, DRM license fetch adds 125ms to critical path:
 
 {% katex(block=true) %}
 \begin{aligned}
-F(0.425\text{s}) &= 1 - \exp\left[-\left(\frac{0.425}{3.39}\right)^{2.28}\right] = 0.00880 \\
-F(0.300\text{s}) &= 1 - \exp\left[-\left(\frac{0.300}{3.39}\right)^{2.28}\right] = 0.00399 \\
-\Delta F &= 0.00880 - 0.00399 = 0.00481 \text{ (0.481\%)}
+F_v(0.425\text{s}) &= 1 - \exp\left[-\left(\frac{0.425}{3.39}\right)^{2.28}\right] = 0.00880 \\
+F_v(0.300\text{s}) &= 1 - \exp\left[-\left(\frac{0.300}{3.39}\right)^{2.28}\right] = 0.00399 \\
+\Delta F_v &= 0.00880 - 0.00399 = 0.00481 \text{ (0.481\%)}
 \end{aligned}
 {% end %}
 
@@ -1215,33 +1300,33 @@ Pre-fetching DRM licenses removes 125ms from the critical path, reducing abandon
 For small latency changes, we use the derivative of the abandonment formula to calculate instantaneous abandonment rate:
 
 {% katex(block=true) %}
-f'(t; \lambda, k) = \frac{k}{\lambda} \left(\frac{t}{\lambda}\right)^{k-1} \exp\left[-(t/\lambda)^k\right]
+f'_v(t; \lambda_v, k_v) = \frac{k_v}{\lambda_v} \left(\frac{t}{\lambda_v}\right)^{k_v-1} \exp\left[-(t/\lambda_v)^{k_v}\right]
 {% end %}
 
 **Derivation (chain rule):**
 
-Starting from the Weibull abandonment CDF: \\(F(t; \lambda, k) = 1 - \exp[-(t/\lambda)^k]\\)
+Starting from the Weibull abandonment CDF: \\(F_v(t; \lambda_v, k_v) = 1 - \exp[-(t/\lambda_v)^{k_v}]\\)
 
 {% katex(block=true) %}
 \begin{aligned}
-F'(t; \lambda, k) &= \frac{d}{dt}\left[1 - \exp\left[-\left(\frac{t}{\lambda}\right)^k\right]\right] \\
-&= -\exp\left[-\left(\frac{t}{\lambda}\right)^k\right] \cdot \frac{d}{dt}\left[-\left(\frac{t}{\lambda}\right)^k\right] \\
-&= \exp\left[-\left(\frac{t}{\lambda}\right)^k\right] \cdot k \cdot \frac{1}{\lambda} \cdot \left(\frac{t}{\lambda}\right)^{k-1} \\
-&= \frac{k}{\lambda} \left(\frac{t}{\lambda}\right)^{k-1} \exp\left[-\left(\frac{t}{\lambda}\right)^k\right]
+F'_v(t; \lambda_v, k_v) &= \frac{d}{dt}\left[1 - \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right]\right] \\
+&= -\exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right] \cdot \frac{d}{dt}\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right] \\
+&= \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right] \cdot k_v \cdot \frac{1}{\lambda_v} \cdot \left(\frac{t}{\lambda_v}\right)^{k_v-1} \\
+&= \frac{k_v}{\lambda_v} \left(\frac{t}{\lambda_v}\right)^{k_v-1} \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right]
 \end{aligned}
 {% end %}
 
 This derivative has units of [s^-1] (per second). To find abandonment per 100ms:
 
 {% katex(block=true) %}
-\Delta f_{100\text{ms}} \approx f'(t) \times 0.1\,\text{s}
+\Delta f_{v,100\text{ms}} \approx f'_v(t) \times 0.1\,\text{s}
 {% end %}
 
 **At baseline t = 1.0s (industry standard):**
 
 {% katex(block=true) %}
 \begin{aligned}
-f'(1.0\,\text{s}) &= \frac{2.28}{3.39} \left(\frac{1.0}{3.39}\right)^{1.28} \exp\left[-(1.0/3.39)^{2.28}\right] \\
+f'_v(1.0\,\text{s}) &= \frac{2.28}{3.39} \left(\frac{1.0}{3.39}\right)^{1.28} \exp\left[-(1.0/3.39)^{2.28}\right] \\
 &\approx 0.150\,\text{s}^{-1}
 \end{aligned}
 {% end %}
@@ -1300,7 +1385,7 @@ Even at the lower bound ($0.28M), when combined with all optimizations to reach 
 
 **Falsified If:** Production A/B test (artificial +200ms delay) shows annual impact <$0.28M/year (below 95% CI lower bound).
 
-The k=2.28 shape parameter reveals the core insight: abandonment risk accelerates non-linearly with latency. First 700ms of optimization (1s → 300ms) delivers 3.8× more value per 100ms than the next 200ms. "Good enough" latency isn't good enough because every additional 100ms hurts more.
+The \\(k_v\\)=2.28 shape parameter reveals the core insight: abandonment risk accelerates non-linearly with latency. First 700ms of optimization (1s → 300ms) delivers 3.8× more value per 100ms than the next 200ms. "Good enough" latency isn't good enough because every additional 100ms hurts more.
 
 The 52.9% ARPU variance contribution is a warning. Your revenue calculation is only as good as your ARPU estimate. If blended ARPU is off by 20%, your ROI calculation is off by 10%. Get accurate revenue-per-user data before presenting infrastructure proposals.
 
@@ -1317,7 +1402,7 @@ Having established the mathematical framework for converting latency to abandonm
 **Abandonment driver**: Buffering during video transitions
 
 **Weibull analysis**:
-- At 2-second delay: F(2.0) = 6.2% abandonment rate
+- At 2-second delay: \\(F_v(2.0)\\) = 6.2% abandonment rate
 - Kira's tolerance threshold: ~500ms (instant feel expected from social apps)
 - Each buffering event triggers abandonment window
 
@@ -1471,16 +1556,16 @@ Component-level costs at 10M DAU. For mathematical derivations and scaling formu
 For infrastructure investment \\(I\\) yielding latency reduction \\(\Delta t = t_{\text{before}} - t_{\text{after}}\\):
 
 {% katex(block=true) %}
-\text{Payback}_{\text{months}} = \frac{12 \cdot I}{N \cdot T \cdot \Delta F \cdot r}
+\text{Payback}_{\text{months}} = \frac{12 \cdot I}{N \cdot T \cdot \Delta F_v \cdot r}
 {% end %}
 
-where \\(\Delta F = F(t_{\text{before}}) - F(t_{\text{after}})\\) using the Weibull abandonment CDF.
+where \\(\Delta F_v = F_v(t_{\text{before}}) - F_v(t_{\text{after}})\\) using the Weibull abandonment CDF.
 
 The same $1M investment has dramatically different ROI depending on platform scale:
 
 **$1M infrastructure cost to save 270ms (370ms to 100ms, protocol migration):**
 
-| Scale | DAU | F(0.37s) | F(0.10s) | ΔF | Revenue Protected | Payback | Annual ROI | Decision |
+| Scale | DAU | \\(F_v\\)(0.37s) | \\(F_v\\)(0.10s) | \\(\Delta F_v\\) | Revenue Protected | Payback | Annual ROI | Decision |
 |-------|-----|----------|----------|-----|-------------------|---------|------------|----------|
 | **Seed** | 100K | 0.00639 | 0.00032 | 0.00606 | $0.013M/year | **>10 years** | 0.01× | Reject |
 | **Series A** | 1M | 0.00639 | 0.00032 | 0.00606 | $0.127M/year | **95 months** | 0.13× | Reject |
@@ -1491,9 +1576,9 @@ The same $1M investment has dramatically different ROI depending on platform sca
 
 {% katex(block=true) %}
 \begin{aligned}
-F(0.37\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.37}{3.39}\right)^{2.28}\right] = 0.00639 \text{ (0.639\%)} \\
-F(0.10\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.10}{3.39}\right)^{2.28}\right] = 0.00032 \text{ (0.032\%)} \\
-\Delta F &= 0.00639 - 0.00032 = 0.00606 \quad \text{(0.606 percentage points)} \\
+F_v(0.37\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.37}{3.39}\right)^{2.28}\right] = 0.00639 \text{ (0.639\%)} \\
+F_v(0.10\,\text{s}) &= 1 - \exp\left[-\left(\frac{0.10}{3.39}\right)^{2.28}\right] = 0.00032 \text{ (0.032\%)} \\
+\Delta F_v &= 0.00639 - 0.00032 = 0.00606 \quad \text{(0.606 percentage points)} \\
 R &= 3\,000\,000 \times 365 \times 0.00606 \times \$0.0573 = \$0.38\text{M/year} \\
 \text{Payback} &= \frac{\$1\,000\,000}{\$0.38\text{M} / 12} = 32\text{ months}
 \end{aligned}

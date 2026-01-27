@@ -239,9 +239,24 @@ Now we apply the Four Laws framework with Safari-adjusted numbers:
 | 1. Universal Revenue | \\(\Delta F\\) (abandonment delta) between 370ms (TCP) and 100ms (QUIC) is 0.606pp (calculated: F(0.370) - F(0.100) = 0.006386 - 0.000324 = 0.006062). Revenue calculation: \\(3\text{M} \times \\$1.72 \times 12 \times 0.00606 = \\$0.38\text{M}\\). | $0.22M/year protected @3M DAU from base latency reduction after Safari adjustment (scales to $3.67M @50M DAU). |
 | 2. Weibull Model | Input t=370ms vs t=100ms into F(t; λ=3.39, k=2.28). | F(0.370) = 0.6386%, F(0.100) = 0.0324%, \\(\Delta F\\) = 0.606pp. |
 | 3. Theory of Constraints | Latency is the active constraint; Protocol is the governing mechanism. | Latency cannot be fixed without fixing protocol. |
-| 4. ROI Threshold | Infrastructure cost ($1.64M) vs Revenue ($2.72M Safari-adjusted @3M DAU: $0.22M base latency + $2.32M connection migration + $0.18M DRM prefetch). | 1.66× ROI @3M DAU (Below 3× threshold - requires scale; becomes 7.2× ROI @50M DAU with $45.33M revenue vs $6.26M total infrastructure). |
+| 4. ROI Threshold | Infrastructure cost ($1.64M) vs Revenue ($2.72M Safari-adjusted @3M DAU: $0.22M base latency + $2.32M connection migration + $0.18M DRM prefetch). | 1.66× ROI @3M DAU (Below 3× threshold). **Strategic Headroom**: scales to 5.5× @10M DAU, 7.2× @50M DAU. |
 
-Critical: This ROI is scale-dependent. At 100K DAU, `ROI ≈ 1.0×`, failing the threshold. Protocol optimization is a high-volume play requiring >15M DAU to clear the 3× ROI hurdle.
+**Strategic Headroom Classification:** Protocol migration qualifies as a Strategic Headroom investment per the framework in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#strategic-headroom-investments):
+
+| Criterion | Value | Assessment |
+| :--- | :--- | :--- |
+| Current ROI @3M DAU | 1.66× | Above break-even, below 3× threshold |
+| Projected ROI @10M DAU | 5.5× | Super-threshold (\\(>5.0\times\\)) |
+| Scale factor | 3.3× | Non-linear: fixed infrastructure ($1.64M) vs. linear revenue |
+| Lead time | 18 months | One-way door, cannot deploy just-in-time |
+| Reversibility | Low | HLS fallback exists but sacrifices all MoQ benefits |
+
+The sub-threshold ROI is justified because:
+- Infrastructure costs are largely fixed ($1.64M dual-stack regardless of DAU)
+- Revenue protection scales linearly ($2.72M @3M → $9.1M @10M → $45.3M @50M)
+- ROI therefore scales super-linearly: \\(\text{ROI}(N) \propto N / C_{\text{fixed}}\\)
+
+Critical: This ROI is scale-dependent. At 100K DAU, `ROI ≈ 1.0×`, failing the threshold. Protocol optimization is a high-volume play requiring >5M DAU to clear the 3× ROI hurdle.
 
 ### Mixed-Mode Latency: The Real-World p95
 
@@ -640,7 +655,15 @@ When to skip directly to QUIC+MoQ:
 
 Abandonment calculation using Law 2 (Weibull): LL-HLS at 280ms yields \\(F(0.28s) = 0.34\\%\\) abandonment vs TCP+HLS at 529ms with \\(F(0.529s) = 1.44\\%\\) abandonment. Savings: \\(\Delta F = 1.10\text{pp}\\). Revenue protected: 3M × 365 × 0.0110 × $0.0573 = **$0.69M/year** at 3M DAU.
 
-ROI: $0.40M migration yields $0.69M/year revenue protection = 1.7× return (marginal at 3M DAU, but scales linearly—becomes 5.8× at 10M DAU).
+ROI: $0.40M migration yields $0.69M/year revenue protection = 1.7× return (below 3× threshold at 3M DAU).
+
+**Strategic Headroom Classification:** This qualifies as a Strategic Headroom investment per the framework in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#strategic-headroom-investments):
+- Current ROI: 1.7× (above break-even, below threshold)
+- Projected ROI @10M DAU: 5.8× (super-threshold)
+- Scale factor: 3.4× (non-linear due to fixed migration costs vs. linear revenue protection)
+- Lead time: 3-6 months (cannot deploy just-in-time)
+
+The sub-threshold ROI is justified because infrastructure costs remain fixed ($0.40M migration) while revenue protection scales linearly with DAU ($0.69M × 3.3 = $2.3M @10M DAU).
 
 The trade-off: LL-HLS is a bridge, not a destination. It buys time to grow the team from 3-5 engineers to 10-15, at which point QUIC+MoQ's 1.8× ops load becomes absorbable. Staying on LL-HLS beyond 18 months incurs opportunity cost ($0.69M LL-HLS vs $2.72M QUIC potential at 3M DAU).
 
@@ -1113,7 +1136,37 @@ The decision (scale-dependent):
 - **ROI @50M DAU**: Pay $1.64M to protect $45.33M (27.6× return, strongly justified)
 
 The protocol lock - Blast Radius analysis:
-This decision is permanent for 3 years (18-month migration + 18-month stabilization). Choosing wrong means the platform is locked into unfixable physics limits for that duration. This is a one-way door with maximum Blast Radius - there is no incremental rollback path.
+
+This decision is permanent for 3 years (18-month migration + 18-month stabilization). Choosing wrong means the platform is locked into unfixable physics limits for that duration. Using the blast radius formula from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#one-way-doors-when-you-cant-turn-back):
+
+{% katex(block=true) %}
+\begin{aligned}
+R_{\text{blast}} &= \text{DAU}_{\text{affected}} \times \text{LTV}_{\text{annual}} \times P(\text{failure}) \times T_{\text{recovery}} \\
+&= 3{,}000{,}000 \times \$20.64/\text{year} \times 0.10 \times 3\,\text{years} \\
+&= \$18.58\text{M}
+\end{aligned}
+{% end %}
+
+| Component | Value | Derivation |
+| :--- | :--- | :--- |
+| DAU affected | 3M | All users experience protocol-layer latency |
+| LTV (annual) | $20.64/user | $1.72/month × 12 (Duolingo blended ARPU) |
+| P(failure) | 10% | Estimated: wrong protocol choice, market shift, or Safari never adopts MoQ |
+| T_recovery | 3 years | 18-month reverse migration + 18-month stabilization |
+| **Blast radius** | **$18.58M** | Maximum exposure from wrong protocol choice |
+
+With P(failure) = 1.0 (catastrophic), blast radius reaches $185.8M—exceeding most Series B valuations. Even at 10% failure probability, $18.58M dwarfs the $859K analytics architecture blast radius in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/#one-way-door-analysis-pipeline-infrastructure-decisions) by **21.6×**. This asymmetry explains why protocol decisions require cross-functional architecture review while analytics architecture can be scoped within a single team.
+
+**Architecture Decision Priority (by blast radius):**
+
+| Decision | Blast Radius | T_recovery | Series Reference | Review Scope |
+| :--- | ---: | :--- | :--- | :--- |
+| **Protocol Migration** (QUIC+MoQ) | $18.58M | 3 years | This document | **Cross-functional / Architecture Review Board** |
+| **Database Sharding** | $9.29M | 18 months | [Part 1](/blog/microlearning-platform-part1-foundation/) | Cross-functional / Architecture Review Board |
+| **Analytics Architecture** (Batch vs Stream) | $0.86M | 6 months | [Part 3](/blog/microlearning-platform-part3-creator-pipeline/) | Staff Engineer + Team Lead |
+| **Multi-region Encoding** | $0.43M | 3 months | [Part 3](/blog/microlearning-platform-part3-creator-pipeline/) | Senior Engineer + Tech Lead |
+
+This is a one-way door with the **highest blast radius in the series**. There is no incremental rollback path.
 
 **Check Impact Matrix (from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/)):**
 
@@ -1997,7 +2050,17 @@ Allowed operations (idempotent, replay-safe):
 - Video playback requests (replaying "play video #7" is harmless)
 - Video prefetch requests (pre-loading videos multiple times wastes bandwidth but causes no damage)
 - DRM license fetch (read-only operation, replaying just returns the same license)
-- Analytics events (duplicate events are filtered server-side via deduplication)
+- Analytics events (duplicate events are filtered server-side via deduplication—see "Event Deduplication" in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/#event-deduplication-and-0-rtt-replay-protection))
+
+**Analytics Event Idempotency:**
+
+Analytics events require special handling. Unlike video playback (truly idempotent), a replayed "view" event would corrupt retention curves and creator analytics if double-counted. The solution links protocol-layer deduplication to application-layer event processing:
+
+1. **Client generates deterministic event_id**: \\(\text{event\\_id} = \text{SHA-256}(\text{session\\_id} \| \text{video\\_id} \| \text{event\\_type} \| \text{playback\\_position\\_ms})\\)
+2. **Server deduplicates on event_id**: Redis SET with 10-minute TTL prevents double-counting
+3. **Result**: Replayed 0-RTT packets produce identical event_ids, which are deduplicated before reaching the analytics pipeline
+
+This transforms a potentially non-idempotent operation (view counting) into an idempotent one (same input → same event_id → deduplicated). The retention curve calculation in Part 3 depends on this guarantee.
 
 Forbidden operations (non-idempotent, replay-dangerous):
 - Payment transactions (replaying "charge $10" charges the user multiple times)
