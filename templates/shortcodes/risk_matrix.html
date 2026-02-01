@@ -1,0 +1,36 @@
+<div class="risk-surface-container" style="max-width: 800px; margin: 2rem auto; font-family: sans-serif;">
+    <div style="text-align: center; margin-bottom: 10px; font-weight: bold; font-size: 1.25rem; color: #6d28d9;">
+        {{ title }}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 40px 1fr; grid-template-rows: 1fr 40px;">
+        <div style="writing-mode: vertical-lr; transform: rotate(180deg); text-align: center; font-size: 0.85rem; color: #6d28d9; font-weight: 600; padding-bottom: 10px;">
+            {{ y_axis | safe }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid #c4b5fd;">
+            <div style="background: #f2eeff; padding: 20px; border-right: 1px solid #c4b5fd; border-bottom: 1px solid #c4b5fd; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <strong style="color: #6d28d9; margin-bottom: 8px;">{{ q2_title }}</strong>
+                <span style="font-size: 0.9rem; line-height: 1.4;">{{ q2_body | safe }}</span>
+            </div>
+            <div style="background: #ede9fe; padding: 20px; border-bottom: 1px solid #c4b5fd; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <strong style="color: #6d28d9; margin-bottom: 8px;">{{ q1_title }}</strong>
+                <span style="font-size: 0.9rem; line-height: 1.4;">{{ q1_body | safe }}</span>
+            </div>
+            <div style="background: #f7f3ff; padding: 20px; border-right: 1px solid #c4b5fd; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <strong style="color: #6d28d9; margin-bottom: 8px;">{{ q3_title }}</strong>
+                <span style="font-size: 0.9rem; line-height: 1.4;">{{ q3_body | safe }}</span>
+            </div>
+            <div style="background: #fcf8ff; padding: 20px; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <strong style="color: #6d28d9; margin-bottom: 8px;">{{ q4_title }}</strong>
+                <span style="font-size: 0.9rem; line-height: 1.4;">{{ q4_body | safe }}</span>
+            </div>
+        </div>
+
+        <div></div>
+
+        <div style="text-align: center; font-size: 0.85rem; color: #6d28d9; font-weight: 600; padding-top: 10px;">
+            {{ x_axis | safe }}
+        </div>
+    </div>
+</div>
