@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="112.97576mm"
+   height="93.750336mm"
+   viewBox="0 0 112.97576 93.750336"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="scientist_vs_engineer.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="2.8284271"
+     inkscape:cx="272.58966"
+     inkscape:cy="161.5739"
+     inkscape:window-width="1963"
+     inkscape:window-height="1481"
+     inkscape:window-x="1441"
+     inkscape:window-y="367"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="-55.82736"
+       originy="-15.84557"
+       spacingx="0.26458333"
+       spacingy="0.26458334"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.30196078"
+       empspacing="5"
+       dotted="true"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient176"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#8c8c8c;stop-opacity:0.73476702;"
+         offset="0"
+         id="stop176" />
+      <stop
+         style="stop-color:#e0e0e0;stop-opacity:0.24014337;"
+         offset="1"
+         id="stop177" />
+    </linearGradient>
+    <marker
+       style="overflow:visible"
+       id="Triangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient176"
+       id="linearGradient177"
+       x1="104.64271"
+       y1="143.17265"
+       x2="103.12136"
+       y2="123.85807"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.8666944,1.7264685,-1.8923339,1.750182,138.87976,-326.67279)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient176"
+       id="linearGradient178"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(-1.8666944,-1.7264685,-1.8923339,1.750182,528.3169,33.509929)"
+       x1="104.64271"
+       y1="143.17265"
+       x2="103.44442"
+       y2="123.58882" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-55.82736,-15.84557)">
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.383429;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Triangle)"
+       d="M 64.98519,101.6251 65.588961,19.757189"
+       id="path140"
+       inkscape:export-filename="scientist_vs_engineer.svg"
+       inkscape:export-xdpi="228.57144"
+       inkscape:export-ydpi="228.57144" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.383429;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Triangle)"
+       d="m 65.106752,102.00004 88.517288,-0.5584"
+       id="path140-9" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.50885px;font-family:'Hack Nerd Font Mono';-inkscape-font-specification:'Hack Nerd Font Mono';fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.383429;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       x="-87.682365"
+       y="61.24519"
+       id="text154"
+       transform="matrix(0.01479979,-0.96175143,1.0397609,5.6893308e-4,0,0)"><tspan
+         sodipodi:role="line"
+         id="tspan154"
+         style="stroke-width:0.383429"
+         x="-87.682365"
+         y="61.24519">to describe reality</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.50885px;font-family:'Hack Nerd Font Mono';-inkscape-font-specification:'Hack Nerd Font Mono';fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.383429;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       x="82.424232"
+       y="112.93116"
+       id="text154-5"
+       transform="matrix(1.0398531,-0.01796815,0.00524352,0.96158371,0,0)"><tspan
+         sodipodi:role="line"
+         id="tspan154-0"
+         style="stroke-width:0.383429"
+         x="82.424232"
+         y="112.93116">to change reality</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.28734px;font-family:'Hack Nerd Font Mono';-inkscape-font-specification:'Hack Nerd Font Mono';fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.364594;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       x="65.857674"
+       y="23.18063"
+       id="text155"
+       transform="scale(1.0483779,0.95385448)"><tspan
+         sodipodi:role="line"
+         id="tspan155"
+         style="stroke-width:0.364594"
+         x="65.857674"
+         y="23.18063">Scientist</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.28734px;font-family:'Hack Nerd Font Mono';-inkscape-font-specification:'Hack Nerd Font Mono';fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.364594;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       x="137.40425"
+       y="102.16667"
+       id="text155-3"
+       transform="scale(1.0483779,0.95385448)"><tspan
+         sodipodi:role="line"
+         id="tspan155-5"
+         style="stroke-width:0.364594"
+         x="137.40425"
+         y="102.16667">Engineer</tspan></text>
+    <path
+       style="fill:url(#linearGradient177);fill-opacity:1;stroke:none;stroke-width:0.383429;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       d="m 65.85806,101.27463 70.61323,-0.21548 -70.5584,-27.574178 z"
+       id="path176"
+       sodipodi:nodetypes="cccc" />
+    <path
+       style="fill:url(#linearGradient178);fill-opacity:1;stroke:none;stroke-width:0.383429;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       d="m 65.611061,101.04629 0.232996,-65.30882 31.004685,64.90498 z"
+       id="path176-7"
+       sodipodi:nodetypes="cccc" />
+    <rect
+       style="fill:none;fill-opacity:1;stroke:none;stroke-width:0.237164;stroke-linecap:round;stroke-dasharray:0.118581, 0.118581;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect184"
+       width="112.97575"
+       height="93.750336"
+       x="55.827358"
+       y="15.845571"
+       ry="2.0569174" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.258217;stroke-linecap:round;stroke-dasharray:0.129109, 0.129109;stroke-dashoffset:0;stroke-opacity:1"
+       id="path184"
+       sodipodi:type="arc"
+       sodipodi:cx="70.176903"
+       sodipodi:cy="64.126976"
+       sodipodi:rx="0.87556213"
+       sodipodi:ry="0.79963529"
+       sodipodi:start="6.2529765"
+       sodipodi:end="6.2318098"
+       sodipodi:arc-type="slice"
+       d="m 71.052065,64.102824 a 0.87556213,0.79963529 0 0 1 -0.844086,0.823283 0.87556213,0.79963529 0 0 1 -0.90591,-0.766521 0.87556213,0.79963529 0 0 1 0.834499,-0.831396 0.87556213,0.79963529 0 0 1 0.914742,0.757722 l -0.874407,0.04106 z" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.258217;stroke-linecap:round;stroke-dasharray:0.129109, 0.129109;stroke-dashoffset:0;stroke-opacity:1"
+       id="path184-7"
+       sodipodi:type="arc"
+       sodipodi:cx="72.293571"
+       sodipodi:cy="95.108704"
+       sodipodi:rx="0.87556213"
+       sodipodi:ry="0.79963529"
+       sodipodi:start="6.2529765"
+       sodipodi:end="6.2318098"
+       sodipodi:arc-type="slice"
+       d="m 73.168734,95.084551 a 0.87556213,0.79963529 0 0 1 -0.844086,0.823284 0.87556213,0.79963529 0 0 1 -0.90591,-0.766522 0.87556213,0.79963529 0 0 1 0.834498,-0.831396 0.87556213,0.79963529 0 0 1 0.914742,0.757723 l -0.874407,0.04106 z" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.258217;stroke-linecap:round;stroke-dasharray:0.129109, 0.129109;stroke-dashoffset:0;stroke-opacity:1"
+       id="path184-1"
+       sodipodi:type="arc"
+       sodipodi:cx="106.2428"
+       sodipodi:cy="97.225372"
+       sodipodi:rx="0.87556213"
+       sodipodi:ry="0.79963529"
+       sodipodi:start="6.2529765"
+       sodipodi:end="6.2318098"
+       sodipodi:arc-type="slice"
+       d="m 107.11796,97.20122 a 0.87556213,0.79963529 0 0 1 -0.84409,0.823284 0.87556213,0.79963529 0 0 1 -0.90591,-0.766522 0.87556213,0.79963529 0 0 1 0.8345,-0.831396 0.87556213,0.79963529 0 0 1 0.91474,0.757723 l -0.8744,0.04106 z" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.265;stroke-dasharray:1.06, 0.265;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 65.55597,20.429242 c 6.011252,60.549607 26.240843,78.773934 87.11071,81.032948"
+       id="path1"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>
