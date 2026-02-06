@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
-title = "Why GPU Quotas Kill Creators When You Scale"
-description = "While demand-side latency is being solved, supply infrastructure must be prepared. Fast delivery of nothing is still nothing. GPU quotas—not GPU speed—determine whether creators wait 30 seconds or 3 hours. This is the third constraint in the sequence—invest in it now so it doesn't become a bottleneck when protocol migration completes."
+title = "Why GPU Quotas Kill Creators Before Content Flows"
+description = "While demand-side latency is being solved, supply infrastructure must be prepared. Fast delivery of nothing is still nothing. GPU quotas - not GPU speed - determine whether creators wait 30 seconds or 3 hours. This is the third constraint in the sequence - invest in it now so it doesn't become a bottleneck when protocol migration completes."
 date = 2025-12-06
 slug = "microlearning-platform-part3-creator-pipeline"
 
@@ -17,9 +17,11 @@ series_description = "In distributed systems, solving the right problem at the w
 
 +++
 
-The previous posts established the constraint sequence: [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/), [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). Both address the demand side—how fast Kira gets her video. With protocol migration underway, we must prepare the supply side: **GPU quotas kill creator experience**. Without creators, there's no content. Without content, latency optimization is irrelevant—fast delivery of nothing is still nothing.
+You've fixed the demand side. Videos load in under 300ms. Users swipe without waiting. Now Marcus uploads his tutorial and... waits. Two minutes. Five minutes. He opens YouTube in another tab.
 
-Theory of Constraints says focus on the active bottleneck. At 3M DAU, demand (latency) is still active per Protocol Choice analysis. So why discuss supply now? Because preparing the next constraint while solving the current one prevents gaps. GPU quota provisioning takes weeks. If we wait until demand is solved to start supply-side infrastructure, creators experience delays during the transition. The investment in Part 3 is strategic preparation, not premature optimization.
+Fast delivery of nothing is still nothing. Without creators, there's no content. Without content, latency optimization is irrelevant. Parts 1 and 2 solved how fast Kira gets her video. This part solves whether Marcus sticks around to make it.
+
+"But wait," says the careful engineer, "Theory of Constraints says focus on the active bottleneck. Demand is still active - why discuss supply now?" Because GPU quota provisioning takes weeks. If you wait until demand is solved to start supply-side infrastructure, creators experience delays during the transition. This investment is strategic preparation, not premature optimization.
 
 ---
 
@@ -73,24 +75,31 @@ If you can't confidently answer YES, encoding latency is NOT your constraint. Th
 
 ### Applying the Four Laws Framework
 
+<style>
+#tbl_four_laws_creator + table th:first-of-type { width: 15%; }
+#tbl_four_laws_creator + table th:nth-of-type(2) { width: 50%; }
+#tbl_four_laws_creator + table th:nth-of-type(3) { width: 35%; }
+</style>
+<div id="tbl_four_laws_creator"></div>
+
 | Law | Application to Creator Pipeline | Result |
 | :--- | :--- | :--- |
 | **1. Universal Revenue** | \\(\Delta R = \text{Creators Lost} \times \text{Content Multiplier} \times \text{ARPU}\\). At 3M DAU: 1,500 creators × 10K views × $0.0573 = $859K/year | $859K/year protected @3M DAU (scales to $14.3M @50M DAU) |
 | **2. Weibull Model** | Creator patience follows different curve than viewer patience. Encoding >30s triggers "broken" perception; >2min triggers platform abandonment. | 5% annual creator churn from poor upload experience |
 | **3. Theory of Constraints** | Supply becomes binding AFTER demand-side latency solved. At 3M DAU, latency (Mode 1) is still the active constraint per [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). GPU quotas (Mode 3) investment is **preparing the next constraint**, not solving the current one. | Sequence: Latency → Protocol → **GPU Quotas** → Cold Start. Invest in Mode 3 infrastructure while Mode 1/2 migration is underway. |
-| **4. ROI Threshold** | Pipeline cost $38.6K/month vs $859K/year protected = 1.9× ROI @3M DAU. Becomes 2.3× @10M DAU, 2.8× @50M DAU. | Below 3× threshold at all scales—this is a strategic investment, not an ROI-justified operational expense. |
+| **4. ROI Threshold** | Pipeline cost $38.6K/month vs $859K/year protected = 1.9× ROI @3M DAU. Becomes 2.3× @10M DAU, 2.8× @50M DAU. | Below 3× threshold at all scales - this is a strategic investment, not an ROI-justified operational expense. |
 
 **Scale-dependent insight:** At 3M DAU, creator pipeline ROI is 1.9× (below 3× threshold). Why invest when latency is still the active constraint?
 
 Theory of Constraints allows **preparing** the next constraint while solving the current one when:
 1. **Current constraint is being addressed** - Protocol migration (Mode 2) is underway; demand-side will be solved
 2. **Lead time exists** - GPU quota provisioning takes 4-8 weeks; supply-side infrastructure must be ready BEFORE demand-side completes or creators experience delays the moment demand improves
-3. **Capital is not diverted** - $38K/month pipeline cost ($0.46M/year) is 19% of the $2.40M protocol investment, a manageable parallel spend that doesn't slow protocol migration
+3. **Capital is not diverted** - $38K/month pipeline cost ($0.46M/year) is 19% of the $2.90M protocol investment, a manageable parallel spend that doesn't slow protocol migration
 
 The distinction: **Solving** a non-binding constraint destroys capital. **Preparing** the next constraint prevents it from becoming a bottleneck when the current constraint clears.
 
-- If capital-constrained: Defer—focus 100% on protocol migration. Accept that creators will experience delays when demand-side clears until supply-side catches up.
-- If capital-available: Proceed—creator infrastructure ready when protocol migration completes. No gap between demand improvement and supply capability.
+- If capital-constrained: Defer - focus 100% on protocol migration. Accept that creators will experience delays when demand-side clears until supply-side catches up.
+- If capital-available: Proceed - creator infrastructure ready when protocol migration completes. No gap between demand improvement and supply capability.
 
 ---
 
@@ -99,7 +108,7 @@ The distinction: **Solving** a non-binding constraint destroys capital. **Prepar
 - $0.0573/day ARPU (blended freemium)
 - Creator ratio: 1.0% at 3M DAU = 30,000 creators
 - Creator ratio: 1.0% at 50M DAU = 500,000 creators
-- 5% annual creator churn from poor upload experience (hypothesized — no platform publicly reports encoding-attributed churn; actual rate requires instrumentation)
+- 5% annual creator churn from poor upload experience (hypothesized - no platform publicly reports encoding-attributed churn; actual rate requires instrumentation)
 - 1 creator = 10,000 views of content consumption per year (derivation: average creator produces 50 videos/year × 200 views/video = 10,000 views; note: 200 views/video reflects a microlearning niche platform, not YouTube scale where mid-tier creators average 5K-20K views per video)
 
 **The creator experience problem:**
@@ -122,6 +131,8 @@ The rest of this post derives what sub-30-second Upload-to-Live Latency requires
 5. **Real-time analytics** - Creator feedback loop under 30 seconds
 
 ### Creator Patience Model (Adapted Weibull)
+
+The viewer Weibull model from Part 1 doesn't apply to creators - they operate on different timescales with different tolerance thresholds. This section derives a creator-specific patience model.
 
 Creator patience differs fundamentally from viewer patience. Viewers abandon in milliseconds (Weibull \\(\lambda=3.39\\)s, \\(k=2.28\\) from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#weibull-survival-analysis)). Creators tolerate longer delays but have hard thresholds:
 
@@ -152,23 +163,20 @@ The step function above is a simplification. We hypothesize creators exhibit mod
 F_{\text{creator}}(t; \lambda_c, k_c) = 1 - \exp\left[-\left(\frac{t}{\lambda_c}\right)^{k_c}\right], \quad \lambda_c = 90\text{s}, \; k_c = 4.5
 {% end %}
 
-**These parameters are hypothesized, not fitted to data.** The high \\(k_c = 4.5\\) (vs viewer \\(k_v = 2.28\\)) models the "cliff" behavior where creators tolerate delays up to a threshold then abandon rapidly — qualitatively different from viewers' gradual decay. The actual values require instrumentation of creator upload flows. The step function thresholds (0%/5%/15%/65%/95%) are UX heuristics, not empirical measurements.
+**These parameters are hypothesized, not fitted to data.** The high \\(k_c = 4.5\\) (vs viewer \\(k_v = 2.28\\)) models the "cliff" behavior where creators tolerate delays up to a threshold then abandon rapidly - qualitatively different from viewers' gradual decay. The actual values require instrumentation of creator upload flows. The step function thresholds (0%/5%/15%/65%/95%) are UX heuristics, not empirical measurements.
 
 ### Technical Bridge: Viewer vs Creator Patience Distributions
 
-The series uses two distinct statistical models for patience—one for viewers (Part 1) and one for creators (Part 3). This section clarifies the mathematical relationship between them and derives different "Revenue at Risk" profiles for each cohort.
+The series uses two Weibull models: the viewer model (\\(\lambda_v = 3.39\\)s, \\(k_v = 2.28\\)) derived in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#the-math-framework), and the creator model introduced above. This section clarifies why the parameters differ.
 
-**Unified Notation (to avoid confusion):**
+**Notation (subscripts distinguish cohorts):**
 
-| Symbol | Viewer (Demand-Side) | Creator (Supply-Side) | Units |
-| :--- | :--- | :--- | :--- |
-| \\(\lambda\\) | \\(\lambda_v = 3.39\\)s | \\(\lambda_c = 90\\)s | seconds |
-| \\(k\\) | \\(k_v = 2.28\\) | \\(k_c = 4.5\\) | dimensionless |
-| \\(F(t)\\) | \\(F_v(t)\\) = viewer abandonment CDF | \\(F_c(t)\\) = creator abandonment CDF | probability |
-| \\(h(t)\\) | \\(h_v(t)\\) = viewer hazard rate | \\(h_c(t)\\) = creator hazard rate | 1/second |
-| \\(t\\) | Video Start Latency (100ms–1s) | Upload-to-Live Latency (30s–300s) | seconds |
-| \\(\hat{\beta}\\) | 0.73 (logistic coefficient) | N/A (no within-creator β estimated) | log-odds |
-| \\(n\\) | 47,382 events | Requires instrumentation | count |
+| Symbol | Viewer (Demand-Side) | Creator (Supply-Side) |
+| :--- | :--- | :--- |
+| \\(\lambda\\) (scale) | \\(\lambda_v = 3.39\\)s | \\(\lambda_c = 90\\)s |
+| \\(k\\) (shape) | \\(k_v = 2.28\\) | \\(k_c = 4.5\\) |
+| Latency type | Video Start (100ms–1s) | Upload-to-Live (30s–300s) |
+| Behavior | Gradual decay | Cliff at threshold |
 
 **Why Different Shape Parameters (\\(k_v\\) vs \\(k_c\\))?**
 
@@ -178,9 +186,11 @@ The shape parameter \\(k\\) in the Weibull distribution controls how the hazard 
 h(t; \lambda, k) = \frac{k}{\lambda}\left(\frac{t}{\lambda}\right)^{k-1}
 {% end %}
 
-- \\(k = 1\\): Constant hazard (exponential distribution—memoryless)
+- \\(k = 1\\): Constant hazard (exponential distribution - memoryless)
 - \\(1 < k < 3\\): **Gradual acceleration** (viewers: \\(k_v = 2.28\\))
 - \\(k > 3\\): **Cliff behavior** (creators: \\(k_c = 4.5\\))
+
+The behavioral mechanism behind the divergence: viewers make *repeated, low-stakes* decisions - each video start is one of ~20 daily sessions, and a slow load costs seconds, not minutes. Impatience accumulates gradually because the cost of waiting scales linearly with time. Creators face the opposite structure. Uploading is *infrequent and high-investment* - encoding a 60-second video involves recording, editing, and uploading, so the sunk cost is already significant before the wait begins. Creators tolerate substantial delay because they've committed effort, but they maintain a mental reference point (typically set by competing platforms) beyond which the delay signals infrastructure inadequacy. Once that reference point is crossed, the decision flips from "wait" to "evaluate alternatives" - producing the sharp hazard acceleration that \\(k_c = 4.5\\) captures. In survival analysis terms, the viewer process has moderate positive duration dependence (hazard rises as \\(t^{1.28}\\)), while the creator process has strong positive duration dependence (hazard rises as \\(t^{3.5}\\)) because the underlying decision mechanism is threshold-triggered rather than continuously evaluated.
 
 **Hazard Rate Comparison:**
 
@@ -259,28 +269,28 @@ where \\(\rho = 0.01\\) (1% creator ratio) and \\(M = 10{,}000\\) views/creator/
 
 Moving from 90s encoding (Tier 3: 60-120s) to 60s encoding (Tier 2: 30-60s) reduces incremental creator loss from 225 to 75 creators per year, saving 150 creators × 10K views × $0.0573 = **$86K/year** (see tier table below).
 
-**Interpretation:** A 100ms viewer improvement ($205K/year) has ~2.4× the revenue impact of a 30s creator improvement ($86K/year), but creator improvements have asymmetric upside: crossing the 120s cliff (Tier 4) saves $559K/year — more than doubling the viewer optimization value. Viewer optimization is about compounding small gains across billions of sessions. Creator optimization is about preventing cliff-edge churn events that cascade through the content multiplier.
+**Interpretation:** A 100ms viewer improvement ($205K/year) has ~2.4× the revenue impact of a 30s creator improvement ($86K/year), but creator improvements have asymmetric upside: crossing the 120s cliff (Tier 4) saves $559K/year - more than doubling the viewer optimization value. Viewer optimization is about compounding small gains across billions of sessions. Creator optimization is about preventing cliff-edge churn events that cascade through the content multiplier.
 
 Viewer patience (\\(k_v = 2.28\\)) and creator patience (\\(k_c = 4.5\\)) require different optimization strategies:
 
-**Viewers:** Optimize continuously. Every 100ms matters because hazard accelerates gradually. Invest in protocol optimization, edge caching, and prefetching—gains compound across high-frequency sessions.
+**Viewers:** Optimize continuously. Every 100ms matters because hazard accelerates gradually. Invest in protocol optimization, edge caching, and prefetching - gains compound across high-frequency sessions.
 
 **Creators:** Optimize to threshold. Sub-30s encoding is parity; >120s is catastrophic. Binary investment decision: either meet the 30s bar or accept 5%+ annual churn. Intermediate improvements (90s → 60s) have limited value because \\(k_c = 4.5\\) keeps hazard low until the cliff.
 
-Part 1's within-user \\(\hat{\beta} = 0.73\\) validates viewer latency as causal. Part 3's creator model requires separate causality validation (within-creator odds ratio). Don't assume viewer causality transfers to creators—different populations, different mechanisms, different confounders.
+Part 1's within-user \\(\hat{\beta} = 0.73\\) validates viewer latency as causal. Part 3's creator model requires separate causality validation (within-creator odds ratio). Don't assume viewer causality transfers to creators - different populations, different mechanisms, different confounders.
 
 **Revenue impact per encoding delay tier:**
 
 | Encoding Time | \\(F_{\text{creator}}\\) | Creators Lost @3M DAU | Content Lost | Annual Revenue Impact |
 | :--- | :--- | :--- | :--- | :--- |
-| <30s (target) | 0% (baseline) | 0 | 0 views | Baseline — no incremental churn at target encoding speed |
+| <30s (target) | 0% (baseline) | 0 | 0 views | Baseline - no incremental churn at target encoding speed |
 | 30-60s | 5% | 75 | 750K views | $43K/year |
 | 60-120s | 15% | 225 | 2.25M views | $129K/year |
 | >120s | 65% | 975 | 9.75M views | $559K/year |
 
 ### The Double-Weibull Trap: When Supply Cliff Triggers Demand Decay
 
-The table above quantifies **direct** creator loss. But creator loss has a second-order effect: reduced content catalog degrades viewer experience, triggering the *viewer* Weibull curve. This compounding failure mode — where the output of one Weibull becomes the input to another — is the "Double-Weibull Trap."
+The table above quantifies **direct** creator loss. But creator loss has a second-order effect: reduced content catalog degrades viewer experience, triggering the *viewer* Weibull curve. This compounding failure mode - where the output of one Weibull becomes the input to another - is the "Double-Weibull Trap."
 
 **Stage 1: Creator Cliff (\\(k_c = 4.5\\))**
 
@@ -290,7 +300,7 @@ At 120s encoding delay, the creator cliff activates:
 F_c(120\text{s}) = 1 - \exp\left[-\left(\frac{120}{90}\right)^{4.5}\right] = 1 - \exp(-3.65) = 0.974 \quad (97.4\% \text{ abandon})
 {% end %}
 
-This is not a gradual bleed — it's a phase transition. At 60s encoding: \\(F_c = 14.9\\%\\). At 90s: \\(F_c = 63.2\\%\\). At 120s: \\(F_c = 97.4\\%\\). A 33% increase in encoding time from \\(\lambda_c\\) to 120s causes abandonment to jump from 63% to 97%. The \\(k_c = 4.5\\) shape produces this binary behavior: safe or catastrophic, with a narrow transition band around \\(\lambda_c = 90\\)s.
+This is not a gradual bleed - it's a phase transition. At 60s encoding: \\(F_c = 14.9\\%\\). At 90s: \\(F_c = 63.2\\%\\). At 120s: \\(F_c = 97.4\\%\\). A 33% increase in encoding time from \\(\lambda_c\\) to 120s causes abandonment to jump from 63% to 97%. The \\(k_c = 4.5\\) shape produces this binary behavior: safe or catastrophic, with a narrow transition band around \\(\lambda_c = 90\\)s.
 
 **Stage 2: Content Gap**
 
@@ -303,11 +313,11 @@ Each lost creator eliminates 10,000 views/year of content. At 3M DAU with 1,500 
 \end{aligned}
 {% end %}
 
-The Content Gap doesn't appear instantly — it manifests over weeks as lost creators stop uploading. But because GPU quota provisioning takes 4-8 weeks (see "Upload Architecture" below), the gap persists for at least one provisioning cycle.
+The Content Gap doesn't appear instantly - it manifests over weeks as lost creators stop uploading. But because GPU quota provisioning takes 4-8 weeks (see "Upload Architecture" below), the gap persists for at least one provisioning cycle.
 
 **Stage 3: Viewer Cold Start Cascade (\\(k_v = 2.28\\))**
 
-Reduced content catalog pushes more viewers into [cold start territory — Check #4 Product-Market Fit](/blog/microlearning-platform-part1-foundation/#platform-death-decision-logic). New users in content-depleted categories encounter generic recommendations instead of personalized paths:
+Reduced content catalog pushes more viewers into [cold start territory - Check #4 Product-Market Fit](/blog/microlearning-platform-part1-foundation/#platform-death-decision-logic). New users in content-depleted categories encounter generic recommendations instead of personalized paths:
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -325,13 +335,13 @@ At 3M DAU, the indirect effect is modest. But the compound term scales with view
 | 10M DAU | $1.86M | $57K | $1.92M | 1.03× |
 | 50M DAU | $9.32M | $287K | $9.61M | 1.03× |
 
-**Why the amplification appears small — and why it matters anyway:**
+**Why the amplification appears small - and why it matters anyway:**
 
 The 3% amplification understates the real risk for two reasons:
 
 1. **The cliff makes it correlated.** Independent failures average out. But a GPU quota exhaustion event hits *all* creators simultaneously, converting 5% annual churn into a burst event. If 75 creators churn in one week (not spread across a year), the Content Gap concentrates into a 4-week hole, and the cold start penalty hits new users during a period with no fresh content in affected categories.
 
-2. **The provisioning lag creates hysteresis.** GPU provisioning takes 4-8 weeks. Creator churn triggers in days. The gap between "creator leaves" and "capacity restored" means the Content Gap persists even after encoding times recover, because the *creators* don't come back — they've switched platforms (high switching cost, low return probability).
+2. **The provisioning lag creates hysteresis.** GPU provisioning takes 4-8 weeks. Creator churn triggers in days. The gap between "creator leaves" and "capacity restored" means the Content Gap persists even after encoding times recover, because the *creators* don't come back - they've switched platforms (high switching cost, low return probability).
 
 **Risk Heat Map: Joint Failure Surface**
 
@@ -367,21 +377,28 @@ Once the 300ms viewer floor is achieved (Modes 1-2 from [Latency Kills Demand](/
 \end{aligned}
 {% end %}
 
-The ratios look similar, but the **absolute levels** are radically different. Viewer abandonment goes from 0.032% to 0.059% — negligible in both cases. Creator abandonment goes from 63.2% to 96.1% — from "characteristic tolerance" to "near-total loss." The \\(k_c = 4.5\\) shape means the operating point at \\(t = \lambda_c\\) is already on the cliff face.
+The ratios look similar, but the **absolute levels** are radically different. Viewer abandonment goes from 0.032% to 0.059% - negligible in both cases. Creator abandonment goes from 63.2% to 96.1% - from "characteristic tolerance" to "near-total loss." The \\(k_c = 4.5\\) shape means the operating point at \\(t = \lambda_c\\) is already on the cliff face.
 
-**Architectural implication:** Teams that successfully solve demand-side latency often deprioritize supply infrastructure, not realizing the risk surface has rotated 90°. The volatile axis is now vertical (encoding latency), not horizontal (video start latency). Monitor encoding p95 with the same urgency as video start p95 — but with tighter alerting thresholds, because the creator cliff gives no warning.
+**Architectural implication:** Teams that successfully solve demand-side latency often deprioritize supply infrastructure, not realizing the risk surface has rotated 90°. The volatile axis is now vertical (encoding latency), not horizontal (video start latency). Monitor encoding p95 with the same urgency as video start p95 - but with tighter alerting thresholds, because the creator cliff gives no warning.
 
 ### Self-Diagnosis: Is Encoding Latency Causal in YOUR Platform?
 
-The following tests are structured as MECE (Mutually Exclusive, Collectively Exhaustive) criteria. Each test evaluates a distinct dimension: attribution (stated reason), survival (retention curve), behavior (observed actions), and dose-response (gradient effect). Pass/fail thresholds use statistical significance standards matching the causality validation in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#causality-vs-correlation-is-latency-actually-killing-demand).
+The [Causality Test](/blog/microlearning-platform-part1-foundation/#self-diagnosis-is-latency-causal-in-your-platform) pattern applies here with encoding-specific tests. Each test evaluates a distinct dimension: attribution (stated reason), survival (retention curve), behavior (observed actions), and dose-response (gradient effect).
 
-| Test | PASS (Encoding is Constraint) | FAIL (Encoding is Proxy) | Your Platform |
-| :--- | :--- | :--- | :--- |
-| **1. Stated attribution** | Exit surveys: "slow upload" ranks in top 3 churn reasons with >15% mention rate | "Slow upload" mention rate <5% OR ranks below monetization, audience, tools | |
-| **2. Survival analysis (encoding stratification)** | Cox proportional hazards model: fast-encoding cohort (p50 <30s) shows HR < 0.80 vs slow cohort (p50 >120s) for 90-day churn, with 95% CI excluding 1.0 and log-rank test p<0.05 | HR confidence interval includes 1.0 (no significant survival difference) OR log-rank p>0.10 | |
-| **3. Behavioral signal** | >5% of uploads abandoned mid-process (before completion) AND abandoners have >3x churn rate vs completers | <2% mid-process abandonment OR abandonment rate uncorrelated with subsequent churn | |
-| **4. Dose-response gradient** | Monotonic relationship: 90-day retention decreases with each encoding tier (<30s > 30-60s > 60-120s > >120s), Spearman rho < -0.7, p<0.05 | Non-monotonic pattern (middle tier has lowest retention) OR rho > -0.5 | |
-| **5. Within-creator analysis** | Same creator's return probability after slow upload (<50%) vs fast upload (>80%): odds ratio >2.0, McNemar test p<0.05 | Within-creator odds ratio <1.5 OR McNemar p>0.10 (return rate independent of encoding speed) | |
+<style>
+#tbl_self_diagnosis_encoding + table th:first-of-type { width: 18%; }
+#tbl_self_diagnosis_encoding + table th:nth-of-type(2) { width: 41%; }
+#tbl_self_diagnosis_encoding + table th:nth-of-type(3) { width: 41%; }
+</style>
+<div id="tbl_self_diagnosis_encoding"></div>
+
+| Test | PASS (Encoding is Constraint) | FAIL (Encoding is Proxy) |
+| :--- | :--- | :--- |
+| **1. Stated attribution** | Exit surveys: "slow upload" ranks in top 3 churn reasons with >15% mention rate | "Slow upload" mention rate <5% OR ranks below monetization, audience, tools |
+| **2. Survival analysis (encoding stratification)** | Cox proportional hazards model: fast-encoding cohort (p50 <30s) shows HR < 0.80 vs slow cohort (p50 >120s) for 90-day churn, with 95% CI excluding 1.0 and log-rank test p<0.05 | HR confidence interval includes 1.0 (no significant survival difference) OR log-rank p>0.10 |
+| **3. Behavioral signal** | >5% of uploads abandoned mid-process (before completion) AND abandoners have >3× churn rate vs completers | <2% mid-process abandonment OR abandonment rate uncorrelated with subsequent churn |
+| **4. Dose-response gradient** | Monotonic relationship: 90-day retention decreases with each encoding tier (<30s > 30-60s > 60-120s > >120s), Spearman rho < -0.7, p<0.05 | Non-monotonic pattern (middle tier has lowest retention) OR rho > -0.5 |
+| **5. Within-creator analysis** | Same creator's return probability after slow upload (<50%) vs fast upload (>80%): odds ratio >2.0, McNemar test p<0.05 | Within-creator odds ratio <1.5 OR McNemar p>0.10 (return rate independent of encoding speed) |
 
 **Statistical methodology notes:**
 
@@ -554,7 +571,7 @@ Rejecting a 600MB file after upload wastes bandwidth. Rejecting it client-side s
 
 Upload infrastructure has hidden complexity that breaks at scale:
 
-**Presigned URL expiration:** 15-minute validity per part URL balances security vs UX. Slow connections need URL refresh mid-upload—client calls `/uploads/initiate` again if part URLs expire.
+**Presigned URL expiration:** 15-minute validity per part URL balances security vs UX. Slow connections need URL refresh mid-upload - client calls `/uploads/initiate` again if part URLs expire.
 
 **Chunked upload complexity:** Client must track chunk state (localStorage or IndexedDB) including `uploadId`, `partNum`, and `ETag` per completed part. Server must handle out-of-order arrival, and `CompleteMultipartUpload` requires all `{partNum, ETag}` pairs.
 
@@ -587,7 +604,7 @@ The economics are counterintuitive. GPU instances cost less AND encode faster:
 \end{aligned}
 {% end %}
 
-NVIDIA's NVENC hardware encoder on the T4 GPU handles video encoding in dedicated silicon, leaving CUDA cores free for other work. The T4 has one physical NVENC chip, but NVIDIA's datacenter drivers allow unlimited concurrent sessions via time-slicing. Four ABR quality variants encode concurrently — not in true parallel but with efficient hardware scheduling, achieving near-linear throughput for this workload.
+NVIDIA's NVENC hardware encoder on the T4 GPU handles video encoding in dedicated silicon, leaving CUDA cores free for other work. The T4 has one physical NVENC chip, but NVIDIA's datacenter drivers allow unlimited concurrent sessions via time-slicing. Four ABR quality variants encode concurrently - not in true parallel but with efficient hardware scheduling, achieving near-linear throughput for this workload.
 
 ### ABR Ladder Configuration
 
@@ -682,7 +699,7 @@ With 2.5× buffer for queue management, quota requests, and operational margin: 
 | **NVIDIA L4** | g6.xlarge | $0.80 | 3 (hardware) + unlimited (driver) | 4-5× realtime | Next-gen cost-optimized |
 | **NVIDIA A10G** | g5.xlarge | $1.006 | 7 | 4-5× realtime | High-throughput |
 
-**Decision: T4 (g4dn.xlarge)** - Best cost/performance ratio for encoding-only workloads. A10G justified only if combining with ML inference. Note: V100 (p3.2xlarge) is not suitable — it lacks an NVENC hardware video encoder and is designed for ML training/HPC, not video encoding.
+**Decision: T4 (g4dn.xlarge)** - Best cost/performance ratio for encoding-only workloads. A10G justified only if combining with ML inference. Note: V100 (p3.2xlarge) is not suitable - it lacks an NVENC hardware video encoder and is designed for ML training/HPC, not video encoding.
 
 ### Cloud Provider Comparison
 
@@ -868,7 +885,7 @@ Marcus's VLOOKUP tutorial includes spoken explanation: "Select the cell where yo
 
 Captions serve three purposes:
 1. **Accessibility:** Required for deaf/hard-of-hearing users (WCAG 2.1 AA compliance)
-2. **Comprehension:** Studies show 12-40% improvement in comprehension when captions are available (effect varies by audience — strongest for non-native speakers and noisy environments)
+2. **Comprehension:** Studies show 12-40% improvement in comprehension when captions are available (effect varies by audience - strongest for non-native speakers and noisy environments)
 3. **SEO:** Google indexes caption text, improving video discoverability
 
 **Requirements:**
@@ -908,7 +925,7 @@ Captions serve three purposes:
 | **Self-hosted Whisper** | $0.009 | $442 | 1.8× over | GPU fleet management |
 | **Deepgram + Sampling** | $0.006 | $300 | 1.2× over | Only transcribe 50% |
 
-**Decision:** Deepgram for all videos. At growth-tier pricing ($0.0043/min), cost is $215/day — within budget. At pay-as-you-go pricing ($0.0125/min), cost is $625/day — negotiate volume pricing before launching at scale. The alternative (reducing caption coverage) violates accessibility requirements.
+**Decision:** Deepgram for all videos. At growth-tier pricing ($0.0043/min), cost is $215/day - within budget. At pay-as-you-go pricing ($0.0125/min), cost is $625/day - negotiate volume pricing before launching at scale. The alternative (reducing caption coverage) violates accessibility requirements.
 
 **Self-hosted Whisper economics:**
 
@@ -1023,7 +1040,7 @@ ASR accuracy is not a fixed number - it varies by audio quality. Clear audio ach
 
 ## Real-Time Analytics Pipeline
 
-Marcus uploads at 2:10 PM. Within hours, real-time analytics drive content decisions: the retention curve reveals where viewers drop off (he spots a steep decline during his pivot table walkthrough and plans to restructure that segment), an A/B thumbnail test begins accumulating impressions toward the ~14,000 needed for statistical significance, and the engagement heatmap highlights which segments viewers replay most — signaling where the core teaching value lives.
+Marcus uploads at 2:10 PM. Within hours, real-time analytics drive content decisions: the retention curve reveals where viewers drop off (he spots a steep decline during his pivot table walkthrough and plans to restructure that segment), an A/B thumbnail test begins accumulating impressions toward the ~14,000 needed for statistical significance, and the engagement heatmap highlights which segments viewers replay most - signaling where the core teaching value lives.
 
 **Requirement:** <30s latency from view event to dashboard update.
 
@@ -1055,7 +1072,7 @@ graph LR
     end
 {% end %}
 
-Each view emits events (`start`, `progress` × 8, `complete`) carrying standard fields (`video_id`, `user_id`, `session_id`, `playback_position_ms`, device/network context). The architecturally significant field is `event_id` — a deterministic SHA-256 hash (not a random UUID) that ensures replayed QUIC 0-RTT packets ([Protocol Choice](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) produce identical keys, which are deduplicated server-side. Without this, the analytics pipeline would corrupt retention curves by double-counting replayed views. Full derivation in "Event Deduplication" below.
+Each view emits events (`start`, `progress` × 8, `complete`) carrying standard fields (`video_id`, `user_id`, `session_id`, `playback_position_ms`, device/network context). The architecturally significant field is `event_id` - a deterministic SHA-256 hash (not a random UUID) that ensures replayed QUIC 0-RTT packets ([Protocol Choice](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) produce identical keys, which are deduplicated server-side. Without this, the analytics pipeline would corrupt retention curves by double-counting replayed views. Full derivation in "Event Deduplication" below.
 
 **Event volume:**
 
@@ -1073,19 +1090,19 @@ Each view emits events (`start`, `progress` × 8, `complete`) carrying standard 
 
 Flink groups progress events into 5-second buckets, counts distinct viewers per bucket, and writes retention percentages to ClickHouse. The creator dashboard queries the last hour of data, so Marcus sees his retention curve update within 30 seconds of a viewer watching.
 
-The curve tells Marcus where viewers lose interest. If his 60-second accounting tutorial shows 71% retention at 0:30 but drops to 48% by 0:45, Marcus knows the pivot table walkthrough at the 30-second mark is losing viewers. He can re-record that segment or restructure the explanation — the kind of actionable feedback that keeps creators iterating on content quality rather than guessing.
+The curve tells Marcus where viewers lose interest. If his 60-second accounting tutorial shows 71% retention at 0:30 but drops to 48% by 0:45, Marcus knows the pivot table walkthrough at the 30-second mark is losing viewers. He can re-record that segment or restructure the explanation - the kind of actionable feedback that keeps creators iterating on content quality rather than guessing.
 
 ### Event Deduplication and 0-RTT Replay Protection
 
-**The Problem:** QUIC 0-RTT resumption ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) sends encrypted application data in the first packet, saving 50ms. However, attackers can replay intercepted packets, potentially causing the same "view" event to be counted multiple times—corrupting retention curves and inflating view counts.
+**The Problem:** QUIC 0-RTT resumption ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) sends encrypted application data in the first packet, saving 50ms. However, attackers can replay intercepted packets, potentially causing the same "view" event to be counted multiple times - corrupting retention curves and inflating view counts.
 
 **Why This Matters for Retention Curves:**
 
-A replayed 0-RTT packet generates a duplicate `progress` event, inflating viewer counts for specific retention buckets. One duplicate is invisible. But at scale (600M events/day), even a 0.1% replay rate injects 600K false events daily — enough to shift retention percentages by several points and make A/B test results statistically meaningless.
+A replayed 0-RTT packet generates a duplicate `progress` event, inflating viewer counts for specific retention buckets. One duplicate is invisible. But at scale (600M events/day), even a 0.1% replay rate injects 600K false events daily - enough to shift retention percentages by several points and make A/B test results statistically meaningless.
 
 **The Solution: Deterministic Event IDs**
 
-The `event_id` in the Event Schema is NOT a random UUID—it's a deterministic hash derived from immutable event properties:
+The `event_id` in the Event Schema is NOT a random UUID - it's a deterministic hash derived from immutable event properties:
 
 {% katex(block=true) %}
 \text{event\_id} = \text{SHA-256}(\text{session\_id} \| \text{video\_id} \| \text{event\_type} \| \text{playback\_position\_ms})
@@ -1137,7 +1154,7 @@ sequenceDiagram
 
 **Linking to Protocol Layer:**
 
-The [0-RTT Security Trade-offs](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety) analysis in Part 2 classifies analytics events as "idempotent, replay-safe." This classification depends on the deduplication mechanism described here. Without deterministic `event_id` generation, analytics events would be non-idempotent, and 0-RTT would need to be disabled for the entire analytics path—adding 50ms to every event submission.
+The [0-RTT Security Trade-offs](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety) analysis in Part 2 classifies analytics events as "idempotent, replay-safe." This classification depends on the deduplication mechanism described here. Without deterministic `event_id` generation, analytics events would be non-idempotent, and 0-RTT would need to be disabled for the entire analytics path - adding 50ms to every event submission.
 
 **Validation:**
 
@@ -1149,7 +1166,7 @@ The [0-RTT Security Trade-offs](/blog/microlearning-platform-part2-video-deliver
 \end{aligned}
 {% end %}
 
-If dedup rate exceeds 0.1%, it indicates either a replay attack or a client bug generating non-deterministic event_ids—both require investigation.
+If dedup rate exceeds 0.1%, it indicates either a replay attack or a client bug generating non-deterministic event_ids - both require investigation.
 
 ### Batch vs Stream Processing
 
@@ -1221,7 +1238,7 @@ n \approx \frac{16 \times p(1-p)}{(\text{MDE})^2} = \frac{16 \times 0.045 \times
 
 ### Engagement Heatmap
 
-Beyond retention curves, the pipeline tracks which segments get replayed. When a 5-second bucket shows replay rates significantly above the video's baseline (typically 3-7% for educational content), it signals a segment where viewers are re-watching to follow along — usually a hands-on demonstration or formula entry.
+Beyond retention curves, the pipeline tracks which segments get replayed. When a 5-second bucket shows replay rate >2× the video's baseline (typically 3-7% for educational content, so >6-14% triggers), it signals a segment where viewers are re-watching to follow along - usually a hands-on demonstration or formula entry.
 
 Marcus can act on this: if a specific segment draws heavy replays, he can extract it as a standalone "Quick Tip" video, add a visual callout at that moment, or slow down the pacing in future tutorials covering similar material.
 
@@ -1357,7 +1374,7 @@ When GPU quota is exhausted (queue depth >1,000):
 | GPU (normal) | 18s | "Processing..." |
 | CPU (fallback) | 120s | "High demand - ready in ~10 minutes" |
 
-**Implementation:** Route jobs to c5.4xlarge fleet *in the same region* when queue exceeds threshold. CPU fallback is always same-region, making it GDPR-compliant by default — no cross-border data transfer occurs. This matters: when GPU quota is exhausted, the fallback order should be CPU (same-region, GDPR-safe, 120s) before same-jurisdiction overflow (e.g., eu-west-1 → eu-central-1, GDPR-safe, ~20s).
+**Implementation:** Route jobs to c5.4xlarge fleet *in the same region* when queue exceeds threshold. CPU fallback is always same-region, making it GDPR-compliant by default - no cross-border data transfer occurs. This matters: when GPU quota is exhausted, the fallback order should be CPU (same-region, GDPR-safe, 120s) before same-jurisdiction overflow (e.g., eu-west-1 → eu-central-1, GDPR-safe, ~20s).
 
 **Option B: Rate Limiting**
 
@@ -1401,7 +1418,7 @@ When eu-west-1 quota is exhausted and Marcus (Frankfurt) is routed to us-east-1:
 \end{aligned}
 {% end %}
 
-The 50 Mbps cross-Atlantic estimate is conservative — it reflects S3 Transfer Acceleration with CloudFront edge routing (without acceleration, raw cross-Atlantic throughput for large uploads is 30-80 Mbps depending on TCP window scaling and path congestion). Intra-region S3 throughput reaches 500+ Mbps due to co-located availability zones.
+The 50 Mbps cross-Atlantic estimate is conservative - it reflects S3 Transfer Acceleration with CloudFront edge routing (without acceleration, raw cross-Atlantic throughput for large uploads is 30-80 Mbps depending on TCP window scaling and path congestion). Intra-region S3 throughput reaches 500+ Mbps due to co-located availability zones.
 
 **Full pipeline comparison:**
 
@@ -1412,7 +1429,7 @@ The 50 Mbps cross-Atlantic estimate is conservative — it reflects S3 Transfer 
 | S3 replication back to EU | 0s | 8.0s | +8.0s |
 | **Total pipeline** | **19.4s** | **39.9s** | **+20.5s** |
 
-Cross-region encoding is **2.1× slower** — the GPU doesn't care where the bits came from, but network physics adds 20.5 seconds of overhead.
+Cross-region encoding is **2.1× slower** - the GPU doesn't care where the bits came from, but network physics adds 20.5 seconds of overhead.
 
 #### Creator Patience Threshold Violation
 
@@ -1420,32 +1437,32 @@ Applying the creator Weibull model (\\(\lambda_c = 90\\)s, \\(k_c = 4.5\\)) to b
 
 {% katex(block=true) %}
 \begin{aligned}
-F_c(19.4\text{s}) &= 1 - \exp\left[-\left(\frac{19.4}{90}\right)^{4.5}\right] = 0.001 \quad (0.1\% \text{ — deep in safe zone}) \\[6pt]
-F_c(39.9\text{s}) &= 1 - \exp\left[-\left(\frac{39.9}{90}\right)^{4.5}\right] = 0.025 \quad (2.5\% \text{ — entering ramp}) \\[6pt]
-F_c(60\text{s}) &= 1 - \exp\left[-\left(\frac{60}{90}\right)^{4.5}\right] = 0.149 \quad (14.9\% \text{ — danger zone})
+F_c(19.4\text{s}) &= 1 - \exp\left[-\left(\frac{19.4}{90}\right)^{4.5}\right] = 0.001 \quad (0.1\% \text{ - deep in safe zone}) \\[6pt]
+F_c(39.9\text{s}) &= 1 - \exp\left[-\left(\frac{39.9}{90}\right)^{4.5}\right] = 0.025 \quad (2.5\% \text{ - entering ramp}) \\[6pt]
+F_c(60\text{s}) &= 1 - \exp\left[-\left(\frac{60}{90}\right)^{4.5}\right] = 0.149 \quad (14.9\% \text{ - danger zone})
 \end{aligned}
 {% end %}
 
-Cross-region routing doesn't hit the \\(k_c = 4.5\\) cliff (that's at ~90-120s), but it exits the safe zone. At 39.9s, creator abandonment is **25× higher** than same-region (2.5% vs 0.1%). And this is the *best case* — any additional delay from network congestion, S3 throttling, or replication backlog pushes toward 60s where \\(F_c = 14.9\\%\\).
+Cross-region routing doesn't hit the \\(k_c = 4.5\\) cliff (that's at ~90-120s), but it exits the safe zone. At 39.9s, creator abandonment is **25× higher** than same-region (2.5% vs 0.1%). And this is the *best case* - any additional delay from network congestion, S3 throttling, or replication backlog pushes toward 60s where \\(F_c = 14.9\\%\\).
 
 The 30s creator patience threshold from the Upload Architecture section maps directly:
 
 | Pipeline Time | Perception | \\(F_c\\) | Cross-Region Risk |
 | :--- | :--- | ---: | :--- |
 | **<30s** | Acceptable (YouTube parity) | <0.7% | Same-region achieves this |
-| **30-60s** | "This is slow" — 5% open competitor tab | 0.7%-14.9% | Cross-region lands here |
-| **60-120s** | "Something is wrong" — 15% comparing | 14.9%-97.4% | Cross-region + any delay |
+| **30-60s** | "This is slow" - 5% open competitor tab | 0.7%-14.9% | Cross-region lands here |
+| **60-120s** | "Something is wrong" - 15% comparing | 14.9%-97.4% | Cross-region + any delay |
 | **>120s** | Platform abandonment | >97.4% | CPU fallback (Option A) |
 
-**Verdict:** Cross-region encoding violates the <30s SLO. Same-region encoding (19.4s) is safely under threshold. The 20.5s penalty is not catastrophic, but it moves the operating point from "safe" to "degraded" — and for a supply-side constraint with \\(k_c = 4.5\\) cliff behavior, operating in the degraded zone leaves no margin for variance.
+**Verdict:** Cross-region encoding violates the <30s SLO. Same-region encoding (19.4s) is safely under threshold. The 20.5s penalty is not catastrophic, but it moves the operating point from "safe" to "degraded" - and for a supply-side constraint with \\(k_c = 4.5\\) cliff behavior, operating in the degraded zone leaves no margin for variance.
 
 #### GDPR: Physics Meets Regulation
 
-[Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) establishes region-pinned storage for GDPR compliance (EU data stored in EU infrastructure). [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) establishes that GDPR fine exposure ($13M) exceeds QUIC protocol benefit ($0.38M @3M DAU) — compliance always takes precedence.
+[Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) establishes region-pinned storage for GDPR compliance (EU data stored in EU infrastructure). [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) establishes that GDPR fine exposure ($13M) exceeds QUIC protocol benefit ($0.38M @3M DAU) - compliance always takes precedence.
 
 Cross-region GPU routing for EU creators creates a direct conflict with both principles:
 
-**Legal exposure:** Creator video content contains personal data — faces, voices, location metadata, device identifiers. Processing in us-east-1 constitutes cross-border data transfer under GDPR Article 44. AWS provides Standard Contractual Clauses (SCCs) for US processing, but post-Schrems II (CJEU C-311/18, 2020), these require:
+**Legal exposure:** Creator video content contains personal data - faces, voices, location metadata, device identifiers. Processing in us-east-1 constitutes cross-border data transfer under GDPR Article 44. AWS provides Standard Contractual Clauses (SCCs) for US processing, but post-Schrems II (CJEU C-311/18, 2020), these require:
 - Transfer impact assessments per destination country
 - Supplementary technical measures (encryption in transit is necessary but may not be sufficient)
 - Documentation that US surveillance laws don't undermine protections
@@ -1482,7 +1499,7 @@ The reclassification is driven by three irreversibility factors:
 
 1. **Legal irreversibility.** Once personal data has been processed in a non-EU jurisdiction, the GDPR violation has occurred. You cannot "un-process" the data. Even if you immediately revert routing, the transfer is on record.
 
-2. **Contractual lock-in.** DPA (Data Processing Agreement) amendments, transfer impact assessments, and SCC supplements create 6-12 month legal procurement cycles. These are not engineering decisions — they require Legal, Privacy, and Compliance review.
+2. **Contractual lock-in.** DPA (Data Processing Agreement) amendments, transfer impact assessments, and SCC supplements create 6-12 month legal procurement cycles. These are not engineering decisions - they require Legal, Privacy, and Compliance review.
 
 3. **Architecture lock-in.** Per-region GPU quota management, per-region S3 buckets, and region-aware routing logic create infrastructure that is 6+ months to restructure. The "3-month recovery" estimate assumed changing a routing rule; the actual recovery requires unwinding legal agreements and infrastructure simultaneously.
 
@@ -1520,8 +1537,8 @@ graph TD
 {% end %}
 
 **Overflow rules:**
-- **US overflow:** us-east-1 → us-west-2 (same jurisdiction — no GDPR issue)
-- **EU overflow:** eu-west-1 → eu-central-1 (same jurisdiction — Frankfurt stays in EU)
+- **US overflow:** us-east-1 → us-west-2 (same jurisdiction - no GDPR issue)
+- **EU overflow:** eu-west-1 → eu-central-1 (same jurisdiction - Frankfurt stays in EU)
 - **APAC overflow:** ap-southeast-1 → ap-northeast-1 (subject to local data protection laws)
 - **NEVER:** eu-west-1 → us-east-1 (GDPR Article 44 violation)
 
@@ -1535,7 +1552,7 @@ graph TD
 
 The +$3,830/month ($46K/year) cost is 0.35% of the GDPR fine exposure ($13M). This is the definition of asymmetric risk: spend $46K to avoid $13M exposure.
 
-**Decision:** Region-pinned GPU pools as primary strategy. Same-jurisdiction overflow (eu-west-1 → eu-central-1) maintains <30s SLO without GDPR exposure. CPU fallback (Option A) remains the last-resort degradation — and is always same-region, making it GDPR-safe by default.
+**Decision:** Region-pinned GPU pools as primary strategy. Same-jurisdiction overflow (eu-west-1 → eu-central-1) maintains <30s SLO without GDPR exposure. CPU fallback (Option A) remains the last-resort degradation - and is always same-region, making it GDPR-safe by default.
 
 ### Peak Traffic Patterns
 
@@ -1553,6 +1570,8 @@ GPU quotas are the real bottleneck - not encoding speed. Default quota (8 vCPUs 
 ---
 
 ## Cost Analysis: Creator Pipeline Infrastructure
+
+The previous sections detailed what to build. This section answers whether you can afford it - and whether the investment pays back.
 
 **Target:** Creator pipeline (encoding + captions + analytics) within infrastructure budget.
 
@@ -1582,7 +1601,7 @@ GPU quotas are the real bottleneck - not encoding speed. Default quota (8 vCPUs 
 - Creator pipeline: $0.0129/DAU (6.5% of total budget)
 - Remaining for CDN, compute, ML, etc.: $0.187/DAU
 
-**Constraint Tax Check (Check #1 Economics):** This \\(\\$0.46\\)M/year pipeline cost is the second component of the series' cumulative Constraint Tax (\\(\\$2.40\\)M dual-stack from [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) + \\(\\$0.46\\)M pipeline = \\(\\$2.86\\)M/year). At 10% operating margin, the Constraint Tax requires **1.37M DAU to break even** and **4.11M DAU to clear the 3× threshold** — validating the series' 3M DAU baseline as approaching the minimum scale for these recommendations. See [Latency Kills Demand: Constraint Tax Breakeven](/blog/microlearning-platform-part1-foundation/) for the full derivation and sensitivity analysis. Platforms below 1.4M DAU cannot afford this pipeline — use CPU encoding and batch analytics instead.
+**Constraint Tax Check (Check #1 Economics):** This \\(\\$0.46\\)M/year pipeline cost is the second component of the series' cumulative Constraint Tax (\\(\\$2.90\\)M dual-stack from [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) + \\(\\$0.46\\)M pipeline = \\(\\$3.36\\)M/year). At 10% operating margin, the Constraint Tax requires **1.61M DAU to break even** and **4.82M DAU to clear the 3× threshold** - validating the series' 3M DAU baseline as approaching the minimum scale for these recommendations. See [Latency Kills Demand: Constraint Tax Breakeven](/blog/microlearning-platform-part1-foundation/) for the full derivation and sensitivity analysis. Platforms below 1.6M DAU cannot afford this pipeline - use CPU encoding and batch analytics instead.
 
 ### ROI Threshold Validation (Law 4)
 
@@ -1606,30 +1625,115 @@ The [Strategic Headroom framework](/blog/microlearning-platform-part1-foundation
 
 | Criterion | Protocol Migration | Creator Pipeline | Assessment |
 | :--- | :--- | :--- | :--- |
-| ROI @3M DAU | 1.07× | 1.9× | Both below threshold |
-| ROI @10M DAU | 3.6× | 2.3× | Protocol scales; Pipeline doesn't |
+| ROI @3M DAU | 0.60× | 1.9× | Both below threshold |
+| ROI @10M DAU | 2.0× | 2.3× | Protocol scales; Pipeline doesn't |
 | Scale factor | 3.3× | 1.2× | **Pipeline costs scale with creators** |
-| Cost structure | Fixed ($2.40M) | Variable ($0.0129/DAU) | Near-linear scaling (fixed analytics amortize slightly) |
+| Cost structure | Fixed ($2.90M) | Variable ($0.0129/DAU) | Near-linear scaling (fixed analytics amortize slightly) |
 
 Creator Pipeline ROI scales only 1.2× (1.9× → 2.3×) because **both revenue and costs scale linearly with creator count**. More creators = more encoding = more costs. The fixed-cost leverage that enables Strategic Headroom doesn't apply.
 
 **Existence Constraint Classification:**
 
-Creator Pipeline requires a different justification: **Existence Constraints**. These apply when:
+Creator Pipeline requires a different justification: **Existence Constraints**. The 3× ROI threshold (Law 4) assumes the platform continues to exist whether or not the optimization is made. For creator infrastructure, that assumption fails.
 
-1. **Platform derivative is zero**: \\(\partial\text{Platform}/\partial\text{Creators} = 0\\) (no creators = no platform)
-2. **No alternative exists**: Cannot substitute with third-party content or delay indefinitely
-3. **Failure is catastrophic**: Unlike latency (degraded experience), creator loss is existential
+**System-Dependency Graph:**
+
+The platform's value chain has a strict dependency ordering. If any node's output goes to zero, every downstream node also goes to zero - regardless of how well-optimized it is.
+
+{% mermaid() %}
+graph LR
+    A["Creators<br/>(supply)"] --> B["Content Catalog<br/>(50K videos)"]
+    B --> C["Recommendation Engine<br/>(ML personalization)"]
+    C --> D["Viewer Engagement<br/>(session depth)"]
+    D --> E["Revenue<br/>($62.7M/year @3M DAU)"]
+
+    B --> F["Prefetch Model<br/>(cache hit rate)"]
+    F --> D
+
+    style A fill:#FF6B6B,stroke:#333
+    style E fill:#90EE90,stroke:#333
+{% end %}
+
+Every revenue dollar flows through the Creator node. The partial derivative formalizes this:
 
 {% katex(block=true) %}
-\text{If } \frac{\partial \text{Platform}}{\partial \text{Creators}} = 0 \text{ (no creators = no platform), then ROI} \to \infty
+\frac{\partial \text{Revenue}}{\partial \text{Creators}} \neq 0 \quad \text{(creators contribute to revenue)}
 {% end %}
+
+But the existence constraint is stronger than "creators contribute." It's that creator count has a **minimum viable threshold** below which the platform cannot sustain viewer engagement:
+
+{% katex(block=true) %}
+\exists \; C_{\min} \text{ such that } C < C_{\min} \implies \frac{\partial \text{Platform}}{\partial \text{Optimization}_i} = 0 \quad \forall \; i
+{% end %}
+
+Below \\(C_{\min}\\), no optimization matters. Latency improvements, protocol migration, ML personalization - all produce zero marginal revenue because the content catalog is too thin to retain viewers. The ROI formula divides revenue-protected by cost, but if revenue-protected is zero (because the platform doesn't exist), ROI is undefined, not merely sub-threshold.
+
+**Why this renders Law 4 secondary:**
+
+Law 4 asks: "Does this investment return 3× its cost?" That question presupposes the platform survives either way. For creator infrastructure, the counterfactual isn't "platform with slower encoding" - it's "platform with insufficient content → viewer churn → revenue collapse → platform death." The ROI framework compares two operating states. An existence constraint compares an operating state to a non-operating state.
+
+| Framework | Assumes | Applies When | Creator Pipeline |
+| :--- | :--- | :--- | :--- |
+| **Law 4 (3× ROI)** | Platform survives either way | Optimizations within a viable system | ❌ Fails: 1.9× at 3M DAU |
+| **Strategic Headroom** | ROI scales super-linearly | Fixed costs, scaling revenue | ❌ Fails: costs scale linearly with creators |
+| **Existence Constraint** | Platform dies without investment | Supply-side minimum viable threshold | ✅ Applies: no creators = no platform |
 
 **The distinction matters:**
 - **Strategic Headroom** (Protocol): Sub-threshold ROI justified by super-linear scaling at achievable scale
-- **Existence Constraint** (Creator Pipeline): Sub-threshold ROI justified because the alternative is platform death
+- **Existence Constraint** (Creator Pipeline): Sub-threshold ROI justified because the counterfactual is platform non-existence
 
-**Decision:** Proceed with creator pipeline despite sub-3× ROI. Existence constraints supersede optimization thresholds. This is NOT Strategic Headroom—it's a stricter exception where ROI calculation is irrelevant.
+**Decision:** Proceed with creator pipeline despite sub-3× ROI. Existence constraints supersede optimization thresholds. This is NOT Strategic Headroom - it's a stricter exception where the ROI denominator (cost) is finite but the penalty for not investing is unbounded.
+
+**But existence constraints are dangerous.** Any team can claim their project is "existential." Without falsification criteria, the existence constraint becomes a blank check for inefficient engineering spend. The next section defines what evidence would disprove the claim.
+
+### Falsification Criteria: When Encoding Speed Is NOT an Existence Constraint
+
+The existence constraint argument for creator pipeline rests on a causal chain: encoding speed → creator retention → content supply → platform viability. Each link in the chain is an empirical claim that can be tested and falsified.
+
+**The causal chain:**
+
+{% mermaid() %}
+graph LR
+    A["Encoding Speed<br/>(<30s target)"] -->|"Claim: causes"| B["Creator Retention<br/>(5% annual churn)"]
+    B -->|"Claim: causes"| C["Content Supply<br/>(50K videos)"]
+    C -->|"Claim: causes"| D["Platform Viability<br/>(revenue > costs)"]
+
+    E["Monetization<br/>($/1K views)"] -->|"Alternative cause"| B
+    F["Audience Size<br/>(views/video)"] -->|"Alternative cause"| B
+    G["Competing Platforms<br/>(TikTok, YouTube)"] -->|"Alternative cause"| B
+{% end %}
+
+**Falsification tests - any ONE of these disproves the existence constraint for encoding speed:**
+
+| # | Test | Falsification Threshold | Data Required | Interpretation if Falsified |
+| :--- | :--- | :--- | :--- | :--- |
+| F1 | Correlation between encoding speed and creator 90-day retention | \\(r < 0.10\\) (encoding) while \\(r > 0.50\\) (monetization) | Creator cohort analysis: retention ~ encoding_p95 + revenue_per_1K + audience_size | Encoding is hygiene, not driver. Invest in creator monetization instead. |
+| F2 | Within-creator encoding speed variation vs churn | \\(\hat{\beta}_{\text{encoding}} < 0.05\\) in fixed-effects logistic regression | Panel data: same creator experiences different encoding times across uploads | No causal effect. Encoding correlation is confounded by platform quality perception. |
+| F3 | Natural experiment: encoding queue spike (>120s) with no creator churn increase | Churn rate during spike ≤ 1.1× baseline | Queue spike incident data (planned maintenance, GPU quota exhaustion) | Creators tolerate encoding delays. The \\(k_c = 4.5\\) cliff model is wrong. |
+| F4 | Creator exit survey: encoding speed ranked below top-3 churn reasons | <10% cite encoding speed | Structured exit surveys (n>200, forced-rank of 8+ factors) | Other factors dominate. Encoding investment has lower priority. |
+| F5 | Platform comparison: competitors with slower encoding retain creators equally | No significant retention difference (p>0.05) | Cross-platform creator cohort (creators active on multiple platforms) | Encoding speed is not a competitive differentiator at current quality levels. |
+| F6 | Content catalog below \\(C_{\min}\\) but platform survives via licensed/curated content | Platform retains >50% of DAU with <1,000 active creators | Historical data or A/B test with content substitution | Creator supply is substitutable. Existence constraint doesn't apply. |
+
+**What "falsified" means operationally:**
+
+If F1 and F2 both hold (encoding speed has negligible correlation AND no causal effect on retention), then encoding speed is a **hygiene factor** - it needs to be "good enough" (say, <120s) but doesn't justify the $464K/year pipeline investment to achieve <30s. The rational response:
+
+1. Use CPU encoding (~120s, $50K/year) instead of GPU pipeline ($464K/year)
+2. Redirect $414K/year savings to the actual retention driver (likely monetization: higher revenue share, creator fund, or audience growth tools)
+3. Reclassify creator pipeline from "existence constraint" to "hygiene factor" in the constraint sequence
+
+**What "not falsified" means operationally:**
+
+If F1 shows \\(r > 0.30\\) for encoding speed AND F2 shows \\(\hat{\beta}_{\text{encoding}} > 0.20\\) AND F3 shows churn spikes during encoding delays, the existence constraint is validated. Proceed with the GPU pipeline investment, but instrument the causal chain continuously - existence constraints can become hygiene factors as the platform matures and creators build switching costs (audience, revenue, community).
+
+**Current status:** The existence constraint is **hypothesized, not validated.** The UX threshold tiers (0%/5%/15%/65%/95% churn at encoding delays) are heuristics from the [creator patience analysis](#creator-patience-model-adapted-weibull) above, not measured data. The \\(k_c = 4.5\\) Weibull shape parameter is hypothesized. Proceeding with the $464K/year investment is a bet on the causal chain being correct - a defensible bet given the asymmetric risk (platform death if wrong about encoding not mattering vs $414K/year overspend if wrong about encoding mattering), but a bet nonetheless.
+
+**Required instrumentation (before first renewal of GPU commitments):**
+
+1. Add `encoding_complete_timestamp` to creator upload events
+2. Run F2 (within-creator fixed-effects regression) on first 6 months of data
+3. Deploy exit survey (F4) for all creators who go inactive >30 days
+4. If F1+F2 falsify the encoding→retention link, downgrade to CPU encoding at next GPU commitment renewal
 
 ### Cost Derivations
 
@@ -1737,7 +1841,7 @@ Creator pipeline is the THIRD constraint. Solving supply before demand is capita
 | ASR Provider | $0.18M | 2 weeks | This document | Tech Lead |
 | GPU Instance Type | $0.05M | 1 week | This document | Engineer |
 
-Protocol Migration blast radius ($18.82M) exceeds Analytics Architecture ($0.86M) by **21.9×**. But Multi-region Encoding *with GDPR exposure* ($13.4M) is now the second-highest blast radius in the series — elevated from the second-lowest. This reclassification is why the "Ingress Latency Penalty" analysis in the Graceful Degradation section above replaces naive cross-region overflow with region-pinned GPU pools. The operational blast radius ($0.43M for same-jurisdiction overflow) remains a two-way door; only cross-jurisdiction routing triggers the one-way door classification.
+Protocol Migration blast radius ($18.82M) exceeds Analytics Architecture ($0.86M) by **21.9×**. But Multi-region Encoding *with GDPR exposure* ($13.4M) is now the second-highest blast radius in the series - elevated from the second-lowest. This reclassification is why the "Ingress Latency Penalty" analysis in the Graceful Degradation section above replaces naive cross-region overflow with region-pinned GPU pools. The operational blast radius ($0.43M for same-jurisdiction overflow) remains a two-way door; only cross-jurisdiction routing triggers the one-way door classification.
 
 **Blast Radius Formula:**
 
@@ -1757,7 +1861,7 @@ For creator pipeline decisions, we substitute the creator-specific LTV derived f
 \end{aligned}
 {% end %}
 
-> **Assumption note:** This uses daily ARPU ($0.0573) per view, which implicitly assumes each view represents a unique daily engagement that wouldn't have occurred without this creator's content. This is an upper bound — if users would have watched other content instead, the per-view impact is lower ($0.0573/20 ≈ $0.003 per view, since each DAU watches ~20 videos). The true value depends on content substitutability. For niche educational content with few alternatives, the upper bound is more appropriate; for commoditized topics, divide by 5-10×.
+> **Assumption note:** This uses daily ARPU ($0.0573) per view, which implicitly assumes each view represents a unique daily engagement that wouldn't have occurred without this creator's content. This is an upper bound - if users would have watched other content instead, the per-view impact is lower ($0.0573/20 ≈ $0.003 per view, since each DAU watches ~20 videos). The true value depends on content substitutability. For niche educational content with few alternatives, the upper bound is more appropriate; for commoditized topics, divide by 5-10×.
 
 **Example: Analytics Architecture Decision at 3M DAU**
 
@@ -1799,7 +1903,7 @@ The analytics architecture decision illustrates the **Check 2 (Supply) ↔ Check
 | **Stream** | Check 2 (Supply: real-time feedback) | Check 1 (Economics: +$120K/year) | Prevents $859K blast radius |
 | **Batch** | Check 1 (Economics: saves $120K/year) | Check 2 (Supply: delayed feedback) | Risks $859K if creators need real-time |
 
-The "cheaper" batch option can make Check 1 fail worse than stream if creator churn materializes. One-way doors require multi-check analysis—optimizing one check while ignoring second-order effects on other checks is how platforms die while hitting local KPIs.
+The "cheaper" batch option can make Check 1 fail worse than stream if creator churn materializes. One-way doors require multi-check analysis - optimizing one check while ignoring second-order effects on other checks is how platforms die while hitting local KPIs.
 
 ---
 
@@ -1858,35 +1962,20 @@ The wide confidence interval reflects high uncertainty in creator churn attribut
 
 **Falsified if:** A/B test (fast encoding vs slow encoding) shows creator retention delta <$423K/year (below 1σ threshold: $859K - $436K).
 
-### What's Next: Cold Start Caps Growth
+### The Supply Side Is Flowing
 
-Sarah takes a diagnostic quiz. Within 100ms, the platform generates a personalized learning path that skips content she already knows.
+Marcus uploads at 2:10:00 PM. At 2:10:28 PM, his video is live with captions, cached at regional shields, visible in his analytics dashboard. Twenty-eight seconds, end to end. He checks the real-time view counter, sees 47 views in the first minute, and starts planning his next tutorial.
 
-**The cold start problem:**
-- New user: Zero watch history
-- Prefetch accuracy: 15-20% (vs 40% for returning users)
-- 40% of new users churn with generic recommendations
+The creator pipeline is working. GPU quotas secured. ASR captions automated. Analytics streaming. The supply side of the platform equation is solved.
 
-**Cold start analysis covers:**
-- Vector similarity search for content matching
-- Knowledge graph traversal for prerequisite inference
-- Ranking model for relevance scoring
-- Cold start mitigation through diagnostic quizzes
+Sarah opens the app for the first time.
 
-### Connection to Constraint Sequence
+She has no watch history. No quiz results. No engagement signals. The prefetch model has nothing to learn from. It guesses - and guesses wrong. The first three videos are basic content she already knows. She swipes impatiently, encounters a fourth irrelevant video, and closes the app.
 
-Creator experience is the supply side of the platform equation. Without Marcus's tutorials, Kira has nothing to learn. Without fast encoding and real-time analytics, Marcus migrates to YouTube.
+She never returns.
 
-The <30s creator pipeline protects $859K/year in creator retention value at 3M DAU (1% active uploaders who regularly trigger encoding pipelines), scaling to $14.3M/year at 50M DAU. GPU quotas are the hidden constraint - request them early, plan same-jurisdiction multi-region fallback (never cross GDPR boundaries for overflow routing), and never promise what you can't deliver.
+The platform delivers videos in 80ms. Marcus's tutorials are excellent. The infrastructure hums. And 40% of new users churn because the recommendation engine can't distinguish a beginner from an expert without data that doesn't exist yet.
 
----
+GPU quotas, not GPU speed, were the bottleneck. Caption cost dominates pipeline economics. Real-time analytics protects $859K/year in creator retention. These lessons were hard-won.
 
-### Architectural Lessons
-
-Three lessons emerge from the creator pipeline:
-
-**GPU quotas, not GPU speed, are the bottleneck.** Cloud providers default to 8 vCPUs (2 g4dn.xlarge instances) per region. At 50K uploads/day, you need 50. The quota request takes longer than building the encoding pipeline.
-
-**Caption cost dominates creator pipeline economics.** At $0.0125/minute, ASR is 48% of pipeline cost. Self-hosted Whisper only becomes cost-effective above 100K uploads/day. Accept the API cost at smaller scale.
-
-**Real-time analytics is a creator retention moat.** The $15K/month stream processing cost protects $859K/year in creator retention value (1% active uploaders). Batch processing saves money but breaks the Saturday iteration workflow that keeps creators engaged.
+But the cold start problem remains. Fast delivery of personalized content to users the system knows well. Generic delivery to users it's meeting for the first time. The gap between them is where growth dies.
