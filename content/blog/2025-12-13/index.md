@@ -4,7 +4,6 @@ title = "Why Cold Start Caps Growth Before Users Return"
 description = "New users arrive with zero history. Algorithms default to what's popular - which on educational platforms means beginner content. An expert sees elementary material three times and leaves. The personalization that retains power users actively repels newcomers. This is the fourth constraint in the sequence."
 date = 2025-12-13
 slug = "microlearning-platform-part4-ml-personalization"
-draft = true
 
 [taxonomies]
 tags = ["machine-learning", "personalization", "cold-start"]
