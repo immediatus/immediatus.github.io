@@ -17,7 +17,7 @@ series_description = "In distributed systems, solving the right problem at the w
 
 +++
 
-Part 1 established that latency is killing your demand - users abandon before experiencing content quality. You've validated the constraint with data. Now comes the decision that will define your architecture for the next three years.
+[Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) established that latency is killing your demand - users abandon before experiencing content quality. You've validated the constraint with data. Now comes the decision that will define your architecture for the next three years.
 
 Most teams approach latency as a performance optimization problem. They spend six months and $2M on CDN edge workers, video compression, and frontend optimization. They squeeze every millisecond out of application code. Yet when users swipe, the loading spinner persists. The team is demoralized. Leadership questions whether the investment was worth it.
 

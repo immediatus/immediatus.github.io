@@ -17,9 +17,11 @@ series_description = "In distributed systems, solving the right problem at the w
 
 +++
 
-You've fixed the demand side. Videos load in under 300ms. Users swipe without waiting. Now Marcus uploads his tutorial and... waits. Two minutes. Five minutes. He opens YouTube in another tab.
+You've fixed the demand side. Videos load in under 300ms. Users swipe without waiting. But creators are still leaving.
 
-Fast delivery of nothing is still nothing. Without creators, there's no content. Without content, latency optimization is irrelevant. Parts 1 and 2 solved how fast Kira gets her video. This part solves whether Marcus sticks around to make it.
+Fast delivery of nothing is still nothing. The platform streams content instantly - content that doesn't exist yet because the upload pipeline drives creators away.
+
+Marcus uploads his tutorial and... waits. Two minutes. Five minutes. He opens YouTube in another tab. Without creators, there's no content. Without content, latency optimization is irrelevant. [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) and [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) solved how fast Kira gets her video. This post solves whether Marcus sticks around to make it.
 
 "But wait," says the careful engineer, "Theory of Constraints says focus on the active bottleneck. Demand is still active - why discuss supply now?" Because GPU quota provisioning takes weeks. If you wait until demand is solved to start supply-side infrastructure, creators experience delays during the transition. This investment is strategic preparation, not premature optimization.
 

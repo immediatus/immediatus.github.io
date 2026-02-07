@@ -84,7 +84,7 @@ where \\(n\\) is the number of irrelevant videos encountered (not time). The hig
 
 **These parameters are hypothesized, not fitted to data.** Actual values require instrumenting new-user skip events and correlating with D7 retention. The step from 2 to 3 irrelevant videos (12.6% to 42.0%) is the cliff that justifies the onboarding quiz investment - it prevents users from reaching the abandonment threshold.
 
-The 12% Day-1 abandonment figure from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#sarah-the-adaptive-learner---revenue-quantification) represents the observed aggregate rate. The Weibull model above explains the mechanism: most cold-start users encounter 2-3 irrelevant videos (\\(F_{\text{cs}}(2) = 12.6\%\\)), consistent with the observed 12%.
+The 12% Day-1 abandonment figure from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#sarah-the-adaptive-learner---revenue-quantification) represents the observed aggregate rate. The Weibull model above explains the mechanism: most cold-start users encounter 2-3 irrelevant videos (\\(F_{\text{cs}}(2) = 12.6\\%\\)), consistent with the observed 12%.
 
 **Law 3 (Constraints):** Cold start becomes the active constraint only after demand-side latency (Mode 1-2) and supply-side encoding (Mode 3) are addressed. Personalization for users who abandon on video start latency is wasted compute.
 
@@ -315,7 +315,7 @@ Using the engagement-to-retention relationship from [Latency Kills Demand](/blog
 
 **Uncertainty:** This estimate has ±50% confidence interval ($0.78M - $2.32M) due to the indirect causal chain (prefetch → session depth → engagement → retention → revenue). The 2.5% churn reduction is hypothesized. A/B test (prefetch enabled vs disabled for 5% of users) required before treating this as validated.
 
-**Cost:** $9,600/day ($3.5M/year) CDN egress + $1,920/month GPU inference = $3.52M/year total. ROI: $1.55M / $3.52M = **0.44× @3M DAU** - below the 3× threshold. Prefetch ROI scales linearly with DAU: reaches 1× at ~7M DAU, 3× at ~24M DAU. At 3M DAU, prefetch is justified not by standalone ROI but by its role as enabling infrastructure for the recommendation pipeline - without cached videos, personalized recommendations that predict the right video still deliver 300ms delays.
+**Cost:** $9,600/day ($3.5M/year) CDN egress + $1,920/month GPU inference = $3.52M/year total. ROI: $1.55M / $3.52M = **0.44× @3M DAU** - below the 3× threshold. Prefetch ROI scales linearly with DAU: reaches 1× at ~7M DAU, 3× at ~24M DAU. At 3M DAU, prefetch qualifies as [Enabling Infrastructure](/blog/microlearning-platform-part1-foundation/#strategic-headroom-investments) - a component with negative standalone ROI that unlocks downstream systems. Without cached videos, personalized recommendations that predict the right video still deliver 300ms delays. The combined recommendation pipeline (prefetch + ranking + feature store) achieves 6.3× ROI; prefetch's share is 0.44× but removing it breaks the system.
 
 ### Cold Start Degradation
 

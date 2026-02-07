@@ -62,9 +62,9 @@ Performance requirements:
 
 When this series references "p95 latency" without qualification, it refers to **Video Start Latency** (demand-side) unless explicitly stated otherwise. The 300ms budget, Weibull abandonment model (defined in "The Math Framework" section below), and protocol comparisons all use Video Start Latency as the metric.
 
-- **Part 1 (this document):** Primarily Video Start Latency (demand constraint)
-- **Part 2 (Protocol Choice):** Video Start Latency for protocol comparisons; RTT for handshake analysis
-- **Part 3 (GPU Quotas):** Upload-to-Live Latency (supply constraint); the 30-second target is distinct from the 300ms viewer target
+- **Latency Kills Demand (this document):** Primarily Video Start Latency (demand constraint)
+- **Protocol Choice Locks Physics:** Video Start Latency for protocol comparisons; RTT for handshake analysis
+- **GPU Quotas Kill Creators:** Upload-to-Live Latency (supply constraint); the 30-second target is distinct from the 300ms viewer target
 
 The engineering challenge:
 
@@ -321,7 +321,7 @@ Don't allocate capital based on roadmaps or best practices. Use this math framew
 
 This series analyzes two distinct patience distributions - viewers (demand-side) and creators (supply-side). To avoid confusion, parameters carry cohort subscripts throughout:
 
-| Parameter | Viewer (Part 1-2) | Creator (Part 3) | Interpretation |
+| Parameter | Viewer (Demand-side) | Creator (Supply-side) | Interpretation |
 | :--- | :--- | :--- | :--- |
 | \\(\lambda\\) (scale) | \\(\lambda_v = 3.39\\)s | \\(\lambda_c = 90\\)s | Characteristic tolerance time |
 | \\(k\\) (shape) | \\(k_v = 2.28\\) | \\(k_c = 4.5\\) | Hazard acceleration rate |
@@ -472,13 +472,25 @@ An investment qualifies as Strategic Headroom if ALL conditions hold:
 
 | Investment | ROI @3M | ROI @10M | Scale Factor | Lead Time | Classification |
 | :--- | ---: | ---: | ---: | :--- | :--- |
-| LL-HLS Bridge ([Part 2](/blog/microlearning-platform-part2-video-delivery/)) | 1.7× | 5.8× | 3.4× | 3-6 months | **Strategic Headroom** |
-| QUIC+MoQ Migration ([Part 2](/blog/microlearning-platform-part2-video-delivery/)) | 0.60× | 2.0× | 3.3× | 18 months | **Strategic Headroom** |
-| Creator Pipeline ([Part 3](/blog/microlearning-platform-part3-creator-pipeline/)) | 1.9× | 2.3× | 1.2× | 4-8 weeks | **Existence Constraint** (see below) |
+| LL-HLS Bridge ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/)) | 1.7× | 5.8× | 3.4× | 3-6 months | **Strategic Headroom** |
+| QUIC+MoQ Migration ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/)) | 0.60× | 2.0× | 3.3× | 18 months | **Strategic Headroom** |
+| Creator Pipeline ([GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/)) | 1.9× | 2.3× | 1.2× | 4-8 weeks | **Existence Constraint** (see below) |
 
 **Why Creator Pipeline differs:**
 
 Creator Pipeline ROI scales only 1.2× (1.9× → 2.3×) because both revenue and costs scale with creator count. However, it qualifies under a stricter criterion: **Existence Constraints**. Without creators, there is no platform - the \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\) derivative makes ROI calculation irrelevant. See [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) for full analysis.
+
+**Enabling Infrastructure Exception:**
+
+A third category exists: investments with negative standalone ROI that are prerequisites for other investments to function. These are **Enabling Infrastructure** - components that don't generate value directly but unlock the value of downstream systems.
+
+| Investment | Standalone ROI | Enables | Combined ROI |
+| :--- | ---: | :--- | ---: |
+| Prefetch ML ([Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/)) | 0.44× @3M | Recommendation pipeline latency budget | 6.3× (with recommendations) |
+| Feature Store ([Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/)) | N/A (pure cost) | <10ms ranking model inference | Required for ML personalization |
+| CDC Event Stream ([Consistency Bugs Destroy Trust](/blog/microlearning-platform-part5-data-state/)) | N/A (pure cost) | Client-side state reconciliation | 25× (with full resilience stack) |
+
+**Criterion:** An investment qualifies as Enabling Infrastructure if removing it breaks a downstream system that itself exceeds 3× ROI. The combined ROI of the dependency chain must exceed 3×, not the individual component.
 
 **Intellectual Honesty Check:**
 
