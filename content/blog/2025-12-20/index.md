@@ -6,7 +6,7 @@ date = 2025-12-20
 slug = "microlearning-platform-part5-data-state"
 
 [taxonomies]
-tags = ["databases", "consistency", "caching"]
+tags = ["consistency", "caching", "microlearning"]
 series = ["engineering-platforms-at-scale"]
 
 [extra]

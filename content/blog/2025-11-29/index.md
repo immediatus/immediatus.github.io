@@ -6,7 +6,7 @@ date = 2025-11-29
 slug = "microlearning-platform-part2-video-delivery"
 
 [taxonomies]
-tags = ["distributed-systems", "video-streaming", "microlearning", "protocols"]
+tags = ["distributed-systems", "video-streaming", "microlearning"]
 series = ["engineering-platforms-at-scale"]
 
 [extra]

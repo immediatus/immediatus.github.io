@@ -7,7 +7,7 @@ slug = "ads-platform-part-2-rtb-ml-pipeline"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "real-time-bidding", "ml-inference", "ads-tech"]
+tags = ["distributed-systems", "real-time-bidding", "personalization", "ml-inference", "ads-tech"]
 series = ["architecting-ads-platforms"]
 
 [extra]

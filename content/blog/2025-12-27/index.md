@@ -6,7 +6,7 @@ date = 2025-12-27
 slug = "microlearning-platform-part6-meta-framework"
 
 [taxonomies]
-tags = ["systems-thinking", "optimization", "constraints", "methodology"]
+tags = ["systems-thinking", "optimization", "constraint-sequence-framework", "microlearning"]
 series = ["engineering-platforms-at-scale"]
 
 [extra]
