@@ -234,7 +234,7 @@ Mitigation:
 
 Important: This is NOT a reversible migration. Falling back to HLS means sacrificing ALL MoQ benefits (multi-million dollar annual revenue loss from connection migration, base latency, and DRM optimizations) and returning to 220ms+ latency floor. It's an emergency exit that accepts performance degradation, not a cost-free reversal.
 
-Decision gate: Do not migrate if platform runway is <24 months. The migration itself consumes 18 months. Platforms cannot afford to die mid-surgery.
+Decision gate: Migrating with <24 months runway carries existential risk. The migration itself consumes 18 months. Platforms cannot afford to die mid-surgery.
 
 
 ### Why Protocol Is Step 2
@@ -462,41 +462,42 @@ Critical: This ROI is scale-dependent. At 100K DAU, `ROI ≈ 0.02×`, failing th
 
 ### Mixed-Mode Latency: The Real-World p95
 
-The 300ms target assumes homogeneous protocol deployment. Reality is fragmented: 42% of mobile users (Safari/iOS) experience HLS latency while 58% experience MoQ latency. What is the **actual blended p95** users experience?
+The 300ms target assumes a uniform protocol stack. In practice, the platform is fragmented: 58% of users (Android Chrome, Desktop) benefit from MoQ (100ms p95), while 42% (Safari/iOS) fall back to TCP+HLS (529ms p95).
 
 Note: The HLS p95 of 529ms used below is the full-stack production latency including handshake, segment fetch, edge cache, DRM, and routing overhead - derived in the "Latency Budget Breakdown" section later in this article. The protocol-only floor is 370ms; the additional ~160ms comes from real-world infrastructure components.
 
-**The Mixture Distribution Problem:**
-
-The blended p95 is NOT simply \\((0.42 \times 529\text{ms}) + (0.58 \times 100\text{ms}) = 280\text{ms}\\). That's the expected value, not the 95th percentile. For a mixture of two populations, we must find the latency \\(L\\) where 95% of ALL users have latency below \\(L\\).
-
-**Population Latency Distributions:**
-
-| Segment | Population Share | p50 Latency | p95 Latency | Protocol |
-| :--- | :--- | :--- | :--- | :--- |
-| MoQ users (Android Chrome, desktop) | 58% | 70ms | 100ms | QUIC+MoQ |
-| HLS users (Safari/iOS, fallback) | 42% | 280ms | 529ms | TCP+HLS |
-
-**Calculating the Blended p95:**
-
-To find the blended p95, we need \\(P(\text{latency} < L_{\text{blended}}) = 0.95\\):
+A common error is calculating system p95 as a weighted average: {% katex() %} (0.58 \times 100) + (0.42 \times 529) = 280\text{ms} {% end %}. This is incorrect because percentiles are non-linear. The system p95 is the point {% katex() %} x {% end %} where the cumulative probability across both populations reaches 0.95:
 
 {% katex(block=true) %}
-\begin{aligned}
-P(L < x) &= P(\text{MoQ}) \cdot P(L_{\text{MoQ}} < x) + P(\text{HLS}) \cdot P(L_{\text{HLS}} < x) \\[8pt]
-0.95 &= 0.58 \cdot P(L_{\text{MoQ}} < x) + 0.42 \cdot P(L_{\text{HLS}} < x)
-\end{aligned}
+P(L < x) = 0.58 \cdot P(L_{\text{MoQ}} < x) + 0.42 \cdot P(L_{\text{HLS}} < x) = 0.95
 {% end %}
 
-At \\(x = 100\\)ms (MoQ p95): \\(P = 0.58 \times 0.95 + 0.42 \times 0.04 = 0.568\\) (only 57% below)
+We find this threshold by stepping through the combined population mass:
 
-At \\(x = 280\\)ms (HLS p50): \\(P = 0.58 \times 1.0 + 0.42 \times 0.50 = 0.790\\) (79% below)
+| Latency $x$ | MoQ Mass \\(P(L_{\text{MoQ}} < x)\\) | HLS Mass \\(P(L_{\text{HLS}} < x)\\) | Combined $P(L < x)$ | Note |
+| :--- | :--- | :--- | :--- | :--- |
+| **100ms** | 0.95 | 0.04 | **0.57** | MoQ p95 reached. |
+| **280ms** | 1.00 | 0.50 | **0.79** | All MoQ users included; HLS hits median. |
+| **400ms** | 1.00 | 0.80 | **0.92** | HLS p80 included. |
+| **430ms** | **1.00** | **0.88** | **0.95** | **System p95 threshold.** |
+| **529ms** | 1.00 | 0.95 | **0.98** | p95 of the slowest segment. |
 
-At \\(x = 400\\)ms (HLS p80): \\(P = 0.58 \times 1.0 + 0.42 \times 0.80 = 0.916\\) (92% below)
+The system p95 settles at **430ms**.
 
-At \\(x = 480\\)ms (HLS p92): \\(P = 0.58 \times 1.0 + 0.42 \times 0.92 = 0.966\\) (97% below)
+{% mermaid() %}
+graph LR
+    subgraph "User Population (100%)"
+        M[0-58%:<br/>MoQ] --- H1[58-79%:<br/>HLS p50]
+        H1 --- H2[79-92%:<br/>HLS p80]
+        H2 --- H3[92-95%:<br/>HLS Tail]
+        H3 --- O[95-100%:<br/>Outliers]
+    end
 
-**Interpolating:** The blended p95 ≈ **430ms** (where 95% of all users experience latency below this threshold).
+    H3 -->|"430ms"| p95[System p95]
+    style H3 fill:#f66,stroke:#333,stroke-width:4px
+{% end %}
+
+The result confirms that the system p95 is a metric of the tail. Because the MoQ majority is well below 300ms, they provide probability mass but have no influence on the p95 value. The metric is defined entirely by the Safari minority. To lower the system p95, the performance floor of the fallback protocol must be moved.
 
 | Metric | MoQ-Only | HLS-Only | Blended (Real-World) |
 | :--- | :--- | :--- | :--- |

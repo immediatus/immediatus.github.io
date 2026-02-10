@@ -460,29 +460,83 @@ Embedding drift is the second issue. As the video library grows from 10K to 50K 
 
 The previous two sections built the components: a knowledge graph for prerequisite chains (<20ms traversal) and vector similarity search for content-based candidates (<30ms retrieval). This section assembles them into a pipeline that produces personalized top-20 recommendations within the 100ms budget from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#architectural-drivers).
 
-### Four-Stage Pipeline
+### The 100ms Pipeline: A Probabilistic Budget
 
-| Stage | Operation | Latency | Input → Output |
-| :--- | :--- | ---: | :--- |
-| 1. Candidate generation | Vector similarity search | 30ms | 50K corpus → 1,000 candidates |
-| 2. Feature enrichment | Fetch user + video features | 10ms | 1,000 candidates + context |
-| 3. Ranking | LightGBM scoring | 40ms | 1,000 → top-100 scored |
-| 4. Filtering | Knowledge graph + diversity | 20ms | top-100 → final top-20 |
-| **Total** | | **100ms** | |
+A generic "100ms budget" is misleading. The recommendation pipeline is a sequential chain of four distinct operations. In distributed systems, tail latencies accumulate: if any one stage hits its p99 latency, the entire request breaches the 100ms target.
+
+**The Latency Variance Table:**
+
+| Stage | Operation | p50 (Median) | p95 (Realistic) | p99 (Worst Case) | Bound by |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Candidate Gen** | Vector Search | 15ms | 30ms | 120ms | Index page-in / GC |
+| **2. Enrichment** | Feature Fetch | 4ms | 10ms | 45ms | Valkey network contention |
+| **3. Ranking** | GBDT Scoring | 20ms | 40ms | 80ms | CPU scheduling |
+| **4. Filtering** | KG Traversal | 8ms | 20ms | 60ms | Graph depth complexity |
+| **Total System** | **Sequential** | **47ms** | **100ms** | **305ms** | **Target: 100ms** |
+
+**The Latency Cumulative Diagram:**
 
 {% mermaid() %}
 graph LR
-    A["50K Video Corpus"] --> B["Stage 1: Vector Search<br/>1,000 candidates<br/>30ms"]
-    B --> C["Stage 2: Feature Enrichment<br/>user + video context<br/>10ms"]
-    C --> D["Stage 3: LightGBM Ranking<br/>top-100 scored<br/>40ms"]
-    D --> E["Stage 4: Graph Filter<br/>final top-20<br/>20ms"]
+    subgraph "Personalization Critical Path (Budget: 100ms)"
+        S1[Stage 1: Search] -->|30ms| S2[Stage 2: Features]
+        S2 -->|10ms| S3[Stage 3: Ranking]
+        S3 -->|40ms| S4[Stage 4: KG Filter]
+        S4 -->|20ms| Final[System p95: 100ms]
+    end
+
+    subgraph "Probability of Budget Breach"
+        E1[Index Page-in] -.->|"+90ms"| S1
+        E2[Valkey Fallback] -.->|"+35ms"| S2
+        E3[Tail Contention] -.->|"+40ms"| S3
+    end
+
+    style Final fill:#f96,stroke:#333,stroke-width:4px
 {% end %}
+
+The pipeline hits the 100ms target at p95, but breaches significantly at p99 (305ms). This 5% tail risk is acceptable because recommendation requests happen in the background (prefetch) or during app load (masked by splash screen). The critical requirement is that the median case stays fast enough (47ms) to feel instant during rapid swiping.
+
+### Four-Stage Pipeline Implementation
 
 **Stage 1** is the vector similarity search described above. It narrows 50K videos to 1,000 candidates with cosine distance <0.3 from the user's recent viewing pattern.
 
 **Stage 2** enriches each candidate with user context and video metadata. User features: last 10 videos watched, quiz scores per skill, session duration, device type. Video features: view count, completion rate, creator ID, upload date. These come from the feature store (next section) via Valkey cache at 4-5ms latency. On cache miss, CockroachDB fallback adds 10-15ms - but the feature store keeps hot user profiles cached, so miss rates stay under 5%.
 
-**Stage 3** is a LightGBM model (gradient boosted decision trees) that scores each candidate. The model predicts expected watch time - a proxy for user interest that's more informative than click probability. Training data: ~1.8B user-video view events per month (3M DAU × ~20 videos/day × 30 days). The model uses ~50 features (user history, video metadata, collaborative filtering signals, time-of-day, device type). Inference: 1,000 candidates × 0.04ms per candidate = 40ms total. Model size is ~100MB - small enough for fast inference, large enough to capture the feature interactions that matter.
+**Stage 3** is a LightGBM model (gradient boosted decision trees) that scores each candidate. The model predicts expected watch time - a proxy for user interest that's more informative than click probability.
+
+#### The Ranking Signal Mix
+
+Unlike generic social video, educational ranking must balance pedagogical progress with engagement. The model weights reflect this "learning first" priority:
+
+| Signal Group | Weight | Primary Data Source | Business Role |
+| :--- | ---: | :--- | :--- |
+| **Topic Relevance** | 40% | Vector Similarity (CLIP) | Ensures Sarah sees EKG content, not Python |
+| **Skill Mastery** | 35% | Quiz History (CockroachDB) | Matches difficulty to Sarah's "Advanced" level |
+| **Creator Momentum** | 15% | Real-time views (Flink) | Surfacing fresh Marcus tutorials quickly |
+| **Engagement Tail** | 10% | Global completion rates | Filtering out "Garbage" or low-quality content |
+
+**These weights are hypothesized** based on educational platform priorities (learning progress over engagement metrics). The 40/35/15/10 distribution reflects a "pedagogy-first" philosophy where topic match and skill alignment dominate over recency and popularity signals. Validate with A/B testing (topic-weighted vs engagement-weighted ranking) before treating as ground truth.
+
+#### The Scoring Logic Sequence
+
+{% mermaid() %}
+graph TD
+    subgraph "The Ranking Function"
+        C[1,000 Candidates] --> F[Feature Enrichment]
+        F --> W[Weighting Layer]
+        
+        W --> S1[Similarity Score]
+        W --> S2[Mastery Offset]
+        W --> S3[Freshness Boost]
+        
+        S1 & S2 & S3 --> Agg[LightGBM Ensemble]
+        Agg --> Top[Top-20 Recommendations]
+    end
+
+    style Agg fill:#f96,stroke:#333,stroke-width:4px
+{% end %}
+
+Training data: ~1.8B user-video view events per month (3M DAU × ~20 videos/day × 30 days). The model uses ~50 features (user history, video metadata, collaborative filtering signals, time-of-day, device type). Inference: 1,000 candidates × 0.04ms per candidate = 40ms total. Model size is ~100MB - small enough for fast inference, large enough to capture the feature interactions that matter.
 
 **Stage 4** applies the knowledge graph from above. Remove any video whose prerequisites the user hasn't met. Apply diversity constraints (max 5 from the same creator). If the user has spaced repetition reviews due (covered below), those get priority slots in the top-5. Output: 20 personalized recommendations.
 

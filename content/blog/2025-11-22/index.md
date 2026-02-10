@@ -66,6 +66,21 @@ When this series references "p95 latency" without qualification, it refers to **
 - **Protocol Choice Locks Physics:** Video Start Latency for protocol comparisons; RTT for handshake analysis
 - **GPU Quotas Kill Creators:** Upload-to-Live Latency (supply constraint); the 30-second target is distinct from the 300ms viewer target
 
+### The Physics of the Budget: Why 300ms?
+
+The sub-300ms target is not an arbitrary performance goal; it is the **physical floor** of a globally distributed system. Every millisecond in the budget is a scarce resource competing for space between the speed of light and the user's brain.
+
+| Constraint Layer | Latency Cost | Driver |
+| :--- | :--- | :--- |
+| **Network Physics** | 30ms - 70ms | Speed of light in fiber (Regional RTT) |
+| **Transport Handshake** | 50ms - 100ms | TCP 3-way + TLS 1.3 (2 RTT minimum) |
+| **Protocol Overhead** | 50ms - 100ms | Manifest fetch + first segment (HLS) or frame delivery (MoQ) |
+| **Personalization** | 50ms - 100ms | ML Ranking + Feature Store Lookups |
+| **First Frame Render** | 20ms - 50ms | Client-side hardware decoding |
+| **Total System Floor** | **200ms - 420ms** | **The Physics Ceiling** |
+
+This breakdown reveals the binding constraint: transport + protocol alone consume 100-200ms before personalization even begins. If the transport layer uses TCP+HLS (200ms baseline), the personalization engine has <100ms remaining to hit a 300ms target. To achieve sub-300ms p95, we must change the protocol physics - which is exactly what [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) addresses.
+
 The engineering challenge:
 
 The platform shifts from "push" learning (boss assigns mandatory courses) to "pull" learning (you discover what you need):

@@ -110,6 +110,48 @@ The [Causality Test](/blog/microlearning-platform-part1-foundation/#self-diagnos
 
 ---
 
+## The Regression Trap: Consistency-Personalization Coupling
+
+Kira's lost streak is a visible failure. But consistency bugs have an invisible cost: they corrupt the data that feeds the personalization engine, forcing the user experience to regress from "Optimized" (Mode 4) back to "Cold Start" (Mode 1).
+
+If Sarah completes "Advanced EKG" on her phone, but the write is lost or delayed before she opens her laptop, the feature store serves stale data. The recommendation engine sees "Last Video: Basic EKG" and recommends "Advanced EKG" again.
+
+**The Failure Cascade:**
+
+{% mermaid() %}
+graph TD
+    subgraph "Systemic Trust"
+        C[Part 5: Data Consistency] -->|Ground Truth| S[User Signals]
+        S -->|Informs| ML[Part 4: Personalization Engine]
+        ML -->|Delivers| UX[Relevant Content]
+    end
+
+    subgraph "The Failure Cascade"
+        Bug[Consistency Incident] -->|Stale/Lost Data| C
+        C -.->|Signal Rot| S
+        S -.->|Trigger| Mode4[Regression: Cold Start Problem]
+        Mode4 -->|Sarah sees| Beginner[Elementary Content]
+        Beginner -->|Result| Churn[Trust Collapse]
+    end
+
+    style Bug fill:#f66,stroke:#333
+    style Mode4 fill:#f96,stroke:#333
+{% end %}
+
+This coupling means Mode 5 (Consistency) is not just about trust; it is a prerequisite for sustaining Mode 4 (Personalization). A platform with 95% consistency has a 5% error rate in its personalization inputs.
+
+**Cross-Persona Impact:**
+
+| Persona | Direct Mode 5 Impact | Indirect Mode 4 Regression | Business Penalty |
+| :--- | :--- | :--- | :--- |
+| **Kira** | Lost Streak (16 → 1) | Re-learns backstroke drills she already mastered | Loss Aversion ($M_{loss}$) |
+| **Sarah** | Progress Loss (Mod 3 → 1) | Personalization reverts to "Basic EKG" | Time-to-Value collapse |
+| **Marcus** | Stale Analytics | A/B tests lose significance due to event drops | Creator churn |
+
+Consistency is the "Trust Layer" because it underpins both the user's faith in the platform and the platform's understanding of the user. Without it, the intelligence built in Part 4 dissolves into noise.
+
+---
+
 ## The Temporal Invariant Problem
 
 Kira's streak reset happened because two systems disagreed about what time it was. The mobile client recorded 11:58 PM. The server recorded 12:00:03 AM. This is not a database consistency problem. This is a **temporal invariant** problem - and it's fundamentally harder than typical distributed systems challenges.
@@ -951,10 +993,13 @@ CockroachDB is 50% of infrastructure budget. This is the cost of strong consiste
 | Option | Savings | Trade-off | Decision |
 | :--- | :--- | :--- | :--- |
 | Single-region CockroachDB | $90K/month | GDPR violation (EU data in US) | **Reject** |
-| Cassandra (AP, eventual consistency) | $120K/month | Streaks become eventually consistent | **Reject** |
+| Cassandra for streak/XP data | $120K/month | Streaks become eventually consistent | **Reject** |
+| Cassandra for analytics only | $40K/month | View counts, logs use AP; streak data stays CP | **Accept with CP hybrid** |
 | Optimize cache to 90% hit rate | $30K/month | Aggressive pre-warming, stale data risk | **Accept** |
 
-**Decision:** Option C. Push cache hit rate from 85% to 90% through:
+**Decision:** Hybrid approach - use Cassandra for analytics (Option C, $40K/month savings) and optimize cache (Option D, $30K/month savings). Total savings: $70K/month while maintaining CP guarantees for streak/XP data.
+
+Push cache hit rate from 85% to 90% through:
 1. Pre-warm top 50K user profiles (power users, not just top 10K)
 2. Extend L2 TTL from 1 hour to 2 hours (accept slightly staler data)
 3. Add L1 cache for hot video metadata (in addition to user profiles)

@@ -111,6 +111,14 @@ M(d) = 1 + \alpha \cdot \ln\left(1 + \frac{d}{7}\right)
 
 Where \\(d\\) is the accumulated investment (streak length in days) and \\(\alpha = 1.2\\) is calibrated to behavioral economics research showing losses are felt 2× more intensely than equivalent gains. The divisor 7 normalizes to the habit-formation threshold (one week). A user losing 16 days of accumulated progress experiences \\(M(16) = 2.43\\times\\) the churn probability of losing 1 day.
 
+<style>
+#tbl_damage_patterns + table th:first-of-type { width: 22%; }
+#tbl_damage_patterns + table th:nth-of-type(2) { width: 28%; }
+#tbl_damage_patterns + table th:nth-of-type(3) { width: 28%; }
+#tbl_damage_patterns + table th:nth-of-type(4) { width: 22%; }
+</style>
+<div id="tbl_damage_patterns"></div>
+
 | Damage Pattern | Constraint Type | Modeling Approach | ROI Implication |
 | :--- | :--- | :--- | :--- |
 | Weibull (gradual) | Latency, throughput, capacity | Survival function \\(S(t)\\) | Continuous optimization curve |
@@ -807,6 +815,13 @@ Two constraints have ROIs within 20% of each other.
 
 Pearl's framework requires causal effects to be identifiable from data.
 
+<style>
+#tbl_causality_violations + table th:first-of-type { width: 25%; }
+#tbl_causality_violations + table th:nth-of-type(2) { width: 40%; }
+#tbl_causality_violations + table th:nth-of-type(3) { width: 35%; }
+</style>
+<div id="tbl_causality_violations"></div>
+
 | Violation | Detection | Consequence |
 | :--- | :--- | :--- |
 | Unmeasured confounders | A/B test differs from observational estimate by >50% | Cannot trust causal claims |
@@ -826,6 +841,13 @@ Reliability models assume distribution parameters are constant over the decision
 **Assumption 4: ROI is Measurable**
 
 The investment threshold requires measuring return on investment.
+
+<style>
+#tbl_roi_violations + table th:first-of-type { width: 28%; }
+#tbl_roi_violations + table th:nth-of-type(2) { width: 42%; }
+#tbl_roi_violations + table th:nth-of-type(3) { width: 30%; }
+</style>
+<div id="tbl_roi_violations"></div>
 
 | Violation | Detection | Cause |
 | :--- | :--- | :--- |
@@ -1076,6 +1098,37 @@ The series validates each framework component through concrete application:
 | Stopping criterion | At Part 5 completion, remaining constraints are below threshold | Series arc |
 
 The framework produces consistent decisions across five constraint domains. Where Parts 1-5 deviate from the standard threshold (Strategic Headroom, Enabling Infrastructure, Existence Constraint), the deviation matches the exception criteria defined in the framework. This consistency across domains validates the framework's generality.
+
+---
+
+## The Master Checklist: From Zero to Scale
+
+This checklist operationalizes the entire series into a single decision matrix. Start at the top. If a check fails, stop and fix that constraint. Do not proceed until the active constraint is resolved.
+
+<style>
+#tbl_master_checklist + table th:first-of-type { width: 12%; }
+#tbl_master_checklist + table th:nth-of-type(2) { width: 18%; }
+#tbl_master_checklist + table th:nth-of-type(3) { width: 28%; }
+#tbl_master_checklist + table th:nth-of-type(4) { width: 20%; }
+#tbl_master_checklist + table th:nth-of-type(5) { width: 22%; }
+</style>
+<div id="tbl_master_checklist"></div>
+
+| Stage | Active Constraint | Diagnostic Question | Failure Signal | Action |
+| :--- | :--- | :--- | :--- | :--- |
+| **Foundation** | **Mode 1: Latency** | "If we fixed speed, would retention jump?" | Retention <40% even with good content | [Validate causality](/blog/microlearning-platform-part1-foundation/) via within-user regression |
+| **Architecture** | **Mode 2: Protocol** | "Is physics blocking our p95 target?" | TCP/HLS floor > 300ms | [Migrate to QUIC+MoQ](/blog/microlearning-platform-part2-video-delivery/) (>5M DAU) |
+| **Supply** | **Mode 3: Encoding** | "Do creators leave because upload is slow?" | Queue >120s OR Churn >5% | [Deploy GPU pipeline](/blog/microlearning-platform-part3-creator-pipeline/) (Region-pinned) |
+| **Growth** | **Mode 4: Cold Start** | "Do new users churn 2x faster than old?" | Day-1 Retention < Day-30 Retention | [Build ML pipeline](/blog/microlearning-platform-part4-ml-personalization/) (100ms budget) |
+| **Trust** | **Mode 5: Consistency** | "Do users rage-quit over lost streaks?" | Ticket volume >10% "Lost Progress" | [Migrate to CP DB](/blog/microlearning-platform-part5-data-state/) (CockroachDB) |
+| **Survival** | **Mode 6: Economics** | "Is unit cost > unit revenue?" | Cost/DAU > $0.20 | **STOP EVERYTHING.** Fix unit economics. |
+
+**ROI Threshold Reference:**
+
+- **Standard:** Invest if ROI > 3.0x
+- **Strategic Headroom:** Invest if current ROI > 1.0x AND future ROI > 5.0x (e.g., Protocol)
+- **Existence Constraint:** Invest regardless of ROI if system dies without it (e.g., Creator Pipeline)
+- **Enabling Infra:** Invest if combined downstream ROI > 3.0x (e.g., Prefetch ML)
 
 ---
 

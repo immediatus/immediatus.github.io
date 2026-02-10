@@ -347,6 +347,28 @@ The 3% amplification understates the real risk for two reasons:
 
 **Risk Heat Map: Joint Failure Surface**
 
+{% mermaid() %}
+graph TD
+    subgraph "The Double-Weibull Trap"
+        C["Creator Churn<br/>(Supply Cliff)<br/>k=4.5"] -->|Reduced Catalog| G["Content Gap<br/>(Missing Videos)"]
+        G -->|Cache Misses| V["Viewer Churn<br/>(Demand Gradient)<br/>k=2.28"]
+    end
+
+    subgraph "Failure Zones"
+        Z1["Operating Target<br/>(<30s Encode, <200ms Load)"]
+        Z2["Demand Gradient<br/>(Slow Load, Fast Encode)"]
+        Z3["Supply Cliff<br/>(Fast Load, Slow Encode)"]
+        Z4["Compound Failure<br/>(Slow Load, Slow Encode)"]
+    end
+
+    Z3 -.->|Triggers| G
+    Z4 -.->|Accelerates| V
+
+    style C fill:#ffcccc,stroke:#333
+    style V fill:#ffcccc,stroke:#333
+    style Z4 fill:#ff0000,color:#fff
+{% end %}
+
 {{ risk_matrix(
     title="Double-Weibull Risk Surface",
     x_axis="Encoding Latency: Safe (30s) <──────> Cliff (120s+)",
