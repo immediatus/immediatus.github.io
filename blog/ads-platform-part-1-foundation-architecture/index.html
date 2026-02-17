@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="Building the architectural foundation for ad platforms serving 1M+ QPS with 150ms P95 latency. Deep dive into requirements analysis, latency budgeting across critical paths, resilience through graceful degradation, and P99 tail latency defense using low-pause GC technology." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Real-Time Ads Platform: System Foundation &amp; Latency Engineering - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;ads-platform-part-1-foundation-architecture&#x2F;" />
+  <meta property="og:description" content="Building the architectural foundation for ad platforms serving 1M+ QPS with 150ms P95 latency. Deep dive into requirements analysis, latency budgeting across critical paths, resilience through graceful degradation, and P99 tail latency defense using low-pause GC technology." />
+
+  <title>Real-Time Ads Platform: System Foundation &amp; Latency Engineering - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;ads-platform-part-1-foundation-architecture&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>Real-Time Ads Platform: System Foundation &amp; Latency Engineering</h1>
+
+  <div class="post-meta">
+      <time datetime="2025-10-15T00:00:00+00:00" pubdate>15 October 2025</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/system-architecture/">#system-architecture</a>
+              <a class="tag" href="https://e-mindset.space/tags/ads-tech/">#ads-tech</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<h2 id="introduction-the-challenge-of-real-time-ad-serving-at-scale">Introduction: The Challenge of Real-Time Ad Serving at Scale</h2>
+<p>Full disclosure: I’ve never built an ads platform before. This is a design exercise - a cognitive workout to keep engineering thinking sharp.</p>
+<p><strong>Why Real-Time Ads?</strong></p>
+<p>I chose this domain as a deliberate <a href="https://www.psychologytoday.com/us/blog/the-digital-self/202312/new-years-resolution-go-to-ais-cognitive-gym">cognitive workout</a> - a concept from Psychology Today about training engineering thinking as AI tools get more powerful. Real-time ads forces specific mental disciplines: 150ms latency budgets train decomposition skills (you can’t handwave “make it fast” when RTB takes 100ms alone), financial accuracy demands consistency modeling (which data needs strong consistency vs eventual), and 1M QPS coordination tests failure handling (when cache servers die, does the database melt down?). These aren’t abstract exercises - they’re the foundation for effective engineering decisions regardless of tooling.</p>
+<p>What makes ad platforms compelling: every click has measurable value, every millisecond of latency has quantifiable revenue impact. A user opens an app, sees a relevant ad in under 150ms, clicks it, and the advertiser gets billed. Simple? Not when you’re coordinating real-time auctions across 50+ bidding partners with 100ms timeouts, running ML predictions in &lt;40ms, and handling 1M+ queries per second.</p>
+<p><strong>Target scale:</strong></p>
+<ul>
+<li><strong>400M+ daily active users</strong> generating continuous ad requests</li>
+<li><strong>1M+ queries per second</strong> during peak traffic (with <strong>1.5M QPS platform capacity</strong> - 50% headroom for burst traffic and regional failover)</li>
+<li><strong>150ms p95 latency</strong> for the entire request lifecycle</li>
+<li><strong>Real-time ML inference</strong> for click-through rate prediction</li>
+<li><strong>Distributed auction mechanisms</strong> coordinating with 50+ external bidding partners</li>
+<li><strong>Multi-region deployment</strong> with eventual consistency challenges</li>
+</ul>
+<p><strong>What this post covers:</strong></p>
+<p>Building the architectural foundation requires making high-stakes decisions that cascade through every component. This post establishes the critical foundation:</p>
+<ul>
+<li><strong>Requirements and constraints</strong> - Translating business goals (maximize revenue, minimize latency) into quantifiable system requirements with clear trade-offs</li>
+<li><strong>High-level system architecture</strong> - The dual-source architecture that enables 100% fill rates while maintaining strict latency budgets</li>
+<li><strong>Latency budgeting</strong> - Decomposing 150ms into per-component allocations across network, databases, ML inference, and external RTB calls</li>
+<li><strong>Resilience patterns</strong> - Circuit breakers, graceful degradation, and multi-level fallback strategies that trade modest revenue loss for high availability</li>
+<li><strong>P99 tail latency defense</strong> - Deep dive into GC analysis showing how low-pause garbage collection technology prevents 10,000 requests/second from timing out</li>
+</ul>
+<p><strong>Why this foundation is critical:</strong></p>
+<p>Every architectural decision made here creates constraints and opportunities for the entire system:</p>
+<ul>
+<li><strong>Latency budgets</strong> force parallel execution patterns and limit database round-trips - there’s no room for sequential operations on the critical path</li>
+<li><strong>Resilience requirements</strong> allow aggressive optimization with safety nets - we can push components to their limits knowing degradation paths exist</li>
+<li><strong>Scale requirements</strong> (1M QPS) drive infrastructure sizing, caching strategies, and force distributed architecture - a single instance can’t handle this load</li>
+<li><strong>Financial accuracy requirements</strong> dictate consistency models - eventual consistency for user profiles, strong consistency for advertiser budgets</li>
+</ul>
+<p>Get these wrong and you’re building the wrong system. Underestimate latency budgets and you violate SLOs, losing revenue. Misunderstand resilience needs and peak traffic brings cascading failures.</p>
+<p>The ad tech industry uses specialized terminology. Let’s establish a common vocabulary before diving into the architecture.</p>
+<h2 id="glossary-ad-industry-terms">Glossary - Ad Industry Terms</h2>
+<p><strong>Programmatic Advertising:</strong> Automated buying and selling of ad inventory through real-time auctions. Contrasts with direct sales (guaranteed deals with fixed pricing).</p>
+<p><strong>SSP (Supply-Side Platform):</strong> Platform that publishers use to sell ad inventory. Runs auctions and connects to multiple DSPs to maximize revenue.</p>
+<p><strong>DSP (Demand-Side Platform):</strong> Platform that advertisers/agencies use to buy ad inventory across multiple publishers. Examples: Google DV360, The Trade Desk, Amazon DSP.</p>
+<p><strong>RTB (Real-Time Bidding):</strong> Programmatic auction protocol where ad impressions are auctioned in real-time (~100ms) as users load pages/apps. Each impression triggers a bid request to multiple DSPs.</p>
+<p><strong>OpenRTB:</strong> Industry standard protocol (maintained by IAB Tech Lab) defining the format for RTB communication. Current version: 2.6. Specifies JSON/HTTP format for bid requests and responses.</p>
+<p><strong>IAB (Interactive Advertising Bureau):</strong> Industry trade organization that develops technical standards (OpenRTB, VAST, VPAID) and provides viewability guidelines for digital advertising.</p>
+<p><strong>Pricing Models:</strong></p>
+<ul>
+<li><strong>CPM (Cost Per Mille):</strong> Cost per 1000 impressions. Most common model. Example: CPM of X = advertiser pays price X for every 1000 ad views.</li>
+<li><strong>CPC (Cost Per Click):</strong> Advertiser pays only when users click the ad. Risk shifts to publisher (no clicks = no revenue).</li>
+<li><strong>CPA (Cost Per Action/Acquisition):</strong> Advertiser pays only for conversions (app installs, purchases). Highest risk for publisher.</li>
+</ul>
+<p><strong>eCPM (Effective Cost Per Mille):</strong> Metric that normalizes different pricing models (CPM/CPC/CPA) to “revenue per 1000 impressions” for comparison. Formula: \(eCPM = \frac{\text{Total Earnings}}{\text{Total Impressions}} \times 1000\). Used to rank ads fairly in auctions.</p>
+<p><strong>CTR (Click-Through Rate):</strong> Percentage of ad impressions that result in clicks. Formula: \(CTR = \frac{\text{Clicks}}{\text{Impressions}} \times 100\). Typical range: 0.5-2% for display ads. Critical for converting CPC bids to eCPM.</p>
+<p>With this terminology established, we can now define the system requirements that will drive our architectural decisions.</p>
+<h2 id="requirements-and-constraints">Requirements and Constraints</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<p>The system must deliver four core capabilities:</p>
+<p><strong>1. Multi-Format Ad Delivery</strong></p>
+<p>The platform needs to support all standard ad formats: story ads, video ads, carousel ads, and AR-enabled ads across iOS, Android, and web. Creative assets are served from a CDN targeting sub-100ms first-byte time.</p>
+<p><strong>2. Real-Time Bidding (RTB) Integration</strong></p>
+<p>The platform implements OpenRTB 2.5+ to coordinate with 50+ demand-side platforms (DSPs) simultaneously. Industry standard RTB timeouts range from 100-200ms, with most platforms targeting 100ms to balance revenue and user experience.</p>
+<p>This creates an interesting challenge: executing 50+ parallel network calls within 100ms when some DSPs are geographically distant (NY-Asia RTT: 200-300ms). The system must handle both programmatic and guaranteed inventory with different SLAs and business logic.</p>
+<p><strong>3. ML-Powered Targeting and Optimization</strong></p>
+<p>Machine learning drives revenue optimization through:</p>
+<ul>
+<li>Real-time CTR (click-through rate) prediction for ad ranking</li>
+<li>Conversion rate optimization</li>
+<li>Dynamic creative optimization</li>
+<li>Budget pacing algorithms to distribute advertiser spend evenly over campaign duration</li>
+</ul>
+<p><strong>4. Campaign Management</strong></p>
+<p>The system provides real-time performance metrics, A/B testing frameworks, frequency capping (limiting ad repetition), quality scoring, and policy compliance.</p>
+<h3 id="architectural-drivers-the-three-non-negotiables">Architectural Drivers: The Three Non-Negotiables</h3>
+<p>Before diving into non-functional requirements, we need to establish the three <strong>immutable constraints</strong> that guide every design decision. Understanding these upfront helps explain the architectural choices throughout this post.</p>
+<p><strong>Driver 1: Latency (150ms p95 end-to-end)</strong></p>
+<p><strong>Why this matters:</strong> Mobile apps timeout after 150-200ms. Users expect ads to load instantly - if your ad is still loading when the page renders, you show a blank space and earn no revenue.</p>
+<p>Amazon’s 2006 study found that every 100ms of added latency costs ~1% of sales (this widely-cited metric originates from Amazon’s internal A/B testing, first publicly mentioned by Greg Linden and later referenced by Marissa Mayer at Google; see Kohavi &amp; Longbotham 2007, <a href="https://ai.stanford.edu/~ronnyk/2009controlledExperimentsOnTheWebSurvey.pdf">“Online Controlled Experiments at Large Scale”</a>). In advertising, this translates directly: slower ads = fewer impressions = less revenue.</p>
+<p>At our target scale of 1M queries per second, breaching the 150ms timeout threshold means mobile apps give up waiting, resulting in blank ad slots and complete revenue loss on those requests.</p>
+<p><strong>The constraint:</strong> Maintain 150ms p95 end-to-end latency for the complete request lifecycle - from when the user opens the app to when the ad displays.</p>
+<p><strong>Driver 2: Financial Accuracy (Zero Tolerance)</strong></p>
+<p><strong>Why this matters:</strong> Advertising is a financial transaction. When an advertiser sets a campaign budget, they expect to spend exactly that amount - not 5% more or 5% less.</p>
+<p>Billing discrepancies above 2-5% are considered material in industry practice and can trigger lawsuits. Even 1% errors generate complaints and credit demands. Beyond legal risk, billing errors destroy advertiser trust.</p>
+<p>The specific billing accuracy thresholds (≤1% target, &lt;2% acceptable, &gt;5% problematic) come from <strong>industry best practices</strong> and contractual SLAs rather than explicit regulations, though regulatory frameworks (FTC, EU Digital Services Act) do mandate transparent billing.</p>
+<p><strong>The constraint:</strong> Achieve ≤1% billing accuracy for all advertiser spend. Under-delivery (spending less than budget) costs revenue; over-delivery (spending more than budget) causes legal and trust issues.</p>
+<p><strong>Driver 3: Availability (99.9%+ Uptime)</strong></p>
+<p><strong>Why this matters:</strong> Unlike many services where downtime is annoying but tolerable, ad platforms lose revenue for every second they’re unavailable. No availability = no ads = no money.</p>
+<p>A 99.9% uptime target means 43 minutes of allowed downtime per month. This error budget must cover all sources of unavailability. However, through zero-downtime deployment and migration practices (detailed later in <a href="/blog/ads-platform-part-4-production/">Part 4</a>), we can eliminate <strong>planned</strong> downtime entirely, reserving the full 43 minutes for <strong>unplanned</strong> failures.</p>
+<p><strong>The constraint:</strong> Maintain 99.9%+ availability with the system remaining operational even when individual components fail. All planned operations (deployments, schema changes, configuration updates) must be zero-downtime.</p>
+<p><strong>Driver 4: Signal Availability (Privacy-First Reality)</strong></p>
+<p><strong>Why this matters:</strong> AdTech in 2024/2025 is defined by <strong>signal loss</strong>. Third-party cookies are dying (Chrome Privacy Sandbox), mobile identifiers are restricted (iOS ATT), and privacy regulations (GDPR, CCPA) limit data collection. The assumption that rich “User Profiles” are always available via stable <code>user_id</code> is increasingly false.</p>
+<p>The traditional ad tech stack assumed: request arrives → look up user → personalize ad. This breaks when:</p>
+<ul>
+<li><strong>iOS (ATT)</strong>: Only <a href="https://www.appsflyer.com/company/newsroom/pr/att-data-findings/">~50% of users opt-in</a> to tracking globally (varies significantly by region: Germany 20%, UAE 50%), and dual opt-in drops to ~27%</li>
+<li><strong>Chrome (Privacy Sandbox)</strong>: Third-party cookies replaced with Topics API (coarse interest signals)</li>
+<li><strong>Safari/Firefox</strong>: Third-party cookies blocked entirely since 2020</li>
+<li><strong>New users</strong>: No historical data available regardless of consent</li>
+</ul>
+<p><strong>The constraint:</strong> Design for <strong>graceful signal degradation</strong>. The system must serve relevant, revenue-generating ads across the full spectrum: from rich identity (logged-in users with full history) to zero identity (anonymous first-visit). This isn’t an edge case - it’s 40-60% of traffic on mobile inventory.</p>
+<p><strong>Impact on architecture:</strong> The User Profile Service becomes a <strong>dual-mode system</strong> - identity-based enrichment when available, contextual-only targeting as the primary fallback. ML models must be trained on contextual features (page content, device type, time of day, geo) as first-class signals, not afterthoughts. Revenue expectations must account for lower CPMs on contextual-only inventory (typically 30-50% lower than behaviorally-targeted inventory, though conversion efficiency can be comparable).</p>
+<p><strong>When These Constraints Conflict:</strong></p>
+<p>These four drivers sometimes conflict with each other. For example, ensuring financial accuracy may require additional verification steps that add latency. Maximizing availability might mean accepting some data staleness that could affect billing precision. Signal availability constraints may force simpler models that reduce revenue optimization.</p>
+<p>When trade-offs are necessary, we prioritize:</p>
+<p><strong>Financial Accuracy &gt; Availability &gt; Signal Availability &gt; Latency</strong></p>
+<p>Rationale: Legal and trust issues from billing errors have longer-lasting impact than temporary downtime; downtime has more severe consequences than privacy-compliant degradation; serving a slightly less personalized ad is better than timing out. Throughout this post, when you see architectural decisions that seem to sacrifice latency or personalization, they’re usually protecting financial accuracy or privacy compliance.</p>
+<h3 id="non-functional-requirements-performance-modeling">Non-Functional Requirements: Performance Modeling</h3>
+<p>Formalizing the performance constraints:</p>
+<p><strong>Latency Distribution Constraint:</strong>
+$$P(\text{Latency} \leq 150\text{ms}) \geq 0.95$$</p>
+<p>This constraint requires 95% of requests to complete within 150ms. Total latency is the sum of all services in the request path:</p>
+<p>$$T_{total} = \sum_{i=1}^{n} T_i$$</p>
+<p>where \(T_i\) is the latency of each service. With Real-Time Bidding (RTB) requiring 100-120ms for external DSP responses, plus internal services (ML inference, user profile, ad selection), the 150ms budget requires careful allocation.</p>
+<p>Strict latency budgets are critical: incremental service calls (“only 10ms each”) compound quickly. The 150ms SLO aligns with industry standard RTB timeout (100-120ms) while maintaining responsive user experience.</p>
+<p><strong>Latency Budget Breakdown:</strong></p>
+<ul>
+<li><strong>Total end-to-end SLO:</strong> 150ms p95</li>
+<li><strong>Internal services budget:</strong> ~50ms (network, gateway, user profile, ad selection)</li>
+<li><strong>RTB external calls:</strong> ~100ms (industry standard timeout)</li>
+<li><strong>ML inference:</strong> ~40ms (CPU-based GBDT serving)</li>
+</ul>
+<p>The 150ms total accommodates industry-standard RTB timeout (100ms) while maintaining responsive user experience. Internal services are optimized for &lt;50ms to leave budget for external DSP calls.</p>
+<p><strong>RTB Latency Reality Check:</strong> The 100ms RTB budget is aggressive given global network physics (NY-London: 60-80ms RTT, NY-Asia: 200-300ms RTT). Understanding RTB timeouts requires distinguishing between specification and operational practice:</p>
+<ul>
+<li><strong>100ms timeout (tmax)</strong>: The OpenRTB specification timeout - the <strong>failure deadline</strong> when we give up waiting for DSP responses. This is the maximum time we’ll wait.</li>
+<li><strong>50-70ms operational target</strong>: The <strong>quality auction target</strong> - the time by which we aim to have most responses. Waiting beyond 70ms yields only +1-2% additional revenue but adds 30ms latency.</li>
+</ul>
+<p>Achieving practical 50-70ms operational targets while maintaining 100ms as fallback requires three optimizations:</p>
+<ol>
+<li><strong>Geographic sharding</strong> - Regional ad server clusters call geographically-local DSPs only (15-25ms RTT)</li>
+<li><strong>Dynamic bidder health scoring</strong> - De-prioritize or skip consistently slow/low-value DSPs</li>
+<li><strong>Adaptive early termination</strong> - Progressive auction at 50ms, 70ms, 80ms cutoffs capturing 95-97% revenue</li>
+</ol>
+<p>Without these optimizations, global DSP calls would routinely exceed 100ms. Geographic sharding and adaptive timeout strategies are covered in detail in <a href="/blog/ads-platform-part-2-rtb-ml-pipeline/#rtb-geographic-sharding-and-timeout-strategy">Part 2’s RTB integration section</a>.</p>
+<p><strong>Throughput Requirements:</strong></p>
+<p>Target peak load:
+$$Q_{peak} \geq 1.5 \times 10^6 \text{ QPS}$$</p>
+<p>Using Little’s Law to relate throughput, latency, and concurrency. With service time \(S\) and \(N\) servers:
+$$N = \frac{Q_{peak} \times S}{U_{target}}$$</p>
+<p>where \(U_{target}\) is target utilization. This fundamental queueing theory relationship helps us understand the capacity needed to handle peak traffic while maintaining acceptable response times.</p>
+<p><strong>Availability Constraint:</strong></p>
+<p>Target “three nines” (99.9% uptime):
+$$A = \frac{\text{MTBF}}{\text{MTBF} + \text{MTTR}} \geq 0.999$$</p>
+<p>where MTBF = Mean Time Between Failures, MTTR = Mean Time To Recovery.</p>
+<p>This translates to <strong>43 minutes</strong> of allowed downtime per month. Through zero-downtime deployments (detailed in <a href="/blog/ads-platform-part-4-production/">Part 4</a>), we eliminate <strong>planned</strong> downtime entirely, reserving the full error budget for <strong>unplanned</strong> failures.</p>
+<p><strong>Consistency Requirements:</strong></p>
+<p>Different data types require different consistency guarantees. Treating everything as strongly consistent degrades performance, while treating everything as eventually consistent creates financial and correctness issues.</p>
+<ul>
+<li>
+<p><strong>Financial data</strong> (ad spend, billing): Strong consistency required
+$$\forall t_1 &lt; t_2: \text{Read}(t_2) \text{ observes } \text{Write}(t_1)$$</p>
+<p>Billing accuracy is non-negotiable, but engineering trade-offs create acceptable bounds. The system must prevent unbounded over-delivery from race conditions. <strong>Bounded over-delivery ≤1% of budget</strong> is acceptable due to practical constraints like server failures and network partitions.</p>
+<p>Under-delivery is worse (lost revenue + advertiser complaints), so slight over-delivery is the lesser evil. Legal precedent: lawsuits arise from systematic errors &gt;2-5% (precedent: Google/advertiser settlement 2019), not sub-1% technical variance.</p>
+</li>
+<li>
+<p><strong>User preferences and profiles</strong>: Eventual consistency acceptable
+$$\lim_{t \to \infty} P(\text{AllReplicas consistent}) = 1$$</p>
+<p>If a user updates their interests and sees old targeting for a few seconds, it’s not critical.</p>
+<p><strong>Practical example:</strong> User adds “fitness equipment” to their interests. If they see ads for electronics for the next 10-20 seconds while the update propagates across replicas, that’s acceptable. The user doesn’t even notice, and we haven’t lost revenue.</p>
+</li>
+<li>
+<p><strong>Operational dashboards and reporting</strong>: Eventual consistency acceptable</p>
+<p>Real-time dashboards showing “impressions served so far today” can tolerate 10-30 second staleness. Advertisers checking campaign progress don’t need millisecond-accurate counts.</p>
+</li>
+</ul>
+<p><strong>Key insight:</strong> The challenge is reconciling strong consistency requirements for financial data with the latency constraints. Without proper atomic enforcement, race conditions could cause severe over-budget scenarios (e.g., multiple servers simultaneously allocating from the same budget). This is addressed through distributed budget pacing with atomic counters, covered in <a href="/blog/ads-platform-part-3-data-revenue/">Part 3</a>.</p>
+<h3 id="scale-analysis">Scale Analysis</h3>
+<p><strong>Data Volume Estimation:</strong></p>
+<p>With 400M Daily Active Users (DAU), averaging 20 ad requests/user/day:</p>
+<ul>
+<li>Daily ad requests: <strong>8B requests/day</strong></li>
+<li>Daily log volume (at 1KB per log): <strong>8TB/day</strong></li>
+</ul>
+<p><strong>Storage Requirements:</strong></p>
+<ul>
+<li>User profiles (10KB per user): <strong>4TB</strong></li>
+<li>Historical ad performance (30 days retention, 100B per impression): <strong>~24TB</strong></li>
+</ul>
+<p><strong>Cache Requirements:</strong></p>
+<p>To achieve acceptable response times, frequently accessed data needs to be cached. User access patterns follow a power law distribution where a small fraction of users generate the majority of traffic.</p>
+<p>Estimated cache needs: <strong>~800GB</strong> of hot data to serve most requests from memory.</p>
+<p><em>Note: Detailed analysis of cache sizing, hit rate optimization, and distribution strategies is covered in <a href="/blog/ads-platform-part-3-data-revenue/">Part 3</a>.</em></p>
+<hr />
+<h2 id="system-architecture-overview">System Architecture Overview</h2>
+<p>Before diving into detailed diagrams and flows, let’s establish the fundamental architectural principles and component structure that shapes this platform.</p>
+<h3 id="service-architecture-and-component-boundaries">Service Architecture and Component Boundaries</h3>
+<p>Before diving into individual components, let’s establish the logical view of the system. The diagram below shows component boundaries and their relationships - this is a <strong>conceptual overview</strong> to build intuition. Detailed request flows, protocols, and integration patterns follow in subsequent sections.</p>
+<pre class="mermaid">
+    
+    graph TB
+    subgraph "Client Layer"
+        CLIENT[Publishers & Users<br/>Mobile Apps, Websites]
+    end
+
+    subgraph "API Gateway Layer"
+        GW[API Gateway<br/>Auth, Rate Limiting, Routing]
+    end
+
+    subgraph "Core Request Processing"
+        ORCH[Ad Server Orchestrator<br/>Request Coordination & Auction]
+    end
+
+    subgraph "Profile & Security Services"
+        PROFILE[User Profile Service<br/>Identity + Contextual Dual-Mode]
+        INTEGRITY[Integrity Check Service<br/>Fraud Detection, Validation]
+    end
+
+    subgraph "Revenue Engine Services"
+        FEATURE[Feature Store<br/>ML Features Cache]
+        ML[ML Inference Service<br/>CTR Prediction, eCPM Scoring]
+        RTB[RTB Gateway<br/>External DSP Coordination]
+    end
+
+    subgraph "Financial & Auction Services"
+        AUCTION[Auction Service<br/>Unified eCPM Ranking]
+        BUDGET[Budget Service<br/>Spend Control, Atomic Ops]
+    end
+
+    subgraph "Storage Layer"
+        CACHE[(L1/L2 Cache<br/>Caffeine + Valkey)]
+        DB[(Database<br/>Transactional Storage)]
+        DATALAKE[(Data Lake<br/>Analytics & ML Training)]
+    end
+
+    CLIENT --> GW
+    GW --> ORCH
+
+    ORCH --> PROFILE
+    ORCH --> INTEGRITY
+    ORCH --> ML
+    ORCH --> RTB
+    ORCH --> AUCTION
+    ORCH --> BUDGET
+
+    PROFILE --> CACHE
+    ML --> FEATURE
+    FEATURE --> CACHE
+    BUDGET --> CACHE
+
+    PROFILE --> DB
+    BUDGET --> DB
+    AUCTION --> DB
+
+    ML --> DATALAKE
+
+    style ORCH fill:#e1f5ff
+    style GW fill:#fff4e1
+    style CACHE fill:#f0f0f0
+    style DB fill:#f0f0f0
+    style DATALAKE fill:#f0f0f0
+</pre>
+<p><strong>Note:</strong> This diagram represents logical component boundaries, not physical deployment topology. In production, services are distributed across multiple regions with complex networking, service mesh, and data replication - those details are covered in <a href="/blog/ads-platform-part-4-production/">Part 4</a> and <a href="/blog/ads-platform-part-5-implementation/">Part 5</a>.</p>
+<p><strong>Component Overview</strong></p>
+<p>The platform decomposes into focused, independently scalable services. Each service owns a specific domain with clear responsibilities:</p>
+<p><strong>Ad Server Orchestrator</strong> - The central coordinator that orchestrates the entire ad request lifecycle. Receives requests, coordinates parallel calls to all downstream services (User Profile, Integrity Check, ML Inference, RTB Gateway), manages timeouts, runs the unified auction, and returns the winning ad. Stateless and horizontally scaled to handle 1M+ QPS.</p>
+<p><strong>User Profile Service</strong> - Manages user targeting data through a <strong>dual-mode architecture</strong> designed for signal loss reality. When identity is available (stable user_id via login or device ID), enriches requests with demographics, interests, and behavioral history. When identity is unavailable (ATT opt-out, cookie-blocked browsers, new users), falls back to <strong>contextual-only mode</strong> using request-time signals: page URL/content, device type, geo-IP, time of day, and Topics API categories. Optimized for read-heavy workloads with aggressive caching (95%+ cache hit rate). Tolerates eventual consistency - profile updates can lag by seconds without business impact. The dual-mode design ensures 100% of requests receive targeting signals regardless of identity availability.</p>
+<p><strong>Integrity Check Service</strong> - Validates request authenticity, detects fraud patterns, enforces rate limits. First line of defense against bot traffic and malicious requests. Must be fast (5ms budget) to stay off critical path.</p>
+<p><strong>Feature Store</strong> - Serves pre-computed ML features for CTR prediction. Fed by batch and streaming pipelines that aggregate user engagement history, contextual signals, and temporal patterns. Caches features aggressively to meet 10ms latency budget.</p>
+<p><strong>ML Inference Service</strong> - Runs gradient boosted decision trees (GBDT) for click-through rate prediction. Converts advertiser bids (CPM/CPC/CPA) into comparable eCPM scores for fair auction ranking. CPU-based inference for cost efficiency at 1M QPS scale.</p>
+<p><strong>RTB Gateway</strong> - Broadcasts bid requests to 50+ external demand-side platforms (DSPs) via OpenRTB protocol. Handles connection pooling, timeout management, partial auction logic. Geographically distributed to minimize latency to DSP data centers.</p>
+<p><strong>Auction Service</strong> - Executes the unified auction that ranks all bids (internal ML-scored + external RTB) by eCPM. Applies quality scores, reserve prices, and selects the winner. Stateless computation - no data persistence.</p>
+<p><strong>Budget Service</strong> - Enforces advertiser campaign budgets through distributed atomic operations. Requires strong consistency - cannot tolerate budget overspend. Uses distributed cache with atomic compare-and-swap operations and pre-allocation pattern to achieve 3ms latency.</p>
+<p><strong>Why these boundaries:</strong></p>
+<p>Service boundaries align with data access patterns, consistency requirements, and scaling characteristics:</p>
+<ul>
+<li><strong>Read-heavy vs write-heavy</strong>: User Profile (read-heavy, aggressive cache) vs Budget Service (write-heavy, atomic ops)</li>
+<li><strong>Consistency needs</strong>: Budget Service (strong consistency, atomic operations) vs User Profile (eventual consistency, cached)</li>
+<li><strong>Latency sensitivity</strong>: Integrity Check (5ms, simple logic) vs ML Inference (40ms, complex computation)</li>
+<li><strong>External dependencies</strong>: RTB Gateway (manages 50+ external DSPs) isolated from core services</li>
+<li><strong>Technology fit</strong>: ML Service (CPU-optimized) vs Ad Server Orchestrator (memory-optimized for object allocation)</li>
+</ul>
+<h3 id="stateless-design-philosophy">Stateless Design Philosophy</h3>
+<p>All request-handling services (Ad Server, Auction, ML Inference, RTB Gateway) are <strong>stateless</strong> - they hold no session state between requests. This enables:</p>
+<ul>
+<li><strong>Horizontal scaling</strong>: Add instances without coordination or data migration</li>
+<li><strong>Fault tolerance</strong>: Failed instances replaced instantly without state recovery</li>
+<li><strong>Load balancing</strong>: Traffic distributes freely across instances</li>
+<li><strong>Zero-downtime deployments</strong>: Rolling updates with no session disruption</li>
+</ul>
+<p>State lives in dedicated storage layers (multi-tier cache hierarchy and strongly-consistent databases) accessed by stateless services. This separation of compute and storage is fundamental to the architecture.</p>
+<h3 id="service-independence-and-failure-isolation">Service Independence and Failure Isolation</h3>
+<p>Services communicate synchronously (gRPC) but are designed to fail independently:</p>
+<ul>
+<li><strong>Ad Server Orchestrator</strong> can timeout a slow service without blocking the entire request</li>
+<li><strong>Feature Store</strong> failure triggers fallback to cold-start features (10% revenue impact vs 100% if blocking)</li>
+<li><strong>RTB Gateway</strong> timeout doesn’t prevent internal ML auction from proceeding</li>
+<li><strong>Circuit breakers</strong> isolate failures, preventing cascades</li>
+</ul>
+<p>This failure isolation is critical at 1M QPS - any service failure must degrade gracefully rather than propagate.</p>
+<p><em>Detailed implementation of RTB Gateway (OpenRTB protocol, DSP coordination, timeout handling) and ML Inference pipeline (Feature Store architecture, GBDT model serving, feature engineering) are covered in <a href="/blog/ads-platform-part-2-rtb-ml-pipeline/">Part 2</a>.</em></p>
+<h2 id="data-architecture">Data Architecture</h2>
+<p>State management drives many architectural decisions. The platform requires three distinct storage patterns, each with different consistency, latency, and access characteristics.</p>
+<h3 id="storage-pattern-requirements">Storage Pattern Requirements</h3>
+<p><strong>Pattern 1: Strongly Consistent Transactional Data</strong></p>
+<ul>
+<li>Campaign configurations, advertiser budgets, billing records</li>
+<li>Requirement: Multi-region strong consistency with audit trails</li>
+<li>Constraint: Must survive regional failures without data loss</li>
+<li>Access pattern: Low-volume writes (1K-10K QPS), moderate reads</li>
+<li>Technology category: Distributed SQL or strongly consistent NoSQL</li>
+</ul>
+<p><strong>Pattern 2: High-Throughput Atomic Operations</strong></p>
+<ul>
+<li>Budget counters, rate limiting state, idempotency keys</li>
+<li>Requirement: Sub-millisecond atomic updates at 1M+ QPS</li>
+<li>Constraint: Distributed coordination without locks</li>
+<li>Access pattern: High-volume reads and writes (1M+ QPS)</li>
+<li>Technology category: In-memory distributed cache with atomic operations</li>
+</ul>
+<p><strong>Pattern 3: Read-Heavy Profile Data</strong></p>
+<ul>
+<li>User targeting profiles, engagement history</li>
+<li>Requirement: 1M+ reads/sec with predictable single-digit ms latency</li>
+<li>Constraint: Tolerates eventual consistency (seconds of lag acceptable)</li>
+<li>Access pattern: Extremely read-heavy (99%+ reads), global distribution</li>
+<li>Technology category: Globally replicated NoSQL document store</li>
+</ul>
+<h3 id="consistency-requirements-by-data-type">Consistency Requirements by Data Type</h3>
+<p>Different data has different correctness requirements:</p>
+<table><thead><tr><th>Data Type</th><th>Consistency Need</th><th>Storage Pattern</th><th>Rationale</th></tr></thead><tbody>
+<tr><td><strong>Advertiser budgets</strong></td><td>Strong (≤1% variance)</td><td>Pattern 2 + Pattern 1 ledger</td><td>Financial accuracy non-negotiable</td></tr>
+<tr><td><strong>User profiles</strong></td><td>Eventual (seconds lag OK)</td><td>Pattern 3</td><td>Profile updates don’t need instant visibility</td></tr>
+<tr><td><strong>Campaign configs</strong></td><td>Strong (immediate visibility)</td><td>Pattern 1</td><td>Advertiser changes must take effect immediately</td></tr>
+<tr><td><strong>ML features</strong></td><td>Eventual (minutes lag OK)</td><td>Pattern 2 cache</td><td>Stale features have minimal impact on CTR prediction</td></tr>
+<tr><td><strong>Billing events</strong></td><td>Strong (linearizable)</td><td>Pattern 1 with ordering guarantees</td><td>Financial audit trails require total ordering</td></tr>
+</tbody></table>
+<p>This tiered approach optimizes for both performance (eventual consistency where acceptable) and correctness (strong consistency where required).</p>
+<h3 id="caching-strategy">Caching Strategy</h3>
+<p>To meet the 10ms latency budget for user profile and feature lookups at 1M+ QPS, aggressive caching is mandatory. A multi-tier cache hierarchy reduces database load by 95%:</p>
+<ul>
+<li><strong>L1 (In-Process)</strong>: Sub-millisecond reads, limited by JVM heap size</li>
+<li><strong>L2 (Distributed)</strong>: 1-2ms reads, shared across all service instances</li>
+<li><strong>L3 (Database)</strong>: Fallback for cache misses</li>
+</ul>
+<p><em><a href="/blog/ads-platform-part-3-data-revenue/">Part 3</a> covers the complete data layer: specific technology selection for strongly-consistent transactional storage, distributed caching, and user profile storage, plus cache architecture implementation, hit rate optimization, invalidation strategies, and clustering patterns.</em></p>
+<h2 id="communication-architecture">Communication Architecture</h2>
+<p>Services communicate synchronously using a binary RPC protocol for internal calls and REST for external integrations. This section explains why these choices align with latency requirements and operational constraints.</p>
+<h3 id="internal-service-communication-binary-rpc">Internal Service Communication: Binary RPC</h3>
+<p>All internal service-to-service calls (Ad Server → User Profile, Ad Server → ML Service, etc.) use a <strong>binary RPC protocol over HTTP/2</strong>.</p>
+<p><strong>Why binary RPC:</strong></p>
+<ul>
+<li><strong>Performance</strong>: Binary serialization is 3-10× smaller than JSON, reducing network overhead</li>
+<li><strong>HTTP/2 multiplexing</strong>: Multiple requests share single TCP connection, avoiding connection setup overhead</li>
+<li><strong>Type safety</strong>: Schema-based contracts provide compile-time validation between services</li>
+<li><strong>Latency</strong>: Sub-millisecond serialization overhead vs 2-5ms for JSON parsing</li>
+</ul>
+<p><strong>At 1M QPS scale</strong>, JSON serialization would add 2-5ms per request - consuming 40-50% of the latency budget. Binary protocols keep serialization overhead under 1ms.</p>
+<h3 id="external-communication-rest-json">External Communication: REST/JSON</h3>
+<p>External integrations (RTB DSPs, client apps) use <strong>REST with JSON</strong> over HTTP/1.1 or HTTP/2.</p>
+<p><strong>Why REST for external:</strong></p>
+<ul>
+<li><strong>Industry standard</strong>: OpenRTB protocol mandates JSON over HTTP</li>
+<li><strong>Compatibility</strong>: External DSPs expect REST/JSON</li>
+<li><strong>Debugging</strong>: JSON is human-readable, simplifying integration debugging</li>
+<li><strong>Flexibility</strong>: REST doesn’t require schema sharing with external parties</li>
+</ul>
+<p><strong>Trade-off accepted</strong>: External REST calls (RTB) have higher serialization overhead, but they’re already consuming 100ms for network RTT - the 2-5ms JSON overhead is negligible compared to network latency.</p>
+<h3 id="why-not-asynchronous-messaging">Why Not Asynchronous Messaging?</h3>
+<p>The architecture is <strong>synchronous request/response</strong> rather than event-driven/async messaging.</p>
+<p><strong>Why synchronous:</strong></p>
+<ul>
+<li><strong>Latency requirements</strong>: 150ms end-to-end budget doesn’t allow time for message queue hops</li>
+<li><strong>Request-scoped transactions</strong>: Each ad request is independent - no shared state across requests</li>
+<li><strong>Failure handling</strong>: Immediate timeout/retry decisions vs delayed processing in queues</li>
+<li><strong>Debugging</strong>: Synchronous stack traces are easier to debug than distributed event traces</li>
+</ul>
+<p><strong>Async messaging exists</strong> for non-critical-path workflows (billing events, analytics pipelines, ML feature computation), but the ad serving critical path is fully synchronous.</p>
+<h3 id="service-discovery">Service Discovery</h3>
+<p>Services discover each other via <strong>DNS-based service discovery</strong> within the container orchestration platform.</p>
+<ul>
+<li>Service names resolve to cluster IPs</li>
+<li>No external service registry - platform-native DNS handles discovery</li>
+<li>Client-side load balancing via RPC framework built-in routing</li>
+</ul>
+<p><em><a href="/blog/ads-platform-part-5-implementation/">Part 5</a> (Final Architecture) covers complete technology selection and configuration: gRPC setup, container orchestration architecture, connection pooling strategies, and service mesh implementation.</em></p>
+<h2 id="deployment-architecture">Deployment Architecture</h2>
+<p>The platform deploys as a distributed system across multiple regions. This section establishes the deployment model and scaling principles - specific instance counts, cluster sizing, and resource allocation are covered in <a href="/blog/ads-platform-part-5-implementation/">Part 5</a>’s implementation blueprint.</p>
+<h3 id="horizontal-scaling-model">Horizontal Scaling Model</h3>
+<p>All request-handling services are <strong>stateless</strong> and scale horizontally by adding instances. This architectural choice enables:</p>
+<p><strong>Elastic capacity management:</strong></p>
+<ul>
+<li>Add instances during traffic spikes (holidays, viral events, new publisher onboarding)</li>
+<li>Remove instances during off-peak hours to reduce costs</li>
+<li>No coordination required between instances - each handles requests independently</li>
+</ul>
+<p><strong>Fault tolerance:</strong></p>
+<ul>
+<li>Failed instances are replaced automatically without state recovery</li>
+<li>No session affinity required - any instance can handle any request</li>
+<li>Graceful degradation: losing 10% of instances reduces capacity by 10%, not catastrophic failure</li>
+</ul>
+<p><strong>Zero-downtime deployments:</strong></p>
+<ul>
+<li>Rolling updates across instance pool</li>
+<li>New instances start serving traffic once healthy</li>
+<li>Old instances drain connections gracefully</li>
+</ul>
+<p><strong>Scaling characteristics by service type:</strong></p>
+<ul>
+<li><strong>Request-path services</strong> (Ad Server, ML Inference, User Profile): Scale based on QPS and CPU utilization</li>
+<li><strong>Atomic operation services</strong> (Budget Service): Scale based on write throughput and contention metrics</li>
+<li><strong>External integration services</strong> (RTB Gateway): Scale based on DSP fanout and connection pool saturation</li>
+</ul>
+<p><strong>Why stateless matters:</strong> At 1M+ QPS, stateful services create operational nightmares - instance failures require state migration, deploys need session draining, and horizontal scaling requires data sharding. Stateless design eliminates these concerns by pushing state to dedicated storage layers (distributed cache, database) that are designed for consistency and durability.</p>
+<h3 id="multi-region-deployment">Multi-Region Deployment</h3>
+<p>The platform deploys across <strong>multiple geographic regions</strong> to satisfy availability, latency, and data sovereignty requirements.</p>
+<p><strong>Why multi-region is mandatory:</strong></p>
+<ul>
+<li><strong>Availability target</strong>: 99.9% uptime (43 min/month error budget) cannot survive single-region failures. Cloud providers have multi-hour regional outages multiple times per year.</li>
+<li><strong>Latency optimization</strong>: Serving users from the nearest region reduces network RTT by 50-100ms. A US user reaching EU servers adds 80-120ms before processing even starts - violating the 150ms P95 budget.</li>
+<li><strong>Data residency</strong>: GDPR requires EU user data stays in EU regions. Single-region deployment forces choosing between compliance violations or serving all traffic from EU (unacceptable latency for US/APAC users).</li>
+<li><strong>Blast radius containment</strong>: Regional isolation limits the impact of configuration errors, deployment bugs, or capacity exhaustion.</li>
+</ul>
+<p><strong>Regional deployment model:</strong></p>
+<ul>
+<li><strong>Active-active architecture</strong>: All regions serve production traffic simultaneously (no idle standby regions wasting capacity)</li>
+<li><strong>Over-provisioned capacity</strong>: Each region sized to handle more than its baseline share to absorb failover traffic from another region</li>
+<li><strong>GeoDNS routing</strong>: Traffic directed to geographically nearest healthy region with automatic failover</li>
+</ul>
+<p><strong>Data layer considerations:</strong></p>
+<ul>
+<li><strong>Strongly-consistent data</strong> (budgets, billing): Multi-region replication with consensus protocols for consistency</li>
+<li><strong>Eventually-consistent data</strong> (user profiles, features): Async replication with bounded lag acceptable</li>
+<li><strong>Region-pinned data</strong> (GDPR): EU user data never leaves EU region, even during failover</li>
+</ul>
+<p><strong>Failover behavior:</strong> When a region fails health checks, GeoDNS redirects traffic to next-nearest healthy region within 2-5 minutes. The surviving regions absorb the additional load without user-visible degradation due to over-provisioned capacity.</p>
+<p><em>Operational details of multi-region failover (GeoDNS health checks, split-brain prevention, regional budget pacing, RTO/RPO targets) are covered in <a href="/blog/ads-platform-part-4-production/">Part 4</a>. Specific regional sizing, instance counts, and cluster configurations are detailed in <a href="/blog/ads-platform-part-5-implementation/">Part 5</a>.</em></p>
+<h3 id="financial-integrity-immutable-audit-log">Financial Integrity: Immutable Audit Log</h3>
+<p><strong>Compliance Requirement:</strong></p>
+<p>The operational ledger (CockroachDB) is mutable by design - rows can be updated for budget corrections, deleted during cleanup, or modified by database administrators. This violates SOX (Sarbanes-Oxley) and tax compliance requirements for non-repudiable financial records. Regulators and auditors require immutable, cryptographically verifiable transaction history that cannot be tampered with after the fact.</p>
+<p><strong>Architectural Solution:</strong></p>
+<p>Implement <strong>dual-ledger architecture</strong> separating concerns:</p>
+<ul>
+<li><strong>Operational Ledger</strong> (CockroachDB): Mutable system optimized for real-time transactions (budget checks, billing writes) with 3ms latency</li>
+<li><strong>Immutable Audit Log</strong> (Kafka → ClickHouse): Append-only permanent record for compliance, storing every financial event (budget deductions, charges, refunds) with cryptographic hash chaining</li>
+</ul>
+<p>Every financial operation publishes an event to Kafka <code>financial-events</code> topic, which ClickHouse consumes into append-only MergeTree tables. ClickHouse retains records for 7 years (tax compliance requirement) with hash-based integrity verification preventing undetected tampering. Daily reconciliation job compares both systems to detect discrepancies.</p>
+<p><strong>Trade-off:</strong> Additional infrastructure complexity (Kafka cluster + ClickHouse deployment) and operational overhead (reconciliation monitoring) for regulatory compliance and audit confidence. Cost increase approximately 15-20% of database infrastructure budget, but eliminates compliance risk and enables advertiser dispute resolution with verifiable records.</p>
+<p>Detailed architecture covered in <a href="/blog/ads-platform-part-3-data-revenue/#immutable-financial-audit-log-compliance-architecture">Part 3’s Immutable Audit Log section</a>, implementation details in <a href="/blog/ads-platform-part-5-implementation/#immutable-audit-log-technology-stack">Part 5</a>.</p>
+<h3 id="load-balancing-and-traffic-distribution">Load Balancing and Traffic Distribution</h3>
+<p>Traffic flows through multiple load balancing layers, each serving a distinct purpose:</p>
+<p><strong>1. GeoDNS (Global Traffic Distribution)</strong></p>
+<ul>
+<li>Routes users to nearest healthy region based on geographic location</li>
+<li>DNS-based routing with health check integration</li>
+<li>Failover latency: 2-5 minutes (DNS TTL propagation time)</li>
+</ul>
+<p><strong>2. Regional Load Balancer (Availability Zone Distribution)</strong></p>
+<ul>
+<li>Distributes traffic across availability zones within a region</li>
+<li>Protects against datacenter-level failures</li>
+<li>Health checks at network layer (L4) and application layer (L7)</li>
+</ul>
+<p><strong>3. Service Mesh (Service Instance Distribution)</strong></p>
+<ul>
+<li>Distributes traffic across service instances with fine-grained health checks</li>
+<li>Enables circuit breakers, retries, and timeout enforcement</li>
+<li>Provides observability (latency histograms, error rates per instance)</li>
+</ul>
+<p><strong>4. Client-Side Load Balancing (RPC-Level Distribution)</strong></p>
+<ul>
+<li>Services use client-side load balancing for direct service-to-service calls</li>
+<li>Avoids extra network hop through centralized load balancer</li>
+<li>Round-robin or least-connections algorithms depending on workload</li>
+</ul>
+<p><strong>Why multi-tier load balancing:</strong> Each layer optimizes for different failure domains and timescales. GeoDNS handles region failures (minutes), regional LB handles zone failures (seconds), service mesh handles instance failures (sub-second), and client-side LB handles request-level distribution (milliseconds).</p>
+<p>This layered approach ensures traffic always reaches healthy capacity at every level of the infrastructure stack.</p>
+<h2 id="high-level-architecture">High-Level Architecture</h2>
+<h3 id="system-components-and-request-flow">System Components and Request Flow</h3>
+<pre class="mermaid">
+    
+    graph TB
+    subgraph "Client Layer"
+        CLIENT[Mobile/Web Client<br/>iOS, Android, Browser]
+    end
+
+    subgraph "Edge Layer"
+        CDN[Content Delivery Network<br/>Global PoPs<br/>Static assets]
+        GLB[Global Load Balancer<br/>GeoDNS + Health Checks]
+    end
+
+    subgraph "Regional Service Layer - Primary Region"
+        GW[API Gateway<br/>Rate Limiting: 1M QPS<br/>Auth: JWT/OAuth<br/>Service Mesh Integration]
+        AS[Ad Server Orchestrator<br/>Stateless, Horizontally Scaled<br/>150ms latency budget]
+
+        subgraph "Core Services"
+            UP[User Profile Service<br/>Identity + Contextual<br/>Target: 10ms]
+            INTEGRITY[Integrity Check Service<br/>Lightweight Fraud Filter<br/>Target: <5ms]
+            AD_SEL[Ad Selection Service<br/>Candidate Retrieval<br/>Target: 15ms]
+            ML[ML Inference Service<br/>CTR Prediction<br/>Target: 40ms]
+            RTB[RTB Auction Service<br/>OpenRTB Protocol<br/>Target: 100ms]
+            BUDGET[Atomic Pacing Service<br/>Pre-Allocation<br/>Strong Consistency]
+            AUCTION[Auction Logic<br/>Combine Internal + RTB<br/>First-Price Auction]
+        end
+
+        subgraph "Data Layer"
+            DISTRIBUTED_CACHE[(Distributed Cache<br/>Atomic Operations<br/>Budget Enforcement)]
+            TRANSACTIONAL_DB[(Strongly Consistent DB<br/>Billing Ledger + User Profiles<br/>Logical Timestamps<br/>Multi-Region ACID)]
+            FEATURE_STORE[(Feature Store<br/>ML Features<br/>Sub-10ms p99)]
+        end
+    end
+
+    subgraph "Data Processing Pipeline - Background"
+        EVENT_STREAM[Event Streaming<br/>100K events/sec]
+        STREAM_PROC[Stream Processing<br/>Real-time Aggregation]
+        BATCH_PROC[Batch Processing<br/>Feature Engineering]
+        DATA_LAKE[(Object Storage<br/>Data Lake + Cold Archive<br/>500TB+ daily + 7-year retention)]
+    end
+
+    subgraph "ML Training Pipeline - Offline"
+        WORKFLOW[Workflow Orchestration]
+        TRAIN[Training Cluster<br/>Daily CTR Model<br/>Retraining]
+        REGISTRY[Model Registry<br/>Versioning<br/>A/B Testing]
+    end
+
+    subgraph "Observability"
+        METRICS[Metrics Collection<br/>Time-series DB]
+        TRACING[Distributed Tracing<br/>Span Collection]
+        DASHBOARDS[Visualization<br/>Dashboards & Alerts]
+    end
+
+    CLIENT --> CDN
+    CLIENT --> GLB
+    GLB --> GW
+    GW --> AS
+
+    AS -->|Fetch User| UP
+    AS -->|Check Fraud| INTEGRITY
+    AS -->|Get Ads| AD_SEL
+    AS -->|RTB Parallel| RTB
+    AS -->|Score Ads| ML
+    AS -->|Run Auction| AUCTION
+    AS -->|Check Budget| BUDGET
+
+    UP -->|Read| DISTRIBUTED_CACHE
+    UP -->|Read| TRANSACTIONAL_DB
+
+    INTEGRITY -->|Read Bloom Filter| DISTRIBUTED_CACHE
+    INTEGRITY -->|Read Reputation| DISTRIBUTED_CACHE
+
+    AD_SEL -->|Read| DISTRIBUTED_CACHE
+    AD_SEL -->|Read| TRANSACTIONAL_DB
+
+    ML -->|Read Features| FEATURE_STORE
+
+    RTB -->|OpenRTB 2.x| EXTERNAL[50+ DSP Partners]
+
+    BUDGET -->|Atomic Ops| DISTRIBUTED_CACHE
+    BUDGET -->|Audit Trail| TRANSACTIONAL_DB
+
+    AS -.->|Async Events| EVENT_STREAM
+    EVENT_STREAM --> STREAM_PROC
+    STREAM_PROC --> DISTRIBUTED_CACHE
+    STREAM_PROC --> DATA_LAKE
+    BATCH_PROC --> DATA_LAKE
+    BATCH_PROC --> FEATURE_STORE
+
+    TRANSACTIONAL_DB -.->|Nightly Archive<br/>90-day-old records| DATA_LAKE
+
+    WORKFLOW --> TRAIN
+    TRAIN --> REGISTRY
+    REGISTRY --> ML
+
+    AS -.-> METRICS
+    AS -.-> TRACING
+
+    classDef client fill:#e1f5ff,stroke:#0066cc
+    classDef edge fill:#fff4e1,stroke:#ff9900
+    classDef service fill:#e8f5e9,stroke:#4caf50
+    classDef data fill:#f3e5f5,stroke:#9c27b0
+    classDef stream fill:#ffe0b2,stroke:#e65100
+
+    class CLIENT client
+    class CDN,GLB edge
+    class GW,AS,UP,AD_SEL,ML,RTB,BUDGET,AUCTION service
+    class DISTRIBUTED_CACHE,TRANSACTIONAL_DB,FEATURE_STORE,DATA_LAKE data
+    class EVENT_STREAM,STREAM_PROC,BATCH_PROC stream
+</pre>
+<p><strong>Request Flow Sequence:</strong></p>
+<p>The diagram above shows both the <strong>critical request path</strong> (solid lines) and <strong>background processing</strong> (dotted lines). Here’s what happens during a single ad request:</p>
+<p><strong>1. Request Ingress (15ms total)</strong></p>
+<ul>
+<li>Client sends ad request to Global Load Balancer</li>
+<li>Load balancer routes to nearest regional gateway (10ms network latency)</li>
+<li>API Gateway performs authentication, rate limiting, request enrichment (5ms)</li>
+</ul>
+<p><strong>2. Identity &amp; Fraud Verification (15ms sequential)</strong></p>
+<ul>
+<li><strong>User Profile Service (10ms):</strong> Fetches user demographics, interests, browsing history from multi-tier cache hierarchy (L1/L2/L3)</li>
+<li><strong>Integrity Check Service (&lt;5ms):</strong> Lightweight fraud detection - checks user against Bloom filter (known bad IPs), validates device fingerprint, applies basic behavioral rules. BLOCKS fraudulent requests BEFORE expensive RTB fan-out to 50+ DSPs. Critical placement prevents wasting bandwidth on bot traffic.</li>
+</ul>
+<p><strong>3. Parallel Path Split (ML + RTB run simultaneously after fraud check)</strong></p>
+<p><strong>Path A: Internal ML Path (65ms after split)</strong></p>
+<ul>
+<li><strong>Feature Store Service (10ms):</strong> Retrieves pre-computed behavioral features (1-hour click rate, 7-day CTR, etc.) from feature serving layer</li>
+<li><strong>Ad Selection Service (15ms):</strong> Queries internal ad database for candidate ads from direct deals, guaranteed campaigns, and house ads. Filters by user interests and features.
+<ul>
+<li><em>Note: Retrieves internal inventory only - RTB ads come from external DSPs in the parallel path</em></li>
+</ul>
+</li>
+<li><strong>ML Inference Service (40ms):</strong> Scores internal ad candidates using CTR prediction model, converts base CPM to eCPM</li>
+</ul>
+<p><strong>Path B: External RTB Auction (100ms after split - CRITICAL PATH)</strong></p>
+<ul>
+<li><strong>RTB Auction Service (100ms):</strong> Broadcasts OpenRTB bid requests to 50+ external Demand-Side Platforms (DSPs). DSPs run their own ML and return bids. Runs in parallel with ML path because it only needs user context from User Profile, operates on independent ad inventory from external partners.</li>
+</ul>
+<p><strong>4. Unified Auction and Response (13ms avg, 15ms p99)</strong></p>
+<ul>
+<li><strong>Auction Logic (8ms avg, 10ms p99):</strong>
+<ul>
+<li>Combines ML-scored internal ads with external RTB bids</li>
+<li>Runs unified first-price auction to select highest eCPM across both sources (3ms)</li>
+<li>Atomically checks and deducts from campaign budget via distributed cache atomic operations (3ms avg, 5ms p99)</li>
+<li>Overhead: 2ms (detailed in <a href="/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-spend-control">budget pacing section of Part 3</a>)</li>
+</ul>
+</li>
+<li><strong>Response Serialization (5ms):</strong> Formats winning ad with tracking URLs, returns to client</li>
+</ul>
+<p><strong>Total: 143ms avg (145ms p99)</strong> (15ms ingress + 10ms User Profile + 5ms Integrity Check + 100ms RTB + 13ms auction/budget/response, with ML path completing in parallel at 65ms after split)</p>
+<p><strong>Background Processing (Asynchronous):</strong></p>
+<ul>
+<li>Ad Server publishes impression/click/conversion events to event stream (non-blocking)</li>
+<li>Stream processing layer aggregates events in real-time, updates distributed cache and Feature Store</li>
+<li>Batch processing layer runs jobs for model training data preparation</li>
+<li>Workflow orchestration system schedules daily CTR model retraining, publishes to Model Registry</li>
+<li>Transactional database archives 90-day-old billing records to object storage nightly (7-year regulatory retention)</li>
+</ul>
+<p><strong>Data Dependencies:</strong></p>
+<ul>
+<li><strong>Sequential:</strong> User Profile → Feature Store → Ad Selection → ML Inference (cannot parallelize due to feature dependencies)</li>
+<li><strong>Parallel:</strong> RTB Auction runs alongside Feature Store + Ad Selection + ML (only needs user context from User Profile)</li>
+<li><strong>Critical Path:</strong> RTB Auction (100ms after User Profile) determines overall latency, dominating the ML path (65ms parallel portion)</li>
+</ul>
+<h3 id="latency-budget-decomposition">Latency Budget Decomposition</h3>
+<p>For a 150ms total latency budget, we decompose the request path:</p>
+<p>$$T_{total} = T_{network} + T_{gateway} + T_{services} + T_{serialization}$$</p>
+<p><strong>Network Overhead (Target: 10ms)</strong></p>
+<ul>
+<li>Client to edge: 5ms (CDN proximity)</li>
+<li>Edge to service: 5ms (regional deployment)</li>
+</ul>
+<p><strong>API Gateway (Target: 5ms)</strong></p>
+<ul>
+<li>Authentication: 2ms</li>
+<li>Rate limiting: 1ms</li>
+<li>Request enrichment: 2ms</li>
+</ul>
+<p><strong>Technology Selection: API Gateway</strong></p>
+<style>
+#tbl_gtw + table th:first-of-type  { width: 10%; }
+#tbl_gtw + table th:nth-of-type(2) { width: 10%; }
+#tbl_gtw + table th:nth-of-type(3) { width: 15%; }
+#tbl_gtw + table th:nth-of-type(4) { width: 15%; }
+#tbl_gtw + table th:nth-of-type(5) { width: 15%; }
+#tbl_gtw + table th:nth-of-type(6) { width: 15%; }
+#tbl_gtw + table th:nth-of-type(7) { width: 15%; }
+</style>
+<div id="tbl_gtw"></div>
+<p><strong>API Gateway Requirements:</strong></p>
+<blockquote>
+<p><strong>Architectural Driver: Latency</strong> - The API gateway must operate within a 5ms latency budget while providing authentication, rate limiting, and traffic routing at 1M+ QPS scale.</p>
+</blockquote>
+<p><strong>Key requirements:</strong></p>
+<ul>
+<li><strong>Sub-5ms latency overhead</strong> for the entire gateway layer (TLS, auth, rate limiting, routing)</li>
+<li><strong>High throughput:</strong> 150K+ requests/second per gateway node</li>
+<li><strong>Service mesh integration:</strong> Unified observability and mTLS with the underlying service mesh</li>
+<li><strong>Authentication:</strong> Support for JWT and OAuth 2.0 token validation</li>
+<li><strong>Rate limiting:</strong> Distributed token bucket algorithm with sub-millisecond token checks</li>
+<li><strong>Operational simplicity:</strong> Minimize the number of distinct proxy technologies in the stack</li>
+</ul>
+<p><strong>Latency budget breakdown:</strong></p>
+<ul>
+<li>TLS termination: ~1ms</li>
+<li>Authentication (JWT validation): ~2ms</li>
+<li>Rate limiting (token check): ~0.5ms</li>
+<li>Request routing and enrichment: ~1.5ms</li>
+<li><strong>Total target: &lt;5ms</strong></li>
+</ul>
+<p><em>Specific technology selection (gateway products, configuration, and deployment patterns) is covered in <a href="/blog/ads-platform-part-5-implementation/">Part 5</a>.</em></p>
+<p><strong>Service-Level SLA Summary</strong></p>
+<p>Consolidated latency targets driving technology selection, deployment architecture, and monitoring:</p>
+<table><thead><tr><th>Service</th><th>Target Latency</th><th>Percentile</th><th>Critical Path</th><th>Notes</th></tr></thead><tbody>
+<tr><td><strong>Overall Orchestrator</strong></td><td><strong>150ms</strong></td><td><strong>P99</strong></td><td><strong>Yes</strong></td><td><strong>End-to-end SLO</strong> (143ms avg, 145ms p99 actual)</td></tr>
+<tr><td>Network Overhead</td><td>10ms</td><td>Average</td><td>Yes</td><td>Client→Edge (5ms) + Edge→Service (5ms)</td></tr>
+<tr><td>API Gateway</td><td>5ms</td><td>Average</td><td>Yes</td><td>Auth (2ms) + Rate Limit (1ms) + Routing (2ms)</td></tr>
+<tr><td>User Profile Service</td><td>10ms</td><td>Target</td><td>Yes</td><td>Identity + contextual data retrieval</td></tr>
+<tr><td>Integrity Check</td><td>&lt;5ms</td><td>Target</td><td>Yes</td><td>Fraud prevention (first defense layer)</td></tr>
+<tr><td>Ad Selection Service</td><td>15ms</td><td>Target</td><td>Parallel</td><td>Candidate retrieval from storage</td></tr>
+<tr><td>Feature Store</td><td>10ms</td><td>P99</td><td>Parallel</td><td>ML feature lookup (degrades at &gt;15ms)</td></tr>
+<tr><td>ML Inference Service</td><td>40ms</td><td>Budget</td><td>Parallel</td><td>CTR prediction for auction ranking (~20ms actual GBDT inference, 40ms budget includes overhead)</td></tr>
+<tr><td>RTB Auction Service</td><td>50-70ms</td><td>Operational</td><td>Yes</td><td>External DSP coordination (100ms p95, 120ms p99 hard)</td></tr>
+<tr><td>Auction Logic</td><td>3ms</td><td>Average</td><td>Yes</td><td>eCPM ranking + winner selection</td></tr>
+<tr><td>Budget Check</td><td>3ms (5ms p99)</td><td>Average</td><td>Yes</td><td>Atomic spend control with strong consistency</td></tr>
+<tr><td>Response Serialization</td><td>5ms</td><td>Average</td><td>Yes</td><td>Ad response formatting</td></tr>
+</tbody></table>
+<p><strong>Critical path:</strong> Network (10ms) → Gateway (5ms) → User Profile (10ms) + Integrity (5ms) → <strong>RTB dominates at 100ms</strong> (ML completes at 65ms in parallel) → Auction (3ms) + Budget (3ms) + Serialization (5ms) = <strong>143ms average, 145ms p99</strong></p>
+<h3 id="rate-limiting-volume-based-traffic-control">Rate Limiting: Volume-Based Traffic Control</h3>
+<p>Rate limiting protects infrastructure from overload while ensuring fair resource allocation across clients. This section covers the architectural pattern for distributed rate limiting at 1M+ QPS scale.</p>
+<p><strong>Why Rate Limiting:</strong></p>
+<ol>
+<li><strong>Infrastructure protection</strong>: Prevents single client from overwhelming 1.5M QPS platform capacity</li>
+<li><strong>Cost control</strong>: Limits outbound calls to external DSPs (50+ partners × 1M QPS = massive API costs without controls)</li>
+<li><strong>Fair allocation</strong>: Ensures large advertisers don’t starve smaller ones</li>
+<li><strong>SLA enforcement</strong>: API contracts specify tiered rate limits per advertiser</li>
+</ol>
+<p><strong>Rate Limiting vs Fraud Detection:</strong></p>
+<p>These are complementary mechanisms:</p>
+<ul>
+<li><strong>Rate limiting</strong>: Volume-based control - “Are you requesting too much?” → throttle with HTTP 429</li>
+<li><strong>Fraud detection</strong>: Pattern-based control - “Is your behavior malicious?” → permanent block</li>
+</ul>
+<p><em>Pattern-based fraud detection (device fingerprinting, behavioral analysis, bot detection) is covered in <a href="/blog/ads-platform-part-4-production/#fraud-detection-pattern-based-abuse-detection">Part 4</a>.</em></p>
+<p><strong>Multi-Tier Architecture:</strong></p>
+<table><thead><tr><th>Tier</th><th>Scope</th><th>Limit</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><strong>Global</strong></td><td>Entire platform</td><td>1.5M QPS</td><td>Protect total capacity</td></tr>
+<tr><td><strong>Per-IP</strong></td><td>Client IP</td><td>10K QPS</td><td>Prevent single-source abuse</td></tr>
+<tr><td><strong>Per-Advertiser</strong></td><td>API key</td><td>1K-100K QPS (tiered)</td><td>SLA enforcement + fairness</td></tr>
+<tr><td><strong>DSP outbound</strong></td><td>External calls</td><td>50K QPS total</td><td>Control API costs</td></tr>
+</tbody></table>
+<p><strong>Distributed Rate Limiting Pattern:</strong></p>
+<p>The core architectural challenge: enforcing global rate limits across 100+ distributed gateway nodes without centralizing every request.</p>
+<p><strong>Approach:</strong> Token bucket algorithm with distributed cache-backed state</p>
+<ul>
+<li><strong>Each advertiser</strong> gets a token bucket (capacity = rate limit)</li>
+<li><strong>Token consumption</strong> happens via atomic cache operations</li>
+<li><strong>Token refill</strong> runs periodically (every 1-10 seconds depending on smoothness requirements)</li>
+<li><strong>Distributed enforcement</strong>: All gateway nodes share the same distributed token counters</li>
+</ul>
+<p><strong>Key trade-off:</strong></p>
+<ul>
+<li><strong>Centralized state</strong> (distributed cache) adds 1-2ms latency per request</li>
+<li><strong>Benefit</strong>: Accurate global rate limiting across all nodes</li>
+<li><strong>Acceptable</strong>: 1-2ms fits within 5ms gateway latency budget</li>
+</ul>
+<p><strong>Latency Budget:</strong></p>
+<ul>
+<li>API Gateway total: 5ms (authentication 2ms + rate limiting 1ms + enrichment 2ms)</li>
+<li>Rate limiting: 1ms for distributed cache token bucket check</li>
+</ul>
+<p><strong>Complete Request Latency:</strong></p>
+<ul>
+<li>Network overhead + Gateway: 15ms</li>
+<li>User Profile (shared): 10ms</li>
+<li>Integrity Check (fraud filter): 5ms</li>
+<li>Critical service path: 100ms (RTB dominates - runs in parallel with ML)
+<ul>
+<li><em>Note: RTB phase includes 1ms DSP selection lookup (performance tier filtering for egress cost optimization) + 99ms DSP auction. See <a href="/blog/ads-platform-part-2-rtb-ml-pipeline/#egress-bandwidth-cost-optimization-predictive-dsp-timeouts">Part 2’s Egress Bandwidth Cost Optimization</a> for details on DSP Performance Tier Service.</em></li>
+</ul>
+</li>
+<li>ML path (parallel): 65ms (completes before RTB)</li>
+<li>Auction logic + Budget check + Serialization: 13ms avg (15ms p99)</li>
+<li><strong>Total: 143ms avg (145ms p99)</strong> with 5ms buffer to 150ms SLO</li>
+</ul>
+<h3 id="critical-path-and-dual-source-architecture">Critical Path and Dual-Source Architecture</h3>
+<p>The platform serves ads from <strong>two independent inventory sources</strong> that compete in a unified auction:</p>
+<ul>
+<li><strong>Source 1 (Internal)</strong>: Direct deals, guaranteed campaigns stored in internal database with pre-negotiated pricing. ML scores these ads to predict user-specific CTR and convert to eCPM.</li>
+<li><strong>Source 2 (External)</strong>: Real-time bids from 50+ external DSPs via OpenRTB protocol. DSPs score internally and return bid prices.</li>
+</ul>
+<p>Both sources compete in final auction. Highest eCPM wins (internal or external). This dual-source model enables parallel execution: ML scores internal inventory while RTB collects external bids simultaneously.</p>
+<blockquote>
+<p><strong>Architectural Driver: Revenue Optimization</strong> - Unified auction maximizes revenue per impression by ensuring best ad wins regardless of source. Industry standard: Google Ad Manager, Amazon Publisher Services, Prebid.js.</p>
+</blockquote>
+<p><strong>Why parallel execution works:</strong> ML and RTB operate on independent ad inventories. ML doesn’t need RTB results (scoring internal ads from our database). RTB doesn’t need ML results (DSPs bid independently). Only synchronize at final auction when both paths complete.</p>
+<p><em>For detailed business model, revenue optimization, and economic rationale, see the “Ad Inventory Model and Monetization Strategy” section in the RTB integration post of this series.</em></p>
+<h4 id="request-flow-and-timing">Request Flow and Timing</h4>
+<p>The critical path is determined by <strong>RTB Auction (100ms)</strong>, which dominates the latency budget. Internal ML processing runs in parallel and completes faster at 65ms:</p>
+<pre class="mermaid">
+    
+    graph TB
+    A[Request Arrives] -->|5ms| B[Gateway Auth]
+    B --> C[User Profile<br/>10ms<br/>Cache hierarchy]
+    C --> IC[Integrity Check<br/>5ms CRITICAL<br/>Lightweight fraud filter<br/>Bloom filter + basic rules<br/>BLOCKS fraudulent requests]
+
+    IC -->|PASS| FS[Feature Store Lookup<br/>10ms<br/>Behavioral features]
+    IC -->|PASS| F[RTB Auction<br/>100ms CRITICAL PATH<br/>OpenRTB to 50+ external DSPs<br/>Source 2: External inventory]
+    IC -->|BLOCK| REJECT[Reject Request<br/>Return house ad or error<br/>No RTB call made]
+
+    FS --> D[Ad Selection<br/>15ms<br/>Query internal ad DB<br/>Direct deals + guaranteed<br/>Source 1: Internal inventory]
+
+    D --> E[ML Inference<br/>40ms<br/>CTR prediction on internal ads<br/>Output: eCPM-scored ads]
+
+    E --> G[Synchronization<br/>Wait for both sources<br/>Internal: ready at 85ms<br/>External RTB: at 120ms]
+    F --> G
+
+    G -->|5ms| H[Unified Auction<br/>Combine Source 1 + Source 2<br/>Select highest eCPM<br/>Winner: internal OR external]
+    H -->|5ms| I[Response]
+
+    style F fill:#ffcccc
+    style IC fill:#ffdddd
+    style C fill:#ffe6e6
+    style FS fill:#e6f3ff
+    style G fill:#fff4cc
+    style H fill:#e6ffe6
+    style REJECT fill:#ff9999
+</pre>
+<p><strong>Critical Path (from diagram):</strong> Gateway (5ms) → User Profile (10ms) → Integrity Check (5ms) → RTB Auction (100ms) → Sync → Final Auction (8ms avg, 10ms p99) → Response (5ms) = <strong>133ms avg service layer (135ms p99)</strong></p>
+<p><strong>Parallel path (Internal ML):</strong> Gateway (5ms) → User Profile (10ms) → Integrity Check (5ms) → Feature Store (10ms) → Ad Selection (15ms) → ML Inference (40ms) → Sync (waiting) = <strong>85ms</strong></p>
+<p><strong>Note:</strong> Diagram shows service layer only. Add 10ms network overhead at the start for <strong>143ms avg total request latency (145ms p99)</strong> with 5ms buffer to 150ms SLO.</p>
+<blockquote>
+<p><strong>Critical Design Decision: Integrity Check Placement</strong> - The 5ms Integrity Check Service runs BEFORE the RTB fan-out to 50+ DSPs. This prevents wasting bandwidth and DSP processing time on fraudulent traffic. Cost impact: blocking 20-30% bot traffic before RTB eliminates massive egress bandwidth costs (RTB requests to external DSPs incur data transfer charges). At scale (1M QPS, 50+ DSPs, 2-4KB payloads), early fraud filtering saves <strong>thousands of times more</strong> in annual bandwidth costs than the 5ms latency investment costs in lost impressions.</p>
+</blockquote>
+<p><strong>Component explanations</strong> (referencing dual-source architecture above):</p>
+<ul>
+<li><strong>User Profile (10ms)</strong>: L1/L2/L3 cache hierarchy retrieves user demographics, interests, browsing history. Shared by both paths. Uses hedge requests (Defense Strategy 3 below) for P99.9 tail latency protection against network jitter.</li>
+<li><strong>Integrity Check (5ms)</strong>: Lightweight fraud detection using Bloom filter (known bad IPs), device fingerprint validation, and basic behavioral rules. Runs BEFORE expensive RTB calls to prevent wasting bandwidth on bot traffic. Multi-tier fraud detection is detailed in <a href="/blog/ads-platform-part-4-production/#fraud-detection-pattern-based-abuse-detection">Part 4</a>. Blocks 20-30% of fraudulent requests here.</li>
+<li><strong>Feature Store (10ms)</strong>: Retrieves pre-computed behavioral features (1-hour click rate, 7-day CTR, etc.) from distributed feature cache. Used only by ML path.</li>
+<li><strong>Ad Selection (15ms)</strong>: Queries <strong>internal ad database</strong> (transactional database) for top 100 candidates from direct deals, guaranteed campaigns, and house ads. Filters by user profile and features. Does NOT include RTB ads (those come from external DSPs).</li>
+<li><strong>ML Inference (40ms budget, ~20ms actual)</strong>: GBDT model predicts CTR for internal ad candidates (~20ms inference). Converts base CPM to eCPM using formula: <code>eCPM = predicted_CTR × base_CPM × 1000</code>. Output: List of internal ads with eCPM scores. The 40ms budget allocation provides safety margin.</li>
+<li><strong>RTB Auction (100ms)</strong>: Broadcasts OpenRTB request to 50+ external DSPs, collects bids. DSPs do their own ML internally. Output: List of external bids with prices.</li>
+<li><strong>Synchronization Point</strong>: System waits here until BOTH paths complete. ML path (85ms total from start) finishes 35ms before RTB path (120ms total from start). Internal ads are cached while waiting for external RTB bids.</li>
+<li><strong>Final Auction (8ms avg, 10ms p99)</strong>: Runs unified auction combining ML-scored internal ads (Source 1) with external RTB bids (Source 2). Selects winner with highest eCPM across both sources (3ms), then atomically checks and deducts campaign budget via atomic distributed cache operations (3ms avg, 5ms p99), plus overhead (2ms). Winner could be internal OR external ad.</li>
+</ul>
+<h4 id="parallel-execution-and-unified-auction">Parallel Execution and Unified Auction</h4>
+<p><strong>Why parallel execution works:</strong> ML and RTB operate on <strong>completely independent ad inventories</strong> with no data dependency. ML scores internal inventory (direct deals in our database), while RTB collects bids from external DSPs (advertiser networks). They only merge at the final auction.</p>
+<p><strong>Synchronization Point timing:</strong></p>
+<ol>
+<li>ML path completes at t=85ms: Internal ads scored and cached</li>
+<li>ML thread waits idle from t=85ms to t=120ms (35ms idle time)</li>
+<li>RTB path completes at t=120ms: External DSP bids arrive</li>
+<li>Both results available → proceed to Final Auction at t=120ms</li>
+</ol>
+<p><strong>Unified Auction logic (8ms avg, 10ms p99: 3ms auction + 3ms avg budget check [5ms p99] + 2ms overhead):</strong>
+<strong>Unified auction algorithm:</strong></p>
+<ol>
+<li>
+<p><strong>Calculate eCPM for internal ads:</strong></p>
+<ul>
+<li>eCPM = predicted_CTR × base_CPM × 1000</li>
+<li>Example: 0.05 CTR × base_CPM of 3 × 1000 = eCPM of 150</li>
+</ul>
+</li>
+<li>
+<p><strong>Use eCPM from RTB bids:</strong></p>
+<ul>
+<li>DSP bids are already in eCPM format</li>
+<li>No conversion needed</li>
+</ul>
+</li>
+<li>
+<p><strong>Select winner:</strong></p>
+<ul>
+<li>Choose candidate with highest eCPM across all sources</li>
+<li>Winner can be internal ad OR external RTB bid</li>
+</ul>
+</li>
+</ol>
+<p><strong>Example outcome:</strong>
+<strong>Auction results:</strong></p>
+<ul>
+<li>DSP_A (external): eCPM of 180 <strong>← WINNER</strong> (external RTB wins)</li>
+<li>DSP_B (external): eCPM of 160</li>
+<li>Nike (internal): eCPM of 150</li>
+<li>Adidas (internal): eCPM of 120</li>
+</ul>
+<p>Publisher earns highest bid for this impression. If an internal ad scored eCPM of 190 (highly personalized match), it would beat RTB - ensuring maximum revenue regardless of source.</p>
+<p><strong>Latency comparison:</strong></p>
+<ul>
+<li>Sequential (ML after RTB): 100ms RTB + 40ms ML = 140ms (exceeds budget, no buffer)</li>
+<li>Parallel (independent sources): max(100ms RTB, 65ms ML) = 100ms (<strong>35ms savings</strong>)</li>
+</ul>
+<p><strong>Why we can’t start auction earlier:</strong> We need BOTH ML-scored ads AND RTB bids for complete auction. Starting before RTB completes excludes external bidders, losing potential revenue.</p>
+<h3 id="resilience-graceful-degradation-and-circuit-breaking">Resilience: Graceful Degradation and Circuit Breaking</h3>
+<p>The critical path analysis above assumes all services operate within their latency budgets. But what happens when they don’t? The 150ms SLO leaves only a 15ms buffer - if any critical service exceeds its budget, the entire request fails.</p>
+<blockquote>
+<p><strong>Architectural Driver: Availability</strong> - Serving a less-optimal ad quickly beats serving no ad at all. When services breach latency budgets, degrade gracefully through fallback layers rather than timing out.</p>
+</blockquote>
+<p><strong>Example scenario:</strong> ML inference allocated 40ms, but CPU load spikes push p99 latency to 80ms. Options:</p>
+<ul>
+<li><strong>Wait for slow ML response:</strong> Violates 150ms SLA → mobile timeouts → blank ads → 100% revenue loss</li>
+<li><strong>Skip ML entirely:</strong> Serve random ad → 100% revenue loss from poor targeting</li>
+<li><strong>Degrade gracefully:</strong> Serve cached predictions → ~8% revenue loss, but ad still served</li>
+</ul>
+<p>The answer: <strong>graceful degradation</strong>. Better to serve a less-optimal ad quickly than perfect ad slowly (or no ad at all).</p>
+<h4 id="degradation-hierarchy-per-service-fallback-layers">Degradation Hierarchy: Per-Service Fallback Layers</h4>
+<p>Each critical-path service has a <strong>latency budget</strong> and a <strong>degradation ladder</strong> defining fallback behavior when budgets are exceeded. The table below shows all degradation levels across the three most critical services:</p>
+<style>
+#tbl_degradation + table th:first-of-type  { width: 15%; }
+#tbl_degradation + table th:nth-of-type(2) { width: 28%; }
+#tbl_degradation + table th:nth-of-type(3) { width: 28%; }
+#tbl_degradation + table th:nth-of-type(4) { width: 28%; }
+</style>
+<div id="tbl_degradation"></div>
+<table><thead><tr><th>Level</th><th>ML Inference<br/>(40ms budget)</th><th>User Profile<br/>(10ms budget)</th><th>RTB Auction<br/>(100ms budget)</th></tr></thead><tbody>
+<tr><td><strong>Level 0</strong><br/>Normal</td><td>GBDT on CPU<br/>Latency: 20ms<br/>Revenue: 100%<br/><em>Trigger: p99 &lt; 40ms</em></td><td>Transactional DB + distributed cache<br/>Latency: 8ms<br/>Accuracy: 100%<br/><em>Trigger: p99 &lt; 10ms</em></td><td>Query all 50 DSPs<br/>Latency: 85ms<br/>Revenue: 100%<br/><em>Trigger: p95 &lt; 100ms</em></td></tr>
+<tr><td><strong>Level 1</strong><br/>Light Degradation</td><td><strong>Cached predictions</strong><br/>Cached CTR predictions<br/>Latency: 5ms<br/>Revenue: 92% (-8%)<br/><em>Trigger: p99 &gt; 40ms for 60s</em></td><td><strong>Stale cache</strong><br/>Extended TTL cache<br/>Latency: 2ms<br/>Accuracy: 95% (-5%)<br/><em>Trigger: p99 &gt; 10ms for 60s</em></td><td><strong>Top 30 DSPs only</strong><br/>Highest-value DSPs<br/>Latency: 80ms<br/>Revenue: 95% (-5%)<br/><em>Trigger: p95 &gt; 100ms for 60s</em></td></tr>
+<tr><td><strong>Level 2</strong><br/>Moderate Degradation</td><td><strong>Heuristic model</strong><br/>Rule-based CTR<br/>Latency: 2ms<br/>Revenue: 85% (-15%)<br/><em>Trigger: Cache miss &gt; 30%</em></td><td><strong>Segment defaults</strong><br/>Demographic avg<br/>Latency: 1ms<br/>Accuracy: 70% (-30%)<br/><em>Trigger: DB unavailable</em></td><td><strong>Top 10 DSPs only</strong><br/>Ultra-high-value only<br/>Latency: 75ms<br/>Revenue: 88% (-12%)<br/><em>Trigger: p95 &gt; 110ms for 60s</em></td></tr>
+<tr><td><strong>Level 3</strong><br/>Severe Degradation</td><td><strong>Global average</strong><br/>Category avg CTR<br/>Latency: 1ms<br/>Revenue: 75% (-25%)<br/><em>Trigger: Still breaching SLA</em></td><td>N/A</td><td><strong>Skip RTB entirely</strong><br/>Direct inventory only<br/>Latency: 0ms<br/>Revenue: 65% (-35%)<br/><em>Trigger: All DSPs timeout</em></td></tr>
+</tbody></table>
+<p><strong>Key observations:</strong></p>
+<ul>
+<li><strong>ML degradation is gradual</strong>: 4 levels allow fine-grained fallback (100% → 92% → 85% → 75%)</li>
+<li><strong>User Profile degradation is binary</strong>: Either fresh data or stale/default (fewer intermediate states needed)</li>
+<li><strong>RTB degradation is aggressive</strong>: Each level significantly reduces scope to meet latency budget</li>
+<li><strong>Latency improvements are substantial</strong>: Level 1 degradations save 25-35ms, buying time for recovery</li>
+</ul>
+<p><strong>Mathematical Model of Degradation Impact:</strong></p>
+<p>Total revenue under degradation:</p>
+<p>$$R_{degraded} = R_{baseline} \times (1 - \alpha) \times (1 + \beta \times \Delta L)$$</p>
+<p>where:</p>
+<ul>
+<li>\(\alpha\) = revenue loss from less accurate targeting (8% for Level 1, 15% for Level 2)</li>
+<li>\(\beta\) = revenue gain from reduced latency (empirically ~0.0002 per ms saved, or 0.02% per ms)</li>
+<li>\(\Delta L\) = latency improvement (e.g., 40ms → 5ms = 35ms saved)</li>
+</ul>
+<p><strong>Example:</strong> Level 1 degradation (cached predictions):</p>
+<ul>
+<li>Targeting accuracy loss: -8%</li>
+<li>Latency improvement: 35ms × 0.0002/ms = +0.007 = +0.7% revenue gain (faster load = higher CTR)</li>
+<li><strong>Net impact: -8% + 0.7% = -7.3% revenue</strong></li>
+</ul>
+<p>But compare to the alternative:</p>
+<ul>
+<li>Breaching 150ms SLA → 200ms+ total latency → mobile timeout → 100% revenue loss on timed-out requests</li>
+</ul>
+<h4 id="circuit-breakers-automated-degradation-triggers">Circuit Breakers: Automated Degradation Triggers</h4>
+<p>Degradation shouldn’t require manual intervention. Implement <strong>circuit breakers</strong> that automatically detect when services exceed latency budgets and switch to fallback layers.</p>
+<p><strong>Circuit breaker pattern:</strong> Monitor service latency continuously. When a service consistently breaches its budget, “trip” the circuit and route traffic to the next degradation level until the service recovers.</p>
+<p><strong>Three-state circuit breaker:</strong></p>
+<p><strong>Goal:</strong> Automatically detect service degradation and route around it, then carefully test recovery before fully restoring traffic.</p>
+<p><strong>CLOSED (normal operation):</strong></p>
+<ul>
+<li>All traffic flows to primary service (e.g., ML inference)</li>
+<li><strong>Monitor continuously</strong>: Track latency percentiles (p95, p99) over rolling time windows</li>
+<li><strong>Trip condition</strong>: When latency exceeds <code>budget + tolerance_margin</code> for sustained period
+<ul>
+<li><strong>Tolerance margin</strong>: Small buffer above budget to avoid false positives from transient spikes</li>
+<li><strong>Duration threshold</strong>: How long the breach must persist before tripping (balance: too short = false positives, too long = prolonged degradation)</li>
+</ul>
+</li>
+</ul>
+<p><strong>OPEN (degraded mode):</strong></p>
+<ul>
+<li>All traffic routed to fallback (cached data, simplified logic, etc.)</li>
+<li>Primary service not called (prevents overwhelming already-struggling service)</li>
+<li><strong>Wait period</strong>: Exponential backoff before testing recovery
+<ul>
+<li>Start with base wait time, double on repeated failures</li>
+<li>Prevents rapid retry loops that could worsen the problem</li>
+</ul>
+</li>
+</ul>
+<p><strong>HALF-OPEN (testing recovery):</strong></p>
+<ul>
+<li><strong>Send test traffic</strong>: Route small percentage to primary service
+<ul>
+<li>Too much test traffic = risks overwhelming recovering service</li>
+<li>Too little = takes too long to gain confidence in recovery</li>
+</ul>
+</li>
+<li><strong>Success criteria</strong>: Define what “healthy” means
+<ul>
+<li>Percentage of requests that must succeed</li>
+<li>Maximum acceptable latency for test requests</li>
+<li>Minimum sample size before declaring success</li>
+</ul>
+</li>
+<li><strong>On failure</strong>: Return to OPEN with increased backoff (service not ready)</li>
+<li><strong>On success</strong>: Restore to CLOSED (service recovered)</li>
+</ul>
+<p><strong>Configuration approach:</strong></p>
+<ul>
+<li>Set trip threshold slightly above budget to tolerate brief spikes</li>
+<li>Choose duration window based on your traffic volume (higher QPS = can detect issues faster)</li>
+<li>Size test traffic based on primary service capacity during recovery</li>
+<li>Use exponential backoff to give struggling services time to recover</li>
+</ul>
+<p><strong>Per-service circuit breaker thresholds:</strong></p>
+<style>
+#tbl_0 + table th:first-of-type  { width: 18%; }
+#tbl_0 + table th:nth-of-type(2) { width: 12%; }
+#tbl_0 + table th:nth-of-type(3) { width: 20%; }
+#tbl_0 + table th:nth-of-type(4) { width: 32%; }
+#tbl_0 + table th:nth-of-type(5) { width: 18%; }
+</style>
+<div id="tbl_0"></div>
+<table><thead><tr><th>Service</th><th>Budget</th><th>Trip Threshold</th><th>Fallback</th><th>Revenue Impact</th></tr></thead><tbody>
+<tr><td><strong>ML Inference</strong></td><td>40ms</td><td>p99 &gt; 45ms<br/>for 60s</td><td>Cached CTR predictions</td><td>-8%</td></tr>
+<tr><td><strong>User Profile</strong></td><td>10ms</td><td>p99 &gt; 15ms<br/>for 60s</td><td>Stale cache (5min TTL)</td><td>-5%</td></tr>
+<tr><td><strong>RTB Auction</strong></td><td>100ms</td><td>p95 &gt; 105ms<br/>for 60s</td><td>Top 20 DSPs only<br/>(Note: p99 protected by 120ms absolute cutoff*)</td><td>-6%</td></tr>
+<tr><td><strong>Ad Selection</strong></td><td>15ms</td><td>p99 &gt; 20ms<br/>for 60s</td><td>Skip personalization, use category matching</td><td>-12%</td></tr>
+</tbody></table>
+<p><em>*RTB p99 protection: The 120ms absolute cutoff forces immediate fallback to internal inventory or House Ad when RTB exceeds the hard timeout, preventing P99 tail requests (10,000 req/sec at 1M QPS) from timing out at the mobile client. See <a href="https://e-mindset.space/blog/ads-platform-part-1-foundation-architecture/#p99-tail-latency-defense-the-unacceptable-tail">P99 Tail Latency Defense</a> for complete strategy.</em></p>
+<p><strong>Composite Degradation Impact:</strong></p>
+<p>If <strong>all services degrade simultaneously</strong> (worst case, e.g., during regional failover):</p>
+<p>$$R_{total} = R_{baseline} \times (1 - 0.08) \times (1 - 0.05) \times (1 - 0.06) \times (1 - 0.12)$$
+$$R_{total} \approx 0.92 \times 0.95 \times 0.94 \times 0.88 = 0.728 R_{baseline}$$</p>
+<p><strong>Result:</strong> ~27% revenue loss under full degradation, but <strong>system stays online</strong>. Compare to outage scenario: 100% revenue loss.</p>
+<p><strong>Recovery Strategy:</strong></p>
+<p><strong>Hysteresis prevents flapping:</strong></p>
+<p>$$
+\begin{aligned}
+\text{Degrade if: } &amp; L_{p99} &gt; L_{budget} + 5ms \text{ for } 60s \\
+\text{Recover if: } &amp; L_{p99} &lt; L_{budget} - 5ms \text{ for } 300s
+\end{aligned}
+$$</p>
+<p>Asymmetric thresholds (5ms tolerance vs 5ms buffer, 60s vs 300s duration) prevent oscillation between states. Example: CPU latency spike trips circuit at t=60s, switches to cached predictions; after 5min of healthy p99&lt;35ms latency, circuit closes and resumes normal GBDT inference.</p>
+<p><strong>Monitoring Degradation State:</strong></p>
+<p>Track composite degradation score: \(Score = \sum_{i \in \text{services}} w_i \times \text{Level}_i\) where \(w_i\) reflects revenue impact (ML=0.4, RTB=0.3, Profile=0.2, AdSelection=0.1). Alert on: any service at Level 2+ for &gt;10min (P2), composite score &gt;4 (P1 - cascading failure risk), revenue &lt;85% forecast (P1), circuit flapping &gt;3 transitions/5min.</p>
+<p><strong>Testing Degradation Strategy:</strong></p>
+<p>Validate via chaos engineering: (1) Inject 50ms latency to 10% ML requests, verify circuit trips and -8% revenue impact matches prediction; (2) Terminate 50% ML inference pods, confirm graceful degradation within 60s; (3) Quarterly regional failover drills validating &lt;30% revenue loss and measuring recovery time.</p>
+<p><strong>Trade-off Articulation:</strong></p>
+<p><strong>Why degrade rather than scale?</strong></p>
+<p>You might ask: “Why not just auto-scale ML inference pods when latency spikes?”</p>
+<p><strong>Problem:</strong> Provisioning new CPU pods takes <strong>15-30 seconds</strong> with modern tooling (pre-warmed container images, model pre-loading) - instance boot + model loading into memory + JVM warmup. During traffic spikes, you’ll still breach SLAs for 15-30 seconds before new capacity comes online.</p>
+<p><strong>Note:</strong> Without optimization (cold container pulls, full model loading from object storage, cold JVM), cold start can take <strong>60-90 seconds</strong>. The 15-30s baseline assumes modern best practices: pre-warmed images, model streaming, and container image caching.</p>
+<p><strong>Cost-benefit comparison:</strong></p>
+<style>
+#tbl_degrade_strategy + table th:first-of-type  { width: 28%; }
+#tbl_degrade_strategy + table th:nth-of-type(2) { width: 24%; }
+#tbl_degrade_strategy + table th:nth-of-type(3) { width: 24%; }
+#tbl_degrade_strategy + table th:nth-of-type(4) { width: 24%; }
+</style>
+<div id="tbl_degrade_strategy"></div>
+<table><thead><tr><th>Strategy</th><th>Latency Impact</th><th>Revenue Impact</th><th>Cost</th></tr></thead><tbody>
+<tr><td><strong>Wait for CPU</strong><br/>(no degradation)</td><td>150ms<br/>total → timeout</td><td>-100%<br/>on timed-out requests</td><td>None</td></tr>
+<tr><td><strong>Scale CPU instances</strong></td><td>30s of 80ms<br/>latency → partial timeouts</td><td>-15%<br/>during scale-up window</td><td>+20-30% CPU baseline for burst capacity</td></tr>
+<tr><td><strong>Degrade to cached predictions</strong></td><td>5ms<br/>immediate</td><td>-8%<br/>targeting accuracy</td><td>None</td></tr>
+</tbody></table>
+<p><strong>Decision:</strong> Degradation costs less (-8% vs -15%) and reacts faster (immediate vs 30s).</p>
+<p><strong>But we still auto-scale!</strong> Degradation buys time for auto-scaling to provision capacity. Once new CPU pods are healthy (30s later), circuit closes and we return to normal operation.</p>
+<p><strong>Degradation is a bridge, not a destination.</strong></p>
+<h3 id="p99-tail-latency-defense-the-unacceptable-tail">P99 Tail Latency Defense: The Unacceptable Tail</h3>
+<p>At 1 million QPS, the <strong>P99 tail represents 10,000 requests per second</strong> - a volume too large to ignore. Without P99 protection, these requests risk timeout, resulting in blank ads and complete revenue loss on the tail.</p>
+<blockquote>
+<p><strong>Architectural Driver: Revenue Protection</strong> - The P99 tail is dominated by garbage collection pauses and the slowest RTB bidder. Protecting these 10,000 req/sec requires infrastructure choices (low-pause GC) and operational discipline (hard timeouts with forced failure).</p>
+</blockquote>
+<p><strong>Two Primary P99 Contributors:</strong></p>
+<ol>
+<li><strong>Garbage Collection Pauses</strong>: Traditional garbage collectors can produce 10-50ms stop-the-world pauses, consuming 7-33% of the 150ms latency budget</li>
+<li><strong>Slowest RTB Bidder</strong>: With 25-30 DSPs per auction, a single slow bidder (110-120ms) can push total latency over the SLO</li>
+</ol>
+<p><strong>Defense Strategy 1: Low-Pause GC Technology</strong></p>
+<p><strong>Requirement: Sub-2ms GC pause times at P99.9</strong></p>
+<p>At 1M QPS serving hundreds of thousands of requests per second per instance, managed runtime garbage collection becomes a critical latency contributor. Traditional stop-the-world collectors can pause application threads for 10-50ms, directly violating latency budgets.</p>
+<p><strong>Why it matters:</strong> Without low-pause GC, traditional collectors can add 41-55ms to P99.9 latency, violating the 150ms SLO and causing mobile client timeouts.</p>
+<p><strong>Technology options:</strong></p>
+<ul>
+<li><strong>Low-pause JVM collectors</strong>: Modern concurrent GC with &lt;2ms pauses</li>
+<li><strong>Low-pause runtimes</strong>: Languages with sub-millisecond GC or no GC at all</li>
+<li><strong>Trade-off</strong>: Typically 10-15% throughput reduction for pause time predictability</li>
+</ul>
+<p><em><a href="/blog/ads-platform-part-5-implementation/">Part 5</a> (Final Architecture) covers complete GC technology selection: specific collectors (low-pause concurrent GC, incremental GC), runtime comparisons (JVM vs Go vs Rust), configuration details, and performance validation.</em></p>
+<p><strong>Defense Strategy 2: RTB 120ms Absolute Cutoff</strong></p>
+<p><strong>Hard timeout at 120ms</strong> forces the Ad Server to cancel all pending RTB requests and fail over to fallback inventory:</p>
+<ul>
+<li><strong>Fallback Level 1</strong>: Internal inventory only (preserves ~40% of revenue vs complete loss)</li>
+<li><strong>Fallback Level 2</strong>: House Ad (0% ad revenue, but preserves user experience and prevents CTR degradation)</li>
+</ul>
+<p><strong>Why 120ms?</strong> This ensures total latency stays within 153ms even at P99 (Gateway 5ms + User Profile 10ms + Integrity Check 5ms + RTB 120ms + Auction 8ms + Response 5ms = 153ms). A 3ms SLO violation is acceptable; a mobile timeout (&gt;200ms) is not.</p>
+<p><strong>Trade-off Analysis:</strong></p>
+<p>Better to serve a guaranteed ad at 120ms than wait for a perfect RTB bid that might never arrive. The P99 tail (1% of traffic) sacrifices 40-60% of optimal revenue to prevent 100% loss from timeouts and the compounding UX damage of blank ads (which reduces CTR across ALL traffic by 0.5-1%).</p>
+<p><em><a href="/blog/ads-platform-part-4-production/">Part 4</a> covers implementation details: request cancellation patterns, fallback logic, monitoring strategies, and chaos testing for P99 defense.</em></p>
+<p><strong>Defense Strategy 3: Hedge Requests for Read Paths</strong></p>
+<p>While ZGC eliminates GC pauses and hard timeouts handle slow RTB bidders, neither addresses <strong>application logic stalls</strong> or <strong>network jitter</strong> on internal read paths. A single slow User Profile or Feature Store lookup can push P99 over budget despite all other optimizations.</p>
+<p><strong>The pattern:</strong> Hedge requests, introduced by Dean and Barroso in <a href="https://cseweb.ucsd.edu/classes/sp18/cse124-a/post/schedule/p74-dean.pdf">“The Tail at Scale” (2013)</a>, send the same read request to <strong>two replicas</strong>, taking the first response and discarding the second. Google demonstrated this reduces 99.9th percentile latency from 1,800ms to 74ms with only 2% additional load.</p>
+<p><strong>Where to apply hedge requests:</strong></p>
+<ul>
+<li><strong>User Profile Service (10ms budget)</strong>: Read-heavy, idempotent, replicated across 3+ instances — <strong>Primary application: Ad Server → User Profile gRPC client configuration for P99.9 protection against network jitter</strong></li>
+<li><strong>Feature Store (10ms budget)</strong>: Pre-computed features, read-only, easily replicated</li>
+</ul>
+<p><strong>Where NOT to apply:</strong></p>
+<p><strong>CRITICAL: Never hedge write operations or non-idempotent methods</strong></p>
+<p>Hedging executes requests multiple times on the server. gRPC documentation explicitly states: “Hedged RPCs may execute more than once on a server so only idempotent methods should be hedged.”</p>
+<ul>
+<li><strong>Budget Service</strong>: Write operations cause double-spend (campaign charged $10 instead of $5 when both primary and hedge complete)</li>
+<li><strong>Any mutation operation</strong>: INSERT, UPDATE, DELETE operations execute twice → data corruption</li>
+<li><strong>RTB Gateway</strong>: External calls already expensive; doubling would double DSP costs and violate rate limits</li>
+<li><strong>ML Inference</strong>: Compute-bound, replicas equally loaded; hedging wastes CPU cycles without benefit</li>
+</ul>
+<p><strong>Implementation safety:</strong> Use explicit service allowlist in gRPC configuration to prevent accidental hedging. Only enable for services explicitly designed as read-only and idempotent (UserProfileService, FeatureStoreService).</p>
+<p><strong>Trade-off analysis:</strong></p>
+<ul>
+<li><strong>Cost:</strong> 2× read load on hedged services (but reads are cheap - cache hits in &lt;1ms)</li>
+<li><strong>Benefit:</strong> P99.9 latency protection against network jitter - reduces tail latency by 30-40% on hedged paths, validated by production measurements:
+<ul>
+<li><a href="https://cacm.acm.org/research/the-tail-at-scale/">Google tied requests</a>: 40% reduction at P99.9 in real production system</li>
+<li><a href="https://aws.amazon.com/blogs/database/how-global-payments-inc-improved-their-tail-latency-using-request-hedging-with-amazon-dynamodb/">Global Payments with AWS DynamoDB</a>: 30% reduction at P99</li>
+<li><a href="https://grafana.com/blog/2021/08/27/grafana-tempo-1.1-released-new-hedged-requests-reduce-latency-by-45/">Grafana Tempo distributed tracing</a>: 45% reduction in tail latency</li>
+</ul>
+</li>
+</ul>
+<p><strong>Implementation approach:</strong></p>
+<p>The pattern uses asynchronous request handling with timeout-based triggers. The primary request starts immediately to the first replica. If it doesn’t complete within the P95 latency threshold, a secondary request fires to a different replica. Whichever response arrives first wins; the slower response is discarded.</p>
+<p><strong>Client-side configuration (Ad Server → User Profile gRPC):</strong></p>
+<ul>
+<li>Configure gRPC client with hedge policy enabled for read-only operations</li>
+<li>Set hedge delay to P95 latency threshold (User Profile: ~3ms)</li>
+<li>Enable automatic replica selection from service discovery</li>
+<li>Client-side only implementation - requires only client configuration, no server architecture changes (though servers must handle cancellation cooperatively for full benefit)</li>
+</ul>
+<p><strong>When to trigger hedge:</strong> Per the original paper, defer hedge requests until the primary has been outstanding longer than the <strong>95th percentile latency</strong> for that service. For User Profile (P95 ~3ms), trigger hedge at 3ms. This limits additional load to ~5% while substantially shortening the tail - only requests in the slow tail trigger the hedge.</p>
+<p><strong>Monitoring:</strong> Track <code>hedge_request_rate</code> and <code>hedge_win_rate</code>. If hedge requests win &gt;20% of the time, investigate why primary is consistently slow.</p>
+<p><strong>Advanced Optimizations and Safety Mechanisms:</strong></p>
+<p>The baseline hedge implementation adds ~5% load (requests in the slow tail). Two production-validated optimizations improve effectiveness while one critical safety mechanism prevents cascading failures:</p>
+<p><strong>1. Load-Aware Hedge Routing via Service Mesh</strong></p>
+<p>Leverage service mesh built-in load balancing rather than random replica selection:</p>
+<ul>
+<li><strong>Linkerd approach:</strong> EWMA (Exponentially Weighted Moving Average) algorithm automatically tracks per-replica latency and routes hedge requests to faster instances</li>
+<li><strong>Istio approach:</strong> Configure least-request load balancing policy, which routes to replicas with fewest active requests</li>
+<li><strong>Why not custom logic:</strong> Building custom “choose lowest queue depth” algorithms creates oscillation risk - the least-loaded replica receives all hedges, becomes most-loaded, causing hedges to shift to next replica in unstable pattern</li>
+<li><strong>Benefit:</strong> Service mesh naturally avoids slow replicas, increasing hedge win rate from 5% to 8-12% without custom code</li>
+<li><strong>Production validation:</strong> Linkerd measured as fastest service mesh for low-latency workloads (RPS &lt; 500), with sub-millisecond median latencies</li>
+</ul>
+<p><strong>2. Request Cancellation on First Response</strong></p>
+<p>Cancel the slower request immediately when first response arrives:</p>
+<ul>
+<li><strong>Mechanism:</strong> gRPC supports request cancellation - client sends <code>RST_STREAM</code> frame to cancel in-flight request</li>
+<li><strong>Server handling requirement:</strong> Server MUST detect cancellation and stop processing. In gRPC/Java, service implementation should periodically check <code>ServerCallStreamObserver.isCancelled()</code> and abort work when true</li>
+<li><strong>Critical caveat:</strong> Cancellation is cooperative - if server ignores cancellation signal, it continues processing to completion even though client stopped listening. This wastes server resources (CPU, memory, DB connections)</li>
+<li><strong>Benefit (if properly implemented):</strong> Reduces actual compute cost from 2× to ~1.05-1.1× (only requests in slow tail complete duplicate work)</li>
+<li><strong>Implementation:</strong> Client-side cancellation via gRPC context is automatic. Server-side requires explicit cancellation handling in service code</li>
+</ul>
+<p><strong>3. Circuit Breaker for Hedge Safety (Critical)</strong></p>
+<p>Prevent thundering herd during system degradation:</p>
+<p><strong>The problem adaptive thresholds tried to solve - and why they fail:</strong></p>
+<p>Initial intuition suggests: “During degradation, hedge more aggressively to maintain SLOs.” This leads to adaptive thresholds that lower the hedge trigger (P95 → P90) when P50 latency increases, raising hedge rate from 5% to 10%. <strong>This is backwards.</strong> When User Profile Service is degraded (e.g., Valkey partial outage slows L2 cache), ALL requests exceed the P95 threshold → hedge rate spikes to 100% → effective load doubles (2× every request) → replicas saturate → P50 increases further → more hedging → cascading failure.</p>
+<p>No production systems use adaptive hedge thresholds. Instead, they use circuit breakers to disable hedging during overload.</p>
+<p><strong>The Netflix/Hystrix pattern:</strong></p>
+<p>Circuit breaker monitors hedge rate and <strong>throttles immediately</strong> rather than waiting for system to break:</p>
+<ul>
+<li><strong>Monitor:</strong> Track hedge request rate over rolling 60-second window</li>
+<li><strong>Threshold:</strong> If hedge rate exceeds 15-20% for sustained period (60 seconds)</li>
+<li><strong>Action:</strong> Disable hedging entirely for 5 minutes (circuit open)</li>
+<li><strong>Resume:</strong> Re-enable hedging and monitor (circuit half-open → closed if healthy)</li>
+<li><strong>Additional safety:</strong> Disable hedging during multi-region failover (when more than 1 region down)</li>
+</ul>
+<p><strong>Why 15-20% threshold:</strong> Baseline hedge rate should be ~5% (only slow tail requests). If rate climbs to 15-20%, it indicates widespread degradation where hedging adds load without benefit - primary and hedge requests are both slow.</p>
+<p><strong>Production precedent:</strong> Netflix Hystrix emphasizes that “concurrency limits and timeouts are the proactive portion that prevent anything from going beyond limits and throttle immediately, rather than waiting for statistics or for the system to break.” The circuit breaker is “icing on the cake” that provides the safety valve.</p>
+<p><strong>Combined impact:</strong></p>
+<ul>
+<li>Service mesh load-aware routing: +50% hedge win rate (5% → 8%) without custom code</li>
+<li>Request cancellation: -50% wasted compute (2× → 1.05×) when properly implemented</li>
+<li>Circuit breaker: Prevents cascading failures during degradation (essential safety mechanism)</li>
+<li><strong>Net result:</strong> Maintain ~5% average hedge rate with protection against overload. Total capacity increase: +4-6 pods per region to handle hedge overhead.</li>
+</ul>
+<p><strong>Production implementation guidance:</strong></p>
+<p>Start with baseline (P95 threshold, no optimizations):</p>
+<ol>
+<li>Enable hedging for User Profile Service only via gRPC service configuration</li>
+<li>Configure service mesh for hedging-eligible methods (read-only, idempotent operations)</li>
+<li>Implement circuit breaker monitoring (track hedge rate, disable if &gt;15% for 60s)</li>
+<li>Require server-side cancellation handling (check cancellation token, abort work)</li>
+</ol>
+<p>gRPC native hedging configuration specifies maximum attempts (primary plus one hedge), hedging delay (P95 latency threshold), and which error codes should trigger hedging versus failing fast. The client automatically cancels slower requests when first response arrives, but servers must cooperatively check cancellation status and stop processing.</p>
+<p><strong>Trade-offs to accept:</strong></p>
+<p>This approach adds three types of complexity worth the 30-40% P99.9 latency benefit:</p>
+<ul>
+<li>Monitoring complexity (requires hedge rate metric and circuit breaker logic)</li>
+<li>Idempotency requirement (services must be safe to execute multiple times)</li>
+<li>Cache coherence challenge (discussed below)</li>
+</ul>
+<p>Only implement after validating baseline hedge requests prove effective in production.</p>
+<p><strong>Cache Coherence Trade-off:</strong></p>
+<p>Hedging requests to different replicas with L1 in-process caches introduces data consistency challenges:</p>
+<p><strong>The scenario:</strong></p>
+<ul>
+<li>User Profile pods maintain L1 Caffeine caches with 60-second TTL</li>
+<li>User updates profile at T=0, invalidating L2 Valkey cache immediately</li>
+<li>Replica A: L1 cache entry still valid (won’t expire until T=60)</li>
+<li>Replica B: L1 cache already expired, fetches fresh data from L2</li>
+<li>Hedge request sent to both replicas → <strong>whichever wins determines user experience</strong></li>
+</ul>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>User may see inconsistent profile data across consecutive requests</li>
+<li>Ad targeting uses stale interests (up to 60 seconds old) → reduced relevance</li>
+<li>GDPR compliance concern: Opt-out signal may not reflect for up to 60 seconds</li>
+</ul>
+<p><strong>Why no simple fix exists:</strong></p>
+<p>Two standard approaches, both with drawbacks:</p>
+<ol>
+<li><strong>Reduce L1 TTL</strong> (60s → 10s): Increases L2 Valkey load 6× (60% of requests now miss L1 instead of hitting it)</li>
+<li><strong>Active invalidation</strong> (publish cache eviction events): Adds latency (15ms Kafka publish + propagation), adds complexity (event streaming infrastructure), still has eventual consistency window (100ms instead of 60s)</li>
+</ol>
+<p><strong>Recommended approach:</strong></p>
+<p>Accept 60-second max staleness as trade-off for 30-40% P99.9 latency improvement. For critical updates requiring immediate consistency (GDPR opt-out, account suspension), implement active invalidation via L2 cache eviction events - trigger explicit Valkey DELETE when these updates occur, forcing all replicas to fetch fresh data from L3.</p>
+<p><strong>This is a fundamental distributed caching trade-off, not specific to hedging</strong> - any multi-tier cache with in-process L1 faces this challenge. Hedging simply makes the inconsistency more visible by potentially serving requests from replicas in different cache states within single user session.</p>
+<hr />
+<h2 id="external-api-architecture">External API Architecture</h2>
+<p>The platform exposes three distinct API surfaces for different user personas. Each API has different latency requirements, security models, and rate limiting strategies. Understanding these external interfaces is critical - they’re not implementation details but architectural concerns that shape request flow, authentication overhead, and operational complexity.</p>
+<p><strong>Why APIs matter architecturally:</strong> The API layer sits on the critical path (contributing 5ms to latency budget), enforces security boundaries (preventing unauthorized access to high-value revenue streams), and manages external load (rate limiting 1M+ QPS from thousands of publishers). Get API design wrong and you either violate latency SLOs, create security vulnerabilities, or waste engineering time debugging integration issues.</p>
+<p><strong>Three API types overview:</strong></p>
+<ul>
+<li><strong>Publisher Ad Request API</strong>: Critical path for ad serving (150ms P95 latency, 1M+ QPS)</li>
+<li><strong>Advertiser Campaign Management API</strong>: Non-critical management operations (500ms latency acceptable, 10K req/min)</li>
+<li><strong>Event Tracking API</strong>: High-volume async analytics (5M events/sec, best-effort delivery)</li>
+</ul>
+<p>These APIs integrate with Part 1’s system architecture (API Gateway → Ad Server Orchestrator), <a href="/blog/ads-platform-part-3-data-revenue/#cache-invalidation-strategies">Part 3’s cache invalidation patterns</a> (budget updates propagate through L1/L2/L3), and <a href="/blog/ads-platform-part-4-production/#security-and-compliance">Part 4’s security model</a> (zero-trust, encryption at rest/transit).</p>
+<h3 id="publisher-ad-request-api-critical-path">Publisher Ad Request API - Critical Path</h3>
+<p><strong>Purpose and Requirements</strong></p>
+<p>This API serves the core ad request flow: mobile apps and websites request ads in real-time. It’s the highest-traffic, most latency-sensitive endpoint in the entire platform.</p>
+<p><strong>Latency constraint:</strong> P95 &lt; 150ms (matches internal SLO from <a href="/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition">Part 1’s latency budget decomposition</a>)
+<strong>Throughput:</strong> 1M QPS baseline, 1.5M QPS burst capacity (from Part 1’s scale requirements)
+<strong>Availability:</strong> 99.9% uptime (43 min/month error budget - same as overall platform SLA)</p>
+<p><strong>Why this is critical path:</strong> Every millisecond counts. Mobile apps timeout after 150-200ms. If this API breaches budget, users see blank ad slots and we earn zero revenue on those requests.</p>
+<p><strong>Endpoint Design</strong></p>
+<p><strong>HTTP Method:</strong> POST
+<strong>Path:</strong> <code>/v1/ad/request</code>
+<strong>Authentication:</strong> API Key via <code>X-Publisher-ID</code> header</p>
+<p><strong>Why API key instead of OAuth:</strong> Latency. OAuth token validation requires JWT signature verification (RSA-2048: 2-3ms) plus potential token introspection calls (5-10ms if not cached). API keys validate via simple distributed cache lookup (0.5ms). At 1M QPS, this 2ms difference consumes 13% of the gateway’s 5ms latency budget.</p>
+<p><strong>Rate Limiting:</strong> 10K QPS per publisher (tied to SLA tier)</p>
+<p>Publishers are tiered (Bronze: 1K QPS, Silver: 5K, Gold: 10K, Platinum: 50K+). Rate limits enforce commercial agreements and prevent single publisher from overwhelming platform capacity.</p>
+<p><strong>Request Schema</strong></p>
+<p>The request payload contains four categories of data:</p>
+<p><strong>User Identity Section (Optional - Signal Loss Reality):</strong></p>
+<ul>
+<li><code>user_id</code> (hashed, <strong>optional</strong>): SHA-256 hash of device ID or email when available</li>
+<li><code>demographics</code>: Age range (18-24, 25-34, etc.), gender (inferred or declared)</li>
+<li><code>interests</code>: Array of categories ([sports, technology, travel]) from behavioral signals</li>
+</ul>
+<p><strong>Why <code>user_id</code> is optional:</strong> Due to ATT (only ~50% opt-in on iOS, ~27% dual opt-in), cookie blocking (Safari, Firefox), and Privacy Sandbox (Chrome), stable user identity is unavailable for 40-60% of mobile traffic. The system must serve ads without it. When present, <code>user_id</code> enables frequency capping and sequential retargeting. When absent, the system falls back to contextual targeting.</p>
+<p><strong>Contextual Signals Section (Always Available):</strong></p>
+<ul>
+<li><code>page_url</code>: Current page URL for content-based targeting (news.com/sports → sports advertisers)</li>
+<li><code>page_categories</code>: Publisher-declared content categories (IAB taxonomy)</li>
+<li><code>topics</code>: Chrome Topics API categories (when available) - privacy-preserving interest signals</li>
+<li><code>referrer</code>: Traffic source for intent inference</li>
+<li><code>session_depth</code>: Pages viewed this session (engagement signal)</li>
+</ul>
+<p><strong>Why contextual signals are first-class:</strong> These signals are always available regardless of identity. While contextual inventory commands lower CPMs than behaviorally-targeted inventory (typically 30-50% lower, though premium placements approach parity), contextual targeting delivers comparable conversion performance - <a href="https://gumgum.com/blog/landmark-study-proves-the-effectiveness-of-contextual-over-behavioral-targeting">a GumGum/Dentsu study</a> found 48% lower cost-per-click and similar conversion rates. This makes contextual the economically viable fallback for the 40-60% of traffic without stable user_id.</p>
+<p><strong>Placement Section:</strong></p>
+<ul>
+<li><code>format</code>: banner, video, interstitial, native, rewarded-video</li>
+<li><code>dimensions</code>: 320x50 (mobile banner), 728x90 (leaderboard), 300x250 (medium rectangle)</li>
+<li><code>position</code>: above_fold, below_fold, in_feed (affects viewability and CPM pricing)</li>
+</ul>
+<p><strong>Device Section:</strong></p>
+<ul>
+<li><code>type</code>: mobile, desktop, tablet, connected-tv</li>
+<li><code>os</code>: iOS 17.2, Android 14, Windows 11 (for creative compatibility)</li>
+<li><code>ip</code>: Client IP address for fraud detection and geo-targeting</li>
+</ul>
+<p><strong>Why IP included:</strong> Essential for two critical functions: (1) Fraud detection (<a href="/blog/ads-platform-part-4-production/#fraud-detection-pattern-based-abuse-detection">Part 4’s Integrity Check Service</a>) - correlate IP with device fingerprint to detect bot farms, (2) Geo-targeting - advertisers pay premium for location-based campaigns (NYC restaurant targets Manhattan users).</p>
+<p><strong>Payload size constraint:</strong> &lt; 4KB</p>
+<p>Why limit size? At 1M QPS, 4KB requests = 4GB/sec network ingress = 32 Gbps. Keeping payloads compact reduces infrastructure costs and network latency (smaller payloads = faster transmission over TCP).</p>
+<p><strong>Response Schema</strong></p>
+<p>The response contains the winning ad plus tracking instrumentation:</p>
+<p><strong>Ad Metadata:</strong></p>
+<ul>
+<li><code>ad_id</code>: Unique identifier for this specific ad creative</li>
+<li><code>creative_url</code>: CDN-hosted asset (image, video, HTML5) served from global PoPs (sub-100ms first-byte time)</li>
+<li><code>click_url</code>: Destination URL when user taps/clicks the ad</li>
+</ul>
+<p><strong>Tracking URLs:</strong></p>
+<ul>
+<li><code>impression_url</code>: Pre-signed URL for impression event (fired when ad displays)</li>
+<li><code>click_url</code>: Pre-signed URL for click event</li>
+<li><code>viewability_url</code>: Optional URL for viewability tracking (50%+ pixels visible for 1+ seconds)</li>
+</ul>
+<p><strong>Why pre-signed URLs:</strong> Prevents tracking pixel fraud. Without signatures, malicious publishers could forge impression events by repeatedly calling <code>/v1/events/impression</code> with fabricated data. Pre-signed URLs use HMAC-SHA256 with secret key and 5-minute expiry - only the Ad Server can generate valid tracking URLs.</p>
+<p><strong>TTL (Time-To-Live):</strong> 300 seconds default</p>
+<p>Advertisers want fresh targeting data (user’s interests from 5 minutes ago, not 24 hours ago), but excessive freshness increases server load. 300s (5min) balances these concerns - cache hit rate remains high (80%+) while targeting stays reasonably current.</p>
+<p><strong>Integration with System Architecture</strong></p>
+<p>Request flow: <code>Client → API Gateway (5ms) → Ad Server Orchestrator → [User Profile, ML, RTB, Auction] → Response</code></p>
+<p>Reference <a href="/blog/ads-platform-part-1-foundation-architecture/#system-components-and-request-flow">Part 1’s request flow diagram</a> - the Publisher API is the entry point to the entire ad serving critical path. The 5ms gateway latency budget includes API key validation (0.5ms), rate limiting (1ms), and request enrichment (3.5ms for adding geo-location from IP, parsing headers, sanitizing inputs).</p>
+<p><strong>Why synchronous:</strong> Publishers need immediate responses to render ad content. Asynchronous processing (accept request, return job ID, poll for result) would require publishers to implement complex retry logic and delays ad display by seconds - unacceptable for user experience.</p>
+<h3 id="advertiser-campaign-management-api">Advertiser Campaign Management API</h3>
+<p><strong>Purpose and Requirements</strong></p>
+<p>Advertisers use this API to create campaigns, adjust budgets, query real-time stats, and manage targeting parameters. Unlike the Publisher API (critical path), these are management operations where 500ms latency is acceptable.</p>
+<p><strong>Latency constraint:</strong> P95 &lt; 500ms (non-critical path, acceptable to be slower than ad serving)
+<strong>Throughput:</strong> 10K req/min (much lower than 1M QPS ad serving - advertisers make tens of API calls per campaign, not millions)
+<strong>Use cases:</strong> Dashboard integrations, programmatic campaign optimization, bulk operations</p>
+<p><strong>Endpoint Catalog</strong></p>
+<p><strong>POST <code>/v1/campaigns</code></strong> - Create campaign</p>
+<ul>
+<li>Request: Campaign name, budget, targeting criteria (interests, demographics, geo), creative assets, pricing model (CPM/CPC/CPA)</li>
+<li>Response: Campaign ID, initial status (pending_review → advertiser must await approval before serving)</li>
+</ul>
+<p><strong>GET <code>/v1/campaigns/{id}/stats</code></strong> - Query real-time performance</p>
+<ul>
+<li>Request: Campaign ID, time range (last_hour, today, last_7_days), metrics (impressions, clicks, spend)</li>
+<li>Response: Aggregated stats with 10-30 second staleness (eventual consistency acceptable)</li>
+</ul>
+<p><strong>PATCH <code>/v1/campaigns/{id}/budget</code></strong> - Adjust spending</p>
+<ul>
+<li>Request: New budget amount, pacing strategy (even_distribution, frontloaded)</li>
+<li>Response: Updated budget, estimated time to depletion</li>
+</ul>
+<p><strong>DELETE <code>/v1/campaigns/{id}</code></strong> - Pause/stop campaign</p>
+<ul>
+<li>Request: Campaign ID</li>
+<li>Response: Confirmation, final spend report</li>
+</ul>
+<p><strong>Authentication Model</strong></p>
+<p><strong>OAuth 2.0 Authorization Code Flow</strong></p>
+<p><strong>Why OAuth instead of API keys:</strong> Long-lived sessions. Advertisers log into web dashboards for 30-60 minute sessions. OAuth provides:</p>
+<ul>
+<li>Access tokens (15 min expiry) - prevents token replay attacks</li>
+<li>Refresh tokens (rotation on use) - enables long sessions without storing credentials</li>
+<li>Scope-based permissions (read-only, billing-only, admin) - granular access control</li>
+</ul>
+<p>OAuth’s 2-3ms latency overhead is acceptable here because we have 500ms budget (vs 150ms for Publisher API).</p>
+<p><strong>Scope-based permissions:</strong></p>
+<ul>
+<li><code>campaigns:read</code> - View campaigns and stats</li>
+<li><code>campaigns:write</code> - Create, update, pause campaigns</li>
+<li><code>billing:read</code> - View invoices and spend</li>
+<li><code>billing:write</code> - Update payment methods (admin only)</li>
+</ul>
+<p><strong>Stats API Deep-Dive</strong></p>
+<p><strong>The challenge:</strong> Advertisers expect stats within 5 seconds (not 30 seconds from batch processing), but querying billions of impression/click events in real-time would violate latency budget and overwhelm the transactional database.</p>
+<p><strong>Solution:</strong> Separate analytics path with pre-aggregated data</p>
+<p>Introduce a columnar analytics database (ClickHouse or Apache Druid) optimized for time-series aggregations:</p>
+<ul>
+<li><strong>Raw events:</strong> Stream from Kafka to analytics database (not transactional database)</li>
+<li><strong>Pre-aggregation:</strong> Hourly rollups compute <code>SUM(impressions), SUM(clicks), SUM(spend)</code> grouped by campaign_id</li>
+<li><strong>Query time:</strong> Fetch pre-aggregated hourly data (1000× faster than scanning raw events)</li>
+</ul>
+<p><strong>Trade-off:</strong> 10-20 seconds staleness (eventual consistency). Events flow: User clicks ad → Kafka → Stream Processor → Analytics DB → Hourly rollup job → Stats API cache. Total pipeline latency: 10-20 seconds.</p>
+<p><strong>Why acceptable:</strong> Advertisers checking campaign progress don’t need millisecond-accurate counts. Showing 99.6% budget utilization with 20-second lag is fine. Critical financial accuracy (budget enforcement) uses separate strongly-consistent path (<a href="/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-spend-control">Part 3’s atomic operations</a>).</p>
+<p><strong>Budget Update Workflow</strong></p>
+<p>Advertiser updates budget via <code>PATCH /v1/campaigns/{id}/budget</code>:</p>
+<ol>
+<li><strong>Request validated:</strong> Check authorization (OAuth scopes), validate new budget &gt; current spend</li>
+<li><strong>Database write:</strong> Update campaign budget in transactional database (strong consistency required)</li>
+<li><strong>Cache invalidation cascade:</strong> Propagate change through L1/L2/L3 cache hierarchy</li>
+</ol>
+<p><strong>Cache invalidation mechanics</strong> (reference <a href="/blog/ads-platform-part-3-data-revenue/#multi-tier-cache-hierarchy">Part 3’s cache hierarchy</a>):</p>
+<ul>
+<li>L1 (in-process Caffeine cache on 300 Ad Server instances): Pub/sub message triggers <code>cache.invalidate(campaign_id)</code> - propagation time &lt;60 seconds</li>
+<li>L2 (distributed Valkey cache): <code>DEL campaign:{id}:budget</code> - immediate</li>
+<li>L3 (transactional database): Already updated (source of truth)</li>
+</ul>
+<p><strong>Propagation time:</strong> 10-20 seconds for all instances to see new budget</p>
+<p><strong>Why this doesn’t violate financial accuracy:</strong> Budget enforcement uses pre-allocated windows (<a href="/blog/ads-platform-part-3-data-revenue/#budget-pacing-distributed-spend-control">Part 3’s atomic pacing</a>). Even if some servers see stale budget for 20 seconds, the atomic budget counter in distributed cache enforces spending limits with ≤1% variance. Worst case: slight over-delivery during propagation window, but bounded by pre-allocation limits.</p>
+<h3 id="event-tracking-api">Event Tracking API</h3>
+<p><strong>Purpose and Requirements</strong></p>
+<p>Track impressions (ad displayed), clicks (user tapped ad), and conversions (user installed app or made purchase). This API handles the highest volume - 5× the ad request rate due to retries, duplicates, and background analytics beacons.</p>
+<p><strong>Volume:</strong> 5M events/sec (5× ad request rate)</p>
+<ul>
+<li>1M ad requests/sec → 1M impressions/sec (100% display rate)</li>
+<li>× 2-3% CTR = 30K clicks/sec</li>
+<li>× Retry/duplicate multiplier (2-3×) = 90K events/sec</li>
+<li>
+<ul>
+<li>Background analytics = 5M events/sec total</li>
+</ul>
+</li>
+</ul>
+<p><strong>Latency:</strong> Best-effort (async processing acceptable)</p>
+<p>Unlike ad serving (must complete in 150ms), event tracking can tolerate seconds of delay. Analytics dashboards update with 10-30 second lag, and that’s fine.</p>
+<p><strong>Endpoint Design</strong></p>
+<p><strong>POST <code>/v1/events/impression</code></strong> - Ad displayed
+<strong>POST <code>/v1/events/click</code></strong> - Ad clicked
+<strong>POST <code>/v1/events/conversion</code></strong> - User converted (installed app, purchased product)</p>
+<p><strong>Authentication:</strong> Pre-signed URLs (embedded in ad response, no API key needed)</p>
+<p>The ad response from Publisher API includes <code>impression_url: "/v1/events/impression?ad_id=123&amp;sig=HMAC(...)"</code>. The client fires this URL when displaying the ad. HMAC signature validates request authenticity - only the Ad Server could have generated this URL with correct signature.</p>
+<p><strong>Design Pattern</strong></p>
+<p><strong>Client sends event → API Gateway → Kafka (async) → 200 OK immediately</strong></p>
+<p>The API Gateway doesn’t wait for Kafka acknowledgment or downstream processing. It accepts the event, publishes to Kafka, and returns success immediately. This non-blocking pattern achieves sub-10ms response times even at 5M events/sec.</p>
+<p><strong>Idempotency via event_id:</strong></p>
+<p>Mobile networks are unreliable. Clients retry failed requests, causing duplicate events. To prevent double-counting:</p>
+<ul>
+<li>Client generates unique <code>event_id</code> (UUID) per event</li>
+<li>Stream processor maintains a 24-hour deduplication cache (distributed Bloom filter)</li>
+<li>Duplicate events (same <code>event_id</code>) are discarded before analytics/billing</li>
+</ul>
+<p><strong>Batching support:</strong></p>
+<p>Mobile SDKs batch 10-50 events into single request to reduce network overhead:</p>
+<pre style="background-color:#fafafa;color:#383a42;"><code><span>POST /v1/events/batch
+</span><span>[
+</span><span>  {&quot;type&quot;: &quot;impression&quot;, &quot;ad_id&quot;: 123, &quot;timestamp&quot;: ...},
+</span><span>  {&quot;type&quot;: &quot;impression&quot;, &quot;ad_id&quot;: 456, &quot;timestamp&quot;: ...},
+</span><span>  {&quot;type&quot;: &quot;click&quot;, &quot;ad_id&quot;: 123, &quot;timestamp&quot;: ...}
+</span><span>]
+</span></code></pre>
+<p>Batching reduces request count by 10-50×, saving mobile battery and reducing server load.</p>
+<p><strong>Why Async is Acceptable</strong></p>
+<p>Events serve three purposes:</p>
+<ol>
+<li><strong>Analytics dashboards:</strong> Advertisers see campaign performance (eventual consistency acceptable - 10-30 sec lag)</li>
+<li><strong>Billing reconciliation:</strong> Monthly billing reports (eventual consistency acceptable - daily batch jobs)</li>
+<li><strong>ML training data:</strong> Historical click patterns feed CTR models (eventual consistency acceptable - model retrain daily)</li>
+</ol>
+<p>None of these require real-time processing. Trading lower client latency (10ms vs 50ms if we waited for Kafka ack) for eventual consistency (10-30 sec lag) is a clear win.</p>
+<h3 id="api-gateway-configuration">API Gateway Configuration</h3>
+<p><strong>Technology Choice Rationale</strong></p>
+<p>Reference <a href="/blog/ads-platform-part-5-implementation/#communication-layer-grpc-linkerd">Part 5’s gateway selection</a> (detailed implementation covered in final architecture post). Requirements for this workload:</p>
+<ul>
+<li><strong>JWT validation:</strong> 2ms overhead for OAuth tokens (Advertiser API)</li>
+<li><strong>API key validation:</strong> 0.5ms overhead for distributed cache lookup (Publisher API)</li>
+<li><strong>Rate limiting:</strong> 1ms overhead for distributed token bucket check</li>
+<li><strong>Total overhead target:</strong> 2-4ms (fits within 5ms gateway budget from <a href="/blog/ads-platform-part-1-foundation-architecture/#latency-budget-decomposition">Part 1’s latency decomposition</a>)</li>
+</ul>
+<p><strong>Why these requirements matter:</strong> At 1M QPS, every millisecond of gateway overhead consumes 0.67% of the 150ms latency budget. Inefficient gateways (10-15ms overhead) would violate SLOs before requests even reach the Ad Server.</p>
+<p><strong>Per-API Configuration</strong></p>
+<p><strong>Publisher API:</strong></p>
+<ul>
+<li>Authentication: API key validation via distributed cache (0.5ms)</li>
+<li>Rate limiting: Distributed token bucket (1ms) - enforces per-publisher QPS limits</li>
+<li>TLS termination: Required for PII protection (GDPR/CCPA compliance)</li>
+</ul>
+<p><strong>Advertiser API:</strong></p>
+<ul>
+<li>Authentication: JWT validation (2ms) + OAuth token introspection (cached, 1ms)</li>
+<li>Rate limiting: Per-user token bucket (less aggressive than Publisher - 1K req/min vs 10K QPS)</li>
+<li>CORS handling: Dashboard integrations require cross-origin support</li>
+</ul>
+<p><strong>Events API:</strong></p>
+<ul>
+<li>Authentication: Pre-signed URL HMAC verification (0.3ms - faster than API key)</li>
+<li>Rate limiting: Relaxed (clients batch requests, volume naturally throttled)</li>
+<li>Connection pooling: Persistent HTTP/2 connections reduce overhead for high-volume clients</li>
+</ul>
+<p><strong>Cross-Region Routing</strong></p>
+<p><strong>Publisher API:</strong> Route to nearest region (GeoDNS - minimize latency)</p>
+<ul>
+<li>Client in NYC → us-east-1 gateway (10ms RTT)</li>
+<li>Client in London → eu-west-1 gateway (15ms RTT)</li>
+<li>Why: Latency-sensitive critical path - every millisecond counts</li>
+</ul>
+<p><strong>Advertiser API:</strong> Route to campaign’s home region (data locality)</p>
+<ul>
+<li>Campaign created in us-east-1 → always route to us-east-1 (avoid cross-region data access)</li>
+<li>Why: 500ms latency budget allows cross-region routing if needed (80-120ms penalty acceptable)</li>
+</ul>
+<p><strong>Events API:</strong> Route to nearest Kafka cluster (minimize network hops)</p>
+<ul>
+<li>Event from mobile client in California → us-west-1 Kafka cluster</li>
+<li>Why: Reduces event ingestion latency and network egress costs</li>
+</ul>
+<p><strong>Rate Limiting Architecture</strong></p>
+<p><strong>Multi-tier limits</strong> (from <a href="/blog/ads-platform-part-1-foundation-architecture/#rate-limiting-volume-based-traffic-control">Part 1’s rate limiting section</a>):</p>
+<ul>
+<li><strong>Global:</strong> 1.5M QPS (platform capacity ceiling)</li>
+<li><strong>Per-publisher:</strong> 10K QPS (enforce SLA tiers)</li>
+<li><strong>Per-IP:</strong> 100 QPS (prevent DDoS from single source)</li>
+</ul>
+<p><strong>Distributed cache-backed token bucket:</strong></p>
+<ul>
+<li>Each publisher has token bucket stored in distributed cache (Valkey/Redis)</li>
+<li>Bucket capacity = rate limit (e.g., 10K tokens for 10K QPS)</li>
+<li>Token consumption: Atomic <code>DECRBY bucket_key 1</code> operation (1ms latency)</li>
+<li>Token refill: Background job adds tokens every 100ms (smooth refill rate)</li>
+</ul>
+<p><strong>Why distributed cache:</strong> Centralized truth prevents “split-brain” scenarios where different gateway instances enforce different limits. Trade-off: 1ms cache lookup latency (acceptable within 5ms budget) for accurate global limits.</p>
+<h3 id="api-versioning-strategy">API Versioning Strategy</h3>
+<p><strong>Versioning Approach</strong></p>
+<p><strong>URL-based versioning:</strong> <code>/v1/</code>, <code>/v2/</code>, <code>/v3/</code></p>
+<p><strong>Why URL-based instead of header-based:</strong></p>
+<ul>
+<li><strong>Simplicity:</strong> Developers can test different versions by changing URL (no custom headers)</li>
+<li><strong>Caching:</strong> CDNs and proxies cache by URL - header-based versioning breaks HTTP caching</li>
+<li><strong>Visibility:</strong> Logs and metrics show version in URL path (easier debugging)</li>
+</ul>
+<p><strong>Backward compatibility:</strong> 12 months support for deprecated versions</p>
+<p>When releasing <code>/v2/ad/request</code>, we maintain <code>/v1/ad/request</code> for 12 months. Publishers have 1 year to migrate before forced cutoff.</p>
+<p><strong>Deprecation Workflow</strong></p>
+<ol>
+<li><strong>Announce 6 months in advance</strong> (blog post, email, dashboard banner)</li>
+<li><strong>Response headers warn clients:</strong>
+<ul>
+<li><code>X-API-Deprecated: true</code></li>
+<li><code>X-API-Sunset: 2026-01-01</code> (RFC 8594 Sunset Header)</li>
+</ul>
+</li>
+<li><strong>Migration tools</strong> for common patterns (SDK code generators, automated migration scripts)</li>
+<li><strong>Forced cutoff</strong> after 12 months - <code>/v1</code> returns HTTP 410 Gone</li>
+</ol>
+<p><strong>Breaking Change Examples</strong></p>
+<p><strong>Requires new version:</strong></p>
+<ul>
+<li>Removing fields (breaks existing clients expecting those fields)</li>
+<li>Changing field types (<code>user_id</code> from integer to string)</li>
+<li>Stricter validation (rejecting previously-accepted invalid data could break clients)</li>
+</ul>
+<p><strong>No new version needed:</strong></p>
+<ul>
+<li>Adding optional fields (clients ignore unknown fields)</li>
+<li>Deprecating fields (mark as deprecated but keep functioning)</li>
+<li>Looser validation (accepting more input variants)</li>
+</ul>
+<p><strong>Why this matters:</strong> Breaking changes frustrate developers and damage platform adoption. Clear versioning strategy builds trust - developers know migrations are manageable (12-month window) and predictable (semantic versioning).</p>
+<h3 id="security-model">Security Model</h3>
+<p><strong>Authentication Methods</strong></p>
+<p><strong>Publisher API: API Keys</strong></p>
+<ul>
+<li>Rotation: Quarterly mandatory, triggered rotation on suspected compromise</li>
+<li>Storage: Keys hashed (SHA-256) in database, distributed cache stores hash for validation</li>
+<li>Distribution: Dashboard allows publishers to generate/revoke keys (OAuth-protected admin panel)</li>
+</ul>
+<p><strong>Key management:</strong> Publishers can create multiple keys (dev, staging, production) with independent rate limits. Compromised key = revoke specific key without disrupting other environments.</p>
+<p><strong>Advertiser API: OAuth 2.0</strong></p>
+<ul>
+<li><strong>Access token:</strong> 15 min expiry (limits replay attack window)</li>
+<li><strong>Refresh token:</strong> Rotation on use (prevents token theft long-term)</li>
+<li><strong>Authorization server:</strong> Centralized OAuth provider handles token issuance, validation, revocation</li>
+</ul>
+<p><strong>Why 15 min expiry:</strong> Balances security (short window for stolen token abuse) vs user experience (refresh tokens silently renew access without re-login).</p>
+<p><strong>Events API: Pre-signed URLs</strong></p>
+<ul>
+<li><strong>HMAC-SHA256 signature:</strong> Verifies URL wasn’t tampered with</li>
+<li><strong>5-minute expiry:</strong> Prevents replay attacks (old impression URLs can’t be reused days later to forge events)</li>
+<li><strong>Parameters signed:</strong> <code>ad_id</code>, <code>campaign_id</code>, <code>timestamp</code> included in HMAC input - prevents parameter tampering</li>
+</ul>
+<p><strong>Authorization Granularity</strong></p>
+<p><strong>Publisher: Domain whitelisting</strong></p>
+<ul>
+<li>Publishers register allowed domains/apps (<code>example.com</code>, <code>com.example.app</code>)</li>
+<li>Requests from non-whitelisted origins rejected (prevents API key theft and use on malicious sites)</li>
+</ul>
+<p><strong>Advertiser: Tenant isolation</strong></p>
+<ul>
+<li>Advertisers can only access their own campaigns (row-level security in database)</li>
+<li>RBAC roles:
+<ul>
+<li><strong>Admin:</strong> Full campaign management + billing access</li>
+<li><strong>Read-only:</strong> View-only dashboard access</li>
+<li><strong>Billing-only:</strong> Invoice and payment method access (no campaign creation)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Why tenant isolation matters:</strong> Shared infrastructure (multi-tenant platform) requires strict boundaries. Advertiser A must never see Advertiser B’s campaign data, even through API exploits or SQL injection attempts. Defense-in-depth: API layer enforces authorization, database layer enforces row-level security.</p>
+<p><strong>Threat Mitigation</strong></p>
+<p><strong>API key leakage:</strong></p>
+<ul>
+<li><strong>Automatic rotation:</strong> Quarterly forced rotation reduces long-term exposure</li>
+<li><strong>Rate limit per key:</strong> Leaked key limited to 10K QPS (can’t overwhelm platform)</li>
+<li><strong>Anomaly detection:</strong> Sudden traffic spike from single key triggers alert + automatic temporary suspension</li>
+</ul>
+<p><strong>Token theft (OAuth):</strong></p>
+<ul>
+<li><strong>Short-lived access tokens (15 min):</strong> Limits abuse window</li>
+<li><strong>Refresh token rotation:</strong> Stolen refresh token invalidated on next legitimate refresh</li>
+<li><strong>IP geofencing:</strong> Suspicious IP changes (NYC → China in 5 minutes) trigger re-authentication</li>
+</ul>
+<p><strong>Replay attacks:</strong></p>
+<ul>
+<li><strong>Nonce-based idempotency:</strong> <code>event_id</code> uniqueness enforced (duplicate events rejected)</li>
+<li><strong>Timestamp validation:</strong> Requests with timestamps &gt;5 min old rejected</li>
+<li><strong>HMAC expiry:</strong> Pre-signed URLs expire after 5 minutes (can’t replay old tracking URLs)</li>
+</ul>
+<h3 id="api-architecture-diagrams">API Architecture Diagrams</h3>
+<p><strong>Diagram 1: API Request Flow</strong></p>
+<p>This diagram shows how the three client types (mobile apps, web dashboards, tracking SDKs) connect through the API Gateway to backend services, each with distinct authentication and latency requirements.</p>
+<pre class="mermaid">
+    
+    graph TB
+    subgraph "Client Applications"
+        MOBILE[Mobile App<br/>Publisher API]
+        WEB[Web Dashboard<br/>Advertiser API]
+        SDK[Tracking SDK<br/>Events API]
+    end
+
+    subgraph "API Gateway Layer"
+        GW[Envoy Gateway<br/>Auth + Rate Limiting<br/>2-4ms overhead]
+    end
+
+    subgraph "Backend Services"
+        AS[Ad Server<br/>Critical Path<br/>150ms SLO]
+        CAMPAIGN[Campaign Service<br/>Non-Critical<br/>500ms SLO]
+        KAFKA[Kafka<br/>Event Streaming<br/>Async]
+    end
+
+    MOBILE -->|POST /v1/ad/request<br/>API Key| GW
+    WEB -->|GET /v1/campaigns/stats<br/>OAuth 2.0| GW
+    SDK -->|POST /v1/events/impression<br/>Pre-signed URL| GW
+
+    GW -->|Sync| AS
+    GW -->|Sync| CAMPAIGN
+    GW -->|Async| KAFKA
+
+    AS -->|Response<br/>ad_creative + tracking_urls| MOBILE
+    CAMPAIGN -->|Response<br/>stats JSON| WEB
+    KAFKA -->|200 OK<br/>Non-blocking| SDK
+
+    classDef client fill:#e1f5ff,stroke:#0066cc
+    classDef gateway fill:#fff4e1,stroke:#ff9900
+    classDef service fill:#e8f5e9,stroke:#4caf50
+    classDef async fill:#ffe0b2,stroke:#e65100
+
+    class MOBILE,WEB,SDK client
+    class GW gateway
+    class AS,CAMPAIGN service
+    class KAFKA async
+</pre>
+<p><strong>Diagram 2: Authentication Flow Comparison</strong></p>
+<p>This diagram illustrates the three authentication methods and their latency trade-offs - API keys for low latency (Publisher), OAuth for security (Advertiser), and pre-signed URLs for volume (Events).</p>
+<pre class="mermaid">
+    
+        %%{ init: { "flowchart": { "nodeSpacing": 50, "rankSpacing": 80, "curve": "basis", "useMaxWidth": true, "padding": 30 } } }%%
+    
+    graph LR
+    subgraph PUBLISHER ["Publisher API<br/>Low Latency Priority (0.5ms total)"]
+        direction LR
+        P1[Client Request<br/>X-API-Key header] --> P2[Gateway:<br/>Cache lookup<br/>for API key]
+        P2 --> P3[Validation<br/>Key exists<br/>Not revoked<br/>0.5ms]
+        P3 --> P4[Forward to<br/>Ad Server]
+    end
+
+    subgraph ADVERTISER ["Advertiser API<br/>Security Priority (2-3ms total)"]
+        direction LR
+        A1[Client Request<br/>OAuth Bearer token] --> A2[Gateway:<br/>JWT signature<br/>verification]
+        A2 --> A3[Validation<br/>RSA-2048 signature<br/>Token not expired<br/>Scopes match]
+        A3 --> A4[2ms<br/>validation] --> A5[Forward to<br/>Campaign Service]
+    end
+
+    subgraph EVENTS ["Events API<br/>Volume Priority (0.3ms total)"]
+        direction LR
+        E1[Client Request<br/>Pre-signed URL<br/>with HMAC] --> E2[Gateway:<br/>HMAC-SHA256<br/>verification]
+        E2 --> E3[Validation<br/>Signature valid<br/>Not expired<br/>0.3ms]
+        E3 --> E4[Forward to<br/>Kafka async]
+    end
+
+    classDef fast fill:#e6ffe6,stroke:#4caf50,stroke-width:2px
+    classDef medium fill:#fff4e6,stroke:#ff9900,stroke-width:2px
+    classDef ultrafast fill:#ccffcc,stroke:#339933,stroke-width:2px
+
+    class P1,P2,P3,P4 fast
+    class A1,A2,A3,A4,A5 medium
+    class E1,E2,E3,E4 ultrafast
+</pre>
+<p><strong>Section Conclusion</strong></p>
+<p>The three API surfaces - Publisher (critical path, 150ms latency), Advertiser (management, 500ms latency), Events (high volume, async) - each have distinct requirements that shape authentication, rate limiting, and infrastructure choices.</p>
+<p><strong>Key insights:</strong></p>
+<ul>
+<li><strong>Latency drives authentication:</strong> Publisher API uses API keys (0.5ms) instead of OAuth (2-3ms) because every millisecond matters at 1M QPS</li>
+<li><strong>Security models match threat profiles:</strong> Pre-signed URLs prevent tracking fraud (billions of events/day), OAuth prevents account takeover (financial access)</li>
+<li><strong>Rate limiting protects revenue:</strong> Without limits, single malicious publisher could consume 1.5M QPS capacity, DDoSing legitimate traffic</li>
+</ul>
+<p><strong>Cross-references:</strong></p>
+<ul>
+<li><a href="/blog/ads-platform-part-3-data-revenue/#cache-invalidation-strategies">Part 3’s cache invalidation strategy</a> details how budget updates propagate through L1/L2/L3 tiers after Advertiser API calls</li>
+<li><a href="/blog/ads-platform-part-4-production/#security-and-compliance">Part 4’s security section</a> covers zero-trust architecture, encryption at rest/transit, and defense-in-depth patterns underlying these auth mechanisms</li>
+<li><a href="/blog/ads-platform-part-5-implementation/">Part 5</a> specifies the concrete gateway technology (Envoy vs Kong vs custom) and configuration to meet these latency requirements</li>
+</ul>
+<p>With these API foundations established, the platform has clear external interfaces for publishers (ad serving), advertisers (campaign management), and analytics (event tracking). Next, we’ll explore how the system maintains these SLOs under failure conditions.</p>
+<hr />
+<h2 id="summary-building-a-solid-foundation">Summary: Building a Solid Foundation</h2>
+<p>This post established the architectural foundation for a real-time ads platform serving 1M+ QPS with 150ms latency targets. The key principles and decisions made here will ripple through all subsequent design choices.</p>
+<p><strong>Core Requirements:</strong></p>
+<ul>
+<li><strong>Latency</strong>: 150ms p95 end-to-end, with 143ms avg (145ms p99) leaving 5ms buffer</li>
+<li><strong>Scale</strong>: 1M QPS peak (1.5M capacity), 400M DAU, 8B requests/day</li>
+<li><strong>Financial accuracy</strong>: ≤1% billing variance (strong consistency for spend, eventual for profiles)</li>
+<li><strong>Availability</strong>: 99.9% uptime (43 min/month error budget, zero planned downtime)</li>
+</ul>
+<p><strong>Architectural Decisions:</strong></p>
+<ol>
+<li>
+<p><strong>Dual-Source Architecture</strong>: Internal ML inventory + External RTB inventory compete in unified auction</p>
+<ul>
+<li>Parallel execution (ML: 65ms, RTB: 100ms) maximizes revenue within latency budget</li>
+<li>100% fill rate through fallback hierarchy</li>
+</ul>
+</li>
+<li>
+<p><strong>Latency Budget Decomposition</strong>: Every millisecond allocated and defended</p>
+<ul>
+<li>Network: 15ms | User Profile: 10ms | Integrity Check: 5ms</li>
+<li>Critical path: RTB (100ms) | Auction + Budget: 13ms | Response: 5ms</li>
+<li>Total: 143ms avg with 7ms safety margin</li>
+</ul>
+</li>
+<li>
+<p><strong>Resilience Through Degradation</strong>: Multi-level fallback preserves availability</p>
+<ul>
+<li>Circuit breakers detect service degradation (p99 breaches for 60s)</li>
+<li>Graceful degradation ladder: cached predictions → heuristics → global averages</li>
+<li>Trade modest revenue loss (8-25%) for 100% availability vs complete outages</li>
+</ul>
+</li>
+<li>
+<p><strong>P99 Tail Latency Defense</strong>: Protecting 10,000 req/sec from timeouts</p>
+<ul>
+<li><strong>Infrastructure</strong>: Low-pause GC runtime (32GB heap, 200 threads per instance)
+<ul>
+<li>Eliminates GC pauses as P99 contributor (&lt;1ms vs 41-55ms with traditional GC)</li>
+<li>Calculated from actual workload: 250-400 MB/sec allocation, 5K QPS per instance</li>
+</ul>
+</li>
+<li><strong>Operational</strong>: 120ms absolute RTB cutoff with forced failure
+<ul>
+<li>Prevents P99 tail from violating 150ms SLO (would reach 184-198ms)</li>
+<li>Falls back to internal inventory (40% revenue) vs blank ads (0% revenue)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Rate Limiting</strong>: Infrastructure protection + cost control</p>
+<ul>
+<li>Distributed cache-backed distributed token bucket (centralized truth)</li>
+<li>Multi-tier limits: global (1.5M QPS), per-IP (10K), per-advertiser (1K-100K)</li>
+<li>Prevents 20-30% infrastructure overprovisioning for attack scenarios</li>
+</ul>
+</li>
+</ol>
+<p><strong>Why This Foundation Matters:</strong></p>
+<p>The architectural decisions made in this foundation phase create the constraints and opportunities that shape the entire system:</p>
+<ul>
+<li><strong>Latency budgets</strong> force parallel execution patterns and limit database round-trips - sequential operations on the critical path are simply not viable</li>
+<li><strong>Dual-source architecture</strong> enables maximum revenue (combining internal ML and external RTB) but requires unified auction complexity to fairly compete bids</li>
+<li><strong>Resilience patterns</strong> allow aggressive optimization (tight latency budgets) with safety nets (graceful degradation) - we can push components to their limits knowing fallback paths exist</li>
+<li><strong>GC analysis</strong> demonstrates how infrastructure choices (low-pause GC runtime, heap sizing, thread pool configuration) directly impact SLO compliance - preventing 10,000 requests/second from timing out</li>
+</ul>
+<p><strong>Core Insights from This Analysis:</strong></p>
+<ol>
+<li>
+<p><strong>Quantify everything</strong>: Latency budgets, failure modes, and trade-offs must be measured, not assumed. Calculate actual GC pause times from allocation rates. Prove circuit breaker thresholds from P99 distributions.</p>
+</li>
+<li>
+<p><strong>Design for degradation</strong>: Perfect availability is impossible at scale. Build graceful degradation paths that trade modest revenue loss (8-25%) for continued operation vs complete outages.</p>
+</li>
+<li>
+<p><strong>Infrastructure drives SLOs</strong>: Language runtime choices (GC), heap sizing, and thread pool configuration aren’t implementation details - they determine whether you meet or violate latency SLOs at P99.</p>
+</li>
+<li>
+<p><strong>Parallel execution is mandatory</strong>: With 150ms total budget and 100ms external dependencies, sequential operations violate SLOs. The dual-source architecture with parallel ML and RTB execution is a requirement, not an optimization.</p>
+</li>
+<li>
+<p><strong>Financial accuracy shapes consistency models</strong>: Advertiser budgets demand strong consistency (≤1% variance), while user profiles tolerate eventual consistency. Choose the right model for each data type based on business impact.</p>
+</li>
+</ol>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+        
+      
+    
+      
+    
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+        
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/architecting-ads-platforms/" class="series-link">
+            Architecting Real-Time Ads Platform
+          </a>
+          
+            <span class="series-progress">Part 1/5</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;ads-platform-part-2-rtb-ml-pipeline&#x2F;" title="Dual-Source Revenue Engine: OpenRTB &amp; ML Inference Pipeline">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script>
+  feather.replace();
+</script>
+</body>
+</html>

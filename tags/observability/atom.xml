@@ -1,0 +1,866 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Mindset Footprint - observability</title>
+    <link rel="self" type="application/atom+xml" href="https://e-mindset.space/tags/observability/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://e-mindset.space"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2026-01-22T00:00:00+00:00</updated>
+    <id>https://e-mindset.space/tags/observability/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Self-Measurement Without Central Observability</title>
+        <published>2026-01-22T00:00:00+00:00</published>
+        <updated>2026-01-22T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            Yuriy Polyulya
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://e-mindset.space/blog/autonomic-edge-part2-self-measurement/"/>
+        <id>https://e-mindset.space/blog/autonomic-edge-part2-self-measurement/</id>
+        
+        <content type="html" xml:base="https://e-mindset.space/blog/autonomic-edge-part2-self-measurement/">&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;prerequisites&quot;&gt;Prerequisites&lt;&#x2F;h2&gt;
+&lt;p&gt;This article builds directly on the &lt;a href=&quot;https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part1-contested-connectivity&#x2F;&quot;&gt;contested connectivity framework&lt;&#x2F;a&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Connectivity regimes&lt;&#x2F;strong&gt;: The four states (Full, Degraded, Intermittent, Denied) and Markov transition model define when self-measurement matters most—during denied regime when central observability is unavailable&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Capability hierarchy (L0-L4)&lt;&#x2F;strong&gt;: Self-measurement is the foundation enabling capability assessment. Without accurate health knowledge, the system cannot determine its current capability level&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;The inversion thesis&lt;&#x2F;strong&gt;: “Design for disconnected, enhance for connected” applies directly—self-measurement must function in complete isolation, with central reporting as enhancement when connectivity permits&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Self-measurement is the sensory system of autonomic architecture. Just as organisms must sense their internal state before they can respond, edge systems must measure their own health before they can heal. This part develops the engineering principles for that measurement capability.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;theoretical-contributions&quot;&gt;Theoretical Contributions&lt;&#x2F;h2&gt;
+&lt;p&gt;This article develops the theoretical foundations for self-measurement in distributed systems under contested connectivity. We make the following contributions:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Local Anomaly Detection Framework&lt;&#x2F;strong&gt;: We formalize the anomaly detection problem as hypothesis testing under resource constraints, establishing optimal threshold selection as a function of asymmetric error costs.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Gossip-Based Health Propagation&lt;&#x2F;strong&gt;: We derive convergence bounds for epidemic protocols in partially-connected networks, proving \(O(\ln n)\) propagation time under standard assumptions.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Staleness-Confidence Theory&lt;&#x2F;strong&gt;: We model health state evolution as a stochastic process and derive the maximum useful staleness for decision-making, establishing the relationship between observation age and confidence degradation.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Byzantine-Tolerant Aggregation&lt;&#x2F;strong&gt;: We extend weighted voting mechanisms to handle adversarial nodes, providing trust-decay models that detect and isolate compromised participants.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Observability Constraint Sequence&lt;&#x2F;strong&gt;: We establish a priority ordering for measurement capabilities based on failure cost analysis, providing resource allocation guidelines for constrained systems.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;These contributions connect to and extend prior work on fault detection in distributed systems (Cristian, 1991), epidemic algorithms (Demers et al., 1987), and autonomic computing (Kephart &amp;amp; Chess, 2003), adapting these frameworks for the specific challenges of contested edge environments.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;opening-narrative-outpost-under-observation&quot;&gt;Opening Narrative: OUTPOST Under Observation&lt;&#x2F;h2&gt;
+&lt;p&gt;Early morning. OUTPOST BRAVO’s 127-sensor perimeter mesh has been operating for 43 days. Without warning, the satellite uplink goes dark—no graceful degradation. Seconds later, Sensor 47 stops reporting. Last transmission: routine, battery at 73%, mesh connectivity strong. Then silence.&lt;&#x2F;p&gt;
+&lt;p&gt;OUTPOST needs to answer: &lt;em&gt;how do you diagnose this failure without external systems?&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Hardware failure&lt;&#x2F;strong&gt;: Route around the sensor&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Communication failure&lt;&#x2F;strong&gt;: Attempt alternative paths&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Environmental occlusion&lt;&#x2F;strong&gt;: Wait and retry&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Adversarial action&lt;&#x2F;strong&gt;: Alert defensive posture&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Each diagnosis implies different response. Without central observability, OUTPOST must diagnose itself—analyze patterns, correlate with neighbors, assess probabilities, decide on response. All locally. All autonomously.&lt;&#x2F;p&gt;
+&lt;p&gt;This is self-measurement: assessing health and diagnosing anomalies without external assistance. You can’t heal what you haven’t diagnosed, and you can’t diagnose what you haven’t measured.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;the-self-measurement-challenge&quot;&gt;The Self-Measurement Challenge&lt;&#x2F;h2&gt;
+&lt;p&gt;Cloud-native observability assumes continuous connectivity:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    A[Metrics] --&gt;|&quot;network&quot;| B[Collector]
+    B --&gt;|&quot;network&quot;| C[Storage]
+    C --&gt;|&quot;network&quot;| D[Analysis]
+    D --&gt;|&quot;network&quot;| E[Alerting]
+    E --&gt;|&quot;network&quot;| F[Human Operator]
+    F --&gt;|&quot;network&quot;| G[Remediation]
+
+    style A fill:#e8f5e9
+    style F fill:#ffcdd2
+    linkStyle 0,1,2,3,4,5 stroke:#f44336,stroke-width:2px,stroke-dasharray: 5 5
+&lt;&#x2F;pre&gt;
+&lt;p&gt;Every arrow represents a network call. For edge systems, this architecture fails at the first arrow—when connectivity is denied, the entire observability pipeline is severed.&lt;&#x2F;p&gt;
+&lt;p&gt;The edge alternative inverts the data flow:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    A[Local Sensors] --&gt; B[Local Analyzer]
+    B --&gt; C[Health State]
+    C --&gt; D[Autonomic Controller]
+    D --&gt; E[Self-Healing Action]
+    E --&gt;|&quot;feedback&quot;| A
+
+    style A fill:#e8f5e9
+    style B fill:#c8e6c9
+    style C fill:#fff9c4
+    style D fill:#ffcc80
+    style E fill:#ffab91
+&lt;&#x2F;pre&gt;
+&lt;p&gt;Analysis happens locally. Alerting goes to an autonomic controller, not human operators. The loop closes locally without external connectivity.&lt;&#x2F;p&gt;
+&lt;style&gt;
+#tbl_obs_compare + table th:first-of-type { width: 25%; }
+#tbl_obs_compare + table th:nth-of-type(2) { width: 35%; }
+#tbl_obs_compare + table th:nth-of-type(3) { width: 40%; }
+&lt;&#x2F;style&gt;
+&lt;div id=&quot;tbl_obs_compare&quot;&gt;&lt;&#x2F;div&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Aspect&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cloud Observability&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Edge Self-Measurement&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Analysis location&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Central service&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Local device&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Alerting target&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Human operator&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Autonomic controller&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Training data&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Abundant historical data&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Limited local samples&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Ground truth&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Labels from past incidents&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Uncertain, inferred&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Compute budget&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Elastic (scale up)&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Fixed (device limits)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Memory budget&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Practically unlimited&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Constrained (MB range)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Response latency&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Minutes acceptable&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Seconds required&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;Analysis must happen locally, and alerting must be autonomous&lt;&#x2F;strong&gt;. You can’t wait for human operators or external analysis services. The system must detect, diagnose, and decide—all within the constraints of local compute and memory.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;local-anomaly-detection&quot;&gt;Local Anomaly Detection&lt;&#x2F;h2&gt;
+&lt;h3 id=&quot;the-detection-problem&quot;&gt;The Detection Problem&lt;&#x2F;h3&gt;
+&lt;p&gt;At its core, anomaly detection is a signal detection problem. The sensor produces a stream of values:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;x_1, x_2, \ldots, x_t&lt;&#x2F;script&gt;
+&lt;p&gt;At each timestep, the local analyzer must decide: is this observation normal, or anomalous?&lt;&#x2F;p&gt;
+&lt;p&gt;This is a binary classification under uncertainty:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;\(H_0\) (null hypothesis)&lt;&#x2F;strong&gt;: The observation is from the normal distribution&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;\(H_1\) (alternative)&lt;&#x2F;strong&gt;: The observation is from an anomalous process&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Definition 4&lt;&#x2F;strong&gt; (Local Anomaly Detection Problem). &lt;em&gt;Given a time series \(\{x_t\}_{t \geq 0}\) generated by process \(P\), the local anomaly detection problem is to determine, for each observation \(x_t\), whether \(P\) has transitioned from nominal behavior \(P_0\) to anomalous behavior \(P_1\), subject to:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;Computational budget \(O(1)\) per observation&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;Memory budget \(O(m)\) for fixed \(m\)&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;No access to ground truth labels&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;Real-time decision requirement&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The challenge is performing this classification:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;In real-time, on-device&lt;&#x2F;li&gt;
+&lt;li&gt;With limited compute and memory&lt;&#x2F;li&gt;
+&lt;li&gt;Without access to comprehensive training data&lt;&#x2F;li&gt;
+&lt;li&gt;Without ground truth labels for recent observations&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;style&gt;
+#tbl_detection + table th:first-of-type { width: 25%; }
+#tbl_detection + table th:nth-of-type(2) { width: 35%; }
+#tbl_detection + table th:nth-of-type(3) { width: 40%; }
+&lt;&#x2F;style&gt;
+&lt;div id=&quot;tbl_detection&quot;&gt;&lt;&#x2F;div&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Constraint&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Cloud Detection&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Edge Detection&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Compute&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;GPU clusters, distributed&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Single CPU, milliwatts&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Memory&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Terabytes for models&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Megabytes for everything&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Training data&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Petabytes historical&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Days of local history&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Ground truth&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Labels from incident response&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Inference from outcomes&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;FP cost&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Human review time&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Unnecessary healing action&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;FN cost&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Delayed response&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Undetected failure, potential loss&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;The asymmetry of costs is critical. A false positive triggers an unnecessary healing action—wasteful but recoverable. A false negative leaves a failure undetected—potentially catastrophic in contested environments where undetected failures cascade.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;statistical-approaches&quot;&gt;Statistical Approaches&lt;&#x2F;h3&gt;
+&lt;p&gt;Edge anomaly detection requires algorithms that are:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Computationally lightweight&lt;&#x2F;strong&gt;: O(1) per observation&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Memory-efficient&lt;&#x2F;strong&gt;: Constant or logarithmic memory&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Adaptive&lt;&#x2F;strong&gt;: Adjust to changing baselines without retraining&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Interpretable&lt;&#x2F;strong&gt;: Provide confidence, not just binary classification&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Three approaches meet these requirements:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Exponential Weighted Moving Average (EWMA)&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;The simplest effective approach. Maintain running estimates of mean and variance:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+\mu_t &amp;= \alpha x_t + (1 - \alpha) \mu_{t-1} \\
+\sigma_t^2 &amp;= \alpha (x_t - \mu_{t-1})^2 + (1 - \alpha) \sigma_{t-1}^2
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;Where \(\alpha \in (0, 1)\) controls the decay rate. Smaller \(\alpha\) means longer memory. Note: variance uses \(\mu_{t-1}\) to keep the estimate independent of \(x_t\), consistent with the anomaly score calculation.&lt;&#x2F;p&gt;
+&lt;p&gt;The anomaly score normalizes deviation by variance:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;z_t = \frac{|x_t - \mu_{t-1}|}{\sigma_{t-1}}&lt;&#x2F;script&gt;
+&lt;p&gt;Flag as anomaly if \(z_t &amp;gt; \theta\), where \(\theta\) is typically 2-3 standard deviations.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Proposition 3&lt;&#x2F;strong&gt; (Optimal Anomaly Threshold). &lt;em&gt;Given asymmetric error costs \(C_{\text{FP}}\) for false positives and \(C_{\text{FN}}\) for false negatives, the optimal detection threshold \(\theta^*\) satisfies the likelihood ratio condition:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\frac{p(x | H_0)}{p(x | H_1)} = \frac{C_{\text{FP}}}{C_{\text{FN}}}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;For tactical edge systems where \(C_{\text{FN}} \gg C_{\text{FP}}\) (missed failures are catastrophic), the optimal threshold shifts toward more sensitive detection at the cost of increased false positives.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Proof sketch&lt;&#x2F;em&gt;: The expected cost is \(C_{\text{FP}} \cdot P_{\text{FP}}(\theta) + C_{\text{FN}} \cdot P_{\text{FN}}(\theta)\). Taking the derivative and setting to zero yields the Neyman-Pearson lemma condition.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Compute&lt;&#x2F;strong&gt;: O(1) per observation (two multiply-adds)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Memory&lt;&#x2F;strong&gt;: O(1) (store \(\mu\), \(\sigma^2\))&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Adaptation&lt;&#x2F;strong&gt;: Automatic through exponential decay&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Holt-Winters for Seasonal Patterns&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;For signals with periodic structure (day&#x2F;night cycles, shift patterns), Holt-Winters captures level, trend, and seasonality:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\begin{aligned}
+L_t &amp;= \alpha (x_t - S_{t-p}) + (1 - \alpha)(L_{t-1} + T_{t-1}) \\
+T_t &amp;= \beta (L_t - L_{t-1}) + (1 - \beta) T_{t-1} \\
+S_t &amp;= \gamma (x_t - L_t) + (1 - \gamma) S_{t-p}
+\end{aligned}&lt;&#x2F;script&gt;
+&lt;p&gt;Where \(L_t\) is level, \(T_t\) is trend, \(S_t\) is seasonal component, and \(p\) is period length.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Compute&lt;&#x2F;strong&gt;: O(1) per observation&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Memory&lt;&#x2F;strong&gt;: O(p) to store one period of seasonal factors&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Adaptation&lt;&#x2F;strong&gt;: Continuous updates to all components&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;em&gt;Period examples by scenario&lt;&#x2F;em&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;RAVEN&lt;&#x2F;strong&gt;: p=1 (no meaningful seasonality in flight telemetry)—use EWMA instead&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;CONVOY&lt;&#x2F;strong&gt;: p=24 hours for communication quality (terrain&#x2F;atmospheric effects), p=8 hours for engine metrics (thermal cycles)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;OUTPOST&lt;&#x2F;strong&gt;: p=24 hours for solar&#x2F;thermal cycles, p=7 days for activity patterns near defended perimeter&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Isolation Forest Sketch for Multivariate&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;For multivariate anomaly detection with limited memory, streaming isolation forest maintains a sketch:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{Anomaly Score} = 2^{-E[h(x)] &#x2F; c(n)}&lt;&#x2F;script&gt;
+&lt;p&gt;Where \(h(x)\) is path length to isolate \(x\), and \(c(n)\) is average path length in a random tree.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Compute&lt;&#x2F;strong&gt;: O(log n) per query, O(t) per tree&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Memory&lt;&#x2F;strong&gt;: O(t × d) for t trees with depth limit d&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Adaptation&lt;&#x2F;strong&gt;: Reservoir sampling for tree updates&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;em&gt;Concrete parameters for CONVOY&lt;&#x2F;em&gt;: t=50 trees, d=8 depth limit, sample_size=128, contamination=0.02 (expected 2% anomaly rate). This configuration uses ~25KB memory and achieves 85% detection rate with 3% false positive rate on multi-sensor telemetry (engine, transmission, suspension combined).&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;CUSUM for Change-Point Detection&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;When the goal is detecting &lt;em&gt;when&lt;&#x2F;em&gt; a change occurred (not just that it occurred), Cumulative Sum (CUSUM) provides optimal detection for shifts in mean:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;S_t = \max(0, S_{t-1} + x_t - \mu_0 - k)&lt;&#x2F;script&gt;
+&lt;p&gt;where \(\mu_0\) is the nominal mean and \(k\) is the allowable slack. Alarm when \(S_t &amp;gt; h\). CUSUM detects sustained shifts faster than EWMA but is more sensitive to the choice of \(k\). For RAVEN flight telemetry, CUSUM with \(k = 0.5\sigma\) detects motor degradation 15-20% faster than EWMA, at the cost of 10% higher false positive rate.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Concrete Error Rates&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;For RAVEN with anomaly threshold \(\theta = 2.5\sigma\) and base anomaly rate 2%:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;False Positive Rate: 1.2% (healthy flagged as anomaly)&lt;&#x2F;li&gt;
+&lt;li&gt;False Negative Rate: 8% (anomaly missed)&lt;&#x2F;li&gt;
+&lt;li&gt;Detection latency: 3-5 observations (15-25 seconds at 0.2 Hz sampling)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;OUTPOST Sensor 47 uses EWMA for primary detection: temperature, motion intensity, battery voltage each tracked independently. Cross-sensor correlation uses a lightweight covariance estimate between Sensor 47 and its mesh neighbors.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;distinguishing-failure-modes&quot;&gt;Distinguishing Failure Modes&lt;&#x2F;h3&gt;
+&lt;p&gt;Detection answers “is something wrong?” Diagnosis answers “what is wrong?”&lt;&#x2F;p&gt;
+&lt;p&gt;For Sensor 47’s silence, the fusion node must distinguish:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Sensor hardware failure&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signature: Gradual degradation before silence (increasing noise, drifting calibration)&lt;&#x2F;li&gt;
+&lt;li&gt;Correlation: Neighboring sensors unaffected&lt;&#x2F;li&gt;
+&lt;li&gt;Battery trend: Unusual power consumption before failure&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Communication failure&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signature: Abrupt silence, no prior degradation&lt;&#x2F;li&gt;
+&lt;li&gt;Correlation: Multiple sensors in same mesh region affected&lt;&#x2F;li&gt;
+&lt;li&gt;Path analysis: Common relay nodes show degradation&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Environmental occlusion&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signature: Specific sensor types affected (e.g., optical but not acoustic)&lt;&#x2F;li&gt;
+&lt;li&gt;Correlation: Geographic pattern (flooding, debris)&lt;&#x2F;li&gt;
+&lt;li&gt;Recovery pattern: Intermittent function as conditions change&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Adversarial action&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Signature: Precise silence, no RF emissions&lt;&#x2F;li&gt;
+&lt;li&gt;Correlation: Tactical pattern (sensors on approach path silenced)&lt;&#x2F;li&gt;
+&lt;li&gt;Timing: Coordinated with other events&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The fusion node maintains &lt;strong&gt;causal models&lt;&#x2F;strong&gt; for each failure mode. Given observed evidence \(E\), Bayesian inference estimates posterior probability:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;P(\text{cause} | E) = \frac{P(E | \text{cause}) \cdot P(\text{cause})}{P(E)}&lt;&#x2F;script&gt;
+&lt;p&gt;Priors \(P(\text{cause})\) come from historical failure rates. Likelihoods \(P(E | \text{cause})\) come from the signature patterns.&lt;&#x2F;p&gt;
+&lt;p&gt;For Sensor 47:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Abrupt silence (no degradation): Weights against hardware failure&lt;&#x2F;li&gt;
+&lt;li&gt;Neighbors functioning normally: Weights against communication failure&lt;&#x2F;li&gt;
+&lt;li&gt;Single sensor affected: Weights against environmental occlusion&lt;&#x2F;li&gt;
+&lt;li&gt;Location on approach path: Weights toward adversarial action&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The diagnosis is probabilistic, not certain. Self-measurement provides confidence levels, not ground truth.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;distributed-health-inference&quot;&gt;Distributed Health Inference&lt;&#x2F;h2&gt;
+&lt;h3 id=&quot;gossip-based-health-propagation&quot;&gt;Gossip-Based Health Propagation&lt;&#x2F;h3&gt;
+&lt;p&gt;Individual nodes detect local anomalies. Fleet-wide health requires aggregation without a central coordinator.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Definition 5&lt;&#x2F;strong&gt; (Gossip Health Protocol). &lt;em&gt;A gossip health protocol is a tuple \((H, \lambda, M, T)\) where:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;\(H = [h_1, \ldots, h_n]\) is the health vector over \(n\) nodes&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;\(\lambda\) is the gossip rate (exchanges per second per node)&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;\(M: H \times H \rightarrow H\) is the merge function&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;\(T: \mathbb{R}^+ \rightarrow \mathbb{R}^+\) is the staleness decay function&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Gossip protocols&lt;&#x2F;strong&gt; solve this problem. Each node maintains a health vector:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;H = [h_1, h_2, \ldots, h_n]&lt;&#x2F;script&gt;
+&lt;p&gt;Where \(h_i\) is node \(i\)’s estimated health state.&lt;&#x2F;p&gt;
+&lt;p&gt;The protocol operates in rounds:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Local update&lt;&#x2F;strong&gt;: Node \(i\) updates \(h_i\) based on local anomaly detection&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Peer selection&lt;&#x2F;strong&gt;: Node \(i\) selects random peer \(j\)&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Exchange&lt;&#x2F;strong&gt;: Nodes \(i\) and \(j\) exchange health vectors&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Merge&lt;&#x2F;strong&gt;: Each node merges received vector with local knowledge&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    subgraph Before Exchange
+    A1[&quot;Node A: H_A&quot;] -.-&gt;|&quot;sends H_A&quot;| B1[&quot;Node B: H_B&quot;]
+    B1 -.-&gt;|&quot;sends H_B&quot;| A1
+    end
+    subgraph After Merge
+    A2[&quot;Node A: merge(H_A, H_B)&quot;]
+    B2[&quot;Node B: merge(H_A, H_B)&quot;]
+    end
+    A1 --&gt; A2
+    B1 --&gt; B2
+
+    style A1 fill:#e8f5e9
+    style B1 fill:#e3f2fd
+    style A2 fill:#c8e6c9
+    style B2 fill:#bbdefb
+&lt;&#x2F;pre&gt;
+&lt;p&gt;The merge function must handle:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Staleness&lt;&#x2F;strong&gt;: Older observations are less reliable&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Conflicts&lt;&#x2F;strong&gt;: Different nodes may observe different values&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Adversarial injection&lt;&#x2F;strong&gt;: Compromised nodes may inject false health values&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;A weighted merge using timestamp-based staleness:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;h_k^{\text{merged}} = \frac{w_A \cdot h_k^A + w_B \cdot h_k^B}{w_A + w_B}&lt;&#x2F;script&gt;
+&lt;p&gt;Where weights decay with staleness:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;w = e^{-\gamma \tau}&lt;&#x2F;script&gt;
+&lt;p&gt;With \(\tau\) as time since observation and \(\gamma\) as decay rate (distinct from the gossip rate \(\lambda\)).&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Proposition 4&lt;&#x2F;strong&gt; (Gossip Convergence). &lt;em&gt;For a gossip protocol with rate \(\lambda\) and \(n\) nodes, the expected time for information originating at one node to reach all nodes is:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;T_{\text{convergence}} = O\left(\frac{\ln n}{\lambda}\right)&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;Proof sketch&lt;&#x2F;em&gt;: The information spread follows logistic dynamics \(dI&#x2F;dt = \lambda I(1 - I)\) where \(I\) is the fraction of informed nodes. Solving with initial condition \(I(0) = 1&#x2F;n\) and computing time to reach \(I = 1 - 1&#x2F;n\) yields \(T = (2 \ln(n-1))&#x2F;\lambda\).
+&lt;strong&gt;Corollary 2&lt;&#x2F;strong&gt;. &lt;em&gt;Doubling swarm size adds only \(O(\ln 2 &#x2F; \lambda) \approx 0.69&#x2F;\lambda\) seconds to convergence time, making gossip protocols inherently scalable for edge fleets.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;For tactical parameters (\(n \sim 50\), \(\lambda \sim 0.2\) Hz), the formula yields \(T = 2\ln(49)&#x2F;0.2 \approx 39\) seconds—convergence within 30-40 seconds, fast enough to establish fleet-wide health awareness within a single mission phase. Broadcast approaches scale linearly with \(n\), which is why gossip wins at scale.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;priority-weighted-gossip-extension&quot;&gt;Priority-Weighted Gossip Extension&lt;&#x2F;h3&gt;
+&lt;p&gt;Standard gossip treats all health updates equally. In tactical environments, critical health changes (node failure, resource exhaustion, adversarial detection) should propagate faster than routine updates.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Priority classification&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;\(P_{CRITICAL}\) (priority 3): Node failure, Byzantine detection, adversarial alert&lt;&#x2F;li&gt;
+&lt;li&gt;\(P_{URGENT}\) (priority 2): Resource exhaustion (&amp;lt;10%), capability downgrade&lt;&#x2F;li&gt;
+&lt;li&gt;\(P_{NORMAL}\) (priority 1): Routine health updates, minor degradation&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Accelerated propagation protocol&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;For priority \(p\) messages, modify the gossip rate:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\lambda_p = \lambda_{\text{base}} \cdot (1 + \eta \cdot (p - 1))&lt;&#x2F;script&gt;
+&lt;p&gt;where \(\eta\) is the acceleration factor (typically 2-3). Critical messages gossip at \(3\times\) normal rate.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Message prioritization in constrained bandwidth&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;When bandwidth is limited, each gossip exchange prioritizes by urgency. The protocol proceeds as follows:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Step 1&lt;&#x2F;strong&gt;: Merge local and peer health vectors into a unified update set.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Step 2&lt;&#x2F;strong&gt;: Sort updates by priority (descending), then by staleness (ascending) within each priority class.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Step 3&lt;&#x2F;strong&gt;: Transmit updates in sorted order until bandwidth budget exhausted:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{Transmit update } u_i \text{ iff } \sum_{j &lt; i} \text{size}(u_j) + \text{size}(u_i) \leq B_{\text{budget}}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Step 4&lt;&#x2F;strong&gt;: Critical override—always include \(P_{\text{CRITICAL}}\) updates even if over budget:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{priority}(u) = P_{\text{CRITICAL}} \implies \text{transmit}(u) = \text{true}&lt;&#x2F;script&gt;
+&lt;p&gt;This ensures safety-critical information propagates regardless of bandwidth constraints, accepting temporary budget overrun.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Convergence improvement&lt;&#x2F;strong&gt;: For RAVEN with \(\eta = 2\), critical updates converge in ~15 seconds (vs. 39 seconds for normal updates)—a 2.6× speedup for time-sensitive health information.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Anti-flood protection&lt;&#x2F;strong&gt;: To prevent priority abuse (Byzantine node flooding P_CRITICAL messages), rate-limit critical messages per source:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{Allow } P_{\text{CRITICAL}} \text{ from node } i \text{ iff } \frac{N_{\text{crit}}^i(t)}{t - t_{\text{start}}} &lt; \rho_{\text{max}}&lt;&#x2F;script&gt;
+&lt;p&gt;where \(\rho_{\text{max}} \approx 0.01\) messages&#x2F;second. Exceeding this rate triggers trust decay.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;gossip-under-partition&quot;&gt;Gossip Under Partition&lt;&#x2F;h3&gt;
+&lt;p&gt;When the fleet partitions into disconnected clusters, gossip behavior changes fundamentally. Within each cluster, convergence continues normally. Between clusters, health state diverges.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Remark&lt;&#x2F;strong&gt; (Partition Staleness). &lt;em&gt;For node \(i\) in cluster \(C_1\) observing node \(j\) in cluster \(C_2\), staleness—the elapsed time since observation—accumulates from partition time \(t_p\):&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\tau_{ij}(t) = t - t_p + \tau_{ij}(t_p)&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;The staleness grows unboundedly during partition, eventually exceeding any useful threshold.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    subgraph Cluster_A[&quot;Cluster A (gossip active)&quot;]
+    A1[Node 1] --- A2[Node 2]
+    A2 --- A3[Node 3]
+    A1 --- A3
+    end
+    subgraph Cluster_B[&quot;Cluster B (gossip active)&quot;]
+    B1[Node 4] --- B2[Node 5]
+    B2 --- B3[Node 6]
+    B1 --- B3
+    end
+    A3 -.-x|&quot;PARTITION&lt;br&#x2F;&gt;No communication&quot;| B1
+
+    style Cluster_A fill:#e8f5e9
+    style Cluster_B fill:#e3f2fd
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Cross-cluster state tracking&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;Each node maintains a &lt;strong&gt;partition vector&lt;&#x2F;strong&gt; \(\rho_i\) tracking the last known connectivity state to each other node:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\rho_i[j] = \begin{cases}
+0 &amp; \text{if } j \text{ reachable directly or via gossip} \\
+t_{\text{last contact}} &amp; \text{if } j \text{ unreachable}
+\end{cases}&lt;&#x2F;script&gt;
+&lt;p&gt;When \(\rho_i[j] &amp;gt; 0\) and \(t - \rho_i[j] &amp;gt; \tau_{\text{max}}\), node \(i\) marks its knowledge of node \(j\) as &lt;strong&gt;uncertain&lt;&#x2F;strong&gt; rather than &lt;strong&gt;stale&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Reconciliation priority&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;Upon reconnection, nodes exchange partition vectors. The reconciliation priority for node \(j\)’s state is proportional to divergence duration:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{Priority}(j) = (t_{\text{reconnect}} - \rho[j]) \cdot \text{Importance}(j)&lt;&#x2F;script&gt;
+&lt;p&gt;Nodes with longest partition duration and highest importance (cluster leads, critical sensors) reconcile first.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;confidence-intervals-on-stale-data&quot;&gt;Confidence Intervals on Stale Data&lt;&#x2F;h3&gt;
+&lt;p&gt;Health observations age. A drone last heard from 30 seconds ago may have changed state since then.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Definition 6&lt;&#x2F;strong&gt; (Staleness). &lt;em&gt;The staleness \(\tau\) of an observation is the elapsed time since the observation was made. An observation with staleness \(\tau\) has uncertainty that grows with \(\tau\) according to the underlying state dynamics.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Model health as a stochastic process. If health evolves with variance \(\sigma^2\) per unit time, the confidence interval on stale data is:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{CI} = h_{\text{last}} \pm z_{\alpha&#x2F;2} \sigma \sqrt{\tau}&lt;&#x2F;script&gt;
+&lt;p&gt;Where:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;\(h_{\text{last}}\) = last observed health value&lt;&#x2F;li&gt;
+&lt;li&gt;\(\tau\) = time since observation&lt;&#x2F;li&gt;
+&lt;li&gt;\(\sigma\) = health volatility parameter&lt;&#x2F;li&gt;
+&lt;li&gt;\(z_{\alpha&#x2F;2}\) = confidence multiplier (1.96 for 95%)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Implications for decision-making&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;The CI width grows as \(\sqrt{\tau}\)—a consequence of the Brownian motion model. This square-root scaling means confidence degrades slowly at first but accelerates with staleness.&lt;&#x2F;p&gt;
+&lt;p&gt;When the CI spans a decision threshold (like the L2 capability boundary), you can’t reliably commit to that capability level. The staleness has exceeded the &lt;strong&gt;decision horizon&lt;&#x2F;strong&gt; for that threshold—the maximum time at which stale data can support the decision.&lt;&#x2F;p&gt;
+&lt;p&gt;Different decisions have different horizons. Safety-critical decisions with narrow margins have short horizons. Advisory decisions with wide margins have longer horizons. The system tracks staleness against the relevant horizon for each decision type.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Response strategies&lt;&#x2F;strong&gt; when confidence is insufficient:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Active probe&lt;&#x2F;strong&gt;: Attempt direct communication to get fresh observation&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Conservative fallback&lt;&#x2F;strong&gt;: Assume health at lower bound of CI&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Escalate observation priority&lt;&#x2F;strong&gt;: Increase gossip rate for this node&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;Proposition 5&lt;&#x2F;strong&gt; (Maximum Useful Staleness). &lt;em&gt;For a health process with volatility \(\sigma\) and a decision requiring discrimination at precision \(\Delta h\) with confidence \(1 - \alpha\), the maximum useful staleness is:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\tau_{\text{max}} = \left( \frac{\Delta h}{z_{\alpha&#x2F;2} \sigma} \right)^2&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;where \(z_{\alpha&#x2F;2}\) is the standard normal quantile. Beyond \(\tau_{\text{max}}\), the confidence interval spans the decision threshold and the observation cannot support the decision.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Proof&lt;&#x2F;em&gt;: Follows directly from the Brownian motion model \(dh = \sigma , dW\), which yields variance \(\sigma^2 \tau\) after elapsed time \(\tau\). Setting the CI half-width equal to \(\Delta h\) and solving for \(\tau\) gives the result.
+&lt;strong&gt;Corollary 3&lt;&#x2F;strong&gt;. &lt;em&gt;The quadratic relationship \(\tau_{\text{max}} \propto (\Delta h &#x2F; \sigma)^2\) implies that tightening decision margins dramatically reduces useful staleness. Systems with narrow operating envelopes require proportionally higher observation frequency.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;byzantine-tolerant-health-aggregation&quot;&gt;Byzantine-Tolerant Health Aggregation&lt;&#x2F;h3&gt;
+&lt;p&gt;In contested environments, some nodes may be compromised. They may inject false health values to:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Mask their own degradation (hide compromise)&lt;&#x2F;li&gt;
+&lt;li&gt;Cause healthy nodes to appear degraded (create confusion)&lt;&#x2F;li&gt;
+&lt;li&gt;Destabilize fleet-wide health estimates (denial of service)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Definition 7&lt;&#x2F;strong&gt; (Byzantine Node). &lt;em&gt;A node is Byzantine if it may deviate arbitrarily from the protocol specification, including sending different values to different peers, reporting false observations, or selectively participating in gossip rounds.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Weighted voting&lt;&#x2F;strong&gt; based on trust scores:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;h_k^{\text{aggregated}} = \frac{\sum_i T_i \cdot h_k^i}{\sum_i T_i}&lt;&#x2F;script&gt;
+&lt;p&gt;Where \(T_i\) is the trust score of node \(i\). Trust is earned through consistent, verifiable behavior and decays when inconsistencies are detected.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Outlier detection&lt;&#x2F;strong&gt; on received health reports:&lt;&#x2F;p&gt;
+&lt;p&gt;If node \(i\) reports health for node \(k\) that differs significantly from the consensus, flag the report as suspicious:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{suspicious} = |h_k^i - h_k^{\text{consensus}}| &gt; \theta_{\text{outlier}}&lt;&#x2F;script&gt;
+&lt;p&gt;Repeated suspicious reports decrease trust score for node \(i\).&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Isolation protocol&lt;&#x2F;strong&gt; for nodes with inconsistent claims:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Track history of claims per node&lt;&#x2F;li&gt;
+&lt;li&gt;Compute consistency score: fraction of claims matching consensus&lt;&#x2F;li&gt;
+&lt;li&gt;If consistency below threshold, quarantine node from health aggregation&lt;&#x2F;li&gt;
+&lt;li&gt;Quarantined nodes can still participate but their reports are not trusted&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;Proposition 6&lt;&#x2F;strong&gt; (Byzantine Tolerance Bound). &lt;em&gt;With trust-weighted aggregation, correct health estimation is maintained if the total Byzantine trust weight is bounded:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\sum_{\text{Byzantine}} T_i &lt; \frac{1}{3} \sum_{\text{all}} T_i&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;This generalizes the classical \(f &amp;lt; n&#x2F;3\) bound: with uniform trust, this reduces to \(f &amp;lt; 1&#x2F;3\). With trust decay on suspicious nodes, Byzantine influence decreases over time, allowing tolerance of more compromised nodes provided their accumulated trust is low.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;This is not foolproof—a sophisticated adversary who understands the aggregation mechanism can craft attacks that pass consistency checks. Byzantine tolerance provides defense in depth, not absolute security.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;trust-recovery-mechanisms&quot;&gt;Trust Recovery Mechanisms&lt;&#x2F;h3&gt;
+&lt;p&gt;Trust decay handles misbehaving nodes, but legitimate nodes may be temporarily compromised (e.g., sensor interference, transient fault) and later recover. A purely decaying trust model permanently punishes temporary failures.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Trust recovery model&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;Trust evolves according to a mean-reverting process with decay for misbehavior and recovery for consistent behavior:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;T_i(t+1) = \begin{cases}
+T_i(t) \cdot (1 - \gamma_{\text{decay}}) &amp; \text{if inconsistent} \\
+T_i(t) + \gamma_{\text{recover}} \cdot (T_{\text{max}} - T_i(t)) &amp; \text{if consistent}
+\end{cases}&lt;&#x2F;script&gt;
+&lt;p&gt;where \(\gamma_{\text{decay}} \approx 0.1\) (fast decay) and \(\gamma_{\text{recover}} \approx 0.01\) (slow recovery). The asymmetry ensures that building trust takes longer than losing it—appropriate for contested environments.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Recovery conditions&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;A node must demonstrate sustained consistent behavior before trust recovery activates:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{Recovery eligible iff } \frac{\text{consistent reports in window } W}{\text{total reports in } W} &gt; \theta_{\text{recovery}}&lt;&#x2F;script&gt;
+&lt;p&gt;where \(W\) is typically 50-100 gossip rounds and \(\theta_{\text{recovery}} \approx 0.95\). A node with even 5% inconsistent reports continues decaying.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Sybil attack resistance&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;An adversary creating multiple fake identities (Sybil attack) can attempt to dominate the trust-weighted aggregation. Countermeasures:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Identity binding&lt;&#x2F;strong&gt;: Nodes must prove identity through cryptographic challenge-response or physical attestation (GPS position consistency over time)&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Trust inheritance limits&lt;&#x2F;strong&gt;: New nodes start with \(T_{\text{initial}} = T_{\text{sponsor}} \cdot \beta\) where \(\beta &amp;lt; 0.5\). No node can spawn high-trust children.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Global trust budget&lt;&#x2F;strong&gt;: Total trust across all nodes is bounded:&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\sum_i T_i \leq T_{\text{budget}} = T_{\text{max}} \cdot n_{\text{expected}}&lt;&#x2F;script&gt;
+&lt;p&gt;New node admission requires either trust redistribution or explicit authorization.&lt;&#x2F;p&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Behavioral clustering&lt;&#x2F;strong&gt;: Nodes exhibiting suspiciously correlated behavior (same reports, same timing) are grouped and treated as a single trust entity:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;T_{\text{cluster}} = \max_{i \in \text{cluster}} T_i \quad \text{(not sum)}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;strong&gt;Trust recovery example&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;CONVOY vehicle V3 experiences temporary GPS interference causing inconsistent position reports for 10 minutes. Trust drops from 1.0 to 0.35 during interference. After interference clears:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Minutes 0-5: Consistent reports, trust rises to 0.42&lt;&#x2F;li&gt;
+&lt;li&gt;Minutes 5-15: Continued consistency, trust rises to 0.58&lt;&#x2F;li&gt;
+&lt;li&gt;Minutes 15-30: Trust rises to 0.78&lt;&#x2F;li&gt;
+&lt;li&gt;After 1 hour of consistency: Trust returns to 0.95&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The slow recovery prevents adversaries from rapidly cycling between attack and “good behavior” phases.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;the-observability-constraint-sequence&quot;&gt;The Observability Constraint Sequence&lt;&#x2F;h2&gt;
+&lt;h3 id=&quot;hierarchy-of-observability&quot;&gt;Hierarchy of Observability&lt;&#x2F;h3&gt;
+&lt;p&gt;With limited resources, what should be measured first?&lt;&#x2F;p&gt;
+&lt;p&gt;The &lt;strong&gt;observability constraint sequence&lt;&#x2F;strong&gt; prioritizes metrics by importance:&lt;&#x2F;p&gt;
+&lt;style&gt;
+#tbl_obs_priority + table th:first-of-type { width: 10%; }
+#tbl_obs_priority + table th:nth-of-type(2) { width: 25%; }
+#tbl_obs_priority + table th:nth-of-type(3) { width: 35%; }
+#tbl_obs_priority + table th:nth-of-type(4) { width: 30%; }
+&lt;&#x2F;style&gt;
+&lt;div id=&quot;tbl_obs_priority&quot;&gt;&lt;&#x2F;div&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Level&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Category&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Examples&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Resource Cost&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P0&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Availability&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Is it alive? Responding?&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Minimal (heartbeat)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P1&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Resource exhaustion&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Power, memory, storage remaining&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Low (counters)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P2&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Performance degradation&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Latency, throughput, error rates&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Medium (aggregates)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P3&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Anomaly patterns&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Unusual behavior, drift&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Medium-High (models)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;&lt;strong&gt;P4&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Root cause indicators&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Why is it behaving this way?&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;High (correlation)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;&lt;strong&gt;P0 is non-negotiable&lt;&#x2F;strong&gt;. If a node doesn’t know whether its peers are alive, it cannot make any meaningful decisions. Availability monitoring requires minimal resources—a periodic heartbeat suffices.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;P1 catches imminent failures&lt;&#x2F;strong&gt;. Resource exhaustion is the most predictable failure mode. If power drops below 10%, failure is imminent regardless of other factors. P1 monitoring prevents surprise crashes.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;P2 detects gradual degradation&lt;&#x2F;strong&gt;. A sensor that responds but with increasing latency is degrading. P2 catches problems before they become failures—enabling proactive healing.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;P3 catches the unexpected&lt;&#x2F;strong&gt;. Anomaly detection (Section 2) falls here. It’s more expensive than simple counters but catches failure modes that weren’t explicitly modeled.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;P4 explains rather than just detects&lt;&#x2F;strong&gt;. Root cause analysis requires correlating multiple signals across time—computationally expensive but essential for learning.&lt;&#x2F;p&gt;
+&lt;p&gt;The sequence is &lt;strong&gt;priority-ordered, not exclusive&lt;&#x2F;strong&gt;. A well-resourced system implements all levels. A constrained system implements as many as resources allow, starting from P0.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;resource-budget-for-observability&quot;&gt;Resource Budget for Observability&lt;&#x2F;h3&gt;
+&lt;p&gt;Observability competes with the primary mission for resources:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;R_{\text{observe}} + R_{\text{mission}} \leq R_{\text{total}}&lt;&#x2F;script&gt;
+&lt;p&gt;Where:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;\(R_{\text{observe}}\) = resources for self-measurement&lt;&#x2F;li&gt;
+&lt;li&gt;\(R_{\text{mission}}\) = resources for primary function&lt;&#x2F;li&gt;
+&lt;li&gt;\(R_{\text{total}}\) = total available resources&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The optimization problem:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\max \quad V_{\text{mission}}(R_{\text{mission}}) + V_{\text{health}}(R_{\text{observe}})&lt;&#x2F;script&gt;
+&lt;p&gt;Subject to \(R_{\text{observe}} + R_{\text{mission}} \leq R_{\text{total}}\)&lt;&#x2F;p&gt;
+&lt;p&gt;Typically:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Mission value&lt;&#x2F;strong&gt; has diminishing returns: more resources yield proportionally less capability&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Health value&lt;&#x2F;strong&gt; has threshold effects: below minimum, health knowledge is useless; above minimum, marginal gains decrease&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The optimal allocation gives sufficient resources to observability for reliable health knowledge, then allocates remainder to mission.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;OUTPOST allocation example&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Total compute: 1000 MIPS&lt;&#x2F;li&gt;
+&lt;li&gt;Total bandwidth to fusion: 100 Kbps&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Allocation:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;P0-P1 monitoring: 50 MIPS (5%), 5 Kbps (5%)—heartbeats and resource counters&lt;&#x2F;li&gt;
+&lt;li&gt;P2-P3 monitoring: 100 MIPS (10%), 15 Kbps (15%)—performance aggregates, anomaly detection&lt;&#x2F;li&gt;
+&lt;li&gt;Gossip overhead: 0 MIPS local, 20 Kbps (20%)—health propagation&lt;&#x2F;li&gt;
+&lt;li&gt;Mission (sensor processing): 850 MIPS (85%), 60 Kbps (60%)—primary function&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;This 15% observability overhead enables reliable self-measurement while preserving the majority of resources for the mission.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;raven-self-measurement-protocol&quot;&gt;RAVEN Self-Measurement Protocol&lt;&#x2F;h2&gt;
+&lt;p&gt;The RAVEN drone swarm requires self-measurement at two levels: individual drone health and swarm-wide coordination state.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;per-drone-local-measurement&quot;&gt;Per-Drone Local Measurement&lt;&#x2F;h3&gt;
+&lt;p&gt;Each drone continuously monitors:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Power State&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Battery voltage, current draw, temperature&lt;&#x2F;li&gt;
+&lt;li&gt;Estimated flight time remaining: \(t_{\text{remain}} = E_{\text{remaining}} &#x2F; P_{\text{avg}}\)&lt;&#x2F;li&gt;
+&lt;li&gt;Anomaly detection: Sudden voltage drop, unusual current patterns&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Sensor Health&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Camera: Image quality metrics, focus response, exposure accuracy&lt;&#x2F;li&gt;
+&lt;li&gt;Radar: Return signal strength, calibration consistency&lt;&#x2F;li&gt;
+&lt;li&gt;GPS: Satellite count, position dilution of precision (PDOP)&lt;&#x2F;li&gt;
+&lt;li&gt;IMU: Gyro drift rate, accelerometer noise floor&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Link Quality&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;RSSI to each mesh neighbor&lt;&#x2F;li&gt;
+&lt;li&gt;Packet delivery ratio per link&lt;&#x2F;li&gt;
+&lt;li&gt;Latency distribution per link&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Mission Progress&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Coverage completion percentage&lt;&#x2F;li&gt;
+&lt;li&gt;Threat detection count&lt;&#x2F;li&gt;
+&lt;li&gt;Position relative to assigned sector&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;EWMA tracking on each metric with \(\alpha = 0.1\) (10-second effective memory). Anomaly threshold at 3σ for critical metrics (power, flight controls), 2σ for secondary metrics (sensors, links).&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;swarm-wide-health-inference&quot;&gt;Swarm-Wide Health Inference&lt;&#x2F;h3&gt;
+&lt;p&gt;Gossip protocol parameters:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Exchange rate: 0.2 Hz (once per 5 seconds)&lt;&#x2F;li&gt;
+&lt;li&gt;Staleness threshold: 30 seconds (confidence drops below 90%)&lt;&#x2F;li&gt;
+&lt;li&gt;Trust decay: \(\gamma = 0.05\) per second&lt;&#x2F;li&gt;
+&lt;li&gt;Maximum useful staleness: 60 seconds (confidence drops below 50%, data essentially stale)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;em&gt;Relationship&lt;&#x2F;em&gt;: The staleness threshold (30s) marks where data begins degrading meaningfully—decisions based on 30s-old data have ~90% confidence. The maximum useful staleness (60s) marks where confidence falls below 50%—beyond this, the data provides little more than a guess. The 2:1 ratio reflects the quadratic confidence decay from Proposition 5.&lt;&#x2F;p&gt;
+&lt;p&gt;Health vector per drone contains:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Binary availability (alive&#x2F;silent)&lt;&#x2F;li&gt;
+&lt;li&gt;Power state (percentage)&lt;&#x2F;li&gt;
+&lt;li&gt;Critical sensor status (functional&#x2F;degraded&#x2F;failed)&lt;&#x2F;li&gt;
+&lt;li&gt;Mission capability level (L0-L4)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Convergence guarantees&lt;&#x2F;strong&gt;: With logarithmic propagation dynamics, fleet-wide health convergence occurs within 30-40 seconds—fast enough to track operational state changes while remaining robust to individual message losses.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;anomaly-detection-and-self-diagnosis&quot;&gt;Anomaly Detection and Self-Diagnosis&lt;&#x2F;h3&gt;
+&lt;p&gt;Cross-sensor correlation matrix maintained locally. Example correlations:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;GPS PDOP vs. IMU drift: High PDOP should not correlate with low drift (if they do, likely spoofing)&lt;&#x2F;li&gt;
+&lt;li&gt;Battery voltage vs. current: Should follow known discharge curve (deviation indicates cell degradation)&lt;&#x2F;li&gt;
+&lt;li&gt;Camera image vs. radar return: Consistent threat detections (divergence suggests sensor failure)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Self-diagnosis follows a structured decision process:&lt;&#x2F;p&gt;
+&lt;style&gt;
+#tbl_diagnosis + table th:first-of-type { width: 30%; }
+#tbl_diagnosis + table th:nth-of-type(2) { width: 30%; }
+#tbl_diagnosis + table th:nth-of-type(3) { width: 40%; }
+&lt;&#x2F;style&gt;
+&lt;div id=&quot;tbl_diagnosis&quot;&gt;&lt;&#x2F;div&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Observation Pattern&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Diagnosis&lt;&#x2F;th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Action&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Power anomaly with neighbors unaffected or recent maneuver&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Local power issue&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Reduce power consumption, report to swarm&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Sensor anomaly with cross-sensor consistency&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Environmental condition&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Continue with degraded confidence&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Sensor anomaly with cross-sensor inconsistency&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Sensor failure&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Disable sensor, rely on alternatives&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Communication anomaly affecting multiple neighbors&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Environmental interference or jamming&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Increase transmit power, switch frequencies&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Communication anomaly affecting only self&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Local radio failure&lt;&#x2F;td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Attempt radio restart, fall back to minimal beacon&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;The diagnosis is probabilistic—the table represents the most likely paths, but confidence levels are maintained throughout.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;convoy-self-measurement-protocol&quot;&gt;CONVOY Self-Measurement Protocol&lt;&#x2F;h2&gt;
+&lt;p&gt;The CONVOY ground vehicle network operates with different constraints: vehicles have more resources than drones but face different failure modes.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;per-vehicle-local-measurement&quot;&gt;Per-Vehicle Local Measurement&lt;&#x2F;h3&gt;
+&lt;p&gt;Each vehicle monitors:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Mechanical Systems&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Engine: RPM, temperature, oil pressure, fuel consumption&lt;&#x2F;li&gt;
+&lt;li&gt;Transmission: Gear state, clutch wear indicators&lt;&#x2F;li&gt;
+&lt;li&gt;Suspension: Ride height, damper response&lt;&#x2F;li&gt;
+&lt;li&gt;Brakes: Pad wear, hydraulic pressure&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Navigation Systems&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;GPS: Position, velocity, satellite count, PDOP&lt;&#x2F;li&gt;
+&lt;li&gt;INS: Accelerometer and gyro readings, drift rate&lt;&#x2F;li&gt;
+&lt;li&gt;Dead reckoning: Wheel encoder counts, heading&lt;&#x2F;li&gt;
+&lt;li&gt;Map matching: Confidence in current road segment&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Communication Systems&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Mesh connectivity to other vehicles&lt;&#x2F;li&gt;
+&lt;li&gt;Range to each neighbor&lt;&#x2F;li&gt;
+&lt;li&gt;Bandwidth utilization&lt;&#x2F;li&gt;
+&lt;li&gt;Latency to convoy lead&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Anomaly detection uses Holt-Winters for metrics with diurnal patterns (communication quality varies with terrain) and EWMA for stationary metrics (mechanical systems).&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;convoy-level-health-inference&quot;&gt;Convoy-Level Health Inference&lt;&#x2F;h3&gt;
+&lt;p&gt;Hierarchical aggregation:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Primary mode&lt;&#x2F;strong&gt;: Lead vehicle collects health from all vehicles, computes aggregate, distributes summary&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Fallback mode&lt;&#x2F;strong&gt;: If lead unreachable, peer-to-peer gossip among reachable vehicles&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Lead vehicle aggregation:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Computes minimum capability level across convoy: \(L_{\text{convoy}} = \min_i L_i\)&lt;&#x2F;li&gt;
+&lt;li&gt;Identifies vehicles with critical anomalies&lt;&#x2F;li&gt;
+&lt;li&gt;Determines convoy-wide constraints (e.g., maximum safe speed based on worst vehicle)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Fallback gossip parameters:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Exchange rate: 0.1 Hz (once per 10 seconds)—lower than RAVEN due to vehicle stability&lt;&#x2F;li&gt;
+&lt;li&gt;Staleness threshold: 60 seconds&lt;&#x2F;li&gt;
+&lt;li&gt;Trust decay: \(\gamma = 0.02\) per second&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;anomaly-detection-focus&quot;&gt;Anomaly Detection Focus&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Position spoofing detection&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;Each vehicle tracks its own position via GPS, INS, and dead reckoning. It also receives claimed positions from neighbors. Cross-correlation identifies spoofing:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\Delta_{ij} = \|p_i^{\text{claimed}} - p_i^{\text{observed-by-}j}\|&lt;&#x2F;script&gt;
+&lt;p&gt;If \(\Delta_{ij}\) exceeds threshold for vehicle \(i\) as observed by multiple neighbors \(j\), vehicle \(i\) is flagged for position anomaly.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Communication anomaly classification&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;Distinguish jamming from terrain effects:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Jamming&lt;&#x2F;strong&gt;: Affects all frequencies, correlates with adversarial activity, affects multiple vehicles&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Terrain&lt;&#x2F;strong&gt;: Affects specific paths, correlates with geographic features, predictable from maps&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Use convoy’s position history to build terrain propagation model. Deviations from model suggest adversarial interference.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Integration with Markov connectivity model&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;p&gt;From the &lt;a href=&quot;https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part1-contested-connectivity&#x2F;&quot;&gt;Markov connectivity model&lt;&#x2F;a&gt;, the expected transition rates between regimes are known. Observed transitions that deviate from expectations are flagged:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{anomaly} = P(\text{observed transition} | \text{model}) &lt; \theta_{\text{transition}}&lt;&#x2F;script&gt;
+&lt;p&gt;Unexpectedly rapid transitions from connected to denied suggest adversarial action rather than natural degradation.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;outpost-self-measurement-protocol&quot;&gt;OUTPOST Self-Measurement Protocol&lt;&#x2F;h2&gt;
+&lt;p&gt;The OUTPOST sensor mesh operates with the most extreme constraints: ultra-low power, extended deployment durations (30+ days), and fixed positions that make physical inspection impractical.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;per-sensor-local-measurement&quot;&gt;Per-Sensor Local Measurement&lt;&#x2F;h3&gt;
+&lt;p&gt;Each sensor node continuously monitors with minimal power:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Power State&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Solar panel voltage and current&lt;&#x2F;li&gt;
+&lt;li&gt;Battery state of charge (SoC): \(\text{SoC} = E_{\text{current}} &#x2F; E_{\text{capacity}}\)&lt;&#x2F;li&gt;
+&lt;li&gt;Power budget: \(P_{\text{solar}} - P_{\text{load}} = P_{\text{net}}\)&lt;&#x2F;li&gt;
+&lt;li&gt;Anomaly detection: Solar panel degradation, battery cell failure&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Environmental Monitoring&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Temperature: Affects sensor calibration and battery performance&lt;&#x2F;li&gt;
+&lt;li&gt;Humidity: Risk of condensation and corrosion&lt;&#x2F;li&gt;
+&lt;li&gt;Vibration: Indicates physical disturbance or tampering&lt;&#x2F;li&gt;
+&lt;li&gt;Ambient light: Validates solar panel output&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Sensor Calibration State&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Drift from initial calibration&lt;&#x2F;li&gt;
+&lt;li&gt;Cross-correlation with neighboring sensors&lt;&#x2F;li&gt;
+&lt;li&gt;Response time degradation&lt;&#x2F;li&gt;
+&lt;li&gt;False positive&#x2F;negative rates for known test patterns&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Communication State&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;RSSI to fusion node and neighboring sensors&lt;&#x2F;li&gt;
+&lt;li&gt;Successful message delivery rate&lt;&#x2F;li&gt;
+&lt;li&gt;Round-trip latency&lt;&#x2F;li&gt;
+&lt;li&gt;Queue depth for outgoing messages&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Proposition 7&lt;&#x2F;strong&gt; (Power-Aware Measurement Scheduling). &lt;em&gt;For a sensor with solar charging profile \(P_{\text{solar}}(t)\) and measurement cost \(C_m\) per measurement, the optimal measurement schedule maximizes information gain while maintaining positive energy margin:&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\max \sum_t I(m_t) \quad \text{s.t.} \quad \int_0^T (P_{\text{solar}}(t) - P_{\text{base}} - \sum_{t&#x27;} C_m \cdot \delta(t - t&#x27;)) \, dt \geq E_{\text{reserve}}&lt;&#x2F;script&gt;
+&lt;p&gt;&lt;em&gt;where \(I(m_t)\) is the information gain from measurement at time \(t\) and \(E_{\text{reserve}}\) is the required energy reserve.&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;In practice, this means scheduling high-power measurements (radar, active sensors) during peak solar hours and relying on low-power passive measurements during night and low-light periods.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Greedy heuristic&lt;&#x2F;em&gt;: Sort measurements by information-gain-per-watt ratio \(I(m)&#x2F;C_m\). Schedule in order until power budget exhausted. For OUTPOST, this yields:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Passive seismic (0.1W, high info): Always on&lt;&#x2F;li&gt;
+&lt;li&gt;Passive acoustic (0.2W, medium info): Always on&lt;&#x2F;li&gt;
+&lt;li&gt;Active IR scan (2W, high info): Peak solar only (10am-2pm)&lt;&#x2F;li&gt;
+&lt;li&gt;Radar ping (5W, very high info): Midday only (11am-1pm), battery &amp;gt; 80%&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;This heuristic achieves ~85% of optimal information gain with O(n log n) computation, suitable for embedded deployment.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;mesh-wide-health-inference&quot;&gt;Mesh-Wide Health Inference&lt;&#x2F;h3&gt;
+&lt;p&gt;OUTPOST uses hierarchical aggregation with fusion nodes:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph TD
+    subgraph Sensors[&quot;Sensor Layer (distributed)&quot;]
+    S1[Sensor 1]
+    S2[Sensor 2]
+    S3[Sensor 3]
+    S4[Sensor 4]
+    S5[Sensor 5]
+    S6[Sensor 6]
+    end
+    subgraph Fusion[&quot;Fusion Layer (aggregation)&quot;]
+    F1[Fusion A]
+    F2[Fusion B]
+    end
+    subgraph Command[&quot;Command Layer (satellite)&quot;]
+    U[Uplink to HQ]
+    end
+    S1 --&gt; F1
+    S2 --&gt; F1
+    S3 --&gt; F1
+    S4 --&gt; F2
+    S5 --&gt; F2
+    S6 --&gt; F2
+    F1 --&gt; U
+    F2 --&gt; U
+    F1 -.-&gt;|&quot;backup link&quot;| F2
+
+    style U fill:#c8e6c9
+    style F1 fill:#fff9c4
+    style F2 fill:#fff9c4
+    style Sensors fill:#e3f2fd
+    style Fusion fill:#fff3e0
+    style Command fill:#e8f5e9
+&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Normal operation&lt;&#x2F;strong&gt;: Sensors report to fusion nodes at low frequency (once per minute). Fusion nodes aggregate health and forward summaries via satellite uplink.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Degraded operation&lt;&#x2F;strong&gt;: If satellite uplink fails, fusion nodes exchange health via inter-fusion mesh links. Sensors continue local operation with extended buffer storage.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Denied operation&lt;&#x2F;strong&gt;: Each sensor operates independently with full local decision authority. Health state cached for post-reconnection reconciliation.&lt;&#x2F;p&gt;
+&lt;p&gt;Gossip parameters for OUTPOST:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Exchange rate: 0.017 Hz (once per minute)—optimized for power&lt;&#x2F;li&gt;
+&lt;li&gt;Staleness threshold: 300 seconds (5 minutes)&lt;&#x2F;li&gt;
+&lt;li&gt;Trust decay: \(\gamma = 0.002\) per second&lt;&#x2F;li&gt;
+&lt;li&gt;Maximum useful staleness: 600 seconds&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;tamper-detection&quot;&gt;Tamper Detection&lt;&#x2F;h3&gt;
+&lt;p&gt;Fixed sensor positions make physical tampering a significant threat. Multi-layer detection:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Physical indicators&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Accelerometer for movement detection (sensor should be stationary)&lt;&#x2F;li&gt;
+&lt;li&gt;Light sensor for enclosure opening&lt;&#x2F;li&gt;
+&lt;li&gt;Temperature anomaly from human proximity&lt;&#x2F;li&gt;
+&lt;li&gt;Magnetic field disturbance from tools&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Logical indicators&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Sudden calibration drift after stable period&lt;&#x2F;li&gt;
+&lt;li&gt;Communication pattern change (new signal characteristics)&lt;&#x2F;li&gt;
+&lt;li&gt;Behavior inconsistent with neighboring sensors&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Response protocol&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Log tamper indicators with timestamp&lt;&#x2F;li&gt;
+&lt;li&gt;Increase reporting frequency if power permits&lt;&#x2F;li&gt;
+&lt;li&gt;Alert fusion node with tamper confidence level&lt;&#x2F;li&gt;
+&lt;li&gt;Continue operation unless tamper confidence exceeds threshold&lt;&#x2F;li&gt;
+&lt;li&gt;At high confidence: switch to quarantine mode (report but don’t trust own data)&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h3 id=&quot;cross-sensor-validation&quot;&gt;Cross-Sensor Validation&lt;&#x2F;h3&gt;
+&lt;p&gt;OUTPOST leverages overlapping sensor coverage for validation:&lt;&#x2F;p&gt;
+&lt;script type=&quot;math&#x2F;tex;mode=display&quot;&gt;\text{Confidence}(s_i) = \frac{\sum_{j \in \mathcal{N}_i} w_{ij} \cdot \text{Agreement}(s_i, s_j)}{\sum_{j \in \mathcal{N}_i} w_{ij}}&lt;&#x2F;script&gt;
+&lt;p&gt;Where \(\mathcal{N}_i\) is the set of sensors with overlapping coverage, and \(\text{Agreement}(s_i, s_j)\) measures correlation between sensor detections.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Low confidence triggers&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Sensor \(s_i\) reports detection that no neighbors corroborate&lt;&#x2F;li&gt;
+&lt;li&gt;Sensor \(s_i\) fails to report detection that all neighbors report&lt;&#x2F;li&gt;
+&lt;li&gt;Sensor \(s_i\) timing systematically differs from neighbors&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Cross-validation doesn’t determine which sensor is correct—it identifies sensors requiring investigation.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;the-limits-of-self-measurement&quot;&gt;The Limits of Self-Measurement&lt;&#x2F;h2&gt;
+&lt;p&gt;Self-measurement has boundaries. Recognizing these limits is essential for correct system design.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;novel-failure-modes&quot;&gt;Novel Failure Modes&lt;&#x2F;h3&gt;
+&lt;p&gt;Anomaly detection learns from historical data. A failure mode never seen before—outside the training distribution—may not be detected as anomalous.&lt;&#x2F;p&gt;
+&lt;p&gt;Example: OUTPOST sensors are trained on hardware failures, communication failures, and known environmental conditions. A new adversarial technique—acoustic disruption of MEMS sensors—produces sensor behavior within “normal” ranges but with corrupted data. The anomaly detector sees normal statistics; the semantic content is compromised.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Mitigation&lt;&#x2F;strong&gt;: Defense in depth. Multiple detection mechanisms with different assumptions. Cross-validation between sensors. Periodic ground-truth verification when connectivity allows.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;adversarial-understanding&quot;&gt;Adversarial Understanding&lt;&#x2F;h3&gt;
+&lt;p&gt;An adversary who understands the detection algorithm can craft attacks that evade detection.&lt;&#x2F;p&gt;
+&lt;p&gt;If the adversary knows we use EWMA with \(\alpha = 0.1\), they can introduce gradual drift that stays within 2σ at each step but accumulates to significant deviation over time. The “boiling frog” attack.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Mitigation&lt;&#x2F;strong&gt;: Ensemble of detection algorithms with different sensitivities. Long-term drift detection (comparing current baseline to baseline from days ago). Randomized detection parameters.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cascading-failures&quot;&gt;Cascading Failures&lt;&#x2F;h3&gt;
+&lt;p&gt;Self-measurement assumes the measurement infrastructure is functional. But the measurement infrastructure can fail too.&lt;&#x2F;p&gt;
+&lt;p&gt;If the power management system fails, anomaly detection may lose power before it can detect the power anomaly. If the communication subsystem fails, gossip cannot propagate health. The failure cascades faster than measurement can track.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Mitigation&lt;&#x2F;strong&gt;: P0&#x2F;P1 monitoring on dedicated, ultra-low-power subsystem. Watchdog timers that trigger even if main processor fails. Hardware-level health indicators independent of software.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;the-judgment-horizon&quot;&gt;The Judgment Horizon&lt;&#x2F;h3&gt;
+&lt;p&gt;When should the system distrust its own measurements?&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;When confidence intervals are too wide to support decisions&lt;&#x2F;li&gt;
+&lt;li&gt;When multiple sensors give irreconcilable readings&lt;&#x2F;li&gt;
+&lt;li&gt;When the system is operating outside its training distribution&lt;&#x2F;li&gt;
+&lt;li&gt;When measurement infrastructure itself is compromised&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;At the judgment horizon, self-measurement must acknowledge its limits. The system should:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Log that it has reached measurement uncertainty limits&lt;&#x2F;li&gt;
+&lt;li&gt;Fall back to conservative assumptions&lt;&#x2F;li&gt;
+&lt;li&gt;Request human input when connectivity allows&lt;&#x2F;li&gt;
+&lt;li&gt;Avoid irreversible actions until confidence is restored&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h3 id=&quot;sensor-47-resolution&quot;&gt;Sensor 47 Resolution&lt;&#x2F;h3&gt;
+&lt;p&gt;Return to our opening scenario. Sensor 47 went silent. How did OUTPOST diagnose the failure?&lt;&#x2F;p&gt;
+&lt;p&gt;The fusion node applied the diagnostic framework from Section 2.3:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Signature analysis&lt;&#x2F;strong&gt;: Abrupt silence, no prior degradation—inconsistent with hardware failure&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Correlation check&lt;&#x2F;strong&gt;: Sensors 45, 46, 48, 49 all operational—not a regional communication failure&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Environmental context&lt;&#x2F;strong&gt;: No known jamming indicators, weather nominal&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Staleness trajectory&lt;&#x2F;strong&gt;: Sensor 47’s last 10 readings showed normal variance, no drift&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Diagnosis: &lt;strong&gt;Localized hardware failure&lt;&#x2F;strong&gt; (most likely power regulation), with 78% confidence. The fusion node:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Routed Sensor 47’s coverage zone to neighbors (Sensors 45 and 48)&lt;&#x2F;li&gt;
+&lt;li&gt;Flagged for physical inspection on next patrol&lt;&#x2F;li&gt;
+&lt;li&gt;Updated its anomaly detection baseline to reduce reliance on Sensor 47’s historical patterns&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Post-reconnection analysis (satellite uplink restored 6 hours later): Sensor 47’s voltage regulator had failed suddenly—a known failure mode for this component batch. The diagnosis was correct. The system had self-measured, self-diagnosed, and self-healed without human intervention.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;learning-from-measurement-failures&quot;&gt;Learning from Measurement Failures&lt;&#x2F;h3&gt;
+&lt;p&gt;Anti-fragile self-measurement improves from its failures. When post-hoc analysis reveals a measurement failure:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Document the failure mode&lt;&#x2F;li&gt;
+&lt;li&gt;Add detection signature if possible&lt;&#x2F;li&gt;
+&lt;li&gt;Adjust thresholds or algorithms&lt;&#x2F;li&gt;
+&lt;li&gt;Update training data to include this case&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Each measurement failure is an opportunity to improve future measurement.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;h2 id=&quot;closing-the-measurement-action-loop&quot;&gt;Closing: The Measurement-Action Loop&lt;&#x2F;h2&gt;
+&lt;p&gt;Self-measurement without self-action is just logging.&lt;&#x2F;p&gt;
+&lt;p&gt;You measure in order to act—to heal, adapt, improve. The measurement-action loop drives autonomic architecture:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;mermaid&quot;&gt;
+    
+    graph LR
+    M[&quot;Monitor&lt;br&#x2F;&gt;(observe state)&quot;] --&gt; A[&quot;Analyze&lt;br&#x2F;&gt;(detect anomaly)&quot;]
+    A --&gt; P[&quot;Plan&lt;br&#x2F;&gt;(select action)&quot;]
+    P --&gt; E[&quot;Execute&lt;br&#x2F;&gt;(apply healing)&quot;]
+    E --&gt;|&quot;feedback loop&quot;| M
+
+    style M fill:#c8e6c9
+    style A fill:#fff9c4
+    style P fill:#ffcc80
+    style E fill:#ffab91
+&lt;&#x2F;pre&gt;
+&lt;p&gt;This is the MAPE-K loop (Monitor, Analyze, Plan, Execute, Knowledge) that IBM formalized for autonomic computing. The &lt;a href=&quot;https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part3-self-healing&#x2F;&quot;&gt;self-healing article&lt;&#x2F;a&gt; develops the healing phase in detail.&lt;&#x2F;p&gt;
+&lt;p&gt;Return to OUTPOST BRAVO.&lt;&#x2F;p&gt;
+&lt;p&gt;Sensor 47 is silent. The fusion node has measured: abrupt silence, neighbors functional, location on approach path. The analysis suggests adversarial action with 73% confidence. The plan: increase defensive posture, activate backup sensors in the region, log for human review when uplink restores.&lt;&#x2F;p&gt;
+&lt;p&gt;But measurement alone doesn’t execute this plan. Self-healing must decide: Is 73% confidence sufficient to escalate defensive posture? What is the cost of false alarm versus missed threat? How does the healing action affect the rest of the system?&lt;&#x2F;p&gt;
+&lt;p&gt;The &lt;a href=&quot;https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part3-self-healing&#x2F;&quot;&gt;next article on self-healing&lt;&#x2F;a&gt; develops the engineering principles for autonomous healing under uncertainty.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

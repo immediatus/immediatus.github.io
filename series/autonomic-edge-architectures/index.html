@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="" />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;series&#x2F;autonomic-edge-architectures&#x2F;" />
+  <meta property="og:description" content="" />
+
+  <title>Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;series&#x2F;autonomic-edge-architectures&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+
+
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+      
+    
+  
+
+  
+  
+
+  
+    
+      
+        
+          <h1>Series: Autonomic Edge Architectures: Self-Healing Systems in Contested Environments</h1>
+          <p class="series-description">Traditional distributed systems assume connectivity as the norm and partition as the exception. Tactical edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures—systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through three tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity.</p>
+        
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+
+    <p class="series-count">6 posts in this series</p>
+
+    <div class="series-list">
+      <ol class="series-posts">
+        
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">1.</span>
+                <a href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part1-contested-connectivity&#x2F;">Why Edge Is Not Cloud Minus Bandwidth</a>
+              </h2>
+              
+                <p class="series-post-description">Cloud-native architecture assumes connectivity is the norm and partition is the exception. Edge systems invert this assumption entirely: disconnection is the default operating state. This fundamental difference isn&#x27;t about latency or bandwidth—it&#x27;s a categorical shift in design philosophy. This article establishes the theoretical foundations: Markov models for connectivity regimes, capability hierarchies for graceful degradation, and the constraint sequence that determines which problems to solve first.</p>
+              
+              
+                <small class="series-post-date">15 January 2026</small>
+              
+            </div>
+          </li>
+        
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">2.</span>
+                <a href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part2-self-measurement&#x2F;">Self-Measurement Without Central Observability</a>
+              </h2>
+              
+                <p class="series-post-description">When your monitoring service is unreachable, who monitors the monitors? Edge systems must detect their own anomalies, assess their own health, and maintain fleet-wide awareness through gossip protocols—all without phoning home. This article develops lightweight statistical approaches for on-device anomaly detection, Bayesian methods for distributed health inference, and the observability constraint sequence that prioritizes what to measure when resources are scarce.</p>
+              
+              
+                <small class="series-post-date">22 January 2026</small>
+              
+            </div>
+          </li>
+        
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">3.</span>
+                <a href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part3-self-healing&#x2F;">Self-Healing Without Connectivity</a>
+              </h2>
+              
+                <p class="series-post-description">What happens when a component fails and there&#x27;s no one to call? Edge systems must repair themselves—detecting failures, selecting remediation strategies, and executing recovery without human intervention. This article adapts IBM&#x27;s MAPE-K autonomic control loop for contested environments, develops confidence-based healing triggers that balance false positives against missed failures, and establishes recovery ordering principles that prevent cascading failures when multiple components need healing simultaneously.</p>
+              
+              
+                <small class="series-post-date">29 January 2026</small>
+              
+            </div>
+          </li>
+        
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">4.</span>
+                <a href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part4-fleet-coherence&#x2F;">Fleet Coherence Under Partition</a>
+              </h2>
+              
+                <p class="series-post-description">During partition, each cluster makes decisions independently. When connectivity returns, those decisions must be reconciled—but some conflicts have no clean resolution. This article develops practical approaches to fleet-wide consistency: CRDTs for conflict-free state merging, Merkle-based reconciliation protocols for efficient sync, and hierarchical decision authority that determines who gets the final word when clusters disagree. The goal isn&#x27;t perfect consistency—it&#x27;s sufficient coherence for the mission to succeed.</p>
+              
+              
+                <small class="series-post-date">05 February 2026</small>
+              
+            </div>
+          </li>
+        
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">5.</span>
+                <a href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part5-antifragile-decisions&#x2F;">Anti-Fragile Decision-Making at the Edge</a>
+              </h2>
+              
+                <p class="series-post-description">Resilient systems return to baseline after stress. Anti-fragile systems get better. Every partition event, every component failure, every period of degraded operation carries information that can improve future performance. This article develops the mechanisms: online parameter tuning via multi-armed bandits, Bayesian model updates from operational stress, and the judgment horizon that separates decisions automation should make from those requiring human authority. The goal is systems that emerge from adversity stronger than they entered.</p>
+              
+              
+                <small class="series-post-date">12 February 2026</small>
+              
+            </div>
+          </li>
+        
+          <li class="series-post-item">
+            <div class="series-post-content-area">
+              <h2 class="series-post-title">
+                <span class="series-post-part-badge">6.</span>
+                <a href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;autonomic-edge-part6-constraint-sequence&#x2F;">The Edge Constraint Sequence</a>
+              </h2>
+              
+                <p class="series-post-description">Build sophisticated analytics before validating basic survival, and you&#x27;ll watch your system fail in production. The constraint sequence determines success: some capabilities are prerequisites for others, and solving problems in the wrong order wastes resources on foundations that collapse. This concluding article synthesizes the series into a formal prerequisite graph, develops phase-gate validation functions for systematic verification, and addresses the meta-constraint that autonomic infrastructure itself competes for the resources it manages.</p>
+              
+              
+                <small class="series-post-date">19 February 2026</small>
+              
+            </div>
+          </li>
+        
+      </ol>
+    </div>
+  
+
+
+<p class="dialog-buttons">
+  <a class="inline-button" href="https://e-mindset.space/">← Back to all posts</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script>
+  feather.replace();
+</script>
+</body>
+</html>
