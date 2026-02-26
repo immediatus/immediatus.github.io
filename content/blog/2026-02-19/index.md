@@ -23,12 +23,12 @@ series_description = """Traditional distributed systems assume connectivity as t
 This final article synthesizes the complete series:
 
 - **[Contested Connectivity](@/blog/2026-01-15/index.md)**: The connectivity probability model \\(C(t)\\), capability hierarchy (L0-L4), and the fundamental inversion that defines edge
-- **[Self-Measurement](@/blog/2026-01-22/index.md)**: Distributed health monitoring, the observability constraint sequence, and gossip-based awareness
-- **[Self-Healing](@/blog/2026-01-29/index.md)**: MAPE-K autonomous healing, recovery ordering, and cascade prevention under partition
-- **[Fleet Coherence](@/blog/2026-02-05/index.md)**: State reconciliation, CRDTs, decision authority hierarchies, and the coherence protocol
+- **[Self-Measurement](@/blog/2026-01-22/index.md)**: Distributed health monitoring, the observability {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}, and gossip-based awareness
+- **[Self-Healing](@/blog/2026-01-29/index.md)**: {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} autonomous healing, recovery ordering, and cascade prevention under partition
+- **[Fleet Coherence](@/blog/2026-02-05/index.md)**: State reconciliation, {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}s, decision authority hierarchies, and the coherence protocol
 - **[Anti-Fragile Decision-Making](@/blog/2026-02-12/index.md)**: Systems that improve under stress, the judgment horizon, and the limits of automation
 
-The preceding articles developed the *what*: the capabilities required for autonomic edge architecture. This article addresses the *when*: in what order should these capabilities be built? The constraint sequence determines success or failure. Build in the wrong order, and you waste resources on sophisticated capabilities that collapse because their foundations are missing.
+The preceding articles developed the *what*: the capabilities required for autonomic edge architecture. This article addresses the *when*: in what order should these capabilities be built? The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} determines success or failure. Build in the wrong order, and you waste resources on sophisticated capabilities that collapse because their foundations are missing.
 
 ---
 
@@ -42,7 +42,7 @@ This article develops the theoretical foundations for capability sequencing in a
 
 3. **Meta-Constraint Analysis**: We derive resource allocation bounds for autonomic overhead, proving that optimization infrastructure competes with the system being optimized.
 
-4. **Formal Validation Framework**: We define phase gate functions as conjunction predicates over verification conditions, providing a mathematical foundation for systematic validation.
+4. **Formal Validation Framework**: We define {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %} functions as conjunction predicates over verification conditions, providing a mathematical foundation for systematic validation.
 
 5. **Phase Progression Invariants**: We prove that valid system evolution requires maintaining all prior gate conditions, establishing the regression testing requirement as a theorem.
 
@@ -52,7 +52,7 @@ These contributions connect to and extend prior work on Theory of Constraints (G
 
 ## Opening Narrative: The Wrong Order
 
-Edge Platform Team: PhD ML expertise, cloud deployment veterans, $2.4M funding. Mission: intelligent monitoring for CONVOY vehicles. Six months produced 94% detection accuracy in lab.
+Edge Platform Team: PhD ML expertise, cloud deployment veterans, $2.4M funding. Mission: intelligent monitoring for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} vehicles. Six months produced 94% detection accuracy in lab.
 
 Within 72 hours of deployment: offline on 8 of 12 vehicles.
 
@@ -70,7 +70,7 @@ The failure was **wrong sequencing**, not bad engineering:
 
 They built L3 capability before validating L0. The roof before the foundation.
 
-Cloud-native intuition fails at edge: you can't iterate quickly when mistakes may be irrecoverable. The constraint sequence matters.
+Cloud-native intuition fails at edge: you can't iterate quickly when mistakes may be irrecoverable. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} matters.
 
 ---
 
@@ -78,7 +78,8 @@ Cloud-native intuition fails at edge: you can't iterate quickly when mistakes ma
 
 ### Review: Constraint Sequence from Platform Engineering
 
-**Definition 17** (Constraint Sequence). *A constraint sequence for system \\(S\\) is a total ordering \\(\sigma: \mathcal{C} \rightarrow \mathbb{N}\\) over the set of constraints \\(\mathcal{C}\\) such that addressing constraint \\(c_i\\) before its prerequisites \\(\text{prereq}(c_i)\\) provides zero value:*
+<span id="def-17"></span>
+**Definition 17** (Constraint Sequence). *A {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} for system \\(S\\) is a total ordering \\(\sigma: \mathcal{C} \rightarrow \mathbb{N}\\) over the set of constraints \\(\mathcal{C}\\) such that addressing constraint \\(c_i\\) before its prerequisites \\(\text{prereq}(c_i)\\) provides zero value:*
 
 {% katex(block=true) %}
 \forall c_i \in \mathcal{C}: \sigma(c_j) < \sigma(c_i) \quad \forall c_j \in \text{prereq}(c_i)
@@ -90,13 +91,13 @@ Applied to software systems, this becomes the **Constraint Sequence** principle:
 
 > **Systems fail in a specific order. Each constraint provides a limited window to act. Solving the wrong problem at the wrong time is an expensive way to learn which problem should have come first.**
 
-In platform engineering, common constraint sequences include:
+In platform engineering, common {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}s include:
 1. **Reliability before features**: A feature that crashes the system provides negative value
 2. **Observability before optimization**: You cannot optimize what you cannot measure
 3. **Security before scale**: Vulnerabilities multiply with scale
 4. **Simplicity before sophistication**: Complex solutions to simple problems create maintenance debt
 
-The constraint sequence is not universal—it depends on context. But within a given context, some orderings are strictly correct and others are strictly wrong. The CONVOY team's failure was solving constraint #7 (sophisticated analytics) before constraints #1-6 were addressed.
+The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is not universal—it depends on context. But within a given context, some orderings are strictly correct and others are strictly wrong. The {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} team's failure was solving constraint #7 (sophisticated analytics) before constraints #1-6 were addressed.
 
 ### Edge-Specific Constraint Properties
 
@@ -128,7 +129,7 @@ What does this mean in practice?
 
 **Feedback delays hide sequence errors**. In cloud, wrong sequencing manifests quickly through monitoring. At edge, you may not discover sequence errors until post-mission analysis—after the damage is done.
 
-The implication: **constraint sequence is more critical at the edge than in cloud**. Errors are more expensive, less recoverable, and slower to detect. Getting the sequence right the first time is not a luxury—it is a requirement.
+The implication: **{% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is more critical at the edge than in cloud**. Errors are more expensive, less recoverable, and slower to detect. Getting the sequence right the first time is not a luxury—it is a requirement.
 
 ---
 
@@ -136,9 +137,11 @@ The implication: **constraint sequence is more critical at the edge than in clou
 
 ### Dependency Structure of Edge Capabilities
 
-**Definition 18** (Prerequisite Graph). *The prerequisite graph \\(G = (V, E)\\) is a directed acyclic graph where \\(V\\) is the set of capabilities and \\(E\\) is the set of prerequisite relationships. An edge \\((u, v) \in E\\) indicates that capability \\(u\\) must be validated before capability \\(v\\) can be developed.*
+<span id="def-18"></span>
+**Definition 18** (Prerequisite Graph). *The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} \\(G = (V, E)\\) is a directed acyclic graph where \\(V\\) is the set of capabilities and \\(E\\) is the set of prerequisite relationships. An edge \\((u, v) \in E\\) indicates that capability \\(u\\) must be validated before capability \\(v\\) can be developed.*
 
-**Proposition 19** (Valid Sequence Existence). *A valid development sequence exists if and only if the prerequisite graph is acyclic. When \\(G\\) is a DAG, the number of valid sequences equals the number of topological orderings of \\(G\\).*
+<span id="prop-19"></span>
+**Proposition 19** (Valid Sequence Existence). *A valid development sequence exists if and only if the {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} is acyclic. When \\(G\\) is a DAG, the number of valid sequences equals the number of topological orderings of \\(G\\).*
 
 *Proof*: By the fundamental theorem of topological sorting, a directed graph admits a topological ordering iff it is acyclic. Each topological ordering corresponds to a valid development sequence satisfying all prerequisite constraints.
 Edge capabilities form a directed acyclic graph (DAG) of prerequisites. Some capabilities depend on others; some can be built in parallel. The graph structure determines valid build sequences.
@@ -193,7 +196,7 @@ graph TD
 
 **Critical path analysis**:
 
-The longest path determines minimum development time. For full L4 capability, the critical path is: Hardware Trust, then L0, then Self-Measurement, then Self-Healing, then Fleet Coherence, then L2, then L3, then L4. This is 8 sequential stages. Attempting to shortcut this path leads to the CONVOY failure mode: sophisticated capabilities without stable foundations.
+The longest path determines minimum development time. For full L4 capability, the critical path is: Hardware Trust, then L0, then Self-Measurement, then Self-Healing, then Fleet Coherence, then L2, then L3, then L4. This is 8 sequential stages. Attempting to shortcut this path leads to the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} failure mode: sophisticated capabilities without stable foundations.
 
 **Parallelizable stages**:
 - L1 (Basic Mission) and Self-Measurement can develop in parallel after L0
@@ -202,7 +205,7 @@ The longest path determines minimum development time. For full L4 capability, th
 
 ### Hardware Trust Before Software Health
 
-The deepest layer of the prerequisite graph is hardware trust. All software capabilities assume the hardware is functioning correctly. If hardware is compromised, all software reports are suspect.
+The deepest layer of the {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} is hardware trust. All software capabilities assume the hardware is functioning correctly. If hardware is compromised, all software reports are suspect.
 
 **The trust chain**:
 
@@ -225,7 +228,7 @@ Each layer trusts the layer below it. Compromise at any layer invalidates all la
 3. **Tamper detection**: Physical indicators of unauthorized access
 4. **Health monitoring**: Continuous verification of hardware operation
 
-OUTPOST example: A perimeter sensor reports "all clear" for 72 hours. But the sensor was physically accessed and modified to always report clear. The self-measurement system trusts the sensor's reports because it has no hardware attestation. The software health metrics show green. The actual security state is compromised.
+{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} example: A perimeter sensor reports "all clear" for 72 hours. But the sensor was physically accessed and modified to always report clear. The self-measurement system trusts the sensor's reports because it has no hardware attestation. The software health metrics show green. The actual security state is compromised.
 
 **Design principle**: Hardware trust must be established before software health can be believed. [Self-measurement](@/blog/2026-01-22/index.md) assumes the hardware it runs on is trustworthy. If this assumption is false, self-measurement is meaningless.
 
@@ -247,7 +250,7 @@ A node that cannot survive alone cannot contribute to a fleet. The hierarchy of 
 
 1. **Individual node**: L0 survival, basic self-measurement, local healing
 2. **Local cluster**: Gossip-based health, local coordination, cluster authority
-3. **Fleet-wide**: State reconciliation, hierarchical authority, anti-fragile learning
+3. **Fleet-wide**: State reconciliation, hierarchical authority, {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} learning
 
 Testing protocol:
 - Isolate each node (simulate complete partition)
@@ -256,7 +259,7 @@ Testing protocol:
 - Verify local healing recovers from injected faults
 - Only then proceed to coordination testing
 
-RAVEN example: A drone without fleet coordination can still fly, detect threats, and return to base. This L0/L1 capability must work perfectly before adding swarm coordination. If the individual drone fails under partition, the swarm's coordination capabilities provide no value—they coordinate the failure of their components.
+{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} example: A drone without fleet coordination can still fly, detect threats, and return to base. This L0/L1 capability must work perfectly before adding swarm coordination. If the individual drone fails under partition, the swarm's coordination capabilities provide no value—they coordinate the failure of their components.
 
 ---
 
@@ -264,7 +267,8 @@ RAVEN example: A drone without fleet coordination can still fly, detect threats,
 
 ### How Binding Constraints Shift
 
-**Definition 19** (Constraint Migration). *A system exhibits constraint migration if the binding constraint \\(c^\*(t)\\) varies with system state \\(S(t)\\):*
+<span id="def-19"></span>
+**Definition 19** (Constraint Migration). *A system exhibits {% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %} if the binding constraint \\(c^\*(t)\\) varies with system state \\(S(t)\\):*
 
 {% katex(block=true) %}
 c^*(t) = \arg\max_{c \in \mathcal{C}} \text{Impact}(c, S(t))
@@ -272,6 +276,9 @@ c^*(t) = \arg\max_{c \in \mathcal{C}} \text{Impact}(c, S(t))
 
 *where \\(\text{Impact}(c, S)\\) measures the throughput limitation imposed by constraint \\(c\\) in state \\(S\\).*
 
+The binding constraint is the one whose relaxation would most improve throughput. Formally: \\(c^*(S) = \arg\max_c \text{Impact}(c, S)\\) where \\(\text{Impact}(c, S) = R_{\text{required}}(c, S) / R_{\text{available}}(S)\\) — the ratio of resources this constraint demands to resources available. The constraint with Impact closest to 1 is binding (it is consuming nearly all available resources and would benefit most from relaxation).
+
+<span id="prop-20"></span>
 **Proposition 20** (Connectivity-Dependent Binding). *For edge systems with connectivity state \\(C(t) \in [0, 1]\\), the binding constraint follows a piecewise-constant function over connectivity thresholds:*
 
 {% katex(block=true) %}
@@ -283,8 +290,11 @@ c^*(C) = \begin{cases}
 \end{cases}
 {% end %}
 
-*Proof sketch*: Each connectivity regime imposes different resource scarcity. In connected state, bandwidth is abundant so efficiency dominates. As connectivity degrades, message delivery becomes scarce, shifting the binding constraint to reliability, then autonomy, then survival.
-Unlike static systems where the binding constraint is stable, edge systems experience **constraint migration**—the binding constraint changes based on connectivity state.
+*Proof sketch*: Each {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %} imposes different resource scarcity. In connected state, bandwidth is abundant so efficiency dominates. As connectivity degrades, message delivery becomes scarce, shifting the binding constraint to reliability, then autonomy, then survival.
+
+**Calibration note:** Thresholds \\(C = 0.8\\) and \\(C = 0.3\\) are calibrated to {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s radio characteristics. For systems with lower baseline connectivity (e.g., {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} satellite links), the connected threshold may fall to \\(C = 0.5\\). The principle — that binding constraints shift with connectivity level — is universal; calibrate thresholds to the connectivity level at which real-time command becomes viable for the target system.
+
+Unlike static systems where the binding constraint is stable, edge systems experience **{% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %}**—the binding constraint changes based on connectivity state.
 
 <style>
 #tbl_migration + table th:first-of-type { width: 20%; }
@@ -309,7 +319,7 @@ Unlike static systems where the binding constraint is stable, edge systems exper
 
 **Emergency state**: The binding constraint is survival. Resources are critical, so the question is how to stay alive. Optimization focuses on power conservation, safe-state defaults, and distress signaling.
 
-**Architecture implication**: The system must handle all constraint configurations. It is not sufficient to optimize for connected state if the system spends 60% of time in degraded or denied states. The constraint sequence must address all states.
+**Architecture implication**: The system must handle all constraint configurations. It is not sufficient to optimize for connected state if the system spends 60% of time in degraded or denied states. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} must address all states.
 
 ### Connectivity-Dependent Capability Targets
 
@@ -335,13 +345,13 @@ Each connectivity state has different capability targets:
 - Enable: Safe state, power conservation, distress beacon
 - Optimize: Endurance, safety, recovery potential
 
-The constraint sequence must ensure each state's target capability is achievable before assuming higher states will be available. Design for denied, enhance for connected.
+The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} must ensure each state's target capability is achievable before assuming higher states will be available. Design for denied, enhance for connected.
 
 ### Dynamic Re-Sequencing
 
-Static constraint sequences are defined at design time. But operational conditions may require dynamic adjustment of priorities.
+Static {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}s are defined at design time. But operational conditions may require dynamic adjustment of priorities.
 
-**RAVEN example**: Normal priority sequence:
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} example**: Normal priority sequence:
 1. Fleet coordination
 2. Surveillance collection
 3. Self-measurement
@@ -376,8 +386,9 @@ Every autonomic capability consumes resources:
 - **[Self-measurement](@/blog/2026-01-22/index.md)**: CPU for health checks, memory for baselines, bandwidth for gossip
 - **[Self-healing](@/blog/2026-01-29/index.md)**: CPU for healing logic, power for recovery actions, bandwidth for coordination
 - **[Fleet coherence](@/blog/2026-02-05/index.md)**: Bandwidth for state sync, memory for conflict buffers, CPU for merge operations
-- **[Anti-fragile learning](@/blog/2026-02-12/index.md)**: CPU for model updates, memory for learning history, bandwidth for parameter distribution
+- **[{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} learning](@/blog/2026-02-12/index.md)**: CPU for model updates, memory for learning history, bandwidth for parameter distribution
 
+<span id="prop-21"></span>
 **Proposition 21** (Autonomic Overhead Bound). *For a system with total resources \\(R_{\text{total}}\\) and minimum mission resource requirement \\(R_{\text{mission}}^{\min}\\), the maximum feasible autonomic overhead is:*
 
 {% katex(block=true) %}
@@ -426,7 +437,7 @@ Practical resource allocation requires explicit budgets:
 - **Stable operation**: Invest in learning (conditions favor adaptation)
 - **Resource stress**: Reduce all autonomic budgets (mission priority)
 
-The budget allocation itself is a constraint—it determines what autonomic capabilities are feasible. A resource-constrained edge device (e.g., 500mW power budget) may not be able to afford all autonomic functions. The constraint sequence must account for resource availability.
+The budget allocation itself is a constraint—it determines what autonomic capabilities are feasible. A resource-constrained edge device (e.g., 500mW power budget) may not be able to afford all autonomic functions. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} must account for resource availability.
 
 ---
 
@@ -448,7 +459,7 @@ Software optimization has limits. Eventually, improvement requires hardware chan
 - Limit: once algorithms are optimal, more compute requires more hardware
 
 **Power density**: Batteries determine endurance
-- Energy = power × time; fixed battery means fixed energy
+- Energy = power \\(\times\\) time; fixed battery means fixed energy
 - Efficiency optimization extends endurance
 - Limit: once power usage is minimized, more endurance requires bigger battery
 
@@ -475,7 +486,7 @@ Hardware security is foundational. Secure boot establishes the root of trust:
 - Quarantine the node from fleet
 - Flag for physical inspection
 
-CONVOY example: Vehicle 7 fails hardware attestation after traversing adversary territory. The self-measurement system shows all green. But the attestation failure means we cannot trust those reports. Vehicle 7 is quarantined—excluded from fleet coordination until physically verified.
+{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} example: Vehicle 7 fails hardware attestation after traversing adversary territory. The self-measurement system shows all green. But the attestation failure means we cannot trust those reports. Vehicle 7 is quarantined—excluded from fleet coordination until physically verified.
 
 ### OTA Updates as Fleet Coherence Problem
 
@@ -507,7 +518,8 @@ Over-the-air (OTA) updates are essential for improvement but create coherence ch
 
 Edge architecture development follows a phase-gated structure where each phase must satisfy formal validation predicates before the system advances.
 
-**Definition 20** (Phase Gate Function). *A phase gate function \\(G_i: \mathcal{S} \rightarrow \{0, 1\}\\) is a conjunction predicate over validation conditions:*
+<span id="def-20"></span>
+**Definition 20** (Phase Gate Function). *A {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %} function \\(G_i: \mathcal{S} \rightarrow \{0, 1\}\\) is a conjunction predicate over validation conditions:*
 
 {% katex(block=true) %}
 G_i(S) = \bigwedge_{p \in P_i} \mathbb{1}[V_p(S) \geq \theta_p]
@@ -515,6 +527,7 @@ G_i(S) = \bigwedge_{p \in P_i} \mathbb{1}[V_p(S) \geq \theta_p]
 
 Where \\(P_i\\) is the set of validation predicates for phase \\(i\\), \\(V_p(S)\\) is the validation score for predicate \\(p\\) given state \\(S\\), and \\(\theta_p\\) is the threshold for predicate \\(p\\).
 
+<span id="prop-22"></span>
 **Proposition 22** (Phase Progression Invariant). *The system can only enter phase \\(i+1\\) if all prior gates remain valid:*
 
 {% katex(block=true) %}
@@ -525,15 +538,15 @@ This creates a regression invariant: any change that invalidates an earlier gate
 
 **Connection to Formal Methods**
 
-The phase gate framework translates directly to formal verification tools:
+The {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %} framework translates directly to formal verification tools:
 
-- **TLA+**: Phase gates become safety invariants. The conjunction \\(\bigwedge_{j=0}^{i} G_j(S)\\) is a state predicate that model checking verifies holds across all reachable states. Temporal logic captures the progression invariant: \\(\Box(G_i \Rightarrow \bigcirc G_i) \lor (\bigcirc \neg G_i \land \Diamond G_i)\\)—gates remain valid or the system regresses and recovers.
+- **TLA+**: Phase gates become safety invariants. The conjunction \\(\bigwedge_{j=0}^{i} G_j(S)\\) is a state predicate that model checking verifies holds across all reachable states. In TLA+ temporal logic: \\(\Box P\\) means 'P always holds'; \\(\bigcirc P\\) means 'P holds in the next state'; \\(\Diamond P\\) means 'P eventually holds'. The formula below expresses: phase gates remain satisfied, or if violated they must eventually recover. Temporal logic captures the progression invariant: \\(\Box(G_i \Rightarrow \bigcirc G_i) \lor (\bigcirc \neg G_i \land \Diamond G_i)\\)—gates remain valid or the system regresses and recovers.
 
-- **Alloy**: The prerequisite graph (Definition 18) maps to Alloy's relational modeling. Alloy's bounded model checking can verify that no valid development sequence violates phase dependencies, finding counterexamples if the constraint graph has hidden cycles.
+- **Alloy**: The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} (Definition 18) maps to Alloy's relational modeling. Alloy's bounded model checking can verify that no valid development sequence violates phase dependencies, finding counterexamples if the constraint graph has hidden cycles.
 
-- **Property-Based Testing**: Tools like QuickCheck/Hypothesis generate random system states and verify phase gate predicates hold, providing confidence without exhaustive enumeration.
+- **Property-Based Testing**: Tools like QuickCheck/Hypothesis generate random system states and verify {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %} predicates hold, providing confidence without exhaustive enumeration.
 
-For RAVEN, the TLA+ model is ~500 lines specifying connectivity transitions, healing actions, and phase gates. Model checking verified the phase progression invariant holds for fleet sizes up to n=50 and partition durations up to 10,000 time steps.
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, the TLA+ model is ~500 lines specifying connectivity transitions, healing actions, and {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %}s. Model checking verified the phase progression invariant holds for fleet sizes up to n=50 and partition durations up to 10,000 time steps.
 
 ### Phase 0: Foundation Layer
 
@@ -548,7 +561,7 @@ V_{\text{safe}}(S) &= \mathbb{1}[\text{CriticalFailure}(t) \Rightarrow S(t + \ep
 \end{aligned}
 {% end %}
 
-Typical survival duration thresholds: RAVEN 24 hours, CONVOY 72 hours, OUTPOST 30 days.
+Typical survival duration thresholds: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} 24 hours, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} 72 hours, {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} 30 days.
 
 **Phase 0 gate**: \\(G_0(S) = V_{\text{attest}} \land V_{\text{surv}} \land V_{\text{budget}} \land V_{\text{safe}}\\)
 
@@ -565,7 +578,7 @@ V_{\text{part}}(S) &= \mathbb{1}[\text{Isolate}(n, \tau_{\text{part}}) \land \te
 \end{aligned}
 {% end %}
 
-Typical detection accuracy threshold: \\(\theta_{\text{detect}} = 0.80\\) for tactical systems.
+Typical thresholds for tactical systems: overall accuracy \\(\theta_{\text{detect}} \geq 0.80\\), false negative rate \\(< 0.05\\) (catch \\(>95\\%\\) of anomalies), false positive rate \\(< 0.20\\) (tolerate some false alarms to maintain throughput). Overall accuracy alone is insufficient — a class-imbalanced system can achieve \\(0.90\\) accuracy while missing half of all anomalies.
 
 **Phase 1 gate**: \\(G_1(S) = G_0(S) \land V_{\text{obs}} \land V_{\text{detect}} \land V_{\text{heal}} \land V_{\text{part}}\\)
 
@@ -599,7 +612,7 @@ V_{\text{conflict}}(S) &= \mathbb{1}[\forall (s_1, s_2): s_1 \neq s_2 \Rightarro
 \end{aligned}
 {% end %}
 
-Extended partition recovery predicate validates fleet reconvergence after 24-hour partition.
+Extended partition recovery predicate validates fleet reconvergence after 24-hour partition: \\(V_{\text{reconverge}}(S) = \mathbb{1}[\text{PartitionDuration} \geq 24\text{h} \Rightarrow \text{StateConverged}(\mathcal{F}, \tau_{\text{reconcile}})]\\) where \\(\text{StateConverged}\\) means all nodes agree on shared CRDT state within reconciliation window \\(\tau_{\text{reconcile}}\\).
 
 **Phase 3 gate**: \\(G_3(S) = G_2(S) \land V_{\text{reconcile}} \land V_{\text{crdt}} \land V_{\text{hier}} \land V_{\text{conflict}}\\)
 
@@ -634,6 +647,8 @@ V_{\text{antifragile}}(S) &= \mathbb{1}[\text{PostStress}(P) > \text{PreStress}(
 {% end %}
 
 **Phase 5 gate**: \\(G_5(S) = G_4(S) \land V_{L4} \land V_{\text{degrade}} \land V_{\text{cycle}} \land V_{\text{adv}} \land V_{\text{antifragile}}\\)
+
+**Red team gate integration**: A failed red team exercise (\\(V_{\text{adv}} = 0\\)) triggers re-evaluation of the preceding gate: if jamming breaks gossip coherence, the Phase 2 gate (\\(V_{\text{gossip}}\\)) is re-validated before re-attempting Phase 5.
 
 ### Validation Methodology
 
@@ -676,6 +691,8 @@ graph TD
 
 **Chaos engineering** validates healing predicates through systematic fault injection with coverage tracking: \\(\text{Coverage} = |\mathcal{F}_{\text{tested}}| / |\mathcal{F}|\\).
 
+**Coverage targets:** Model checking should explore at least 80% of reachable states for small state spaces, or verify key invariants via bounded model checking for large ones. Statistical testing requires \\(n \geq 30/\theta_p\\) samples per gate predicate (where \\(\theta_p\\) is the minimum meaningful effect size). Chaos coverage should target at least 80% of known failure modes listed in the threat model.
+
 ### Gate Revision Triggers
 
 The validation framework adapts to changing conditions. Formal triggers for re-evaluation:
@@ -693,7 +710,7 @@ Each trigger initiates re-evaluation of affected gates. The regression invariant
 
 ### RAVEN Constraint Sequence
 
-How the RAVEN drone swarm should be built:
+How the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone swarm should be built:
 
 **Phase 0: Drone Hardware Trust**
 - Secure boot chain from flight controller to sensors
@@ -718,7 +735,7 @@ How the RAVEN drone swarm should be built:
 
 **Phase 3: Swarm Coherence**
 - State reconciliation: threat data, position data, survey data merge
-- CRDT definitions: threat database, coverage map, decision log
+- {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} definitions: threat database, coverage map, decision log
 - Hierarchical authority: cluster to swarm to command
 - Reconnection protocol: swarm reconverges after multi-cluster partition
 - Conflict resolution: latest threat data wins; position data averages
@@ -741,7 +758,7 @@ How the RAVEN drone swarm should be built:
 
 ### CONVOY Constraint Sequence
 
-How the CONVOY ground vehicle network should be built:
+How the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} ground vehicle network should be built:
 
 **Phase 0: Vehicle Hardware Trust**
 - Secure boot from ECU to communication systems
@@ -766,7 +783,7 @@ How the CONVOY ground vehicle network should be built:
 
 **Phase 3: Convoy Coherence**
 - State reconciliation: route data, threat data, logistics data merge
-- CRDT definitions: route decisions (last-write-wins), threat database (union)
+- {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} definitions: route decisions (last-write-wins), threat database (union)
 - Hierarchical authority: vehicle to platoon to convoy to command
 - Reconnection protocol: convoy reconverges after platoon separation
 - Conflict resolution: route conflicts resolved by convoy lead decision
@@ -789,7 +806,7 @@ How the CONVOY ground vehicle network should be built:
 
 ### OUTPOST Constraint Sequence
 
-How the OUTPOST sensor mesh should be built:
+How the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor mesh should be built:
 
 **Phase 0: Sensor/Node Hardware Trust**
 - Secure boot for each sensor node and fusion node
@@ -814,7 +831,7 @@ How the OUTPOST sensor mesh should be built:
 
 **Phase 3: Multi-Site Coordination**
 - State reconciliation: detection data, mesh topology, alert state merge
-- CRDT definitions: alert database (union), detection log (append-only)
+- {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} definitions: alert database (union), detection log (append-only)
 - Hierarchical authority: sensor to fusion to site to regional to central
 - Reconnection protocol: sites reconverge after communication outage
 - Conflict resolution: alert priorities based on threat severity
@@ -839,7 +856,7 @@ How the OUTPOST sensor mesh should be built:
 
 ## The Limits of Constraint Sequence
 
-Every framework has boundaries. The constraint sequence is powerful but not universal. Recognizing its limits is essential for correct application.
+Every framework has boundaries. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is powerful but not universal. Recognizing its limits is essential for correct application.
 
 ### Where the Framework Fails
 
@@ -853,6 +870,8 @@ Resolution approaches:
 - Break the cycle with initial approximation (bootstrap measurement with assumed communication)
 - Develop capabilities simultaneously with careful coordination
 - Accept that some iteration is required
+
+**Bootstrap approach:** Derive initial approximations \\(\hat{S}^{(0)}\\), \\(\hat{C}^{(0)}\\) from simulation or design specifications. Develop self-measurement assuming \\(\hat{C}^{(0)}\\), validate communication assuming \\(\hat{S}^{(0)}\\), update estimates, and iterate until successive approximations change less than a predefined tolerance (e.g., 1% of threshold value). This converges in practice because self-measurement quality and communication quality are weakly coupled at initialization — neither depends strongly on the other until the system is near operational.
 
 **Resource constraints**: Sometimes you can't afford the proper sequence. Budget, time, or capability limits may force shortcuts.
 
@@ -868,7 +887,7 @@ Mitigation: Deploy with documented limitations. Restrict operations to validated
 
 ### Engineering Judgment
 
-The meta-lesson: **every framework has boundaries**. The constraint sequence is a tool, not a law. The edge architect must know when to follow the framework and when to adapt.
+The meta-lesson: **every framework has boundaries**. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is a tool, not a law. The edge architect must know when to follow the framework and when to adapt.
 
 Signs the framework doesn't apply:
 - Constraints don't fit the graph structure
@@ -878,7 +897,7 @@ Signs the framework doesn't apply:
 
 When these signs appear, engineering judgment must supplement the framework. The framework provides structure; judgment provides adaptation.
 
-**Anti-fragile insight**: Framework failures improve the framework. Each case where the constraint sequence didn't apply is an opportunity to extend it. Document exceptions. Analyze root causes. Update the framework for future use.
+**{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} insight**: Framework failures improve the framework. Each case where the {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} didn't apply is an opportunity to extend it. Document exceptions. Analyze root causes. Update the framework for future use.
 
 ---
 
@@ -890,21 +909,21 @@ This series has developed what that difference means in practice:
 
 **[Contested connectivity](@/blog/2026-01-15/index.md)** established the fundamental inversion: disconnection is the default; connectivity is the opportunity. The connectivity probability model \\(C(t)\\) quantifies this inversion. The capability hierarchy (L0-L4) shows how systems must degrade gracefully across connectivity states.
 
-**[Self-measurement](@/blog/2026-01-22/index.md)** showed how to measure health without central observability. The observability constraint sequence (P0-P4) prioritizes what to measure first. Gossip-based health propagation maintains awareness across the fleet. Staleness bounds quantify confidence decay.
+**[Self-measurement](@/blog/2026-01-22/index.md)** showed how to measure health without central observability. The observability {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} (P0-P4) prioritizes what to measure first. Gossip-based health propagation maintains awareness across the fleet. Staleness bounds quantify confidence decay.
 
-**[Self-healing](@/blog/2026-01-29/index.md)** showed how to heal without human escalation. MAPE-K adapted for edge autonomy. Recovery ordering prevents cascade failures. Healing severity matches detection confidence.
+**[Self-healing](@/blog/2026-01-29/index.md)** showed how to heal without human escalation. {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} adapted for edge autonomy. Recovery ordering prevents cascade failures. Healing severity matches detection confidence.
 
-**[Fleet coherence](@/blog/2026-02-05/index.md)** showed how to maintain coherence under partition. CRDTs and merge functions for state reconciliation. Hierarchical decision authority for autonomous decisions. Conflict resolution for irreconcilable differences.
+**[Fleet coherence](@/blog/2026-02-05/index.md)** showed how to maintain coherence under partition. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}s and merge functions for state reconciliation. Hierarchical decision authority for autonomous decisions. Conflict resolution for irreconcilable differences.
 
 **[Anti-fragility](@/blog/2026-02-12/index.md)** showed how to improve from stress rather than merely survive it. Anti-fragility metrics quantify improvement. Stress as information source. The judgment horizon separates automated from human decisions.
 
-**The constraint sequence** integrates these capabilities into a buildable sequence. The prerequisite graph. Constraint migration. The meta-constraint of optimization overhead. The formal validation framework for systematic verification.
+**The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}** integrates these capabilities into a buildable sequence. The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %}. Constraint migration. The meta-constraint of optimization overhead. The formal validation framework for systematic verification.
 
 ### The Goal
 
-The goal is not perfection. Perfection is unachievable in contested environments. The goal is **anti-fragility**: systems that improve from stress.
+The goal is not perfection. Perfection is unachievable in contested environments. The goal is **{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %}**: systems that improve from stress.
 
-An anti-fragile edge system:
+An {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} edge system:
 - Detects when its models fail
 - Learns from operational experience
 - Improves its predictions with each stress event
@@ -919,7 +938,7 @@ Connectivity is contested. Partition is normal. Autonomy is mandatory. Resources
 
 These are not problems to be solved—they are constraints to be designed around. The edge architect who accepts these constraints, rather than wishing them away, builds systems that thrive in their environment.
 
-The RAVEN swarm that loses connectivity doesn't panic. It was designed for this. Each drone measures itself. Clusters coordinate locally. The swarm maintains mission capability at L2 while partitioned. When connectivity returns, state reconciles automatically. And through the stress of partition, the swarm learns—emerging better calibrated for the next disconnection.
+The {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm that loses connectivity doesn't panic. It was designed for this. Each drone measures itself. Clusters coordinate locally. The swarm maintains mission capability at L2 while partitioned. When connectivity returns, state reconciles automatically. And through the stress of partition, the swarm learns—emerging better calibrated for the next disconnection.
 
 This is autonomic edge architecture.
 
@@ -927,7 +946,7 @@ This is autonomic edge architecture.
 
 ### Optimal Sequencing
 
-The constraint sequence corresponds to a topological sort of the prerequisite graph. Valid sequences satisfy \\((u, v) \in E \Rightarrow \sigma(u) < \sigma(v)\\)—prerequisites before dependents. Optimal sequences minimize weighted position \\(\sum_v w_v \cdot \sigma(v)\\), placing high-priority capabilities early.
+The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} corresponds to a topological sort of the {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %}. Valid sequences satisfy \\((u, v) \in E \Rightarrow \sigma(u) < \sigma(v)\\)—prerequisites before dependents. Optimal sequences minimize weighted position \\(\sum_v w_v \cdot \sigma(v)\\), placing high-priority capabilities early.
 
 Resource allocation at optimum equalizes marginal values across functions:
 
@@ -935,28 +954,60 @@ Resource allocation at optimum equalizes marginal values across functions:
 \frac{\partial V_{\text{mission}}}{\partial R_{\text{mission}}} = \frac{\partial V_m}{\partial R_m} = \frac{\partial V_h}{\partial R_h} = \frac{\partial V_c}{\partial R_c} = \lambda
 {% end %}
 
-This Lagrangian condition ensures no reallocation can improve total value.
+This Lagrangian condition ensures no reallocation can improve total value. The optimal allocation is interior — neither \\(R_{\text{autonomic}} = 0\\) (pure mission) nor \\(R_{\text{autonomic}} = R_{\text{total}}\\) (pure autonomy). Both contribute positive marginal mission value: measurement enables better decisions; healing reduces capability loss. The condition \\(\partial V_{\text{mission}} / \partial R_{\text{mission}} = \partial V_{\text{heal}} / \partial R_{\text{heal}} = \lambda\\) indicates the optimum equalizes marginal returns. Online, approximate this by reallocating toward whichever function shows higher marginal improvement per unit resource.
 
 ---
 
 ## Series Conclusion
 
-This concludes the six-part series "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments."
+At some point, every engineer who has deployed a distributed system into a contested or remote environment has gotten the call: the system is unreachable, the operator cannot intervene, and the system was never designed to operate without the operator. The fix is manual. The outage is measured in hours.
 
-**What we covered**:
+That call is a design problem, not an operations problem. The system failed not because of a bug but because the architecture assumed connectivity and had no answer for its absence — no operating mode, no healing logic, no coherence mechanism, no way to get better from the experience. When connectivity left, so did the system.
 
-1. **Edge differs from cloud** in kind, not degree.
+This series builds the answer, formally, in the sequence the mathematics requires.
 
-2. **Disconnection is the default**. Design for partition first.
+### Six Questions No One Is Asking
 
-3. **Self-\* capabilities** (measurement, healing, coherence, improvement) enable autonomy.
+There are six questions an autonomic edge system must be able to answer without a network connection. Most edge architectures answer zero or one. This series answers all six, in order, because the order is not optional.
 
-4. **Anti-fragility** is the goal: systems that improve from stress, not just survive it.
+**1. What does the system *become* when the link drops?**
+Not "what does it do" — what *is* it? The {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Five-tier hierarchy from partition survival (L0) to cloud-equivalent operation (L4)") %}capability level{% end %} hierarchy (L0–L4) answers this. The {% term(url="@/blog/2026-01-15/index.md#def-1", def="Continuous value in [0,1] representing the current fraction of nominal bandwidth available; 0 = fully denied, 1 = full connectivity; regime classification discretizes this into four operating modes") %}connectivity state{% end %} \\(C(t)\\) is a Markov process across four {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regimes{% end %}; Denied is a legitimate steady state, not a failure code. Proposition 1 establishes the {% term(url="@/blog/2026-01-15/index.md#prop-1", def="The connectivity level below which distributed autonomy outperforms cloud control") %}inversion threshold{% end %} \\(\tau^\*\\): below it, distributed autonomy strictly dominates cloud control on every operational metric. For contested and industrial deployments, \\(C(t) < \tau^\*\\) is the routine condition. The design target is partition, not connection.
 
-5. **Engineering judgment** remains essential. Know where your models end.
+**2. What does the system know about itself when isolated?**
+A node cut off from central telemetry must self-measure or it is blind. Local {% term(url="@/blog/2026-01-22/index.md#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %} runs at \\(O(1)\\) per observation — no uplink, no central service. {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}Gossip protocols{% end %} converge fleet health state in \\(O(\ln n / \lambda)\\) rounds across any partial mesh — roughly the same for 500 nodes as for 50. The {% term(url="@/blog/2026-01-22/index.md#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} bound \\(\tau_{\max}\\) tells the system when observations are too old to act on. {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine{% end %}-tolerant aggregation handles adversarial nodes without assuming honesty. A fleet of hundreds maintains accurate situational awareness indefinitely.
 
-6. **Sequence matters**. Build foundational capabilities before sophisticated ones.
+**3. What does the system do with what it knows?**
+Detection without action is an alarm system. The {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} autonomic loop closes the detect-decide-act cycle. {% term(url="@/blog/2026-01-29/index.md#def-9", def="Ordered classification of recovery actions (config tweak, service restart, failover, full reset); higher severity requires higher detection confidence before the MAPE-K loop will trigger it") %}Healing severity{% end %} ordering ensures the smallest effective intervention is tried first. The {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm's priority boundary — MVS components are repaired first") %}minimum viable system{% end %} defines the floor that recovery must defend. Proposition 9 proves the loop converges — it does not oscillate, it does not cascade, it stabilizes.
+
+**4. How do isolated peers stay coherent?**
+Partition events are not consistency violations. They are information events. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDTs{% end %} — data structures with commutative, associative, idempotent merge semantics — mean that when partitioned clusters reconnect, states merge deterministically: no coordinator, no consensus round, no lost writes. {% term(url="@/blog/2026-02-05/index.md#def-13", def="Per-node logical counters tracking causal order of events; if neither node's vector dominates the other, the events are concurrent and require merge resolution rather than simple ordering") %}Vector clocks{% end %} distinguish causality from coincidence when no global clock exists. {% term(url="@/blog/2026-02-05/index.md#def-11", def="Normalized [0,1] measure of how far a node's local state has drifted from fleet consensus; above threshold it triggers CRDT reconciliation to re-establish coherence across the fleet") %}State divergence{% end %} is bounded and measurable. The {% term(url="@/blog/2026-02-05/index.md#def-14", def="Level in the decision hierarchy (node, cluster, fleet, command); determines which decisions a node makes autonomously versus escalates when connectivity to higher tiers is lost") %}authority tier{% end %} hierarchy escalates what local logic cannot resolve.
+
+**5. How does the system get better from being disconnected?**
+A system that merely recovers returns to baseline. {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} — \\(d^2P/d\sigma^2 > 0\\) — is a testable engineering property: the performance-stress curve is convex. {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} bandit algorithms update operational parameters from each partition event; stress events calibrate the system's model of its own environment. The {% term(url="@/blog/2026-02-12/index.md#def-16", def="Boundary above which irreversibility, information content, or catastrophe probability exceeds the system's autonomy limit; the system halts and waits for human authorization rather than acting") %}judgment horizon{% end %} \\(\mathcal{J}\\) bounds what is automated: decisions irreversible at fleet scale, legally consequential, or outside the training distribution route to human authority. That boundary is not timidity — it is what makes the automation deployable in environments where wrong decisions have consequences.
+
+**6. In what order must this be built?**
+The five answers above form a strict dependency chain that cannot be reordered. Self-measurement precedes self-healing — you cannot repair what you cannot observe. Self-healing precedes fleet coherence — unreliable nodes cannot sustain distributed consensus. Fleet coherence precedes anti-fragile learning — you cannot learn from partition events that corrupt your state. The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} encodes this formally; the {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is any topological ordering of that graph. The {% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %} result adds that the binding constraint shifts with \\(C(t)\\) — what limits the system at \\(C(t) = 0.8\\) differs from what limits it at \\(C(t) = 0.1\\). {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}Phase gates{% end %} enforce formal validation at each transition. Skipping a layer is not a schedule decision. It is a correctness error.
+
+### What Changes in the Next Design
+
+Three practices change when an engineer internalizes this framework:
+
+**Design the disconnected system first.** Before the connected architecture, sketch what the system does when fully isolated. The isolated case, if not in the design from day one, cannot be retrofitted without rebuilding the foundation. The connected case is easier to add to a system designed for partition than the reverse.
+
+**Choose data structures by their merge semantics.** Before selecting a store or cache, ask one question: when two partitioned instances of this data reconnect, what is the merge rule? If the answer is "we figure it out at reconciliation time," there is no coherence design yet — only a hope. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDTs{% end %} with commutative, associative, idempotent merge functions make reconciliation an algebraic property of the data structure, not an operational emergency.
+
+**Define the {% term(url="@/blog/2026-02-12/index.md#def-16", def="Boundary above which irreversibility, information content, or catastrophe probability exceeds the system's autonomy limit; the system halts and waits for human authorization rather than acting") %}judgment horizon{% end %} before the automation boundary.** Which decisions can the system make autonomously? Which must escalate regardless of capability? This is an architectural decision, not an operational policy. Systems that leave it undefined will draw the line under stress, in production, with no time to deliberate. Systems that define it explicitly are the ones that get deployed into consequential environments.
+
+### The Swarm Was Never Waiting for the Network
+
+[Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md) opens with forty-seven {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drones losing backhaul without warning. They do not wait. They do not retry. Each drone runs local {% term(url="@/blog/2026-01-22/index.md#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %}. Sub-clusters propagate health via {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %}. The {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop executes recovery. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} merge handles reconciliation when connectivity returns. Bandit algorithms update from partition data. Decisions above the {% term(url="@/blog/2026-02-12/index.md#def-16", def="Boundary above which irreversibility, information content, or catastrophe probability exceeds the system's autonomy limit; the system halts and waits for human authorization rather than acting") %}judgment horizon{% end %} route to the operator. The {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Five-tier hierarchy from partition survival (L0) to cloud-equivalent operation (L4)") %}capability level{% end %} descends and ascends without human intervention.
+
+Six parts later, there is a formal proof for every step of that sequence.
+
+The swarm does not survive partition because it is fault-tolerant. Fault tolerance is reactive — it recovers from conditions it was not designed for. The swarm survives because partition was the design target. There is a difference between a system that handles disconnection and a system that was built for it. The first surprises you at 3am. The second does not surprise anyone, because it was never surprised itself.
+
+The engineer who built the second system is asleep. The system is handling it.
 
 ---
 
-*This series developed the engineering principles for autonomic systems in contested environments. The formal frameworks, mathematical models, and validation predicates provide foundations for practitioners building real systems. As with all engineering frameworks, they must be adapted to specific contexts, validated against operational experience, and refined through the anti-fragile learning process they describe.*
+*The formal frameworks, mathematical models, and validation predicates developed across these six parts provide foundations for practitioners building real edge systems. All models have limits — documented explicitly in each part's Model Scope and Epistemic Positioning sections. Adapt to your context. Validate against operational experience. The framework will improve with each application — which is precisely the property it describes.*

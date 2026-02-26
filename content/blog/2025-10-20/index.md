@@ -2230,7 +2230,7 @@ To meet sub-40ms latency requirements, use TensorFlow Serving with optimizations
 - **Batch size selection**: Balance throughput vs latency
   - Larger batches = better GPU utilization (higher throughput) but longer queuing delay
   - Smaller batches = lower latency but underutilized GPU capacity
-- **Finding the sweet spot**: Test with production-like traffic to find where \\(\text{total\_latency} = \text{queue\_wait} + \text{inference\_time}\\) stays within your SLA while maximizing \\(\text{requests\_per\_second}\\)
+- **Finding the sweet spot**: Test with production-like traffic to find where \\(\text{total\\_latency} = \text{queue\\_wait} + \text{inference\\_time}\\) stays within your SLA while maximizing \\(\text{requests\\_per\\_second}\\)
 
 **How to determine values:**
 1. Measure single-request inference latency (baseline)

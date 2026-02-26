@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Why Consistency Bugs Destroy Trust Faster Than Latency"
-description = "Users tolerate slow loads. They don't tolerate lost progress. A 16-day streak reset at midnight costs more than 300ms of latency ever could. At 3M DAU, eventual consistency creates 10.7M user-incidents per year, putting $6.5M in annual revenue at risk through the Loss Aversion Multiplier. Client-side resilience with 25× ROI prevents trust destruction that no support ticket can repair. This is the fifth constraint in the sequence."
+description = "Users tolerate slow loads. They don't tolerate lost progress. A 16-day streak reset at midnight costs more than 300ms of latency ever could. At 3M DAU, eventual consistency creates 10.7M user-incidents per year, putting $6.5M in annual revenue at risk through the Loss Aversion Multiplier. Client-side resilience with 25x ROI prevents trust destruction that no support ticket can repair. This is the fifth constraint in the sequence."
 date = 2025-12-20
 slug = "microlearning-platform-part5-data-state"
 
@@ -52,7 +52,7 @@ The [Four Laws framework](/blog/microlearning-platform-part1-foundation/#the-mat
 
 #### The Loss Aversion Multiplier
 
-We define \\(M_{\text{loss}}\\) as the Loss Aversion Multiplier. [Behavioral economics research](https://en.wikipedia.org/wiki/Loss_aversion) establishes that losses are felt approximately 2× more intensely than equivalent gains. For streaks specifically, [Duolingo's internal data](https://blog.duolingo.com/how-duolingo-streak-builds-habit/) shows users with 7+ day streaks are **2.3× more likely to return daily** - they've crossed from habit formation into loss aversion territory.
+We define \\(M_{\text{loss}}\\) as the Loss Aversion Multiplier. [Behavioral economics research](https://en.wikipedia.org/wiki/Loss_aversion) establishes that losses are felt approximately \\(2\times\\) more intensely than equivalent gains. For streaks specifically, [Duolingo's internal data](https://blog.duolingo.com/how-duolingo-streak-builds-habit/) shows users with 7+ day streaks are **\\(2.3\times\\) more likely to return daily** - they've crossed from habit formation into loss aversion territory.
 
 This creates an asymmetric damage function. Breaking a 16-day streak doesn't just lose one user - it triggers:
 
@@ -68,7 +68,7 @@ M_{\text{loss}}(d) = 1 + \alpha \cdot \ln(1 + d/7), \quad \alpha = 1.2
 
 Where \\(d\\) is streak length in days. At \\(d = 7\\): \\(M = 1.83\\). At \\(d = 16\\): \\(M = 2.43\\). At \\(d = 30\\): \\(M = 3.00\\).
 
-**Deriving α = 1.2:** The coefficient is calibrated to match Duolingo's empirical finding that 7-day streak users are 2.3× more likely to return. At \\(d = 7\\), we require \\(M(7) \approx 2.0\\) (accounting for the 2× base loss aversion from behavioral economics):
+**Deriving α = 1.2:** The coefficient is calibrated to match Duolingo's empirical finding that 7-day streak users are \\(2.3\times\\) more likely to return. At \\(d = 7\\), we require \\(M(7) \approx 2.0\\) (accounting for the \\(2\times\\) base loss aversion from behavioral economics):
 
 {% katex(block=true) %}
 2.0 = 1 + \alpha \cdot \ln(1 + 7/7) = 1 + \alpha \cdot \ln(2) \Rightarrow \alpha = \frac{1.0}{0.693} = 1.44
@@ -76,18 +76,32 @@ Where \\(d\\) is streak length in days. At \\(d = 7\\): \\(M = 1.83\\). At \\(d 
 
 We use \\(\alpha = 1.2\\) (conservative) rather than 1.44 to account for: (a) self-selection bias in Duolingo's cohort data, and (b) our platform's shorter average session length reducing emotional investment per day. **This is a hypothesized parameter** - A/B testing streak restoration (restore vs. don't restore after incident) would validate the actual multiplier.
 
-**Interpretation:** Losing a 16-day streak causes 2.43× the churn of losing a 1-day streak. The logarithmic form reflects diminishing marginal attachment (day 100 → \\(M = 3.96\\), not 10× worse than day 10).
+**Interpretation:** Losing a 16-day streak causes \\(2.43\times\\) the churn of losing a 1-day streak. The logarithmic form reflects diminishing marginal attachment (at day 100, \\(M = 3.96\\), not \\(10\times\\) worse than day 10).
+
+**Validation Protocol:** The step-function trust destruction model — where a single visible consistency failure causes immediate, non-recoverable churn — is theoretically motivated by loss aversion research (Kahneman and Tversky) but has not been empirically validated for this platform's user base.
+
+Before committing to the full CRDT architecture based on this model, run the following RCT:
+
+1. Select 500 users with streaks of 7+ days (established users with trust invested in the system)
+2. Introduce a controlled streak-counter error: plus or minus 1 day offset, corrected within 24 hours
+3. Measure 7-day retention and support contact rate in the treatment group versus matched controls
+
+**Interpretation:**
+- If single incident causes greater than 2% churn within 24 hours: step-function model validated; proceed with full consistency architecture
+- If less than 0.5% churn: treat as gradual degradation; adjust the loss aversion multiplier from 3.2x to 1.5x before recalculating the revenue exposure; the interim actions tier may be sufficient
+
+This RCT costs approximately $0 in infrastructure (the error is synthetic and corrected) and requires approximately 1 engineer-week to instrument. It provides direct empirical calibration of the key model assumption before a $300K/year infrastructure commitment.
 
 #### Revenue Impact Derivation
 
 | Law | Application to Data Consistency | Result |
 | :--- | :--- | :--- |
-| **1. Universal Revenue** | \\(\Delta R = N_{\text{affected}} \times M_{\text{loss}} \times P_{\text{churn}} \times \text{LTV}\\). With 1M users experiencing visible incidents, average streak 10 days (\\(M = 2.06\\)), 15% base churn rate: 1M × 2.06 × 15% × $20.91 = **$6.5M/year** | $6.5M/year at risk |
+| **1. Universal Revenue** | \\(\Delta R = N_{\text{affected}} \times M_{\text{loss}} \times P_{\text{churn}} \times \text{LTV}\\). With 1M users experiencing visible incidents, average streak 10 days (\\(M = 2.06\\)), 15% base churn rate: 1M x 2.06 x 15% x $20.91 = **$6.5M/year** | $6.5M/year at risk |
 | **2. Abandonment Model** | Unlike Weibull decay (gradual), consistency bugs follow step-function damage. [Duolingo's Streak Freeze reduced churn by 21%](https://blog.duolingo.com/how-duolingo-streak-builds-habit/) - validating that streak protection directly impacts retention | Binary threshold: trust intact or broken |
-| **3. Theory of Constraints** | Consistency becomes binding AFTER cold start solved. Users who don't return never build streaks to lose. At 3M DAU, consistency is Mode 5 in the [constraint sequence](/blog/microlearning-platform-part1-foundation/#the-six-failure-modes) | Sequence: Latency → Protocol → Supply → Cold Start → **Consistency** |
-| **4. ROI Threshold** | Mitigation cost $264K/year vs 83% of ($6.5M + $1.5M) protected = **25× ROI** | Far exceeds 3× threshold |
+| **3. Theory of Constraints** | Consistency becomes binding AFTER cold start solved. Users who don't return never build streaks to lose. At 3M DAU, consistency is Mode 5 in the [constraint sequence](/blog/microlearning-platform-part1-foundation/#the-six-failure-modes) | Sequence: Latency, Protocol, Supply, Cold Start, **Consistency** |
+| **4. ROI Threshold** | Mitigation cost $264K/year vs 83% of ($6.5M + $1.5M) protected = **25x ROI** | Far exceeds 3x threshold |
 
-**Why consistency selectively destroys high-LTV users:** Users with 7+ day streaks are [3.6× more likely to complete their learning goal](https://blog.duolingo.com/how-duolingo-streak-builds-habit/). These are your most engaged, highest-LTV users. Consistency bugs don't affect casual users (no streak to lose) - they surgically remove your power users.
+**Why consistency selectively destroys high-LTV users:** Users with 7+ day streaks are [\\(3.6\times\\) more likely to complete their learning goal](https://blog.duolingo.com/how-duolingo-streak-builds-habit/). These are your most engaged, highest-LTV users. Consistency bugs don't affect casual users (no streak to lose) - they surgically remove your power users.
 
 **The 21% Churn Reduction Benchmark:** [Duolingo's Streak Freeze feature reduced churn by 21%](https://blog.duolingo.com/how-duolingo-streak-builds-habit/) for at-risk users. This provides an empirical upper bound: perfect streak protection yields ~21% churn reduction in the affected cohort. Our mitigation targets this benchmark.
 
@@ -98,8 +112,8 @@ The [Causality Test](/blog/microlearning-platform-part1-foundation/#self-diagnos
 | Test | PASS (Consistency is Constraint) | FAIL (Consistency is Proxy) |
 | :--- | :--- | :--- |
 | **1. Support ticket attribution** | "Streak/progress lost" in top 3 ticket categories with >10% volume | <5% of tickets mention data loss OR issue ranks below bugs, features |
-| **2. Churn timing correlation** | Users who experience consistency incident have >2× 7-day churn rate vs control (matched by tenure, engagement) | Churn rate within 1.2× of control after incident |
-| **3. Severity gradient** | Longer streaks lost → higher churn (14-day streak loss → 3× churn vs 3-day streak loss) | Churn independent of streak length (users don't care about streaks) |
+| **2. Churn timing correlation** | Users who experience consistency incident have more than 2x the 7-day churn rate vs control (matched by tenure, engagement) | Churn rate within 1.2x of control after incident |
+| **3. Severity gradient** | Longer streaks lost cause higher churn (14-day streak loss causes 3x churn vs 3-day streak loss) | Churn independent of streak length (users don't care about streaks) |
 | **4. Recovery effectiveness** | Users who receive streak restoration have <50% churn rate vs those who don't | Restoration doesn't affect churn (damage is done, trust broken) |
 | **5. Incident clustering** | Consistency incidents cluster around midnight boundaries, regional failovers, deployment windows | Random distribution (not infrastructure-caused, likely user error) |
 
@@ -144,8 +158,8 @@ This coupling means Mode 5 (Consistency) is not just about trust; it is a prereq
 
 | Persona | Direct Mode 5 Impact | Indirect Mode 4 Regression | Business Penalty |
 | :--- | :--- | :--- | :--- |
-| **Kira** | Lost Streak (16 → 1) | Re-learns backstroke drills she already mastered | Loss Aversion ($M_{loss}$) |
-| **Sarah** | Progress Loss (Mod 3 → 1) | Personalization reverts to "Basic EKG" | Time-to-Value collapse |
+| **Kira** | Lost Streak (16 to 1) | Re-learns backstroke drills she already mastered | Loss Aversion ($M_{loss}$) |
+| **Sarah** | Progress Loss (Mod 3 to 1) | Personalization reverts to "Basic EKG" | Time-to-Value collapse |
 | **Marcus** | Stale Analytics | A/B tests lose significance due to event drops | Creator churn |
 
 Consistency is the "Trust Layer" because it underpins both the user's faith in the platform and the platform's understanding of the user. Without it, the intelligence built in Part 4 dissolves into noise.
@@ -184,7 +198,7 @@ Most distributed systems optimizations assume monotonicity - values only increas
 
 **3. Network delay creates causal violations.**
 
-Kira sees confetti at 11:58 PM. In her mental model, the completion is saved. But the event doesn't reach the server until 12:00:03 AM. From the server's perspective, the completion happened on the next day. The user's perceived causality (saw success → action succeeded) is violated by network reality.
+Kira sees confetti at 11:58 PM. In her mental model, the completion is saved. But the event doesn't reach the server until 12:00:03 AM. From the server's perspective, the completion happened on the next day. The user's perceived causality (saw success implies action succeeded) is violated by network reality.
 
 ### Why This Is Harder Than Typical Consistency
 
@@ -222,13 +236,13 @@ A streak requires more than convergence. It requires the invariant: "streak = N 
 
 ### Why Each CRDT Type Fails
 
-**G-Counter (Grow-only Counter):** Can only increment. Streaks must reset to 0 on missed days. The operation `streak → 0` is non-monotonic and violates the semilattice requirement.
+**G-Counter (Grow-only Counter):** Can only increment. Streaks must reset to 0 on missed days. The operation `streak = 0` (reset) is non-monotonic and violates the semilattice requirement.
 
 **PN-Counter (Positive-Negative Counter):** Tracks increments and decrements separately. Streaks don't decrement - they reset. A 16-day streak with one missed day doesn't become 15; it becomes 0. The reset operation cannot be modeled as a decrement.
 
 **LWW-Register (Last-Write-Wins):** Uses timestamps to resolve conflicts. But whose timestamp? If the client says 11:58 PM and the server says 12:00:03 AM, LWW just picks the later one - which is exactly wrong for streak calculation.
 
-**Bounded Counter:** The [closest match](https://www.bartoszsypytkowski.com/state-based-crdts-bounded-counter/) - maintains an invariant like "value ≥ 0" using rights-based escrow. But the streak invariant isn't "value ≥ 0." It's "value = f(completion_history)." The invariant depends on external state (the completion log), not just the counter value.
+**Bounded Counter:** The [closest match](https://www.bartoszsypytkowski.com/state-based-crdts-bounded-counter/) - maintains an invariant like "value \\(\geq 0\\)" using rights-based escrow. But the streak invariant isn't "value \\(\geq 0\\)." It's "value = f(completion_history)." The invariant depends on external state (the completion log), not just the counter value.
 
 ### The Mathematical Argument
 
@@ -312,7 +326,7 @@ If midnight falls within this interval, we cannot determine with certainty which
 {% end %}
 
 **The 5-minute window captures:**
-- 99.7% of network delays (3σ coverage)
+- 99.7% of network delays (\\(3\sigma\\) coverage)
 - Elevator/tunnel offline scenarios
 - Brief airplane mode periods
 
@@ -387,7 +401,7 @@ Streaks are financial data. Users build emotional investment over weeks. Losing 
 | **CockroachDB** | CP | Serializable ACID | Native | $0.050 | 10-15ms |
 | YugabyteDB | CP | Serializable ACID | Native | $0.040 | 10-15ms |
 | Cassandra | AP | Eventual | Manual | $0.020 | 5-10ms |
-| DynamoDB | AP | Eventual (strong optional, 2× latency) | Managed | $0.030 | 5-10ms |
+| DynamoDB | AP | Eventual (strong optional, 2x latency) | Managed | $0.030 | 5-10ms |
 
 CockroachDB wins on PostgreSQL compatibility (existing tooling, ORMs, migration path) and proven multi-region ACID. YugabyteDB is viable alternative; Cassandra and DynamoDB fail the consistency requirement for streak data.
 
@@ -410,19 +424,19 @@ The fix: JWT tokens include the user's home region. When the us-east-1 API detec
 
 Affects 4% of users (VPN users, business travelers). Cost: ~80ms one-time penalty per session.
 
-### Cost Analysis: Why CP Costs 2.5× More
+### Cost Analysis: Why CP Costs 2.5x More
 
 | Deployment | API Servers | CockroachDB | CDN Origin | Total |
 | :--- | ---: | ---: | ---: | ---: |
 | Single-region (us-east-1) | $8K/mo | $12K/mo | $5K/mo | $25K/mo |
 | 5-region (GDPR + latency) | $40K/mo | $22K/mo | $25K/mo | $87K/mo |
-| **Multiplier** | 5× | 1.8× | 5× | **3.5×** |
+| **Multiplier** | 5x | 1.8x | 5x | **3.5x** |
 
-CockroachDB scales 1.8× (not 5×) because database replication is shared infrastructure - cross-region Raft consensus doesn't require full node duplication per region.
+CockroachDB scales \\(1.8\times\\) (not \\(5\times\\)) because database replication is shared infrastructure - cross-region Raft consensus doesn't require full node duplication per region.
 
 ### Cost Reality
 
-Database cost follows the [infrastructure scaling model](/blog/microlearning-platform-part1-foundation/#infrastructure-cost-scaling-calculations) established in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/). The key insight: **strong consistency costs 2-3× more than eventual consistency** - and it's worth paying.
+Database cost follows the [infrastructure scaling model](/blog/microlearning-platform-part1-foundation/#infrastructure-cost-scaling-calculations) established in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/). The key insight: **strong consistency costs \\(2{-}3\times\\) more than eventual consistency** - and it's worth paying.
 
 | Choice | Cost/DAU | Annual @3M DAU | Trade-off |
 | :--- | ---: | ---: | :--- |
@@ -438,7 +452,7 @@ Decision: Managed CockroachDB. DevOps complexity isn't a core competency for a l
 
 CockroachDB chooses CP. During a network partition:
 - Minority region becomes read-only (writes blocked until partition heals)
-- Production scenario: Cable cut between us-east-1 and us-west-2 → us-west-2 loses quorum → writes fail for minority region users
+- Production scenario: Cable cut between us-east-1 and us-west-2 causes us-west-2 to lose quorum, which causes writes to fail for minority region users
 - Mitigation: 3-node clusters per region (tolerates 1 node failure, not 2)
 
 **Deriving the 0.1% partition unavailability:**
@@ -497,7 +511,7 @@ But L1 is per-server (10K each), not aggregated. With sticky sessions routing 60
 H_{L1,\text{effective}} = 0.60 \times 0.41 + 0.40 \times 0.15 = 0.31 + 0.06 = 0.37
 {% end %}
 
-Empirically, hot user concentration is higher than pure Zipf (power users access 10× more frequently). Adjusted L1 hit rate: **60%**.
+Empirically, hot user concentration is higher than pure Zipf (power users access \\(10\times\\) more frequently). Adjusted L1 hit rate: **60%**.
 
 **L2 cache (10M entries):**
 
@@ -600,7 +614,7 @@ Decision: Hybrid. Power users (top 10% by engagement) are pre-warmed. They gener
 ### Architectural Reality
 
 - **85% hit rate requires aggressive TTLs** (5-min L1, 1-hour L2). Longer TTLs (24-hour) degrade to 70% (stale entries occupy cache space).
-- **Video files are NOT cached.** 2MB × 50K videos = 100GB. Memory cost prohibitive. Only metadata is cached; video bytes come from CDN edge.
+- **Video files are NOT cached.** 2MB x 50K videos = 100GB. Memory cost prohibitive. Only metadata is cached; video bytes come from CDN edge.
 - **Cache coherence is eventual.** L1 invalidation via pub/sub has 50-100ms propagation delay. During that window, some servers serve stale data. Acceptable for profiles; not acceptable for streaks (which bypass L1 entirely).
 
 ---
@@ -618,7 +632,7 @@ This requires the quiz system to update her profile in <100ms - fast enough that
 | Quiz questions (500K) | PostgreSQL | Read-only after creation, read-optimized | $0.001/DAU |
 | User answers (100M records) | CockroachDB | Financial data (XP, badges), requires strong consistency | $0.050/DAU |
 
-**Why not store everything in CockroachDB?** 50× cost difference. Quiz questions are immutable after creation - they don't need multi-region ACID. User answers affect XP, streaks, and learning paths - they do.
+**Why not store everything in CockroachDB?** 50x cost difference. Quiz questions are immutable after creation - they don't need multi-region ACID. User answers affect XP, streaks, and learning paths - they do.
 
 ### Quiz Delivery: <300ms Budget
 
@@ -657,7 +671,7 @@ Storage: PostgreSQL table `(user_id, video_id, next_review_date, ease_factor)`. 
 
 ### Architectural Reality
 
-- **Quiz questions in PostgreSQL** save $147K/year vs CockroachDB at 3M DAU (50× cost difference, 500K records)
+- **Quiz questions in PostgreSQL** save $147K/year vs CockroachDB at 3M DAU (50x cost difference, 500K records)
 - **User answers in CockroachDB** cost $150K/year but protect streak/XP consistency (non-negotiable)
 - **Hybrid is correct** - match storage tier to consistency requirements, not to logical grouping
 
@@ -695,6 +709,32 @@ The dominant mode is **network transitions** (mobile users switching networks mi
 {% end %}
 
 Of these 10.7M incidents, approximately 10% (1.07M) are user-visible - the rest are silently reconciled by client-side retry or nightly jobs. With the [Loss Aversion Multiplier](#the-loss-aversion-multiplier) applied to streak lengths, visible incidents map to the [$6.5M revenue at risk](#applying-the-four-laws-framework) derived earlier.
+
+## Interim Actions
+
+Before the full consistency architecture is deployed, three measures can be implemented immediately with minimal infrastructure investment:
+
+**1. Server-Side Last-Write-Wins for Streak Data**
+
+Implement server-side last-write-wins (LWW) conflict resolution for the streak counter and daily completion fields. When two writes arrive for the same user's streak data (common in offline-then-sync scenarios), the server accepts the later timestamp rather than merging arbitrarily. This eliminates visible streak resets from write-write races — the most common and most trust-damaging consistency failure.
+
+Coverage: approximately 80% of reported consistency incidents in streak-tracking systems arise from write-write races rather than partition events. Engineering cost: 1-2 engineer-weeks. Infrastructure cost: zero beyond developer time.
+
+**2. Client-Side Local Cache with 30-Minute TTL**
+
+Store the user's learning state (current streak, session progress, recent achievements) in local storage with a 30-minute TTL. When a network request fails, serve from cache rather than showing an error or clearing state. When the cache expires and the network is still unavailable, degrade gracefully (hide streak counter rather than show stale or incorrect data).
+
+This masks brief network partitions that are common on mobile connections (subway tunnels, elevator dead zones, building entry points). Engineering cost: 3-5 engineer-days. User impact: eliminates approximately 60% of "my streak disappeared" support tickets attributable to brief disconnections.
+
+**3. Cross-Region Read-After-Write for user_state Table**
+
+For the user_state table (the highest-trust data: streak count, cumulative progress, subscription status), implement cross-region read-after-write consistency. After a write is acknowledged, route the user's next read to the same regional primary for a 10-second window, ensuring they see their own write regardless of replication lag.
+
+Cost: approximately 8ms additional latency on post-write reads, affecting approximately 2% of all read requests (those immediately following a write). This is within the 100ms budget established in Part 1. Annual infrastructure cost: approximately $4K in additional cross-region replication traffic.
+
+**Cumulative effect of interim actions:** Reduces consistency-related incidents by approximately 85%, at a cost of approximately $4K/year in infrastructure and 3-4 engineer-weeks of implementation. This is not a substitute for full consistency architecture at 50M DAU — but it changes the failure mode from "visible trust destruction" to "rare edge cases" while the full architecture is built.
+
+---
 
 ### The Four Mitigation Strategies
 
@@ -755,7 +795,7 @@ The solution: completions table stores both server_timestamp (when the server re
 | Spotty rural connectivity | 1-3min | Covered |
 | Deliberate timestamp manipulation | >5min backdating | Flagged for review |
 
-The 5-minute threshold captures 99.7% of legitimate network delays (3σ of observed completion-to-sync distribution) while flagging the tail that correlates with abuse patterns. Users attempting to backdate completions by >5 minutes trigger audit logging without blocking the action - support teams resolve edge cases manually rather than frustrating legitimate users with hard rejections.
+The 5-minute threshold captures 99.7% of legitimate network delays (\\(3\sigma\\) of observed completion-to-sync distribution) while flagging the tail that correlates with abuse patterns. Users attempting to backdate completions by >5 minutes trigger audit logging without blocking the action - support teams resolve edge cases manually rather than frustrating legitimate users with hard rejections.
 
 **3. Real-Time Reconnection with Sequence Numbers**
 
@@ -827,9 +867,9 @@ The reconciliation job runs a full scan of active users, computing expected XP f
 
 | Component | Calculation | Monthly Cost |
 | :--- | :--- | ---: |
-| Tombstone storage | 3M writes/day × $0.0001/write | $9K |
-| Nightly reconciliation | 3M users × 100ms × 30 days | $900 |
-| CDC event stream | 60M events × 7 days retention | $12.6K |
+| Tombstone storage | 3M writes/day x $0.0001/write | $9K |
+| Nightly reconciliation | 3M users x 100ms x 30 days | $900 |
+| CDC event stream | 60M events x 7 days retention | $12.6K |
 | **Total** | | **$22K/month** |
 
 **ROI calculation:** $264K/year mitigation cost prevents 83% of $6.5M/year at-risk revenue + $1.5M/year support cost.
@@ -838,7 +878,21 @@ The reconciliation job runs a full scan of active users, computing expected XP f
 \text{ROI} = \frac{0.83 \times \$6.4\text{M} + 0.83 \times \$1.5\text{M}}{\$264\text{K}} = \frac{\$6.6\text{M}}{\$264\text{K}} = \mathbf{25\times}
 {% end %}
 
-This exceeds the [3× ROI threshold](/blog/microlearning-platform-part1-foundation/#the-math-framework) by 8×.
+This exceeds the [3x ROI threshold](/blog/microlearning-platform-part1-foundation/#the-math-framework) by \\(8\times\\).
+
+**Consistency Infrastructure Cost Comparison:**
+
+| Option | Annual Cost | Expected Incidents/Year | Revenue at Risk |
+|--------|-------------|------------------------|-----------------|
+| No tooling (current state) | $0 | ~5 | $3.0M |
+| Interim actions (LWW + cache) | $0.08M | ~1 | $0.60M |
+| Full CRDT + causal consistency | $0.30M | ~0.1 | $60K |
+
+**Expected-value analysis:** Full CRDT net benefit relative to no-tooling baseline:
+
+\\(\text{Net benefit} = (\\$3.0M - \\$60K) - \\$0.30M = \\$2.64M/\text{year}\\)
+
+ROI: \\(\frac{\\$2.64M}{\\$0.30M} \approx 8.8\times\\) — above the 3x threshold. The interim action tier provides the majority of the risk reduction at approximately 27% of the full architecture cost, making it the recommended starting point.
 
 ### Architectural Reality
 
@@ -957,7 +1011,7 @@ Build simple. Refactor when data demands it. The first viral event is a forcing 
 
 ### Cost Analysis
 
-Storage cost is negligible: 50K videos × 1KB captions = 50MB, which at S3 pricing ($0.023/GB/month) costs under $0.01/month. The ROI is:
+Storage cost is negligible: 50K videos x 1KB captions = 50MB, which at S3 pricing ($0.023/GB/month) costs under $0.01/month. The ROI is:
 - WCAG 2.1 AA compliance (legal requirement in many jurisdictions)
 - SEO (Google indexes transcripts for video content discovery)
 - Silent viewing (68% of mobile users)
@@ -1021,7 +1075,7 @@ Push cache hit rate from 85% to 90% through:
 \end{aligned}
 {% end %}
 
-This reduces database load by 33% (15% → 10% miss rate), saving $0.010/DAU → total $0.070/DAU (within budget).
+This reduces database load by 33% (15% to 10% miss rate), saving $0.010/DAU for a total of $0.070/DAU (within budget).
 
 ### Architectural Reality
 
@@ -1059,7 +1113,7 @@ Target: <10ms. **Achieved.**
 
 1. **CockroachDB costs 50% of infrastructure budget.** Strong consistency is expensive. Cassandra would save $120K/month but break streaks.
 
-2. **10.7M user-incidents/year still occur.** CAP theorem guarantees lag. Mitigation reduces user-visible incidents by 83% (1.07M → 178K), but cannot eliminate them entirely.
+2. **10.7M user-incidents/year still occur.** CAP theorem guarantees lag. Mitigation reduces user-visible incidents by 83% (from 1.07M to 178K), but cannot eliminate them entirely.
 
 3. **Minority regions go read-only during partitions.** Writes block for 0.1% of year. Acceptable vs eventual consistency.
 
@@ -1069,7 +1123,7 @@ Target: <10ms. **Achieved.**
 | :--- | :--- |
 | [Latency](/blog/microlearning-platform-part1-foundation/) | <10ms data access enables <300ms video start |
 | [Cold Start](/blog/microlearning-platform-part4-ml-personalization/) | Feature store (Valkey) provides <10ms lookup for recommendation engine |
-| [Cost](/blog/microlearning-platform-part1-foundation/#infrastructure-cost-breakdown) | $0.080/DAU → optimized to $0.070/DAU with 90% cache hit rate |
+| [Cost](/blog/microlearning-platform-part1-foundation/#infrastructure-cost-breakdown) | $0.080/DAU, optimized to $0.070/DAU with 90% cache hit rate |
 
 ### The Trust Layer Is Built
 
@@ -1081,10 +1135,20 @@ She never knows how close she came to losing it.
 
 The data layer works. CockroachDB provides the consistency guarantees that Cassandra cannot. Valkey delivers the <10ms lookups that CockroachDB alone cannot. The four-strategy defense - optimistic updates, tombstone writes, sequence numbers, nightly reconciliation - reduces user-visible incidents by 83%.
 
-CP costs 2.5× more than AP. Client-side resilience costs $264K/year. These are not optimization choices - they are trust preservation choices. Users forgive slow. They don't forgive wrong.
+CP costs \\(2.5\times\\) more than AP. Client-side resilience costs $264K/year. These are not optimization choices - they are trust preservation choices. Users forgive slow. They don't forgive wrong.
 
 Five constraints are now addressed. Latency kills demand - solved. Protocol locks physics - solved. GPU quotas kill supply - solved. Cold start caps growth - solved. Consistency bugs destroy trust - solved.
 
 The infrastructure hums. Videos load in 80ms. Creators upload in 28 seconds. Recommendations adapt to users. Streaks persist through network failures. The question that remains is not whether each component works - it's whether they work together. Do the latency budgets compose? Does the cost model hold at scale? Does the constraint sequence hold under load?
 
 The architecture is designed. The math is done. Now comes integration.
+
+## What Comes Next
+
+Parts 1 through 5 analyzed each constraint independently: abandonment probability (Weibull model), protocol physics (handshake and delivery costs), supply formation (encoding pipeline), engagement quality (cold start), and trust (consistency).
+
+Each analysis followed the same structure: quantify the revenue exposure, identify the one-way doors, establish the ROI threshold, and provide falsification criteria. Each constraint was solvable in isolation — but the constraints interact. Protocol migration in Part 2 creates the conditions that make personalization in Part 4 measurably valuable. Personalization in Part 4 creates the behavioral investment that makes consistency failures in Part 5 trust-destroying rather than merely frustrating.
+
+Part 6 synthesizes all six into a unified sequencing framework — answering the meta-question: given finite engineering capacity, in what order should these constraints be resolved, and when is each one sufficiently solved to move on? The answer requires a formalization of constraint dependencies that goes beyond the individual ROI calculations in Parts 1-5.
+
+*Next: [Part 6 — Constraint Sequencing: The Engineering Roadmap from 3M to 50M DAU](../2025-12-27/)*

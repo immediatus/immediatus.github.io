@@ -13,31 +13,24 @@ title = "Mindset Footprint"
 # The default author for pages
 author = "Yuriy Polyulya"
 
+generate_robots_txt = true
+generate_sitemap = true
 generate_feeds = true
 feed_filenames = ["atom.xml", "rss.xml"]
-
-generate_robots_txt = true
-
-generate_sitemap = true
-
 taxonomies = [
   { name = "tags", feed = true },
   { name = "series", feed = true },
 ]
 
-
 [markdown]
-# Whether to do syntax highlighting
-# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
-highlight_code = true
-highlight_theme = "OneHalfLight"
 smart_punctuation = true
-math = true
+
+[markdown.highlighting]
+theme = "github-light"
 
 [extra]
-
+math = true
 date_format = "%d %B %Y"
-
 google_analytics = "G-X0M5X84BLR"
 
 [extra.nav]

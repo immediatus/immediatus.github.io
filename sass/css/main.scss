@@ -270,12 +270,134 @@ small {
   color: var(--text-secondary);
 }
 
+/* Highlighter-pen metaphor: amber fill marks important passages, no interactivity implied */
 mark {
-  background: linear-gradient(180deg, transparent 50%, rgba(196, 181, 253, 0.25) 50%);
+  background: linear-gradient(180deg, transparent 35%, rgba(251, 191, 36, 0.32) 35%);
   color: var(--text);
-  padding: 0 0.125rem;
+  padding: 0 0.15rem;
   border-radius: 2px;
   font-weight: 500;
+}
+
+/* ─── Defined term: dotted underline + tooltip ─── */
+/* <abbr>-convention: dotted underline signals "this word has a definition, hover me" */
+.defined-term {
+  background: none;
+  color: inherit;
+  font-weight: inherit;
+  border-bottom: 1.5px dotted rgba(139, 92, 246, 0.75);
+  padding-bottom: 1px;
+  cursor: help;
+  text-decoration: none;
+  position: relative;
+  display: inline;
+  /* JS overrides this on mouseover/focusin; ::after and ::before inherit it */
+  --tip-nudge: 0px;
+}
+
+/* Link terms: same dotted underline in accent color + pointer signals clickability */
+a.defined-term {
+  cursor: pointer;
+  border-bottom: 1.5px dotted var(--accent);
+}
+
+/* Tooltip bubble */
+.defined-term::after {
+  content: attr(data-def);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(calc(-50% + var(--tip-nudge))) translateY(6px) scale(0.97);
+
+  /* Light card — white background with a soft lavender tint */
+  background: rgba(255, 253, 255, 0.97);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+
+  color: #1e1a2e;           /* near-black with a faint purple undertone */
+  border: none;
+
+  /* Three shadow layers:
+     1. inset left accent strip  (lavender, matches the term highlight)
+     2. thin outer ring          (subtle lavender border)
+     3. soft drop shadow         (lifts card off the page)              */
+  box-shadow:
+    inset 3px 0 0 0 rgba(139, 92, 246, 0.65),
+    0 0 0 1px rgba(139, 92, 246, 0.18),
+    0 8px 24px rgba(0, 0, 0, 0.10);
+
+  padding: 0.65em 1.05em 0.65em 1.1em;
+  border-radius: 10px;
+
+  font-family: var(--font-sans);   /* explicit — never inherits a stray monospace */
+  font-size: 0.82rem;              /* 13.1px at 16px base — comfortable for wrapped text */
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.65;
+  letter-spacing: 0.013em;        /* slight tracking aids legibility at small sizes */
+
+  width: max-content;
+  min-width: 160px;               /* prevents single-word tooltips from looking squeezed */
+  max-width: 310px;
+  white-space: normal;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+/* Tooltip arrow — inherits --tip-nudge and moves with the bubble */
+.defined-term::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(calc(-50% + var(--tip-nudge))) translateY(6px);
+  border: 5px solid transparent;
+  border-top-color: rgba(255, 253, 255, 0.97);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 101;
+}
+
+.defined-term:hover::after,
+.defined-term:hover::before,
+.defined-term:focus-visible::after,
+.defined-term:focus-visible::before {
+  opacity: 1;
+  transform: translateX(calc(-50% + var(--tip-nudge))) translateY(0) scale(1);
+}
+
+/* Touch devices: tooltip below the word, clamped to viewport width */
+@media (hover: none) {
+  .defined-term::after {
+    bottom: auto;
+    top: calc(100% + 10px);
+    left: 0;
+    transform: translateY(-6px) scale(0.97);
+    max-width: min(310px, calc(100vw - 2.5rem));
+  }
+
+  .defined-term::before {
+    bottom: auto;
+    top: calc(100% + 5px);
+    left: 1rem;
+    transform: translateY(-6px);
+    border-top-color: transparent;
+    border-bottom-color: rgba(10, 8, 24, 0.96);
+  }
+
+  .defined-term:focus-visible::after {
+    transform: translateY(0) scale(1);
+  }
+
+  .defined-term:focus-visible::before {
+    transform: translateY(0);
+  }
 }
 
 hr {
@@ -329,12 +451,12 @@ a:hover {
 }
 
 /* Content area links with subtle underline */
-#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a) {
+#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term) {
   border-bottom: 1px solid var(--lavender);
   opacity: 0.9;
 }
 
-#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):hover {
+#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):hover {
   border-bottom-color: var(--accent);
   opacity: 1;
 }

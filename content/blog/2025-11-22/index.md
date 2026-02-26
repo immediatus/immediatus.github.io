@@ -53,12 +53,12 @@ Performance requirements:
 
 **Latency terminology:**
 
-| Term | Definition | Measured From → To |
+| Term | Definition | Measured (From / To) |
 | :--- | :--- | :--- |
-| **Video Start Latency** | Viewer sees first frame (demand-side) | User taps play → First frame rendered |
-| **Upload-to-Live Latency** | Creator's video becomes discoverable (supply-side) | Upload completes → Video searchable |
-| **RTT** | Packet round-trip time | Packet sent → ACK received |
-| **TTFB** | Time to first byte | HTTP request → First byte received |
+| **Video Start Latency** | Viewer sees first frame (demand-side) | User taps play to first frame rendered |
+| **Upload-to-Live Latency** | Creator's video becomes discoverable (supply-side) | Upload completes to video searchable |
+| **RTT** | Packet round-trip time | Packet sent to ACK received |
+| **TTFB** | Time to first byte | HTTP request to first byte received |
 
 When this series references "p95 latency" without qualification, it refers to **Video Start Latency** (demand-side) unless explicitly stated otherwise. The 300ms budget, Weibull abandonment model (defined in "The Math Framework" section below), and protocol comparisons all use Video Start Latency as the metric.
 
@@ -98,7 +98,9 @@ Video isn't an attachment - it's atomic data with metadata, quiz links, skill gr
 The latency problem:
 Atomic content enables swipe navigation - users browse videos like a feed, not a curriculum. Once you adopt this model, users expect TikTok speed. In a three-minute window, latency taxes attention.
 
-If a video takes four seconds to start, that's 2.2% of the entire learning window. A session of five videos (5 videos × 4 seconds = 20 seconds wait out of 180 seconds total) imposes an 11.1% tax on attention. Users form first impressions in [under 50ms](https://www.nngroup.com/articles/how-long-do-users-stay-on-web-pages/), and the first 10 seconds are critical for stay-or-leave decisions. This tax breaks the flow state required for habit formation and triggers immediate abandonment to social alternatives. You need sub-300ms latency to form user habits.
+If a video takes four seconds to start, that's 2.2% of the entire learning window. A session of five videos (\\(5 \times 4\\) seconds = 20 seconds wait out of 180 seconds total) imposes an 11.1% tax on attention. Users form first impressions in [under 50ms](https://www.nngroup.com/articles/how-long-do-users-stay-on-web-pages/), and the first 10 seconds are critical for stay-or-leave decisions. This tax breaks the flow state required for habit formation and triggers immediate abandonment to social alternatives. You need sub-300ms latency to form user habits.
+
+The three personas central to this analysis — Kira, Marcus, and Sarah — are defined formally in the [Meet the Users](#meet-the-users-three-personas) section below; their characteristics inform the constraint prioritization throughout.
 
 ## Who Should Read This: Pre-Flight Diagnostic
 
@@ -132,7 +134,7 @@ If you can't confidently answer YES, latency is NOT your constraint. The five sc
 **4. Insufficient runway** - *Dimension: Financial Capacity*
 - Signal: {% katex() %}T_{\text{runway}} < 2 \times T_{\text{migration}}{% end %} (e.g., <36 months runway for 18-month protocol migration)
 - Why latency doesn't matter: Company dies mid-migration
-- Diagnostic: Financial runway calculation. Protocol migrations are one-way doors requiring minimum 2× safety margin. If runway is 24 months and migration takes 18 months, buffer is only 1.33× (insufficient).
+- Diagnostic: Financial runway calculation. Protocol migrations are one-way doors requiring minimum 2x safety margin. If runway is 24 months and migration takes 18 months, buffer is only 1.33x (insufficient).
 - Action: Defer protocol migration. Extend runway first (fundraise, reduce burn, or both).
 
 **5. Network reality invalidates solution** - *Dimension: Technical Feasibility*
@@ -162,9 +164,11 @@ The distinction:
 - **Failure priority** (death sequence): What to fix first if something breaks NOW - operational triage
 - **Architectural sequence** (series order): What to design first when building - structural dependencies
 
-Protocol migration is an 18-month one-way door requiring 2× runway buffer. GPU quotas are operational levers adjustable within weeks. Design the physics floor before operating the supply chain - even though supply collapse kills faster when both fail simultaneously.
+Protocol migration is an 18-month one-way door requiring 2x runway buffer. GPU quotas are operational levers adjustable within weeks. Design the physics floor before operating the supply chain - even though supply collapse kills faster when both fail simultaneously.
 
 Deploy latency-stratified cohort analysis before making infrastructure decisions. Wrong prioritization costs 6-18 months of wasted engineering.
+
+Not all constraints are equally urgent at every growth stage. The Platform Death checklist applies regardless of scale — it identifies whether the platform can survive long enough to scale at all.
 
 ### Platform Death Decision Logic
 
@@ -219,22 +223,24 @@ At \\(\\$0.0573/\text{day}\\) blended ARPU and 10% operating margin available fo
 
 The 45% creator payout follows industry benchmarks (YouTube: 55%, TikTok Creator Fund: variable, Twitch: 50%). At 10% operating margin, \\(\\$0.17/\text{user/month}\\) is available to fund the Constraint Tax. This is conservative - Duolingo operates at ~8% GAAP operating margin (FY 2024), but a creator-economy platform has higher payout obligations from revenue sharing.
 
+Duolingo operates at 8% margin with zero creator payouts. Our platform targets 10% margin after 45% creator revenue sharing — the comparison holds because our higher gross margin from subscription pricing offsets the creator payout cost.
+
 **Check #1 (Economics) Validation Across Series Scales:**
 
-| Scale | Operating Margin | Constraint Tax | Coverage | Check #1 (Economics) | 3× Threshold |
+| Scale | Operating Margin | Constraint Tax | Coverage | Check #1 (Economics) | 3x Threshold |
 | :--- | ---: | ---: | ---: | :--- | :--- |
-| 500K DAU | $1.05M | $3.36M | 0.31× | **FAILS** | **FAILS** |
-| 1M DAU | $2.09M | $3.36M | 0.62× | **FAILS** | **FAILS** |
-| 1.61M DAU | $3.36M | $3.36M | 1.00× | **FAILS** (breakeven) | **FAILS** |
-| 3M DAU | $6.27M | $3.36M | 1.87× | PASSES | **FAILS** |
-| **4.82M DAU** | **$10.07M** | **$3.36M** | **3.0×** | **PASSES** | **PASSES** (3× threshold) |
-| 10M DAU | $20.91M | $3.36M | 6.2× | PASSES | PASSES |
+| 500K DAU | $1.05M | $3.36M | 0.31x | **FAILS** | **FAILS** |
+| 1M DAU | $2.09M | $3.36M | 0.62x | **FAILS** | **FAILS** |
+| 1.61M DAU | $3.36M | $3.36M | 1.00x | **FAILS** (breakeven) | **FAILS** |
+| 3M DAU | $6.27M | $3.36M | 1.87x | PASSES | **FAILS** |
+| **4.82M DAU** | **$10.07M** | **$3.36M** | **3.0x** | **PASSES** | **PASSES** (3x threshold) |
+| 10M DAU | $20.91M | $3.36M | 6.2x | PASSES | PASSES |
 
-**The 3× threshold for the Constraint Tax falls at approximately 4.8M DAU.** The series baseline of 3M DAU represents early-stage scale where infrastructure optimization is approaching viability (1.87× coverage - above breakeven but below the 3× threshold). This means at 3M DAU, the full set of recommendations is marginal - teams should prioritize the highest-ROI subset and defer lower-priority investments until ~5M DAU.
+**The 3x threshold for the Constraint Tax falls at approximately 4.8M DAU.** The series baseline of 3M DAU represents early-stage scale where infrastructure optimization is approaching viability (1.87x coverage - above breakeven but below the 3x threshold). This means at 3M DAU, the full set of recommendations is marginal - teams should prioritize the highest-ROI subset and defer lower-priority investments until ~5M DAU.
 
 **Sensitivity to Operating Margin:**
 
-| Margin | Breakeven DAU | 3× Threshold DAU | Implication |
+| Margin | Breakeven DAU | 3x Threshold DAU | Implication |
 | ---: | ---: | ---: | :--- |
 | 5% | 3.22M | 9.65M | Very tight - defer QUIC until Series C |
 | 8% | 2.01M | 6.03M | Marginal - series recommendations stretch budget |
@@ -268,7 +274,7 @@ Correlation ≠ causation. Alternative hypothesis: slow users have poor connecti
 
 Users experiencing >300ms latency churn at 11% higher rate. But high-latency users may be systematically different (poor devices, unstable networks, low intent).
 
-**Confounding structure:** User Quality (U) → Latency (L) and U → Abandonment (A) creates backdoor path. Observed correlation = 11%, but de-confounded effect using Pearl's do-calculus is lower - illustrative estimate: ~8.7%.
+**Confounding structure:** User Quality (U) causes Latency (L) and U causes Abandonment (A) — a backdoor path. Observed correlation = 11%, but de-confounded effect using Pearl's do-calculus is lower - illustrative estimate: ~8.7%.
 
 ### Identifiability: Back-Door Adjustment
 
@@ -284,7 +290,7 @@ Fixed-effects logistic regression compares same user's behavior across sessions.
 
 ### Self-Diagnosis: Is Latency Causal in YOUR Platform?
 
-This five-test pattern - **The Causality Test** - appears throughout the series. Each constraint (latency, encoding, cold start) has its own version, but the structure is identical: five orthogonal tests, ≥3 PASS required for causal evidence. The pattern prevents investing in proxies.
+This five-test pattern - **The Causality Test** - appears throughout the series. Each constraint (latency, encoding, cold start) has its own version, but the structure is identical: five orthogonal tests, \\(\\geq 3\\) PASS required for causal evidence. The pattern prevents investing in proxies.
 
 <style>
 #tbl_self_diagnosis_latency + table th:first-of-type { width: 20%; }
@@ -307,7 +313,7 @@ This five-test pattern - **The Causality Test** - appears throughout the series.
 
 ### Limitations
 
-This is observational evidence, not RCT-proven causality. Robust to Γ ≤ 2.0 unmeasured confounding. Falsified if: RCT shows null effect, within-user β ≤ 0, or only low-quality users show sensitivity. Before investing, run within-user regression on your data.
+This is observational evidence, not RCT-proven causality. Robust to \\(\\Gamma \\leq 2.0\\) unmeasured confounding. Falsified if: RCT shows null effect, within-user \\(\\beta \\leq 0\\), or only low-quality users show sensitivity. Before investing, run within-user regression on your data.
 
 ## The Math Framework
 
@@ -328,7 +334,7 @@ Don't allocate capital based on roadmaps or best practices. Use this math framew
 | **1. Universal Revenue** | {% katex() %}\Delta R_{\text{annual}} = \text{DAU} \times \text{LTV}_{\text{monthly}} \times 12 \times \Delta F{% end %} | DAU = 3M, LTV = $1.72/mo, \\(\Delta F\\) = change in abandonment rate | Every constraint bleeds revenue through abandonment. Example derivation in "Converting Milliseconds to Dollars" section. |
 | **2. Weibull Abandonment** | {% katex() %}F_v(t; \lambda_v, k_v) = 1 - \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right]{% end %} | \\(\lambda_v = 3.39\\)s, \\(k_v = 2.28\\) (see note below) | User patience has increasing hazard rate (impatience accelerates). Attack tail latency (P95/P99) before median. |
 | **3. Theory of Constraints** | {% katex() %}C_{\text{active}} = \arg\max_{i \in \mathbf{F}} \left\{ \Delta R_i \right\}{% end %} | Solve constraint with maximum revenue impact. Uses KKT (Karush-Kuhn-Tucker) conditions to identify "binding" vs "slack" constraints - see "Best Possible Given Reality" section later in this document | Only ONE constraint is binding at any time. Optimizing non-binding constraint = capital destruction. |
-| **4. 3× ROI Threshold** | {% katex() %}\text{ROI} = \frac{\Delta R_{\text{annual}}}{C_{\text{annual}}} \geq 3.0{% end %} | Minimum 3x return to justify architectural shifts | One-way door migrations require 3x buffer for opportunity cost, technical risk, and uncertainty. |
+| **4. 3x ROI Threshold** | {% katex() %}\text{ROI} = \frac{\Delta R_{\text{annual}}}{C_{\text{annual}}} \geq 3.0{% end %} | Minimum 3x return to justify architectural shifts | One-way door migrations require 3x buffer for opportunity cost, technical risk, and uncertainty. |
 
 *Weibull parameters note: The Weibull distribution models how user patience decays over time. Parameters \\(\lambda_v = 3.39\\)s [95% CI: 3.12-3.68] and \\(k_v = 2.28\\) [CI: 2.15-2.42] were estimated via maximum likelihood from n=47,382 abandonment events. Full derivation and goodness-of-fit tests in "Converting Milliseconds to Dollars" section.*
 
@@ -402,26 +408,26 @@ Assumptions:
 
 **ROI definition:**
 
-ROI = revenue protected / annual cost. Revenue protected is the annual revenue saved by solving a constraint. We use a 3× threshold (industry standard for architectural bets, provides buffer for opportunity cost, technical risk, and revenue uncertainty - see "Why 3× ROI?" below for complete rationale) as the decision gate.
+ROI = revenue protected / annual cost. Revenue protected is the annual revenue saved by solving a constraint. We use a 3x threshold (industry standard for architectural bets, provides buffer for opportunity cost, technical risk, and revenue uncertainty - see "Why 3x ROI?" below for complete rationale) as the decision gate.
 
-**Infrastructure costs scale sub-linearly:** if users grow 10×, costs grow ~3× (empirically fitted scaling exponent γ ≈ 0.46, meaning \\(C \propto N^{0.46}\\); see "Infrastructure Cost Scaling Calculations" below for component breakdown).
+**Infrastructure costs scale sub-linearly:** if users grow 10x, costs grow approximately 3x (empirically fitted scaling exponent \\(\\gamma \\approx 0.46\\), meaning \\(C \propto N^{0.46}\\); see "Infrastructure Cost Scaling Calculations" below for component breakdown).
 
 **How we get $2.77M Annual Impact at 3M DAU:**
 (Component breakdown in "Infrastructure Cost Scaling Calculations" section below; protocol details in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/), GPU encoding in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/))
 - Latency optimization: $0.38M (sub-1% abandonment reduction, Weibull derivation below)
-- Protocol upgrade (TCP→QUIC): $1.75M Safari-adjusted (connection migration $1.35M + base latency $0.22M + DRM prefetch $0.18M; see [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) for Market Reach Coefficient \\(C_{\text{reach}} = 0.58\\), Safari/MoQ limitation affecting 42% of mobile users)
+- Protocol upgrade (TCP to QUIC): $1.75M Safari-adjusted (connection migration $1.35M + base latency $0.22M + DRM prefetch $0.18M; see [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) for Market Reach Coefficient \\(C_{\text{reach}} = 0.58\\), Safari/MoQ limitation affecting 42% of mobile users)
 - GPU encoding for creators: $0.86M (creator churn prevention, derived in "Persona Revenue Impact Analysis" section; 1% active uploaders)
 - Subtract overlap: -$0.22M (Safari-adjusted latency component already included in protocol total)
 - **Total: $2.77M/year**
 
 **Worked Example** (Latency optimization calculation): Reducing latency from 370ms to 100ms prevents \\(\Delta F_v = 0.606\\%\\) abandonment (from Weibull model \\(F_v(0.37\text{s}) - F_v(0.10\text{s})\\), see "Converting Milliseconds to Dollars" for complete derivation). Revenue protected = \\(3\text{M DAU} \times 12 \times 0.00606 \times \\$1.72/\text{month} = \\$0.38\text{M/year}\\). Safari browser adjustment: As of 2025, Safari supports QUIC but not MoQ (Media over QUIC), affecting 42% of mobile users who must fall back to HLS. The remaining 58% of mobile users (Android Chrome and other browsers) benefit from full MoQ optimization. Revenue calculations for protocol migration apply this adjustment factor.
 
-Example: 16.7× users (3M → 50M DAU) = only 3.8× costs ($3.50M → $13.20M) because:
-1. CDN tiered pricing provides volume discounts (5.5× cost for 16.7× bandwidth)
-2. Engineering team grows modestly (8 → 14 engineers, not 16.7×)
+Example: 16.7x users (3M to 50M DAU) = only 3.8x costs ($3.50M to $13.20M) because:
+1. CDN tiered pricing provides volume discounts (5.5x cost for 16.7x bandwidth)
+2. Engineering team grows modestly (8 to 14 engineers, not 16.7x)
 3. ML/monitoring infrastructure has fixed components
 
-Revenue grows linearly with users ($2.77M → $46.17M = 16.7×), but costs grow sub-linearly (3.8×), creating ROI improvements at scale (0.8× → 3.5×).
+Revenue grows linearly with users ($2.77M to $46.17M = 16.7x), but costs grow sub-linearly (3.8x), creating ROI improvements at scale (0.8x to 3.5x).
 
 **Analysis Range:** 3M DAU (launch/Series B scale, minimum viable for infrastructure optimization) to 50M DAU (Duolingo 2025 actual, representing mature platform scale). Addressable market: 700M users consuming educational video globally (44% of 1.6B Gen Z). Below 3M: prioritize product-market fit and growth over infrastructure. Above 50M: additional constraints emerge (organizational complexity, market saturation) beyond this analysis scope.
 
@@ -429,25 +435,25 @@ Revenue grows linearly with users ($2.77M → $46.17M = 16.7×), but costs grow 
 | :--- | ---: | ---: | ---: | ---: |
 | **Annual Impact** | $2.77M | $9.23M | $23.08M | $46.17M |
 | **Infrastructure Cost/Year** | $3.50M | $5.68M | $8.80M | $13.20M |
-| **ROI (Protected/Cost)** | **0.8×** | **1.6×** | **2.6×** | **3.5×** |
+| **ROI (Protected/Cost)** | **0.8x** | **1.6x** | **2.6x** | **3.5x** |
 
 *Note: Overlap adjustment prevents double-counting - faster connections reduce latency naturally.*
 
-## Why 3× ROI?
+## Why 3x ROI?
 
-3× provides buffer for opportunity cost (engineers could build features instead), technical risk (migrations fail or take longer), revenue uncertainty, and general "shit goes wrong" margin. Industry standard for architectural bets.
+3x provides buffer for opportunity cost (engineers could build features instead), technical risk (migrations fail or take longer), revenue uncertainty, and general "shit goes wrong" margin. Industry standard for architectural bets.
 
-Using Duolingo's model, the 3× threshold hits at ~40M DAU.
+Using Duolingo's model, the 3x threshold hits at ~40M DAU.
 
-At 3M DAU, infrastructure optimization yields 0.8× ROI - below the 3× threshold. Decision:
-- **Default:** defer until scale where ROI exceeds 3× (approximately 40M+ DAU with realistic infrastructure costs).
+At 3M DAU, infrastructure optimization yields 0.8x ROI - below the 3x threshold. Decision:
+- **Default:** defer until scale where ROI exceeds 3x (approximately 40M+ DAU with realistic infrastructure costs).
 - **Exception:** Strategic Headroom investments (see below) may justify sub-threshold spending when scale trajectory is clear.
 
 ### Strategic Headroom Investments
 
 **When is sub-threshold ROI justified?**
 
-Law 4 (3× ROI Threshold) applies to incremental optimizations with reversible alternatives. However, certain investments exhibit **non-linear ROI scaling** where sub-threshold returns at current scale become super-threshold at projected scale. These are "Strategic Headroom" investments - infrastructure bets that prepare the platform for scale it hasn't yet achieved.
+Law 4 (3x ROI Threshold) applies to incremental optimizations with reversible alternatives. However, certain investments exhibit **non-linear ROI scaling** where sub-threshold returns at current scale become super-threshold at projected scale. These are "Strategic Headroom" investments - infrastructure bets that prepare the platform for scale it hasn't yet achieved.
 
 **The Non-Linear ROI Model:**
 
@@ -469,7 +475,7 @@ ROI therefore scales super-linearly:
 \text{ROI}(N) = \frac{R_{\text{protected}}(N)}{C_{\text{infra}}(N)} \propto \frac{N}{C_{\text{fixed}} + C_{\text{variable}} \cdot N^{0.46}}
 {% end %}
 
-At 3M DAU, an investment might return 1.5×. At 10M DAU, the same investment returns 4×. This non-linearity creates a window where early investment - despite sub-threshold current returns - captures value that would otherwise require scrambling later.
+At 3M DAU, an investment might return 1.5x. At 10M DAU, the same investment returns 4x. This non-linearity creates a window where early investment - despite sub-threshold current returns - captures value that would otherwise require scrambling later.
 
 **Strategic Headroom Criteria:**
 
@@ -487,13 +493,13 @@ An investment qualifies as Strategic Headroom if ALL conditions hold:
 
 | Investment | ROI @3M | ROI @10M | Scale Factor | Lead Time | Classification |
 | :--- | ---: | ---: | ---: | :--- | :--- |
-| LL-HLS Bridge ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/)) | 1.7× | 5.8× | 3.4× | 3-6 months | **Strategic Headroom** |
-| QUIC+MoQ Migration ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/)) | 0.60× | 2.0× | 3.3× | 18 months | **Strategic Headroom** |
-| Creator Pipeline ([GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/)) | 1.9× | 2.3× | 1.2× | 4-8 weeks | **Existence Constraint** (see below) |
+| LL-HLS Bridge ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/)) | 1.7x | 5.8x | 3.4x | 3-6 months | **Strategic Headroom** |
+| QUIC+MoQ Migration ([Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/)) | 0.60x | 2.0x | 3.3x | 18 months | **Strategic Headroom** |
+| Creator Pipeline ([GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/)) | 1.9x | 2.3x | 1.2x | 4-8 weeks | **Existence Constraint** (see below) |
 
 **Why Creator Pipeline differs:**
 
-Creator Pipeline ROI scales only 1.2× (1.9× → 2.3×) because both revenue and costs scale with creator count. However, it qualifies under a stricter criterion: **Existence Constraints**. Without creators, there is no platform - the \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\) derivative makes ROI calculation irrelevant. See [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) for full analysis.
+Creator Pipeline ROI scales only 1.2x (1.9x to 2.3x) because both revenue and costs scale with creator count. However, it qualifies under a stricter criterion: **Existence Constraints**. Without creators, there is no platform - the \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\) derivative makes ROI calculation irrelevant. See [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) for full analysis.
 
 **Enabling Infrastructure Exception:**
 
@@ -501,32 +507,32 @@ A third category exists: investments with negative standalone ROI that are prere
 
 | Investment | Standalone ROI | Enables | Combined ROI |
 | :--- | ---: | :--- | ---: |
-| Prefetch ML ([Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/)) | 0.44× @3M | Recommendation pipeline latency budget | 6.3× (with recommendations) |
+| Prefetch ML ([Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/)) | 0.44x @3M | Recommendation pipeline latency budget | 6.3x (with recommendations) |
 | Feature Store ([Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/)) | N/A (pure cost) | <10ms ranking model inference | Required for ML personalization |
-| CDC Event Stream ([Consistency Bugs Destroy Trust](/blog/microlearning-platform-part5-data-state/)) | N/A (pure cost) | Client-side state reconciliation | 25× (with full resilience stack) |
+| CDC Event Stream ([Consistency Bugs Destroy Trust](/blog/microlearning-platform-part5-data-state/)) | N/A (pure cost) | Client-side state reconciliation | 25x (with full resilience stack) |
 
-**Criterion:** An investment qualifies as Enabling Infrastructure if removing it breaks a downstream system that itself exceeds 3× ROI. The combined ROI of the dependency chain must exceed 3×, not the individual component.
+**Criterion:** An investment qualifies as Enabling Infrastructure if removing it breaks a downstream system that itself exceeds 3x ROI. The combined ROI of the dependency chain must exceed 3x, not the individual component.
 
 **Intellectual Honesty Check:**
 
 This framework does NOT justify sub-threshold investments that:
-- Have ROI < 1.0× at current scale (destroys capital)
+- Have ROI < 1.0x at current scale (destroys capital)
 - Have flat ROI scaling (linear costs, linear revenue)
 - Can be implemented just-in-time (<3 months lead time)
 - Are two-way doors (reversible at low cost)
 
-The 3× threshold remains the default. Strategic Headroom is an exception requiring explicit justification across all five criteria.
+The 3x threshold remains the default. Strategic Headroom is an exception requiring explicit justification across all five criteria.
 
 ### Infrastructure Cost Scaling Calculations
 
-| Component | 3M DAU | 10M DAU (3.3× users) | 25M DAU (8.3× users) | 50M DAU (16.7× users) | Scaling Rationale |
+| Component | 3M DAU | 10M DAU (3.3x users) | 25M DAU (8.3x users) | 50M DAU (16.7x users) | Scaling Rationale |
 | :--- | ---: | ---: | ---: | ---: | :--- |
 | **Engineering Team** | $2.00M (8 eng) | $2.50M (10 eng) | $3.00M (12 eng) | $3.50M (14 eng) | Team grows sub-linearly ($0.25M fully-loaded per engineer, US market) |
-| **CDN + Edge Delivery** | $0.80M | $1.80M (2.3×) | $3.40M (4.3×) | $5.60M (7.0×) | Tiered pricing: enterprise discounts at higher volumes |
-| **Compute (encoding, API, DB)** | $0.40M | $0.80M (2.0×) | $1.50M (3.8×) | $2.80M (7.0×) | Video encoding scales with creator uploads |
-| **ML Infrastructure** | $0.12M | $0.28M (2.3×) | $0.43M (3.6×) | $0.60M (5.0×) | Model complexity + inference costs scale with traffic |
-| **Monitoring + Observability** | $0.18M | $0.30M (1.7×) | $0.47M (2.6×) | $0.70M (3.9×) | Log volume + metrics scale near-linearly; Datadog pricing at scale |
-| **TOTAL** | **$3.50M** | **$5.68M (1.6×)** | **$8.80M (2.5×)** | **$13.20M (3.8×)** | Sub-linear: 3.8× cost for 16.7× users |
+| **CDN + Edge Delivery** | $0.80M | $1.80M (2.3x) | $3.40M (4.3x) | $5.60M (7.0x) | Tiered pricing: enterprise discounts at higher volumes |
+| **Compute (encoding, API, DB)** | $0.40M | $0.80M (2.0x) | $1.50M (3.8x) | $2.80M (7.0x) | Video encoding scales with creator uploads |
+| **ML Infrastructure** | $0.12M | $0.28M (2.3x) | $0.43M (3.6x) | $0.60M (5.0x) | Model complexity + inference costs scale with traffic |
+| **Monitoring + Observability** | $0.18M | $0.30M (1.7x) | $0.47M (2.6x) | $0.70M (3.9x) | Log volume + metrics scale near-linearly; Datadog pricing at scale |
+| **TOTAL** | **$3.50M** | **$5.68M (1.6x)** | **$8.80M (2.5x)** | **$13.20M (3.8x)** | Sub-linear: 3.8x cost for 16.7x users |
 
 #### Mathematical Proof of Sub-Linear Scaling
 
@@ -536,7 +542,7 @@ The 3× threshold remains the default. Strategic Headroom is an exception requir
 \text{Engineers} = E_{\text{base}} + k \cdot \log_2\left(\frac{\text{DAU}}{\text{DAU}_{\text{base}}}\right)
 {% end %}
 
-Where \\(E_{\text{base}} = 8\\) engineers at 3M DAU, \\(k = 1.5\\) (growth coefficient fitted to the team sizes above). Result: 16.7× users requires only 1.75× engineering headcount.
+Where \\(E_{\text{base}} = 8\\) engineers at 3M DAU, \\(k = 1.5\\) (growth coefficient fitted to the team sizes above). Result: 16.7x users requires only 1.75x engineering headcount.
 
 **2. CDN Tiered Pricing (Power Law):**
 
@@ -544,11 +550,11 @@ Where \\(E_{\text{base}} = 8\\) engineers at 3M DAU, \\(k = 1.5\\) (growth coeff
 C_{\text{CDN}} = C_{\text{base}} \cdot \left(\frac{\text{Traffic}}{\text{Traffic}_{\text{base}}}\right)^{0.75} \cdot D(\text{Traffic})
 {% end %}
 
-Traffic scales 16.7× (120TB → 2PB), but with enterprise discounts, CDN scales only 4.75×.
+Traffic scales 16.7x (120TB to 2PB), but with enterprise discounts, CDN scales only 4.75x.
 
 **3. Compute Scaling (Creator-Driven):**
 
-Compute scales with creator uploads (1% of DAU), not viewer traffic directly. With parallelization (3×) and VP9 compression (1.3× savings): 16.7× creators = 7.0× compute cost.
+Compute scales with creator uploads (1% of DAU), not viewer traffic directly. With parallelization (3x) and VP9 compression (1.3x savings): 16.7x creators = 7.0x compute cost.
 
 **4. Total Cost Scaling Law:**
 
@@ -556,7 +562,7 @@ Compute scales with creator uploads (1% of DAU), not viewer traffic directly. Wi
 C_{\text{total}}(\text{DAU}) = C_{\text{fixed}} \cdot \log_2\left(\frac{\text{DAU}}{\text{DAU}_0}\right) + C_{\text{variable}} \cdot \left(\frac{\text{DAU}}{\text{DAU}_0}\right)^{0.65}
 {% end %}
 
-Overall fitted scaling exponent \\(\gamma \approx 0.46\\): 16.7× users ≈ 3.8× costs (fitted to cost projections above, not an empirical constant).
+Overall fitted scaling exponent \\(\gamma \approx 0.46\\): 16.7x users approximately 3.8x costs (fitted to cost projections above, not an empirical constant).
 
 ## Constraint Sequencing Theory: The Math Behind the Priority
 
@@ -626,6 +632,8 @@ Skip rules exist but require validation. At <10K DAU, you can skip to costs - su
 
 ## Advanced Platform Capabilities
 
+*These capabilities become viable after the six constraints are resolved; their analysis is deferred to a future post.*
+
 Solving constraints keeps users from leaving. But retention alone doesn't create value - the platform must deliver features worth staying for. Beyond resolving the six constraints, the platform delivers value through features that require users to remain engaged long enough to discover them.
 
 ### Gamification That Reinforces Learning Science
@@ -634,7 +642,7 @@ Traditional gamification rewards volume ("watch 100 videos = gold badge"). Usele
 
 This platform aligns game mechanics with cognitive science:
 
-Spaced repetition streaks schedule Day 3 review to fight the forgetting curve (SM-2 algorithm). Distributed practice shows medium-to-large effect sizes over massed practice (d ≈ 0.4, Cepeda et al. 2006).
+Spaced repetition streaks schedule Day 3 review to fight the forgetting curve (SM-2 algorithm). Distributed practice shows medium-to-large effect sizes over massed practice (\\(d \approx 0.4\\), Cepeda et al. 2006).
 
 Mastery-based badges require 80% quiz performance, not just watching. Digitally signed QR code shows syllabus, scores, completion date - shareable to Instagram (acquisition loop) or scanned by coaches (verifiable credentials). Verification uses cryptographic signatures (similar to Credly or Open Badges 3.0), not blockchain.
 
@@ -683,7 +691,7 @@ Generic LLM data contains outdated protocols. RAG (Retrieval-Augmented Generatio
 
 ## Mathematical Apparatus: Decision Framework for All Six Failure Modes
 
-Intuition tells you everything is important. Math tells you what's actually bleeding revenue. This section provides the formulas that turn "we should optimize latency" into "latency costs us $X/year, and fixing it returns Y× on investment."
+Intuition tells you everything is important. Math tells you what's actually bleeding revenue. This section provides the formulas that turn "we should optimize latency" into "latency costs us $X/year, and fixing it returns Yx on investment."
 
 The framework that drives every architectural decision: latency kills demand, protocol choice, GPU quotas, cold start, consistency bugs, and cost constraint.
 
@@ -726,7 +734,7 @@ Protocol migrations, database sharding, and monolith splits are **irreversible f
 
 | Type | Examples | Reversal Time | Reversal Cost | Analysis Depth |
 | :--- | :--- | :--- | :--- | :--- |
-| **One-Way Door** | Protocol, Sharding | 18-24 months | >$1M | 100× rigor |
+| **One-Way Door** | Protocol, Sharding | 18-24 months | >$1M | 100x rigor |
 | **Two-Way Door** | Feature flags, A/B | <1 week | <$0.01M | ship & iterate |
 
 The difference in reversal cost demands a way to quantify the stakes. For one-way doors, calculate the blast radius:
@@ -742,11 +750,11 @@ R_{\text{blast}} = \text{DAU}_{\text{affected}} \times \text{LTV}_{\text{annual}
 | Variable | Definition | Derivation |
 | :--- | :--- | :--- |
 | DAU_affected | Users impacted by wrong decision | Depends on decision scope (all users for DB sharding, creator subset for encoding) |
-| LTV_annual | Annual lifetime value per user | $0.0573/day × 365 = $20.91/year (Duolingo blended ARPU) |
+| LTV_annual | Annual lifetime value per user | \\(\\$0.0573/\text{day} \times 365 = \\$20.91/\text{year}\\) (Duolingo blended ARPU) |
 | P(failure) | Probability that the decision is wrong | Estimated from prior art, A/B tests, or industry base rates |
 | T_recovery | Time to reverse the decision | One-way doors: 18-24 months; the formula uses years as the unit |
 
-The product \\(LTV_{annual} \times T_{recovery}\\) represents the total value at risk during the reversal window. For 18-month migrations (1.5 years), this is 1.5× the annual LTV per affected user.
+The product \\(LTV_{annual} \times T_{recovery}\\) represents the total value at risk during the reversal window. For 18-month migrations (1.5 years), this is 1.5x the annual LTV per affected user.
 
 **Example: Database Sharding at 3M DAU**
 
@@ -759,15 +767,17 @@ R_{\text{blast}} &= 3{,}000{,}000\,\text{users} \times \$20.91/\text{year} \time
 
 With P(failure) = 1.0, this represents the maximum exposure if sharding fails catastrophically. More realistic failure probabilities (e.g., P = 0.10 for partial degradation) would yield $9.41M expected blast radius.
 
-**Decision Rule:** One-way doors demand 100× more analysis than two-way doors. The multiplier derives from reversal cost ratio: if a two-way door costs $10K to reverse and a one-way door costs $1M (18-month re-architecture), the analysis investment should scale proportionally. Architectural choices like database sharding are permanent for 18 months - choose wrong, you're locked into unfixable technical debt.
+Maximum blast radius (P=1.0, catastrophic failure): $94.1M. Realistic blast radius (P=0.10, partial degradation): $9.41M. Use the realistic figure for break-even analysis; use the maximum figure for risk-tolerance conversations with stakeholders.
 
-**Adaptation for supply-side analysis:** The blast radius formula extends to creator economics in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/), where Creator LTV is derived from the content multiplier (10,000 learner-days/creator/year × $0.0573 daily ARPU = $573/creator/year). The formula structure remains identical, substituting creator-specific values for user-level metrics.
+**Decision Rule:** One-way doors demand 100x more analysis than two-way doors. The multiplier derives from reversal cost ratio: if a two-way door costs $10K to reverse and a one-way door costs $1M (18-month re-architecture), the analysis investment should scale proportionally. Architectural choices like database sharding are permanent for 18 months - choose wrong, you're locked into unfixable technical debt.
 
-The 2× runway rule is survival math. An 18-month migration with 14-month runway means the company dies mid-surgery. No amount of ROI justifies starting what you can't finish. If runway < 2× migration time, extend runway first or accept the current architecture.
+**Adaptation for supply-side analysis:** The blast radius formula extends to creator economics in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/), where Creator LTV is derived from the content multiplier (\\(10{,}000 \text{ learner-days/creator/year} \times \\$0.0573 \text{ daily ARPU} = \\$573/\text{creator/year}\\)). The formula structure remains identical, substituting creator-specific values for user-level metrics.
+
+The 2x runway rule is survival math. An 18-month migration with 14-month runway means the company dies mid-surgery. No amount of ROI justifies starting what you can't finish. If runway < 2x migration time, extend runway first or accept the current architecture.
 
 Blast radius calculation is mandatory. Before any one-way door, calculate \\(R_{\text{blast}}\\) explicitly. If it exceeds runway, you cannot afford to fail. Document the calculation in the architecture decision record.
 
-### One-Way Doors × Platform Death Checks: The Systems Interaction
+### One-Way Doors and Platform Death Checks: The Systems Interaction
 
 One-way door decisions don't exist in isolation - they interact with the Platform Death Decision Logic (Check 1-5). A decision that satisfies one check can simultaneously stress another. This is the core systems thinking challenge: optimizing for latency (Check 5) while monitoring the impact on economics (Check 1).
 
@@ -775,7 +785,7 @@ One-way door decisions don't exist in isolation - they interact with the Platfor
 
 | One-Way Door | Satisfies | Stresses | Break-Even Condition | Series Reference |
 | :--- | :--- | :--- | :--- | :--- |
-| **QUIC+MoQ migration** | Check 5 (Latency: 370ms→100ms) | Check 1 (Economics: +$2.90M/year cost) | Revenue protected > $2.90M | [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) |
+| **QUIC+MoQ migration** | Check 5 (Latency: 370ms to 100ms) | Check 1 (Economics: +$2.90M/year cost) | Revenue protected > $2.90M | [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) |
 | **Database sharding** | Check 3 (Data Integrity at scale) | Check 1 (Economics: +$0.80M/year ops) | Scale requires sharding | Future: Consistency Bugs |
 | **GPU pipeline (stream vs batch)** | Check 2 (Supply: <30s encoding) | Check 1 (Economics: +$0.12M/year) | Creator churn cost > $0.12M | [GPU Quotas](/blog/microlearning-platform-part3-creator-pipeline/) |
 | **Multi-region expansion** | Check 4 (PMF: geographic reach) | Check 1 (Economics), Check 3 (Data Integrity) | Regional revenue > regional cost | Future: Cold Start |
@@ -790,7 +800,7 @@ The protocol migration decision (analyzed in [Protocol Choice Locks Physics](/bl
 
 **What QUIC+MoQ stresses:**
 - **Check 1 (Economics):** Adds $2.90M/year dual-stack operational cost
-- Creates 1.8× ops complexity during 18-month migration
+- Creates 1.8x ops complexity during 18-month migration
 - Requires 5-6 dedicated engineers
 
 **The Check 1 (Economics) ↔ Check 5 (Latency) tension:**
@@ -839,7 +849,7 @@ The creator pipeline decision (analyzed in [GPU Quotas Kill Creators](/blog/micr
   - Which check does this stress?
   - At what scale does the stressed check flip from PASS to FAIL?
 
-4. **The 3× ROI threshold is a Check 1 (Economics) safety margin.** Requiring 3× return ensures that even with cost overruns or revenue shortfalls, Check 1 (Economics) continues to pass.
+4. **The 3x ROI threshold is a Check 1 (Economics) safety margin.** Requiring 3x return ensures that even with cost overruns or revenue shortfalls, Check 1 (Economics) continues to pass.
 
 One-way doors are not single-variable optimizations. Every protocol migration, database sharding decision, and infrastructure investment creates a Check interaction matrix. Map the interactions before committing.
 
@@ -898,7 +908,7 @@ graph TD
 
 **Example (The Death Spiral):** Finance optimizes locally to cut CDN spend (\\(\max f_{cost}\\)). This increases latency, which spikes abandonment and collapses revenue. The system dies while every department hits its local KPIs.
 
-Death spiral mechanism at 10M DAU scale: Finance cuts CDN costs by 40% ($420K/year savings) by reducing edge PoPs (Points of Presence - the geographic server locations closest to users), celebrating quarterly metrics. Three months later, latency spikes from 300ms to 450ms. Abandonment increases 2.5× (from 0.40% to 1.00% using Weibull model, \\(\Delta = 0.60\text{pp}\\)). Revenue drops $1.25M/year. Finance responds with further cost cuts. The company bleeds out while every department hits quarterly targets.
+Death spiral mechanism at 10M DAU scale: Finance cuts CDN costs by 40% ($420K/year savings) by reducing edge PoPs (Points of Presence - the geographic server locations closest to users), celebrating quarterly metrics. Three months later, latency spikes from 300ms to 450ms. Abandonment increases 2.5x (from 0.40% to 1.00% using Weibull model, \\(\Delta = 0.60\text{pp}\\)). Revenue drops $1.25M/year. Finance responds with further cost cuts. The company bleeds out while every department hits quarterly targets.
 
 {% mermaid() %}
 graph TD
@@ -950,13 +960,13 @@ graph TD
 | - Time | 6-month runway exceeds 3-month implementation (viable) |
 | - External | TikTok competition sets 300ms user expectation |
 |**TRADE-OFF: Pay for infrastructure improvements**|
-| - Pareto position | Medium cost, medium impact @3M DAU (ratio 1.6×), high impact @30M DAU (ratio >3×) |
+| - Pareto position | Medium cost, medium impact @3M DAU (ratio 1.6x), high impact @30M DAU (ratio >3x) |
 | - Local sacrifice | Concern about +$0.50M infrastructure cost approaching $0.80M annual impact |
 | - Reversibility | TWO-WAY DOOR (can roll back in 2 weeks) |
 |**OUTCOME: Scale-dependent viability**|
-| - At 3M DAU | $0.80M impact, ROI 1.6× (below 3× threshold, defer) |
-| - At 10M DAU | $2.68M impact, ROI 5.4× (justified) |
-| - At 30M DAU | $8.03M impact, ROI 16× (strongly justified) |
+| - At 3M DAU | $0.80M impact, ROI 1.6x (below 3x threshold, defer) |
+| - At 10M DAU | $2.68M impact, ROI 5.4x (justified) |
+| - At 30M DAU | $8.03M impact, ROI 16x (strongly justified) |
 | - Feedback loops | Lower latency drives engagement, which drives session length, which drives retention, which creates habit formation |
 ### The Framework In Action: Complete Worked Example
 
@@ -1007,7 +1017,7 @@ Revenue protected (estimated):
 
 Edge cache impact is **directly calculable** via Weibull CDF - the model was calibrated on latency-driven abandonment.
 
-ML personalization impact is **indirect** - requires A/B testing to validate. The $1.32M estimate has ±40% confidence interval vs ±15% for edge cache.
+ML personalization impact is **indirect** - requires A/B testing to validate. The $1.32M estimate has \\(\pm 40\\%\\) confidence interval vs \\(\pm 15\\%\\) for edge cache.
 
 **Law 2 verdict:** Edge cache has predictable, quantifiable impact. ML has higher uncertainty.
 
@@ -1034,7 +1044,7 @@ The latency constraint is "binding" (actively limiting performance) because actu
 
 **Law 3 verdict:** Latency is the **proven binding constraint** (exceeds budget by 50%). Content relevance is speculative (no data).
 
-#### Step 4: Apply Law 4 (Optimization Justification - 3× Threshold)
+#### Step 4: Apply Law 4 (Optimization Justification - 3x Threshold)
 
 **Option A:**
 
@@ -1048,7 +1058,7 @@ The latency constraint is "binding" (actively limiting performance) because actu
 \text{ROI}_B = \frac{\$1.32\text{M/year}}{\$1.2\text{M/year}} = 1.1\times \quad \text{(FAIL - below 3× threshold)}
 {% end %}
 
-**Law 4 verdict:** Neither option meets the 3× threshold at 800K DAU. This is a scale-dependent decision.
+**Law 4 verdict:** Neither option meets the 3x threshold at 800K DAU. This is a scale-dependent decision.
 
 #### Step 5: Pareto Frontier Analysis
 
@@ -1058,15 +1068,15 @@ Budget constraint: $1.50M/year available infrastructure cost.
 
 - Option A alone: $0.60M (40% of budget)
 - Option B alone: $1.20M (80% of budget)
-- Both: $1.80M (120% of budget) **→ EXCEEDS BUDGET**
+- Both: $1.80M (120% of budget) -- **EXCEEDS BUDGET**
 
 **Pareto check:**
 
 | Choice | Revenue Protected | Cost | ROI | Latency (p95) | Budget Slack |
 | :--- | ---: | ---: | ---: | :--- | ---: |
-| **A only** | $110K | $0.60M | 0.18× | 280ms (7% under budget) | $0.90M unused |
-| **B only** | $1.32M | $1.20M | 1.1× | 450ms (50% over budget) | $0.30M unused |
-| **A + B** | $1.43M | $1.80M | 0.79× | 280ms | -$0.30M (over budget) |
+| **A only** | $110K | $0.60M | 0.18x | 280ms (7% under budget) | $0.90M unused |
+| **B only** | $1.32M | $1.20M | 1.1x | 450ms (50% over budget) | $0.30M unused |
+| **A + B** | $1.43M | $1.80M | 0.79x | 280ms | -$0.30M (over budget) |
 
 **Pareto verdict:** At 800K DAU, Option B has higher absolute revenue impact ($1.32M vs $110K). However, Option A fixes the binding latency constraint. The decision depends on whether latency is proven to be the active bottleneck.
 
@@ -1083,23 +1093,23 @@ Budget constraint: $1.50M/year available infrastructure cost.
 **Rationale at 800K DAU:**
 
 1. **Law 1:** ML has higher annual impact ($1.32M vs $110K), but neither justifies cost at this scale
-2. **Law 2:** Edge cache is predictable via Weibull (±15% uncertainty vs ±40% for ML)
+2. **Law 2:** Edge cache is predictable via Weibull (\\(\pm 15\\%\\) uncertainty vs \\(\pm 40\\%\\) for ML)
 3. **Law 3:** Latency is proven binding constraint, but revenue impact at 800K DAU is limited
-4. **Law 4:** Neither passes 3× threshold (0.18× for edge cache, 1.1× for ML)
+4. **Law 4:** Neither passes 3x threshold (0.18x for edge cache, 1.1x for ML)
 
-5. **Pareto:** Neither dominates the other (A is cheaper and fixes latency, B has higher revenue impact) - and neither passes 3× threshold
+5. **Pareto:** Neither dominates the other (A is cheaper and fixes latency, B has higher revenue impact) - and neither passes 3x threshold
 6. **Reversible:** Low blast radius if assumptions wrong
 
-**Scale-dependent insight:** At 3M DAU, the same edge cache optimization would protect $413K/year (3.75× scale), making it marginally acceptable. At 10M DAU, it protects $1.67M/year with ROI of 2.8×. **The 800K DAU example demonstrates why premature optimization destroys capital** - the same investment becomes justified at higher scale.
+**Scale-dependent insight:** At 3M DAU, the same edge cache optimization would protect $413K/year (3.75x scale), making it marginally acceptable. At 10M DAU, it protects $1.67M/year with ROI of 2.8x. **The 800K DAU example demonstrates why premature optimization destroys capital** - the same investment becomes justified at higher scale.
 
-**Decision at 800K DAU:** Defer both investments. Neither passes the 3× threshold. Revisit when scale improves ROI:
+**Decision at 800K DAU:** Defer both investments. Neither passes the 3x threshold. Revisit when scale improves ROI:
 - At ~3M DAU: edge cache becomes marginally viable ($0.60M/year investment)
 - At ~10M DAU: ML personalization ROI approaches viability
 - Prerequisite for ML: latency constraint resolved (sub-300ms p95), content quality telemetry exists
 
 **This is how The Four Laws guide every architectural decision across all platform constraints.** They keep us from optimizing the wrong thing first - always pointing at the binding constraint: protocol physics, GPU supply limits, cold start growth caps, consistency trust issues, and cost survival threats.
 
-Neither option passing 3× threshold is the correct answer. The framework correctly identified that 800K DAU is too early. Deferring optimization preserves capital for when scale makes ROI viable. The worst outcome is spending $1.2M on ML that returns 1.1× when that capital could have extended runway.
+Neither option passing 3x threshold is the correct answer. The framework correctly identified that 800K DAU is too early. Deferring optimization preserves capital for when scale makes ROI viable. The worst outcome is spending $1.2M on ML that returns 1.1x when that capital could have extended runway.
 
 The "defer" decision requires discipline. Teams naturally want to "do something" when shown a problem. The math saying "wait until 3M DAU" feels like inaction. But capital preservation IS the action - choosing survival over premature optimization.
 
@@ -1170,7 +1180,7 @@ graph TD
 - Latency: \\(L_{\text{actual}} / L_{\text{target}}\\)
 
 **Step 2:** Identify binding constraints
-- **If utilization ≥ 95%:** Constraint is BINDING (tight, no room)
+- **If utilization \\(\geq\\) 95%:** Constraint is BINDING (tight, no room)
 - **If utilization < 95%:** Constraint has SLACK (room to improve)
 
 **Step 3:** Apply decision rule
@@ -1255,9 +1265,9 @@ The 300ms target comes from competitive benchmarks and Weibull abandonment model
 
 | Optimization | \\(\Delta F_v\\) (abandonment prevented) | Revenue Protected/Year |
 | :--- | ---: | ---: |
-| 350ms → 100ms (TCP → QUIC) | 0.53pp | $1.11M |
-| 700ms → 350ms (Bad → Baseline) | 2.14pp | $4.48M |
-| 1500ms → 700ms (Terrible → Bad) | 11.72pp | $24.52M |
+| 350ms to 100ms (TCP to QUIC) | 0.53pp | $1.11M |
+| 700ms to 350ms (Bad to Baseline) | 2.14pp | $4.48M |
+| 1500ms to 700ms (Terrible to Bad) | 11.72pp | $24.52M |
 
 **Infrastructure Cost (from scale, not latency):**
 - 10M DAU: $5.68M/year (for full stack at ~300ms p95)
@@ -1265,7 +1275,7 @@ The 300ms target comes from competitive benchmarks and Weibull abandonment model
 
 **Key Insight:** Latency target is determined by protocol physics, not cost optimization. TCP+HLS has a ~370ms floor. QUIC+MoQ has a ~100ms floor. You cannot "buy" lower latency on TCP - the protocol itself sets the ceiling.
 
-**Note:** The $1.11M base latency benefit (350ms→100ms) represents only ONE component of protocol migration value. Full QUIC+MoQ benefits at 10M DAU include connection migration ($4.50M Safari-adjusted), DRM prefetch ($0.58M Safari-adjusted), and base latency ($0.73M Safari-adjusted), totaling $5.83M/year protected revenue (Market Reach Coefficient \\(C_{\text{reach}} = 0.58\\)). This analysis isolates base latency to show the Weibull abandonment model.
+**Note:** The $1.11M base latency benefit (350ms to 100ms) represents only ONE component of protocol migration value. Full QUIC+MoQ benefits at 10M DAU include connection migration ($4.50M Safari-adjusted), DRM prefetch ($0.58M Safari-adjusted), and base latency ($0.73M Safari-adjusted), totaling $5.83M/year protected revenue (Market Reach Coefficient \\(C_{\text{reach}} = 0.58\\)). This analysis isolates base latency to show the Weibull abandonment model.
 
 **Competitive Pressure:** TikTok/Instagram Reels deliver sub-150ms video start. YouTube Shorts: 200-300ms (these numbers are inferred from user-reported network traces and mobile app performance benchmarks, as platforms don't publish actual latency data). At 400ms+, users perceive the platform as "slow" relative to alternatives - driving abandonment beyond what Weibull predicts (brand perception penalty).
 
@@ -1287,6 +1297,8 @@ Data from Google (2018) and Mux research:
 - 53% at 3s (27pp increase - accelerating)
 - 77% at 4s (24pp increase)
 
+*Rates based on Google (2018) mobile load abandonment research and Mux platform benchmarks (approximately 47,000 session-timeout events). Full Weibull fit and goodness-of-fit validation in the Weibull Analysis section below.*
+
 The pattern: abandonment accelerates. Going from 2s to 3s loses MORE users than 1s to 2s. If abandonment were uniform, every 100ms would cost the same. But acceleration means every 100ms hurts more as latency increases.
 
 This is why sub-300ms targets aren't premature optimization - the Weibull curve punishes you harder the slower you get.
@@ -1300,7 +1312,7 @@ F_v(t; \lambda_v, k_v) &= 1 - S_v(t; \lambda_v, k_v) && \text{(abandonment CDF)}
 \end{aligned}
 {% end %}
 
-where t ≥ 0 is latency in seconds, and:
+where \\(t \geq 0\\) is latency in seconds, and:
 - \\(\lambda_v\\) = 3.39s = scale parameter (characteristic tolerance)
 - \\(k_v\\) = 2.28 = shape parameter (\\(k_v > 1\\) indicates accelerating impatience)
 - \\(S_v(t) \in [0,1]\\), \\(F_v(t) \in [0,1]\\) (probabilities)
@@ -1318,7 +1330,7 @@ where t ≥ 0 is latency in seconds, and:
 | :--- | :--- | ---: | ---: | ---: |
 | Survival \\(S_v(t)\\) | {% katex() %}\exp[-(t/\lambda_v)^{k_v}]{% end %} | 0.9997 | 0.9936 | - |
 | CDF \\(F_v(t)\\) | {% katex() %}1-S_v(t){% end %} | 0.0324% | 0.6386% | **0.606pp** |
-| Hazard \\(h_v(t)\\) | {% katex() %}(k_v/\lambda_v)(t/\lambda_v)^{k_v-1}{% end %} | 0.0074/s | 0.0395/s | accelerates 5.3× |
+| Hazard \\(h_v(t)\\) | {% katex() %}(k_v/\lambda_v)(t/\lambda_v)^{k_v-1}{% end %} | 0.0074/s | 0.0395/s | accelerates 5.3x |
 
 **Goodness-of-Fit** (validates Weibull model against industry data):
 
@@ -1340,7 +1352,7 @@ Weibull chosen over Gamma because:
 3. **Hazard function:** \\(h_v(t) = (k_v/\lambda_v)(t/\lambda_v)^{k_v-1}\\) provides actionable insight (abandonment risk increases as \\(t^{1.28}\\))
 4. **Industry standard:** Widely used in reliability engineering and session timeout modeling, making cross-study comparison easier
 
-**Result:** 0.606% ± 0.18% of users abandon between 100ms and 370ms latency (calculated: \\(F_v(0.37\text{s}) - F_v(0.1\text{s})\\) = 0.6386% - 0.0324% = 0.6062%).
+**Result:** \\(0.606\\% \\pm 0.18\\%\\) of users abandon between 100ms and 370ms latency (calculated: \\(F_v(0.37\text{s}) - F_v(0.1\text{s})\\) = 0.6386% - 0.0324% = 0.6062%).
 
 **Falsifiability:** This model fails if KS test p<0.05 OR \\(k_v\\) confidence interval includes 1.0 (would indicate constant hazard, contradicting "impatience accelerates").
 
@@ -1358,7 +1370,7 @@ The shape parameter \\(k_v\\)=2.28 reveals **accelerating abandonment risk**. Go
 
 ### Revenue Calculation Worked Examples
 
-**Example 1: Protocol Latency Reduction (370ms → 100ms)**
+**Example 1: Protocol Latency Reduction (370ms to 100ms)**
 
 Using Weibull parameters \\(\lambda_v\\)=3.39s, \\(k_v\\)=2.28:
 
@@ -1387,9 +1399,9 @@ Reducing latency from 370ms to 100ms saves 0.606% of users from abandoning. With
 \Delta R = 50\text{M} \times 365 \times 0.00606 \times \$0.0573 = \$6.34\text{M/year}
 {% end %}
 
-**Scaling insight:** The same 270ms latency improvement is worth $380K at 3M DAU, $1.27M at 10M DAU, and $6.34M at 50M DAU. Revenue impact scales linearly with user base - protocol optimizations deliver sub-3× ROI at small scale but become essential above 10M DAU.
+**Scaling insight:** The same 270ms latency improvement is worth $380K at 3M DAU, $1.27M at 10M DAU, and $6.34M at 50M DAU. Revenue impact scales linearly with user base - protocol optimizations deliver sub-3x ROI at small scale but become essential above 10M DAU.
 
-**Example 2: Connection Migration (1,650ms → 50ms for WiFi↔4G transition)**
+**Example 2: Connection Migration (1,650ms to 50ms for WiFi to 4G transition)**
 
 21% of sessions involve network transitions (WiFi to 4G or vice versa), measured from mobile app telemetry across educational video platforms (2024-2025 data). Without QUIC connection migration, these transitions cause reconnection delays:
 
@@ -1409,7 +1421,7 @@ F_v(0.05\text{s}) &= 1 - \exp\left[-\left(\frac{0.05}{3.39}\right)^{2.28}\right]
 
 Without QUIC connection migration, 21% of users experience a ~1.65-second reconnect (TCP handshake + TLS negotiation) when switching between WiFi and 4G, causing 17.6% of those users to abandon per the Weibull model. That's 3.70% abandonment across all sessions, costing $2.32M/year at 3M DAU. Connection migration eliminates this entirely by allowing the video stream to survive network changes.
 
-**Example 3: DRM (Digital Rights Management) License Prefetch (425ms → 300ms)**
+**Example 3: DRM (Digital Rights Management) License Prefetch (425ms to 300ms)**
 
 Without prefetch, DRM license fetch adds 125ms to critical path:
 
@@ -1464,7 +1476,7 @@ f'_v(1.0\,\text{s}) &= \frac{2.28}{3.39} \left(\frac{1.0}{3.39}\right)^{1.28} \e
 \end{aligned}
 {% end %}
 
-Marginal abandonment per 100ms: Δf_100ms = 0.133 × 0.1 = 0.0133 (1.3% or 133 basis points)
+Marginal abandonment per 100ms: \\(\Delta f_{100\text{ms}} = 0.133 \times 0.1 = 0.0133\\) (1.3% or 133 basis points)
 
 **At 10M DAU, this translates to:**
 {% katex(block=true) %}
@@ -1484,17 +1496,17 @@ f'(0.3\,\text{s}) \approx 0.0301\,\text{s}^{-1} \quad \Rightarrow \quad \Delta f
 \Delta R_{100\text{ms}} = 10\text{M} \times 365 \times 0.00301 \times \$0.0573 = \$630\text{K/year}
 {% end %}
 
-The marginal cost is 4.4× lower at 300ms vs 1s, showing that the first 700ms of optimization (1s to 300ms) delivers the highest ROI.
+The marginal cost is 4.4x lower at 300ms vs 1s, showing that the first 700ms of optimization (1s to 300ms) delivers the highest ROI.
 
 ### Revenue Impact: Uncertainty Quantification
 
 **Point estimate:** $0.38M/year @3M DAU (370ms to 100ms latency reduction protects this revenue; scales to $6.34M @50M DAU)
 
-**Uncertainty bounds (95% confidence):** Using Delta Method error propagation with parameter uncertainties (N: ±10%, T: ±5%, ΔF: ±14%, r: ±8% for Duolingo actual), the standard error is ±$0.05M.
+**Uncertainty bounds (95% confidence):** Using Delta Method error propagation with parameter uncertainties (N: \\(\pm 10\\%\\), T: \\(\pm 5\\%\\), ΔF: \\(\pm 14\\%\\), r: \\(\pm 8\\%\\) for Duolingo actual), the standard error is \\(\pm \\$0.05\text{M}\\).
 
 **Conservative range:** $0.28M - $0.48M/year (95% CI) @3M DAU
 
-Even at the lower bound ($0.28M), when combined with all optimizations to reach $2.77M total annual impact, the ROI clears the 3× threshold at ~9M DAU scale.
+Even at the lower bound ($0.28M), when combined with all optimizations to reach $2.77M total annual impact, the ROI clears the 3x threshold at ~9M DAU scale.
 
 **Variance decomposition (percentage contributions):**
 - ΔF (Weibull): 28.8%
@@ -1510,7 +1522,7 @@ Even at the lower bound ($0.28M), when combined with all optimizations to reach 
 **Conditional on:**
 - **[C1] Latency is causal** (not proxy for user quality) -  Test via diagnostic table in Causality section
 - **[C2] Modes 3-6 controlled** (supply exists, costs manageable, no bugs, cold start optimized)
-- **[C3] 3M ≤ DAU ≤ 50M** -  Applicability range
+- **[C3] \\(3\text{M} \leq \text{DAU} \leq 50\text{M}\\)** -- Applicability range
 - **[C4] Churn elasticity stable** -  No regime shifts in user behavior
 
 **If [C1] false:** Latency is a proxy variable, not the causal driver - revenue impact approaches zero regardless of investment. Run diagnostic tests BEFORE $3.50M infrastructure optimization.
@@ -1518,7 +1530,7 @@ Even at the lower bound ($0.28M), when combined with all optimizations to reach 
 
 **Falsified If:** Production A/B test (artificial +200ms delay) shows annual impact <$0.28M/year (below 95% CI lower bound).
 
-The \\(k_v\\)=2.28 shape parameter reveals the core insight: abandonment risk accelerates non-linearly with latency. First 700ms of optimization (1s → 300ms) delivers 4.4× more value per 100ms than the next 200ms. "Good enough" latency isn't good enough because every additional 100ms hurts more.
+The \\(k_v\\)=2.28 shape parameter reveals the core insight: abandonment risk accelerates non-linearly with latency. First 700ms of optimization (1s to 300ms) delivers 4.4x more value per 100ms than the next 200ms. "Good enough" latency isn't good enough because every additional 100ms hurts more.
 
 The 52.9% ARPU variance contribution is a warning. Your revenue calculation is only as good as your ARPU estimate. If blended ARPU is off by 20%, your ROI calculation is off by 10%. Get accurate revenue-per-user data before presenting infrastructure proposals.
 
@@ -1540,10 +1552,10 @@ Having established the mathematical framework for converting latency to abandonm
 - Each buffering event triggers abandonment window
 
 **Revenue calculation** (Duolingo ARPU economics):
-- Cohort size at 10M DAU: 7M learners (70% × 10M)
+- Cohort size at 10M DAU: 7M learners (\\(70\\% \times 10\text{M}\\))
 - Per-user daily revenue: $0.0573/day ($1.72/mo ÷ 30 days)
 - Abandonment rate per buffering event: 6.2% (empirical, from buffering-event telemetry)
-- Annual revenue at risk: 7M × 0.062 × $0.0573/day × 365 days = **$9.08M/year**
+- Annual revenue at risk: \\(7\text{M} \times 0.062 \times \\$0.0573/\text{day} \times 365\text{ days}\\) = **$9.08M/year**
 
 **Scale trajectory**:
 - @3M DAU: $2.72M/year
@@ -1557,17 +1569,17 @@ Having established the mathematical framework for converting latency to abandonm
 **Churn driver**: Slow encoding (>30 seconds)
 
 **Creator economics**:
-- Active uploading creators at 10M DAU: 100K (1% × 10M)
+- Active uploading creators at 10M DAU: 100K (\\(1\\% \times 10\text{M}\\))
 - Creator churn from slow encoding: 5% annual churn from poor upload experience (creators have low-friction alternatives like YouTube)
-- Content multiplier: 1 creator generates 10,000 learner-days of content consumption per year (derivation: 50 videos/year × 200 views/video = 10,000 view-days; consistent with [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/))
+- Content multiplier: 1 creator generates 10,000 learner-days of content consumption per year (derivation: \\(50 \text{ videos/year} \times 200 \text{ views/video} = 10{,}000 \text{ view-days}\\); consistent with [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/))
 - Per-learner-day revenue: $0.0573 (daily ARPU, treating each view as one user-day of engagement)
 
 **Revenue calculation**:
-- Lost creators: 100K × 0.05 = 5K creators/year
-- Lost content consumption: 5K creators × 10,000 learner-days × $0.0573 = **$2.87M/year**
+- Lost creators: \\(100\text{K} \times 0.05 = 5\text{K}\\) creators/year
+- Lost content consumption: \\(5\text{K} \times 10{,}000 \text{ learner-days} \times \\$0.0573\\) = **$2.87M/year**
 
 **Scale trajectory**:
-- @3M DAU: $0.86M/year (1,500 creators × 10K learner-days × $0.0573)
+- @3M DAU: $0.86M/year (\\(1{,}500 \text{ creators} \times 10\text{K learner-days} \times \\$0.0573\\))
 - @10M DAU: $2.87M/year
 - @50M DAU: $14.33M/year
 
@@ -1583,15 +1595,15 @@ Having established the mathematical framework for converting latency to abandonm
 - Per-user daily revenue: $0.0573/day
 
 **Revenue calculation**:
-- Annual new users: 2M/month × 12 months = 24M users/year
-- At 10M DAU steady state: 2M new users/month × 0.12 × $0.0573/day × 365 days = **$5.02M/year**
+- Annual new users: \\(2\text{M/month} \times 12\text{ months} = 24\text{M users/year}\\)
+- At 10M DAU steady state: \\(2\text{M new users/month} \times 0.12 \times \\$0.0573/\text{day} \times 365\text{ days}\\) = **$5.02M/year**
 
 **Scale trajectory**:
 - @3M DAU: $1.51M/year
 - @10M DAU: $5.02M/year
 - @50M DAU: $25.10M/year
 
-### Persona→Failure Mode Mapping (Duolingo Economics)
+### Persona-to-Failure Mode Mapping (Duolingo Economics)
 
 With the mathematical framework established and persona revenue quantified, the complete mapping shows how each persona maps to constraints and their revenue impact at different scales:
 
@@ -1619,7 +1631,7 @@ The analysis quantifies what's at stake: $9.23M/year revenue at risk at 10M DAU,
 
 **DECISION:** Should we spend $3.50M/year to reduce latency and optimize infrastructure?
 
-At 3M DAU, the $3.50M/year investment protects $2.77M/year revenue, yielding 0.8× ROI (below breakeven). At 10M DAU, the same analysis yields $9.23M protected at $5.68M cost = 1.6× ROI. This ROI only holds if latency is the binding constraint. If users abandon due to poor content quality, optimizing latency destroys capital.
+At 3M DAU, the $3.50M/year investment protects $2.77M/year revenue, yielding 0.8x ROI (below breakeven). At 10M DAU, the same analysis yields $9.23M protected at $5.68M cost = 1.6x ROI. This ROI only holds if latency is the binding constraint. If users abandon due to poor content quality, optimizing latency destroys capital.
 
 Revenue protected scales linearly with DAU, but infrastructure costs are largely fixed.
 
@@ -1655,8 +1667,8 @@ The abandonment prevention model quantifies the total value of hitting the <300m
 | :--- | ---: | ---: | ---: |
 | **Total Impact** | **$2.77M** | **$9.23M** | **$46.17M** |
 | **Cost** | $3.50M | $5.68M | $13.20M |
-| **ROI** | **0.8×** | **1.6×** | **3.5×** |
-| **3× Threshold** | Below | Below | **Exceeds** |
+| **ROI** | **0.8x** | **1.6x** | **3.5x** |
+| **3x Threshold** | Below | Below | **Exceeds** |
 
 
 ### Infrastructure Cost Breakdown
@@ -1667,25 +1679,25 @@ Component-level costs at 10M DAU. For mathematical derivations and scaling formu
 
 | Component | Annual Cost @10M DAU | Why |
 |-----------|-------------|-----|
-| **Engineering team** | $2.50M | 10 engineers × $0.25M fully-loaded (protocol, infra, ML; US-market rate) |
+| **Engineering team** | $2.50M | \\(10 \text{ engineers} \times \\$0.25\text{M}\\) fully-loaded (protocol, infra, ML; US-market rate) |
 | **CDN + edge compute** | $1.80M | CloudFlare/Fastly edge delivery at 10M DAU scale (enterprise tier pricing for ~10TB/day egress) |
 | **GPU encoding** | $0.80M | Video transcoding: H.264 for uploads (fast encoding), transcode to VP9 for delivery (30% bandwidth savings); H.264 fallback for older devices |
 | **ML infrastructure** | $0.28M | Recommendation engine + prefetch prediction |
 | **Monitoring + observability** | $0.30M | Datadog APM + infrastructure, Sentry, logging at 10M DAU scale |
-| **TOTAL** | **$5.68M/year** | Sub-linear scaling: 2.2× cost for 3.3× users vs 3M DAU baseline |
+| **TOTAL** | **$5.68M/year** | Sub-linear scaling: 2.2x cost for 3.3x users vs 3M DAU baseline |
 
 **TCP+HLS Infrastructure Costs for Comparison:**
 
 | Component | Annual Cost | Performance |
 |-----------|-------------|-------------|
-| **Engineering team** | $1.50M | 6 engineers × $0.25M (simpler stack, same market rate) |
+| **Engineering team** | $1.50M | \\(6 \text{ engineers} \times \\$0.25\text{M}\\) (simpler stack, same market rate) |
 | **CDN (standard HLS)** | $1.40M | CloudFront/Akamai at 10M DAU (standard tier pricing) |
 | **GPU encoding** | $0.60M | Same workload, no VP9 optimization |
 | **ML infrastructure** | $0.08M | Basic recommendations |
 | **Monitoring + observability** | $0.20M | Single-stack monitoring |
 | **TOTAL** | **$3.78M/year** | 500-800ms p95 latency (vs <300ms for QUIC) |
 
-**Cost Delta:** $1.90M/year more for QUIC+MoQ ($5.68M - $3.78M), but protects $9.23M/year at 10M DAU → **4.9× ROI on the incremental investment**.
+**Cost Delta:** $1.90M/year more for QUIC+MoQ ($5.68M - $3.78M), but protects $9.23M/year at 10M DAU -- **4.9x ROI on the incremental investment**.
 
 ### Payback Period Formula
 
@@ -1703,10 +1715,10 @@ The same $1M investment has dramatically different ROI depending on platform sca
 
 | Scale | DAU | \\(F_v\\)(0.37s) | \\(F_v\\)(0.10s) | \\(\Delta F_v\\) | Revenue Protected | Payback | Annual ROI | Decision |
 |-------|-----|----------|----------|-----|-------------------|---------|------------|----------|
-| **Seed** | 100K | 0.00639 | 0.00032 | 0.00606 | $0.013M/year | **>10 years** | 0.01× | Reject |
-| **Series A** | 1M | 0.00639 | 0.00032 | 0.00606 | $0.127M/year | **95 months** | 0.13× | Reject |
-| **Series B** | 3M | 0.00639 | 0.00032 | 0.00606 | $0.38M/year | **32 months** | 0.38× | Marginal |
-| **Growth** | 10M | 0.00639 | 0.00032 | 0.00606 | $1.27M/year | **9.5 months** | 1.27× | Consider |
+| **Seed** | 100K | 0.00639 | 0.00032 | 0.00606 | $0.013M/year | **>10 years** | 0.01x | Reject |
+| **Series A** | 1M | 0.00639 | 0.00032 | 0.00606 | $0.127M/year | **95 months** | 0.13x | Reject |
+| **Series B** | 3M | 0.00639 | 0.00032 | 0.00606 | $0.38M/year | **32 months** | 0.38x | Marginal |
+| **Growth** | 10M | 0.00639 | 0.00032 | 0.00606 | $1.27M/year | **9.5 months** | 1.27x | Consider |
 
 **Calculation for 3M DAU (worked example):**
 
@@ -1720,21 +1732,21 @@ R &= 3\,000\,000 \times 365 \times 0.00606 \times \$0.0573 = \$0.38\text{M/year}
 \end{aligned}
 {% end %}
 
-At 100K DAU, latency optimization fails badly (0.01× ROI). At 10M DAU, ROI reaches 1.27× - still below 3× threshold. Latency optimization alone has limited ROI. The full value comes from protocol migration which unlocks connection migration ($1.35M Safari-adjusted @3M DAU), DRM prefetch ($0.18M), and base latency ($0.22M) together totaling $1.75M @3M DAU for 0.60× ROI, reaching 2.0× ROI at 10M DAU.
+At 100K DAU, latency optimization fails badly (0.01x ROI). At 10M DAU, ROI reaches 1.27x - still below 3x threshold. Latency optimization alone has limited ROI. The full value comes from protocol migration which unlocks connection migration ($1.35M Safari-adjusted @3M DAU), DRM prefetch ($0.18M), and base latency ($0.22M) together totaling $1.75M @3M DAU for 0.60x ROI, reaching 2.0x ROI at 10M DAU.
 
 **Optimization thresholds:**
-- **VC-backed startups:** Require 3× annual ROI (4-month payback), only viable at ≥3M DAU (with corrected values)
-- **Profitable companies:** Require 1× ROI (break-even), viable at ≥1M DAU for 200ms+ improvements
+- **VC-backed startups:** Require 3x annual ROI (4-month payback), only viable at 3M+ DAU (with corrected values)
+- **Profitable companies:** Require 1x ROI (break-even), viable at 1M+ DAU for 200ms+ improvements
 
 ### The ROI Matrix: When Optimization Pays
 
 | Scale | DAU | Revenue Protected | Infrastructure Cost | ROI | Decision |
 |-------|-----|------------------|-------------------|-----|----------|
-| **Seed** | 100K | $0.09M/year | $0.48M/year | 0.19× | **Reject** - use TCP+HLS |
-| **Series A** | 1M | $0.92M/year | $1.23M/year | 0.75× | **Below** - focus on growth |
-| **Series B** | 3M | $2.77M/year | $3.50M/year | 0.8× | **Below** - defer full optimization; below breakeven at this scale |
-| **Series C** | 10M | $9.23M/year | $5.68M/year | 1.6× | **Approaching** - above breakeven, below 3× threshold |
-| **IPO-scale** | 50M | $46.17M/year | $13.20M/year | 3.5× | **High Priority** - above 3× threshold |
+| **Seed** | 100K | $0.09M/year | $0.48M/year | 0.19x | **Reject** - use TCP+HLS |
+| **Series A** | 1M | $0.92M/year | $1.23M/year | 0.75x | **Below** - focus on growth |
+| **Series B** | 3M | $2.77M/year | $3.50M/year | 0.8x | **Below** - defer full optimization; below breakeven at this scale |
+| **Series C** | 10M | $9.23M/year | $5.68M/year | 1.6x | **Approaching** - above breakeven, below 3x threshold |
+| **IPO-scale** | 50M | $46.17M/year | $13.20M/year | 3.5x | **High Priority** - above 3x threshold |
 
 
 ### When This Math Breaks: Counterarguments
@@ -1759,7 +1771,7 @@ The retention adjustment P(retain 12 months | fast load) = 0.65 is illustrative,
 
 The 65% figure has 95% confidence interval [62%, 68%]. Conservative revenue projections use the lower bound (62%) for additional safety margin.
 
-This reduces all ROI estimates by ~35%. At 3M DAU, full platform optimization is already below breakeven (0.8× ROI). At 10M DAU, the adjusted ROI would be ~1.0× - still marginal.
+This reduces all ROI estimates by ~35%. At 3M DAU, full platform optimization is already below breakeven (0.8x ROI). At 10M DAU, the adjusted ROI would be approximately 1.0x - still marginal.
 
 Optimizing latency when the real problem is content quality is a fatal mistake. Achieving sub-200ms p95 doesn't matter if users don't want to watch the videos. Fast delivery of garbage is still garbage. Measure D7 retention before optimizing infrastructure - if <40%, your problem isn't latency.
 
@@ -1768,11 +1780,11 @@ Optimizing latency when the real problem is content quality is a fatal mistake. 
 Engineering budget is zero-sum. Spending $3.50M on latency means not spending on features.
 
 Compare marginal ROI across investments:
-- New content formats (social sharing, collaborative playlists): 5-10× ROI
-- Latency optimization (full platform): 0.8× ROI at 3M DAU, 1.6× at 10M DAU, 3.5× at 50M DAU
-- User acquisition (paid marketing): 3-5× ROI at product-market fit
+- New content formats (social sharing, collaborative playlists): 5-10x ROI
+- Latency optimization (full platform): 0.8x ROI at 3M DAU, 1.6x at 10M DAU, 3.5x at 50M DAU
+- User acquisition (paid marketing): 3-5x ROI at product-market fit
 
-**DECISION RULE:** Rank by marginal return. If features deliver 8× and latency delivers 0.8×, build features first at small scale. Re-evaluate quarterly as scale changes ROI. At 50M DAU, latency optimization (3.5×) crosses the 3× threshold - but partial optimizations (CDN, caching) may pass at lower scale.
+**DECISION RULE:** Rank by marginal return. If features deliver 8x and latency delivers 0.8x, build features first at small scale. Re-evaluate quarterly as scale changes ROI. At 50M DAU, latency optimization (3.5x) crosses the 3x threshold - but partial optimizations (CDN, caching) may pass at lower scale.
 
 **"Total Cost of Ownership > one-time migration"**
 
@@ -1787,7 +1799,7 @@ Operational complexity has ongoing cost. Protocol migrations add permanent infra
 
 Additional protocol options (LL-HLS, WebRTC) exist as intermediate solutions with different cost-latency trade-offs.
 
-QUIC+MoQ payback changes from "4.0 months" (one-time cost) to "7.8 months" (TCO including 3-year ops burden). Accept higher TCO when annual impact justifies it: $2.30M TCO vs $46.15M annual impact over 5 years at 10M DAU = 20× return.
+QUIC+MoQ payback changes from "4.0 months" (one-time cost) to "7.8 months" (TCO including 3-year ops burden). Accept higher TCO when annual impact justifies it: $2.30M TCO vs $46.15M annual impact over 5 years at 10M DAU = 20x return.
 ## Technical Requirements
 
 ### The Latency Budget: Where Every Millisecond Goes
@@ -1810,7 +1822,7 @@ QUIC+MoQ payback changes from "4.0 months" (one-time cost) to "7.8 months" (TCO 
 
 ### Why 300ms When Research Shows 2-Second Thresholds?
 
-Published research shows clear abandonment thresholds at 2-3 seconds for traditional video streaming (Akamai, Mux). So why does this platform target <300ms - a threshold 6-7× more aggressive than industry benchmarks?
+Published research shows clear abandonment thresholds at 2-3 seconds for traditional video streaming (Akamai, Mux). So why does this platform target <300ms - a threshold 6-7x more aggressive than industry benchmarks?
 
 **Three factors drive the 300ms requirement:**
 
@@ -1826,12 +1838,12 @@ The platform's usage pattern (28 video switches per 12-minute session, average 2
 
 Traditional video research (Akamai, Google) studies single long-form videos where users tolerate 2-3 second startup because they'll watch 10+ minutes. Our pattern is inverted:
 
-- **Traditional:** 1 video × 10 minutes = tolerates 3s startup (3% overhead)
-- **This platform:** 20 videos × 30s each = 20 startups (cumulative effect)
+- **Traditional:** \\(1 \text{ video} \times 10 \text{ minutes}\\) = tolerates 3s startup (3% overhead)
+- **This platform:** \\(20 \text{ videos} \times 30\text{s each}\\) = 20 startups (cumulative effect)
 
 If each video took 2 seconds to start:
-- Dead time: 20 × 2s = 40 seconds
-- Active learning: 20 × 30s = 10 minutes
+- Dead time: \\(20 \times 2\text{s} = 40\text{ seconds}\\)
+- Active learning: \\(20 \times 30\text{s} = 10\text{ minutes}\\)
 - **Session overhead: 40s / (10m + 40s) = 6.3%** wasted time
 
 Users abandon when they perceive excessive waiting. The Weibull model shows 2s startup produces 26% abandonment on first video, but the cumulative psychological impact of repeated delays amplifies frustration across 20 videos.
@@ -1902,7 +1914,7 @@ Accessibility is not a Phase 2 feature - it's a Day 1 architectural requirement.
 |-------------|----------------|-------------------|-----------|
 | **Closed Captions** | Auto-generated via ASR API, creator-reviewed | <30s generation (parallel with encoding) | Required for deaf/hard-of-hearing users; studies show 12-40% comprehension improvement depending on audience and context |
 | **Screen Reader Support** | ARIA labels, semantic HTML, keyboard navigation | 100% navigability without mouse | Blind users must access all features (video selection, quiz interaction, profile management) |
-| **Adjustable Playback Speed** | 0.5× to 2× speed controls | Client-side, <10ms latency | Cognitive disabilities may require slower playback; advanced learners benefit from 1.5× speed |
+| **Adjustable Playback Speed** | 0.5x to 2x speed controls | Client-side, <10ms latency | Cognitive disabilities may require slower playback; advanced learners benefit from 1.5x speed |
 | **High Contrast Mode** | WCAG AAA contrast ratios (7:1) | Dynamic styling | Visual impairments require enhanced contrast beyond AA minimum (4.5:1) |
 | **Transcript Download** | Full text transcript available per video | <2s generation from captions | Screen reader users, search indexing, offline reference |
 
@@ -1964,7 +1976,7 @@ This design targets production-scale operations from day one.
 |--------|--------|-----------|
 | Daily Active Users | 3M baseline, 10M peak | Addressable market: [700M users consuming educational short-form video globally](https://www.gminsights.com/industry-analysis/mobile-learning-market) (44% of 1.6B Gen Z) |
 | Daily Video Views | 60M views | 3M users x 20 videos per session |
-| Daily Uploads | 7K videos | 1% creator ratio (30K creators × 1.5 uploads/week ÷ 7 days ≈ 6.4K/day) + 10% buffer for growth |
+| Daily Uploads | 7K videos | 1% creator ratio (\\(30\text{K creators} \times 1.5 \text{ uploads/week} \div 7 \text{ days} \approx 6.4\text{K/day}\\)) + 10% buffer for growth |
 | Geographic Distribution | 5 regions (US, EU, APAC, LATAM, MEA) | Sub-1-second global sync requires multi-region active-active |
 | Availability | 99.99% uptime | 4.3 minutes per month downtime tolerance |
 
@@ -1978,7 +1990,7 @@ At 3M DAU:
 - Free tier advertising: 2.736M x $0.92/user = $2.52M/mo ($0.84/DAU)
 - **Total revenue**: $5.16M/mo = **$1.72/DAU** = $61.9M/year
 
-This ad revenue projection of $0.92/month per free user ($11/year) reflects high-engagement educational video with 30-45 min/day avg usage. Derivation: 40 min/day × 30 days = 1,200 min/month × 1 ad per 10 min = 120 ads × $8 CPM / 1,000 = $0.96/month, rounded to $0.92 for conservative estimate. Comparable to YouTube ($7-15/year per active user) and TikTok ($8-12/year). Lower than Duolingo's actual ad revenue but conservative for microlearning video platform.
+This ad revenue projection of $0.92/month per free user ($11/year) reflects high-engagement educational video with 30-45 min/day avg usage. Derivation: \\(40 \text{ min/day} \times 30 \text{ days} = 1{,}200 \text{ min/month} \times 1 \text{ ad per 10 min} = 120 \text{ ads} \times \\$8 \text{ CPM} / 1{,}000 = \\$0.96/\text{month}\\), rounded to $0.92 for conservative estimate. Comparable to YouTube ($7-15/year per active user) and TikTok ($8-12/year). Lower than Duolingo's actual ad revenue but conservative for microlearning video platform.
 
 At 10M DAU:
 - 10M x 8.8% = 880K paying users
@@ -1988,7 +2000,7 @@ At 10M DAU:
 
 **Creator economics** (premium microlearning model):
 - Total views: 60M/day x 30 days = 1.8B views/mo (1.8M per thousand)
-- Creator revenue pool: **$1.35M/mo** (1.8B views × $0.75/1K effective rate)
+- Creator revenue pool: **$1.35M/mo** (\\(1.8\text{B views} \times \\$0.75/1\text{K}\\) effective rate)
 - Effective rate: **$0.75 per 1,000 views**
 - Distribution: Proportional to watch time across 30K active creators (rewards engagement quality)
 - Platform comparison:
@@ -2009,8 +2021,8 @@ Microlearning creators receive 45% revenue share because:
 **User Lifetime Value (LTV) Calculation**:
 - Premium user monthly subscription: $9.99/mo
 - Average paid user retention: 12 months (typical for educational platforms)
-- **Premium user LTV**: $9.99 × 12 = $119.88, approximately **$120**
-- Blended LTV (all users): $0.0573/day × 365 days × ~5 year avg lifespan = **$105** (conservative; premium users retain 12 months, free users retained longer at lower ARPU)
+- **Premium user LTV**: \\(\\$9.99 \times 12 = \\$119.88\\), approximately **$120**
+- Blended LTV (all users): \\(\\$0.0573/\text{day} \times 365 \text{ days} \times 5 \text{ year avg lifespan} \approx\\) **$105** (conservative; premium users retain 12 months, free users retained longer at lower ARPU)
 - Churn protection: Single bad experience (outage, buffering, slow load) can trigger 1-3% incremental churn, making reliability a direct LTV protection mechanism
 
 Five user journeys revealed five architectural constraints. **Rapid Switchers** will close the app if buffering appears during rapid video switching. **Creators** will abandon the platform if encoding takes more than 30 seconds. **High-Intent Learners** will churn immediately if forced to watch content they already know. The performance targets are not arbitrary - they derive directly from user behavior that determines platform survival.
@@ -2033,8 +2045,8 @@ TCP+HLS has a physics floor of 370ms - 23% over the 300ms budget before you've o
 
 The difference is 270ms. At 3M DAU, that translates to $1.75M/year in protected revenue. At 50M DAU, $29M/year.
 
-But QUIC+MoQ costs $2.90M/year in infrastructure. Safari users - 42% of mobile traffic - get forced to HLS fallback anyway. The ROI doesn't clear 3× until ~15M DAU.
+But QUIC+MoQ costs $2.90M/year in infrastructure. Safari users - 42% of mobile traffic - get forced to HLS fallback anyway. The ROI doesn't clear 3x until ~15M DAU.
 
-Protocol choice is a one-way door. The decision made now determines the physics ceiling for the next three years. Choose TCP+HLS and you've accepted 370ms as your floor - no amount of edge optimization or ML prefetching can recover those milliseconds. Choose QUIC+MoQ and you've committed to dual-stack complexity, 18 months of migration, and infrastructure costs that may not pay back until you've grown 5×.
+Protocol choice is a one-way door. The decision made now determines the physics ceiling for the next three years. Choose TCP+HLS and you've accepted 370ms as your floor - no amount of edge optimization or ML prefetching can recover those milliseconds. Choose QUIC+MoQ and you've committed to dual-stack complexity, 18 months of migration, and infrastructure costs that may not pay back until you've grown 5x.
 
 The constraint is identified. The math is done. Now comes the architecture.

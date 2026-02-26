@@ -1,0 +1,15 @@
+{% if "@" in url %}
+  {% set parts = url | split(pat="#") %}
+  {% if parts | length > 1 %}
+    {% set base = get_url(path=parts | first) %}
+    {% set fragment = parts | last %}
+    {% set href = base ~ "#" ~ fragment %}
+  {% else %}
+    {% set href = get_url(path=parts | first) %}
+  {% endif %}
+{% elif url %}
+  {% set href = url %}
+{% else %}
+  {% set href = "" %}
+{% endif %}
+{% if href %}<a href="{{ href | safe }}" class="defined-term" data-def="{{ def | safe }}" aria-label="{{ def | safe }}">{{ body | safe }}</a>{% else %}<span class="defined-term" tabindex="0" data-def="{{ def | safe }}" role="note" aria-label="{{ def | safe }}">{{ body | safe }}</span>{% endif %}

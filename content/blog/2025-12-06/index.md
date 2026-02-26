@@ -40,7 +40,7 @@ This creator pipeline analysis matters in two scenarios:
 **Scenario B: Supply is already the active constraint** (applies at higher scale)
 - **Demand-side latency solved** - Protocol choice made, p95 <300ms achieved
 - **Supply is the active constraint** - Creator churn >5%/year from upload experience, encoding queue >30s p95
-- **Volume justifies complexity** - >10M DAU where supply-side ROI approaches 3× threshold
+- **Volume justifies complexity** - >10M DAU where supply-side ROI approaches 3x threshold
 
 Common requirements for both scenarios:
 - **Creator ratio meaningful** - >0.5% of users create content (>5,000 active creators at 1M DAU)
@@ -86,12 +86,12 @@ If you can't confidently answer YES, encoding latency is NOT your constraint. Th
 
 | Law | Application to Creator Pipeline | Result |
 | :--- | :--- | :--- |
-| **1. Universal Revenue** | \\(\Delta R = \text{Creators Lost} \times \text{Content Multiplier} \times \text{ARPU}\\). At 3M DAU: 1,500 creators × 10K views × $0.0573 = $859K/year | $859K/year protected @3M DAU (scales to $14.3M @50M DAU) |
+| **1. Universal Revenue** | \\(\Delta R = \text{Creators Lost} \times \text{Content Multiplier} \times \text{ARPU}\\). At 3M DAU: 1,500 creators x 10K views x $0.0573 = $859K/year | $859K/year protected @3M DAU (scales to $14.3M @50M DAU) |
 | **2. Weibull Model** | Creator patience follows different curve than viewer patience. Encoding >30s triggers "broken" perception; >2min triggers platform abandonment. | 5% annual creator churn from poor upload experience |
-| **3. Theory of Constraints** | Supply becomes binding AFTER demand-side latency solved. At 3M DAU, latency (Mode 1) is still the active constraint per [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). GPU quotas (Mode 3) investment is **preparing the next constraint**, not solving the current one. | Sequence: Latency → Protocol → **GPU Quotas** → Cold Start. Invest in Mode 3 infrastructure while Mode 1/2 migration is underway. |
-| **4. ROI Threshold** | Pipeline cost $38.6K/month vs $859K/year protected = 1.9× ROI @3M DAU. Becomes 2.3× @10M DAU, 2.8× @50M DAU. | Below 3× threshold at all scales - this is a strategic investment, not an ROI-justified operational expense. |
+| **3. Theory of Constraints** | Supply becomes binding AFTER demand-side latency solved. At 3M DAU, latency (Mode 1) is still the active constraint per [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/). GPU quotas (Mode 3) investment is **preparing the next constraint**, not solving the current one. | Sequence: Latency to Protocol to **GPU Quotas** to Cold Start. Invest in Mode 3 infrastructure while Mode 1/2 migration is underway. |
+| **4. ROI Threshold** | Pipeline cost $38.6K/month vs $859K/year protected = 1.9x ROI @3M DAU. Becomes 2.3x @10M DAU, 2.8x @50M DAU. | Below 3x threshold at all scales - this is a strategic investment, not an ROI-justified operational expense. |
 
-**Scale-dependent insight:** At 3M DAU, creator pipeline ROI is 1.9× (below 3× threshold). Why invest when latency is still the active constraint?
+**Scale-dependent insight:** At 3M DAU, creator pipeline ROI is 1.9x (below 3x threshold). Why invest when latency is still the active constraint?
 
 Theory of Constraints allows **preparing** the next constraint while solving the current one when:
 1. **Current constraint is being addressed** - Protocol migration (Mode 2) is underway; demand-side will be solved
@@ -111,7 +111,7 @@ The distinction: **Solving** a non-binding constraint destroys capital. **Prepar
 - Creator ratio: 1.0% at 3M DAU = 30,000 creators
 - Creator ratio: 1.0% at 50M DAU = 500,000 creators
 - 5% annual creator churn from poor upload experience (hypothesized - no platform publicly reports encoding-attributed churn; actual rate requires instrumentation)
-- 1 creator = 10,000 views of content consumption per year (derivation: average creator produces 50 videos/year × 200 views/video = 10,000 views; note: 200 views/video reflects a microlearning niche platform, not YouTube scale where mid-tier creators average 5K-20K views per video)
+- 1 creator = 10,000 views of content consumption per year (derivation: average creator produces 50 videos/year x 200 views/video = 10,000 views; note: 200 views/video reflects a microlearning niche platform, not YouTube scale where mid-tier creators average 5K-20K views per video)
 
 **The creator experience problem:**
 
@@ -232,7 +232,7 @@ The logistic coefficient \\(\hat{\beta}\\) measures the log-odds increase in aba
 \exp(\hat{\beta}) = 2.1 \approx \left(\frac{F_v(0.35\text{s})}{F_v(0.25\text{s})}\right) = \frac{0.00563}{0.00262} = 2.15 \quad \checkmark
 {% end %}
 
-The logistic \\(\hat{\beta}\\) is consistent with Weibull \\(k_v = 2.28\\) at the 300ms decision boundary. Both models agree: viewers are ~2× more likely to abandon above threshold.
+The logistic \\(\hat{\beta}\\) is consistent with Weibull \\(k_v = 2.28\\) at the 300ms decision boundary. Both models agree: viewers are approximately 2x more likely to abandon above threshold.
 
 **Revenue at Risk Profiles: Viewer vs Creator**
 
@@ -245,7 +245,7 @@ The different patience distributions create fundamentally different revenue risk
 | **Hazard profile** | Gradual acceleration (\\(k_v = 2.28\\)) | Cliff behavior (\\(k_c = 4.5\\)) |
 | **Time scale** | Milliseconds (100ms–1,000ms) | Minutes (30s–300s) |
 | **Revenue mechanism** | Direct: \\(\Delta R_v = N \cdot \Delta F_v \cdot r \cdot T\\) | Indirect: \\(\Delta R_c = C_{\text{lost}} \cdot M \cdot r \cdot T\\) |
-| **Multiplier** | 1× (one user = one user) | 10,000× (one creator = 10K views/year) |
+| **Multiplier** | 1x (one user = one user) | 10,000x (one creator = 10K views/year) |
 | **Sensitivity** | Every 100ms compounds | Binary: <30s OK, >120s triggers churn |
 | **Recovery** | Next session (high frequency) | Platform switch (low frequency, high switching cost) |
 
@@ -269,9 +269,9 @@ where \\(\rho = 0.01\\) (1% creator ratio) and \\(M = 10{,}000\\) views/creator/
 
 *Creator optimization (90s → 60s):*
 
-Moving from 90s encoding (Tier 3: 60-120s) to 60s encoding (Tier 2: 30-60s) reduces incremental creator loss from 225 to 75 creators per year, saving 150 creators × 10K views × $0.0573 = **$86K/year** (see tier table below).
+Moving from 90s encoding (Tier 3: 60-120s) to 60s encoding (Tier 2: 30-60s) reduces incremental creator loss from 225 to 75 creators per year, saving 150 creators x 10K views x $0.0573 = **$86K/year** (see tier table below).
 
-**Interpretation:** A 100ms viewer improvement ($205K/year) has ~2.4× the revenue impact of a 30s creator improvement ($86K/year), but creator improvements have asymmetric upside: crossing the 120s cliff (Tier 4) saves $559K/year - more than doubling the viewer optimization value. Viewer optimization is about compounding small gains across billions of sessions. Creator optimization is about preventing cliff-edge churn events that cascade through the content multiplier.
+**Interpretation:** A 100ms viewer improvement ($205K/year) has approximately 2.4x the revenue impact of a 30s creator improvement ($86K/year), but creator improvements have asymmetric upside: crossing the 120s cliff (Tier 4) saves $559K/year - more than doubling the viewer optimization value. Viewer optimization is about compounding small gains across billions of sessions. Creator optimization is about preventing cliff-edge churn events that cascade through the content multiplier.
 
 Viewer patience (\\(k_v = 2.28\\)) and creator patience (\\(k_c = 4.5\\)) require different optimization strategies:
 
@@ -333,9 +333,9 @@ At 3M DAU, the indirect effect is modest. But the compound term scales with view
 
 | Scale | Direct Creator Loss | Indirect Viewer Loss | Compound Total | Amplification |
 | :--- | ---: | ---: | ---: | ---: |
-| 3M DAU | $559K | $17K | $576K | 1.03× |
-| 10M DAU | $1.86M | $57K | $1.92M | 1.03× |
-| 50M DAU | $9.32M | $287K | $9.61M | 1.03× |
+| 3M DAU | $559K | $17K | $576K | 1.03x |
+| 10M DAU | $1.86M | $57K | $1.92M | 1.03x |
+| 50M DAU | $9.32M | $287K | $9.61M | 1.03x |
 
 **Why the amplification appears small - and why it matters anyway:**
 
@@ -420,7 +420,7 @@ The [Causality Test](/blog/microlearning-platform-part1-foundation/#self-diagnos
 | :--- | :--- | :--- |
 | **1. Stated attribution** | Exit surveys: "slow upload" ranks in top 3 churn reasons with >15% mention rate | "Slow upload" mention rate <5% OR ranks below monetization, audience, tools |
 | **2. Survival analysis (encoding stratification)** | Cox proportional hazards model: fast-encoding cohort (p50 <30s) shows HR < 0.80 vs slow cohort (p50 >120s) for 90-day churn, with 95% CI excluding 1.0 and log-rank test p<0.05 | HR confidence interval includes 1.0 (no significant survival difference) OR log-rank p>0.10 |
-| **3. Behavioral signal** | >5% of uploads abandoned mid-process (before completion) AND abandoners have >3× churn rate vs completers | <2% mid-process abandonment OR abandonment rate uncorrelated with subsequent churn |
+| **3. Behavioral signal** | >5% of uploads abandoned mid-process (before completion) AND abandoners have >3x churn rate vs completers | <2% mid-process abandonment OR abandonment rate uncorrelated with subsequent churn |
 | **4. Dose-response gradient** | Monotonic relationship: 90-day retention decreases with each encoding tier (<30s > 30-60s > 60-120s > >120s), Spearman rho < -0.7, p<0.05 | Non-monotonic pattern (middle tier has lowest retention) OR rho > -0.5 |
 | **5. Within-creator analysis** | Same creator's return probability after slow upload (<50%) vs fast upload (>80%): odds ratio >2.0, McNemar test p<0.05 | Within-creator odds ratio <1.5 OR McNemar p>0.10 (return rate independent of encoding speed) |
 
@@ -435,7 +435,7 @@ The [Causality Test](/blog/microlearning-platform-part1-foundation/#self-diagnos
 **Decision Rule:**
 - **4-5 PASS:** Strong causal evidence. Encoding latency directly drives creator churn. Proceed with GPU pipeline optimization.
 - **3 PASS:** Moderate evidence. Encoding is likely causal but consider confounders. Validate with natural experiment (e.g., GPU outage) before major investment.
-- **≤2 PASS:** Weak or no evidence. Encoding is proxy for other issues (monetization, discovery, content quality). Fix root causes BEFORE investing $38K/month in encoding infrastructure.
+- **2 or fewer PASS:** Weak or no evidence. Encoding is proxy for other issues (monetization, discovery, content quality). Fix root causes BEFORE investing $38K/month in encoding infrastructure.
 
 **The constraint:** AWS defaults to 8 GPU instances per region. How many do we actually need? That depends on upload volume, encoding speed, and peak patterns - all derived in the sections that follow.
 
@@ -540,9 +540,9 @@ Trade-off: TUS requires server-side storage before S3 transfer, adding one hop. 
 ### Content Deduplication
 
 Marcus accidentally uploads the same video twice. Without deduplication, the platform:
-- Wastes upload bandwidth (87MB × 2)
+- Wastes upload bandwidth (87MB x 2)
 - Pays for encoding twice (GPU cost per video derived in next section)
-- Stores duplicate files (S3 Standard: $0.023/GB/month × 2)
+- Stores duplicate files (S3 Standard: $0.023/GB/month x 2)
 
 **Solution:** Content-addressable storage using SHA-256 hash:
 
@@ -585,7 +585,7 @@ Before spending GPU cycles on encoding, validate the upload:
 | **Duration** | <5 minutes | Reject with "Video exceeds 5-minute limit" |
 | **Format** | MP4, MOV, WebM | Reject with "Unsupported format" |
 | **Codec** | H.264, H.265, VP9 | Transcode if needed (adds latency) |
-| **Resolution** | ≥720p | Warn "Low quality - consider re-recording" |
+| **Resolution** | 720p or higher | Warn "Low quality - consider re-recording" |
 
 **Validation timing:**
 - Client-side: Format, size (instant feedback)
@@ -615,8 +615,8 @@ The economics are counterintuitive. GPU instances cost less AND encode faster:
 
 | Instance | Type | Hourly Cost | Encoding Speed | 60s Video Time | Cost per Video |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| c5.4xlarge | CPU (16 vCPU) | $0.68 | 0.5× realtime | 120 seconds | $0.023 |
-| g4dn.xlarge | GPU (T4) | $0.526 | 3-4× realtime | 15-20 seconds | $0.003 |
+| c5.4xlarge | CPU (16 vCPU) | $0.68 | 0.5x realtime | 120 seconds | $0.023 |
+| g4dn.xlarge | GPU (T4) | $0.526 | 3-4x realtime | 15-20 seconds | $0.003 |
 
 **Why GPUs win:**
 
@@ -636,10 +636,10 @@ Four quality variants cover the network spectrum:
 
 | Quality | Resolution | Bitrate | Target Network | Use Case |
 | :--- | :--- | :--- | :--- | :--- |
-| **1080p** | 1920×1080 | 5 Mbps | WiFi, 5G | Kira at home, full quality |
-| **720p** | 1280×720 | 2.5 Mbps | 4G LTE | Marcus on commute |
-| **480p** | 854×480 | 1 Mbps | 3G, congested 4G | Sarah in hospital basement |
-| **360p** | 640×360 | 500 Kbps | 2G, satellite | Rural India fallback |
+| **1080p** | 1920x1080 | 5 Mbps | WiFi, 5G | Kira at home, full quality |
+| **720p** | 1280x720 | 2.5 Mbps | 4G LTE | Marcus on commute |
+| **480p** | 854x480 | 1 Mbps | 3G, congested 4G | Sarah in hospital basement |
+| **360p** | 640x360 | 500 Kbps | 2G, satellite | Rural India fallback |
 
 **Encoding parameters (H.264 for compatibility):**
 
@@ -653,7 +653,7 @@ Four quality variants cover the network spectrum:
 
 **Why H.264 over H.265:**
 - H.265 offers 30-40% better compression
-- But: 50-100% longer encoding time with hardware NVENC, 2-3× with software, and limited older device support
+- But: 50-100% longer encoding time with hardware NVENC, 2-3x with software, and limited older device support
 - Decision: H.264 for uploads (broad compatibility), consider H.265 for high-traffic videos where bandwidth savings justify re-encoding
 
 ### Parallel Encoding Architecture
@@ -713,15 +713,15 @@ graph TD
 \end{aligned}
 {% end %}
 
-With 2.5× buffer for queue management, quota requests, and operational margin: **50 g4dn.xlarge instances** at peak capacity. Buffer derivation: 19 peak instances × 2.5 = 47.5 ≈ 50, where 2.5× accounts for queue smoothing (1.3×), AWS quota headroom (1.2×), and instance failure tolerance (1.6×) - multiplicative: 1.3 × 1.2 × 1.6 ≈ 2.5.
+With a 2.5x buffer for queue management, quota requests, and operational margin: **50 g4dn.xlarge instances** at peak capacity. Buffer derivation: 19 peak instances x 2.5 = 47.5, rounded to 50, where 2.5x accounts for queue smoothing (1.3x), AWS quota headroom (1.2x), and instance failure tolerance (1.6x) - multiplicative: 1.3 x 1.2 x 1.6 = approximately 2.5.
 
 ### GPU Instance Comparison
 
 | GPU | Instance | Hourly Cost | NVENC Sessions | Encoding Speed | Best For |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **NVIDIA T4** | g4dn.xlarge | $0.526 | Unlimited (1 NVENC chip, time-sliced) | 3-4× realtime | Cost-optimized batch |
-| **NVIDIA L4** | g6.xlarge | $0.80 | 3 (hardware) + unlimited (driver) | 4-5× realtime | Next-gen cost-optimized |
-| **NVIDIA A10G** | g5.xlarge | $1.006 | 7 | 4-5× realtime | High-throughput |
+| **NVIDIA T4** | g4dn.xlarge | $0.526 | Unlimited (1 NVENC chip, time-sliced) | 3-4x realtime | Cost-optimized batch |
+| **NVIDIA L4** | g6.xlarge | $0.80 | 3 (hardware) + unlimited (driver) | 4-5x realtime | Next-gen cost-optimized |
+| **NVIDIA A10G** | g5.xlarge | $1.006 | 7 | 4-5x realtime | High-throughput |
 
 **Decision: T4 (g4dn.xlarge)** - Best cost/performance ratio for encoding-only workloads. A10G justified only if combining with ML inference. Note: V100 (p3.2xlarge) is not suitable - it lacks an NVENC hardware video encoder and is designed for ML training/HPC, not video encoding.
 
@@ -737,7 +737,7 @@ With 2.5× buffer for queue management, quota requests, and operational margin: 
 
 GPU quotas - not encoding speed - kill creator experience.
 
-**Default quotas are 6-25× under-provisioned:** AWS gives 8 vCPUs/region by default, but you need 200 (50 instances) for Saturday peak. Request quota 2 weeks before launch, in multiple regions, with a fallback plan if denied.
+**Default quotas are 6-25x under-provisioned:** AWS gives 8 vCPUs/region by default, but you need 200 (50 instances) for Saturday peak. Request quota 2 weeks before launch, in multiple regions, with a fallback plan if denied.
 
 **Saturday peak math:** 30% of daily uploads (15K) arrive in 4 hours. Baseline capacity handles 2,200/hour. Queue grows at 1,550/hour, creating 6,200 video backlog and 2.8-hour wait times. Marcus uploads at 5:30 PM, sees "Processing in ~2 hours," and opens YouTube.
 
@@ -851,7 +851,7 @@ graph LR
 | **B: Lazy Pull** | $59K | 1.7% of views (origin fetches) | ~$51K loss* |
 | **C: Geo-Aware** | $8.6K | 0.3% of views (non-warmed regions) | ~$9K loss* |
 
-*Revenue loss derivation: Cold-start views × F(240ms) abandonment (0.24%) × $0.0573 ARPU × 365 days. Example for Option B: 60M × 1.7% × 0.24% × $0.0573 × 365 = $51K/year.*
+*Revenue loss derivation: Cold-start views x F(240ms) abandonment (0.24%) x $0.0573 ARPU x 365 days. Example for Option B: 60M x 1.7% x 0.24% x $0.0573 x 365 = $51K/year.*
 
 **Net benefit calculation (C vs A):**
 
@@ -863,7 +863,7 @@ graph LR
 \end{aligned}
 {% end %}
 
-**Decision:** Option C (Geo-Aware Selective Warming) - Pareto optimal at 98% of benefit for 1.5% of cost. Two-way door (reversible in 1 week). ROI: $558K net benefit ÷ $8.6K cost = **65× return**.
+**Decision:** Option C (Geo-Aware Selective Warming) - Pareto optimal at 98% of benefit for 1.5% of cost. Two-way door (reversible in 1 week). ROI: $558K net benefit divided by $8.6K cost = **65x return**.
 
 ### Implementation
 
@@ -899,7 +899,7 @@ Both extremes of cache warming fail at scale:
 
 **Lazy pull fails:** First-viewer latency penalty violates <300ms SLO. High-profile creators trigger simultaneous cache misses across 50+ PoPs, causing origin thundering herd.
 
-**Geo-aware wins:** New creators get origin + 2 nearest shields. Viral detection (10× views in 5 minutes) triggers global push. Time-zone awareness weights recent views higher.
+**Geo-aware wins:** New creators get origin + 2 nearest shields. Viral detection (10x views in 5 minutes) triggers global push. Time-zone awareness weights recent views higher.
 
 ---
 
@@ -944,10 +944,10 @@ Captions serve three purposes:
 
 | Option | Cost/Video | Daily Cost | vs Budget | Trade-off |
 | :--- | :--- | :--- | :--- | :--- |
-| **AWS Transcribe** | $0.024 | $1,200 | 4.8× over | Highest accuracy |
-| **Deepgram (Nova-2)** | $0.0043-$0.0125 | $215-$625 | 0.9-2.5× over | 2-3% lower accuracy; price varies by plan (pay-as-you-go vs growth tier) |
-| **Self-hosted Whisper** | $0.009 | $442 | 1.8× over | GPU fleet management |
-| **Deepgram + Sampling** | $0.006 | $300 | 1.2× over | Only transcribe 50% |
+| **AWS Transcribe** | $0.024 | $1,200 | 4.8x over | Highest accuracy |
+| **Deepgram (Nova-2)** | $0.0043-$0.0125 | $215-$625 | 0.9-2.5x over | 2-3% lower accuracy; price varies by plan (pay-as-you-go vs growth tier) |
+| **Self-hosted Whisper** | $0.009 | $442 | 1.8x over | GPU fleet management |
+| **Deepgram + Sampling** | $0.006 | $300 | 1.2x over | Only transcribe 50% |
 
 **Decision:** Deepgram for all videos. At growth-tier pricing ($0.0043/min), cost is $215/day - within budget. At pay-as-you-go pricing ($0.0125/min), cost is $625/day - negotiate volume pricing before launching at scale. The alternative (reducing caption coverage) violates accessibility requirements.
 
@@ -977,7 +977,14 @@ Self-hosted Whisper costs $442/day vs Deepgram's $625/day - a 29% savings. But:
 | 100K/day | $1,250/day | $884/day | $133K/year | Break-even (evaluate ops capacity) |
 | 200K/day | $2,500/day | $1,768/day | $267K/year | **Whisper** (savings justify complexity) |
 
-**Decision:** Deepgram at 50K/day. Two-way door (switch providers in 2 weeks). Revisit Whisper at 100K+ when ROI exceeds 3× threshold.
+**Decision:** Deepgram at 50K/day. Two-way door (switch providers in 2 weeks). Revisit Whisper at 100K+ when ROI exceeds 3x threshold.
+
+| Provider | Cost/min | P99 Latency | WER | Startup Cost |
+|----------|----------|-------------|-----|--------------|
+| Deepgram | $0.0125 | <5s | ~5% | None |
+| Whisper (self-hosted) | ~$0.004 | ~30s | ~6% | ~$15K |
+
+At 50,000 uploads/day at 10 minutes average: Deepgram costs approximately $187K/month versus Whisper at approximately $60K/month. Breakeven on the Whisper infrastructure investment at 3 months.
 
 ### Custom Vocabulary
 
@@ -1096,7 +1103,7 @@ graph LR
     end
 {% end %}
 
-Each view emits events (`start`, `progress` × 8, `complete`) carrying standard fields (`video_id`, `user_id`, `session_id`, `playback_position_ms`, device/network context). The architecturally significant field is `event_id` - a deterministic SHA-256 hash (not a random UUID) that ensures replayed QUIC 0-RTT packets ([Protocol Choice](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) produce identical keys, which are deduplicated server-side. Without this, the analytics pipeline would corrupt retention curves by double-counting replayed views. Full derivation in "Event Deduplication" below.
+Each view emits events (`start`, `progress` x 8, `complete`) carrying standard fields (`video_id`, `user_id`, `session_id`, `playback_position_ms`, device/network context). The architecturally significant field is `event_id` - a deterministic SHA-256 hash (not a random UUID) that ensures replayed QUIC 0-RTT packets ([Protocol Choice](/blog/microlearning-platform-part2-video-delivery/#0-rtt-security-trade-offs-performance-vs-safety)) produce identical keys, which are deduplicated server-side. Without this, the analytics pipeline would corrupt retention curves by double-counting replayed views. Full derivation in "Event Deduplication" below.
 
 **Event volume:**
 
@@ -1174,7 +1181,7 @@ sequenceDiagram
 **Why 600-second TTL:**
 - 0-RTT replay attacks must occur within the PSK (Pre-Shared Key) validity window
 - QUIC PSK typically valid for 7 days, but practical replay window is <10 minutes (network caching)
-- 600s provides 10× safety margin over realistic attack window
+- 600s provides 10x safety margin over realistic attack window
 
 **Linking to Protocol Layer:**
 
@@ -1200,7 +1207,7 @@ If dedup rate exceeds 0.1%, it indicates either a replay attack or a client bug 
 | **Batch (15-min)** | 15-30 minutes | $8K/month | Low |
 | **Stream (Flink)** | 10-30 seconds | $15K/month | High |
 
-**Why stream processing despite 3× cost:**
+**Why stream processing despite 3x cost:**
 
 The <30s latency requirement is non-negotiable for creator retention. Marcus iterates on content in a 4-hour Saturday window. Hourly batch means he sees analytics for Video 1 only after uploading Video 4.
 
@@ -1262,7 +1269,7 @@ n \approx \frac{16 \times p(1-p)}{(\text{MDE})^2} = \frac{16 \times 0.045 \times
 
 ### Engagement Heatmap
 
-Beyond retention curves, the pipeline tracks which segments get replayed. When a 5-second bucket shows replay rate >2× the video's baseline (typically 3-7% for educational content, so >6-14% triggers), it signals a segment where viewers are re-watching to follow along - usually a hands-on demonstration or formula entry.
+Beyond retention curves, the pipeline tracks which segments get replayed. When a 5-second bucket shows replay rate >2x the video's baseline (typically 3-7% for educational content, so >6-14% triggers), it signals a segment where viewers are re-watching to follow along - usually a hands-on demonstration or formula entry.
 
 Marcus can act on this: if a specific segment draws heavy replays, he can extract it as a standalone "Quick Tip" video, add a visual callout at that moment, or slow down the pacing in future tutorials covering similar material.
 
@@ -1273,9 +1280,9 @@ Marcus can act on this: if a specific segment draws heavy replays, he can extrac
 | **Views** | Unique video starts | <30s |
 | **Retention curve** | % viewers at each timestamp | <30s |
 | **Completion rate** | % viewers reaching 95% | <30s |
-| **Replay segments** | Timestamps with >2× avg replays | <30s |
+| **Replay segments** | Timestamps with >2x avg replays | <30s |
 | **A/B test results** | CTR/completion by variant | <30s |
-| **Estimated earnings** | Views × $0.75/1K | <30s |
+| **Estimated earnings** | Views x $0.75/1K | <30s |
 
 Stream processing costs $15K/month (Kafka $3K + Flink $8K + ClickHouse $4K), but delivers 6-second latency - well under the 30s requirement. The 30s budget provides margin for processing spikes. Batch processing would save $10K/month but deliver 15-minute latency, breaking Marcus's iteration workflow.
 
@@ -1385,30 +1392,24 @@ Building on the quota bottleneck discussed above, here are AWS-specific quotas b
 | us-west-2 | 8 vCPUs | 100 vCPUs (backup region) | 3-5 business days |
 | eu-west-1 | 8 vCPUs | 50 vCPUs (EU creators) | 5-7 business days |
 
-Apply the mitigation strategy from the architectural section: request 2 weeks before launch, request 2× expected need, and have fallback regions approved.
+Apply the mitigation strategy from the architectural section: request 2 weeks before launch, request 2x expected need, and have fallback regions approved.
 
 ### Graceful Degradation
 
 When GPU quota is exhausted (queue depth >1,000):
 
-**Option A: CPU Fallback (GDPR-safe)**
+| Option | Queue trigger | Creator impact | GDPR safe | Monthly cost |
+|--------|---------------|----------------|-----------|--------------|
+| CPU fallback encoding | >80% CPU | +2-4 min delay | Yes | No additional |
+| Rate limiting | >500 uploads/hr | Queue position shown | Yes | No additional |
+| Multi-region same-jurisdiction | Cross-AZ latency >50ms | None | Yes | +$8K |
+| Region-pinned pools | GDPR Article 44 applies | None | Yes | +$12K |
 
-| Mode | Encoding Time | User Message |
-| :--- | :--- | :--- |
-| GPU (normal) | 18s | "Processing..." |
-| CPU (fallback) | 120s | "High demand - ready in ~10 minutes" |
-
-**Implementation:** Route jobs to c5.4xlarge fleet *in the same region* when queue exceeds threshold. CPU fallback is always same-region, making it GDPR-compliant by default - no cross-border data transfer occurs. This matters: when GPU quota is exhausted, the fallback order should be CPU (same-region, GDPR-safe, 120s) before same-jurisdiction overflow (e.g., eu-west-1 → eu-central-1, GDPR-safe, ~20s).
-
-**Option B: Rate Limiting**
-
-Prioritize by creator tier:
-1. Premium creators (paid subscription): GPU queue
-2. Top creators (>10K followers): GPU queue
-3. New creators: CPU queue during peak
-4. Notification: "Video processing may take longer due to high demand"
+CPU fallback and rate limiting cost nothing incremental but degrade creator experience — CPU fallback pushes encoding to 120s (beyond the \\(k_c = 4.5\\) cliff's safe zone), while rate limiting introduces visible queuing. Both are zero-cost stopgaps, not sustainable solutions. Same-jurisdiction overflow (+$8K/month) preserves the <30s SLO without GDPR exposure. Region-pinned pools (+$12K/month) eliminate the failure mode entirely by pre-provisioning capacity per data residency zone, making overflow within a jurisdiction unnecessary. The fallback priority order is: rate limiting (immediate, zero cost) then CPU fallback (same-region, GDPR-safe, 120s) then same-jurisdiction GPU overflow (GDPR-safe, ~20s). Cross-jurisdiction routing is not a fallback option — it is a one-way door.
 
 **Option C: Multi-Region Encoding**
+
+Multi-region encoding with cross-jurisdiction overflow is reclassified from a two-way to a one-way door by GDPR Article 44 — see the Ingress Latency Penalty section below for the $13.4M exposure analysis.
 
 If us-east-1 queue >500, route overflow to us-west-2:
 
@@ -1430,7 +1431,7 @@ graph TD
 
 **This diagram is incomplete.** It omits the critical constraint: GDPR data residency. Routing an EU creator's upload to a US GPU instance constitutes cross-border data transfer under GDPR Article 44. The following analysis quantifies the latency penalty and reclassifies multi-region encoding from a two-way door to a one-way door.
 
-#### Ingress Latency Penalty: EU Creator → US GPU
+#### Ingress Latency Penalty: EU Creator to US GPU
 
 When eu-west-1 quota is exhausted and Marcus (Frankfurt) is routed to us-east-1:
 
@@ -1446,14 +1447,14 @@ The 50 Mbps cross-Atlantic estimate is conservative - it reflects S3 Transfer Ac
 
 **Full pipeline comparison:**
 
-| Stage | Same-Region | Cross-Region (EU→US) | Delta |
+| Stage | Same-Region | Cross-Region (EU to US) | Delta |
 | :--- | ---: | ---: | ---: |
 | S3 upload | 1.4s | 13.9s | +12.5s |
 | GPU encoding | 18.0s | 18.0s | 0s |
 | S3 replication back to EU | 0s | 8.0s | +8.0s |
 | **Total pipeline** | **19.4s** | **39.9s** | **+20.5s** |
 
-Cross-region encoding is **2.1× slower** - the GPU doesn't care where the bits came from, but network physics adds 20.5 seconds of overhead.
+Cross-region encoding is **2.1x slower** - the GPU doesn't care where the bits came from, but network physics adds 20.5 seconds of overhead.
 
 #### Creator Patience Threshold Violation
 
@@ -1467,7 +1468,7 @@ F_c(60\text{s}) &= 1 - \exp\left[-\left(\frac{60}{90}\right)^{4.5}\right] = 0.14
 \end{aligned}
 {% end %}
 
-Cross-region routing doesn't hit the \\(k_c = 4.5\\) cliff (that's at ~90-120s), but it exits the safe zone. At 39.9s, creator abandonment is **25× higher** than same-region (2.5% vs 0.1%). And this is the *best case* - any additional delay from network congestion, S3 throttling, or replication backlog pushes toward 60s where \\(F_c = 14.9\\%\\).
+Cross-region routing doesn't hit the \\(k_c = 4.5\\) cliff (that's at ~90-120s), but it exits the safe zone. At 39.9s, creator abandonment is **25x higher** than same-region (2.5% vs 0.1%). And this is the *best case* - any additional delay from network congestion, S3 throttling, or replication backlog pushes toward 60s where \\(F_c = 14.9\\%\\).
 
 The 30s creator patience threshold from the Upload Architecture section maps directly:
 
@@ -1503,9 +1504,9 @@ Cross-region GPU routing for EU creators creates a direct conflict with both pri
 \end{aligned}
 {% end %}
 
-No engineering optimization justifies 1,710× regulatory risk. The cross-region overflow path is a regulatory one-way door disguised as an operational two-way door.
+No engineering optimization justifies 1,710x regulatory risk. The cross-region overflow path is a regulatory one-way door disguised as an operational two-way door.
 
-#### Reclassification: Two-Way Door → One-Way Door
+#### Reclassification: Two-Way Door to One-Way Door
 
 The blast radius comparison table below currently classifies multi-region encoding as:
 
@@ -1625,11 +1626,13 @@ The previous sections detailed what to build. This section answers whether you c
 - Creator pipeline: $0.0129/DAU (6.5% of total budget)
 - Remaining for CDN, compute, ML, etc.: $0.187/DAU
 
-**Constraint Tax Check (Check #1 Economics):** This \\(\\$0.46\\)M/year pipeline cost is the second component of the series' cumulative Constraint Tax (\\(\\$2.90\\)M dual-stack from [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) + \\(\\$0.46\\)M pipeline = \\(\\$3.36\\)M/year). At 10% operating margin, the Constraint Tax requires **1.61M DAU to break even** and **4.82M DAU to clear the 3× threshold** - validating the series' 3M DAU baseline as approaching the minimum scale for these recommendations. See [Latency Kills Demand: Constraint Tax Breakeven](/blog/microlearning-platform-part1-foundation/) for the full derivation and sensitivity analysis. Platforms below 1.6M DAU cannot afford this pipeline - use CPU encoding and batch analytics instead.
+**Constraint Tax Check (Check #1 Economics):** This \\(\\$0.46\\)M/year pipeline cost is the second component of the series' cumulative Constraint Tax (\\(\\$2.90\\)M dual-stack from [Protocol Choice](/blog/microlearning-platform-part2-video-delivery/) + \\(\\$0.46\\)M pipeline = \\(\\$3.36\\)M/year). At 10% operating margin, the Constraint Tax requires **1.61M DAU to break even** and **4.82M DAU to clear the 3x threshold** - validating the series' 3M DAU baseline as approaching the minimum scale for these recommendations. See [Latency Kills Demand: Constraint Tax Breakeven](/blog/microlearning-platform-part1-foundation/) for the full derivation and sensitivity analysis. Platforms below 1.6M DAU cannot afford this pipeline - use CPU encoding and batch analytics instead.
+
+**Cumulative Constraint Tax at 3M DAU:** Protocol migration $2.90M/year + Creator pipeline $0.46M/year = $3.36M/year total. Breakeven: 1.61M DAU. 3x ROI threshold: 4.82M DAU. See Part 1 for full derivation.
 
 ### ROI Threshold Validation (Law 4)
 
-Using the Universal Revenue Formula (Law 1) and 3× ROI threshold (Law 4):
+Using the Universal Revenue Formula (Law 1) and 3x ROI threshold (Law 4):
 
 {% katex(block=true) %}
 \text{ROI} = \frac{\Delta R_{\text{annual}}}{C_{\text{annual}}} = \frac{\text{Creator Churn Prevented} \times \text{Content Multiplier} \times \text{ARPU}}{\text{Pipeline Cost}} \geq 3.0
@@ -1637,11 +1640,11 @@ Using the Universal Revenue Formula (Law 1) and 3× ROI threshold (Law 4):
 
 | Scale | Creators | 5% Churn Loss | Revenue Protected | Pipeline Cost | ROI | Threshold |
 | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
-| **3M DAU** | 30,000 | 1,500 | $859K/year | $464K/year | **1.9×** | Below 3× |
-| **10M DAU** | 100,000 | 5,000 | $2.87M/year | $1.26M/year | **2.3×** | Below 3× |
-| **50M DAU** | 500,000 | 25,000 | $14.3M/year | $5.04M/year | **2.8×** | Below 3× |
+| **3M DAU** | 30,000 | 1,500 | $859K/year | $464K/year | **1.9x** | Below 3x |
+| **10M DAU** | 100,000 | 5,000 | $2.87M/year | $1.26M/year | **2.3x** | Below 3x |
+| **50M DAU** | 500,000 | 25,000 | $14.3M/year | $5.04M/year | **2.8x** | Below 3x |
 
-Creator pipeline ROI never exceeds 3× threshold at any scale analyzed.
+Creator pipeline ROI never exceeds 3x threshold at any scale analyzed.
 
 **Why This Differs from Strategic Headroom:**
 
@@ -1649,16 +1652,16 @@ The [Strategic Headroom framework](/blog/microlearning-platform-part1-foundation
 
 | Criterion | Protocol Migration | Creator Pipeline | Assessment |
 | :--- | :--- | :--- | :--- |
-| ROI @3M DAU | 0.60× | 1.9× | Both below threshold |
-| ROI @10M DAU | 2.0× | 2.3× | Protocol scales; Pipeline doesn't |
-| Scale factor | 3.3× | 1.2× | **Pipeline costs scale with creators** |
+| ROI @3M DAU | 0.60x | 1.9x | Both below threshold |
+| ROI @10M DAU | 2.0x | 2.3x | Protocol scales; Pipeline doesn't |
+| Scale factor | 3.3x | 1.2x | **Pipeline costs scale with creators** |
 | Cost structure | Fixed ($2.90M) | Variable ($0.0129/DAU) | Near-linear scaling (fixed analytics amortize slightly) |
 
-Creator Pipeline ROI scales only 1.2× (1.9× → 2.3×) because **both revenue and costs scale linearly with creator count**. More creators = more encoding = more costs. The fixed-cost leverage that enables Strategic Headroom doesn't apply.
+Creator Pipeline ROI scales only 1.2x (from 1.9x to 2.3x) because **both revenue and costs scale linearly with creator count**. More creators = more encoding = more costs. The fixed-cost leverage that enables Strategic Headroom doesn't apply.
 
 **Existence Constraint Classification:**
 
-Creator Pipeline requires a different justification: **Existence Constraints**. The 3× ROI threshold (Law 4) assumes the platform continues to exist whether or not the optimization is made. For creator infrastructure, that assumption fails.
+Creator Pipeline requires a different justification: **Existence Constraints**. The 3x ROI threshold (Law 4) assumes the platform continues to exist whether or not the optimization is made. For creator infrastructure, that assumption fails.
 
 **System-Dependency Graph:**
 
@@ -1694,19 +1697,19 @@ Below \\(C_{\min}\\), no optimization matters. Latency improvements, protocol mi
 
 **Why this renders Law 4 secondary:**
 
-Law 4 asks: "Does this investment return 3× its cost?" That question presupposes the platform survives either way. For creator infrastructure, the counterfactual isn't "platform with slower encoding" - it's "platform with insufficient content → viewer churn → revenue collapse → platform death." The ROI framework compares two operating states. An existence constraint compares an operating state to a non-operating state.
+Law 4 asks: "Does this investment return 3x its cost?" That question presupposes the platform survives either way. For creator infrastructure, the counterfactual isn't "platform with slower encoding" - it's "platform with insufficient content leading to viewer churn, then revenue collapse, then platform death." The ROI framework compares two operating states. An existence constraint compares an operating state to a non-operating state.
 
 | Framework | Assumes | Applies When | Creator Pipeline |
 | :--- | :--- | :--- | :--- |
-| **Law 4 (3× ROI)** | Platform survives either way | Optimizations within a viable system | ❌ Fails: 1.9× at 3M DAU |
-| **Strategic Headroom** | ROI scales super-linearly | Fixed costs, scaling revenue | ❌ Fails: costs scale linearly with creators |
-| **Existence Constraint** | Platform dies without investment | Supply-side minimum viable threshold | ✅ Applies: no creators = no platform |
+| **Law 4 (3x ROI)** | Platform survives either way | Optimizations within a viable system | Fails: 1.9x at 3M DAU |
+| **Strategic Headroom** | ROI scales super-linearly | Fixed costs, scaling revenue | Fails: costs scale linearly with creators |
+| **Existence Constraint** | Platform dies without investment | Supply-side minimum viable threshold | Applies: no creators = no platform |
 
 **The distinction matters:**
 - **Strategic Headroom** (Protocol): Sub-threshold ROI justified by super-linear scaling at achievable scale
 - **Existence Constraint** (Creator Pipeline): Sub-threshold ROI justified because the counterfactual is platform non-existence
 
-**Decision:** Proceed with creator pipeline despite sub-3× ROI. Existence constraints supersede optimization thresholds. This is NOT Strategic Headroom - it's a stricter exception where the ROI denominator (cost) is finite but the penalty for not investing is unbounded.
+**Decision:** Proceed with creator pipeline despite sub-3x ROI. Existence constraints supersede optimization thresholds. This is NOT Strategic Headroom - it's a stricter exception where the ROI denominator (cost) is finite but the penalty for not investing is unbounded.
 
 **But existence constraints are dangerous.** Any team can claim their project is "existential." Without falsification criteria, the existence constraint becomes a blank check for inefficient engineering spend. The next section defines what evidence would disprove the claim.
 
@@ -1733,10 +1736,12 @@ graph LR
 | :--- | :--- | :--- | :--- | :--- |
 | F1 | Correlation between encoding speed and creator 90-day retention | \\(r < 0.10\\) (encoding) while \\(r > 0.50\\) (monetization) | Creator cohort analysis: retention ~ encoding_p95 + revenue_per_1K + audience_size | Encoding is hygiene, not driver. Invest in creator monetization instead. |
 | F2 | Within-creator encoding speed variation vs churn | \\(\hat{\beta}_{\text{encoding}} < 0.05\\) in fixed-effects logistic regression | Panel data: same creator experiences different encoding times across uploads | No causal effect. Encoding correlation is confounded by platform quality perception. |
-| F3 | Natural experiment: encoding queue spike (>120s) with no creator churn increase | Churn rate during spike ≤ 1.1× baseline | Queue spike incident data (planned maintenance, GPU quota exhaustion) | Creators tolerate encoding delays. The \\(k_c = 4.5\\) cliff model is wrong. |
+| F3 | Natural experiment: encoding queue spike (>120s) with no creator churn increase | Churn rate during spike at most 1.1x baseline | Queue spike incident data (planned maintenance, GPU quota exhaustion) | Creators tolerate encoding delays. The \\(k_c = 4.5\\) cliff model is wrong. |
 | F4 | Creator exit survey: encoding speed ranked below top-3 churn reasons | <10% cite encoding speed | Structured exit surveys (n>200, forced-rank of 8+ factors) | Other factors dominate. Encoding investment has lower priority. |
 | F5 | Platform comparison: competitors with slower encoding retain creators equally | No significant retention difference (p>0.05) | Cross-platform creator cohort (creators active on multiple platforms) | Encoding speed is not a competitive differentiator at current quality levels. |
 | F6 | Content catalog below \\(C_{\min}\\) but platform survives via licensed/curated content | Platform retains >50% of DAU with <1,000 active creators | Historical data or A/B test with content substitution | Creator supply is substitutable. Existence constraint doesn't apply. |
+
+**Pre-Investment Pilot (2 weeks, 100 creators):** Before committing $464K/year, measure F2 (within-creator encoding time versus 90-day churn). If Pearson r < 0.15, the encoding-to-retention causal claim is not supported; invest in creator revenue share improvements instead. This 2-week pilot costs approximately $8K in engineering time — cheap insurance against a $464K/year commitment.
 
 **What "falsified" means operationally:**
 
@@ -1761,16 +1766,16 @@ If F1 shows \\(r > 0.30\\) for encoding speed AND F2 shows \\(\hat{\beta}_{\text
 
 ### Cost Derivations
 
-**GPU encoding:** 50K videos × 18s = 250 GPU-hours/day × $0.526/hr + 10% overhead = **$146/day** (11% of pipeline)
+**GPU encoding:** 50K videos x 18s = 250 GPU-hours/day x $0.526/hr + 10% overhead = **$146/day** (11% of pipeline)
 
-**ASR captions:** 50K videos × 1 min × $0.0125/min = **$625/day** (48% of pipeline - the dominant cost)
+**ASR captions:** 50K videos x 1 min x $0.0125/min = **$625/day** (48% of pipeline - the dominant cost)
 
 ### Sensitivity Analysis
 
 | Scenario | Variable | Pipeline Cost | Impact |
 | :--- | :--- | :--- | :--- |
 | **Baseline** | 50K uploads, Deepgram | $38.6K/month | - |
-| **Upload 2×** | 100K uploads | $67.4K/month | +75% |
+| **Upload 2x** | 100K uploads | $67.4K/month | +75% |
 | **ASR +20%** | Deepgram price increase | $42.4K/month | +10% |
 | **GPU +50%** | Instance price increase | $40.8K/month | +6% |
 | **Self-hosted Whisper** | At 100K uploads | $52.1K/month | +35% (but scales better) |
@@ -1803,7 +1808,7 @@ Consider this scenario: A 200K DAU platform invests $38K/month in GPU encoding i
 | Decision Stage | Local Optimum (Engineering) | Global Impact (Platform) | Constraint Analysis |
 | :--- | :--- | :--- | :--- |
 | Initial state | 2-minute encoding queue, 8% creator churn | 2,000 creators, $0.75/1K view payout | Unknown root cause |
-| Infrastructure investment | Encoding → 30s (93% improvement) | Creator churn unchanged at 8% | Metric: Encoding optimized |
+| Infrastructure investment | Encoding reduced to 30s (93% improvement) | Creator churn unchanged at 8% | Metric: Encoding optimized |
 | Cost increases | Pipeline added: $38.6K/month (+$464K/year) | Burn rate increases, runway shrinks | Wrong constraint optimized |
 | Reality check | Creators leave for TikTok's $0.02-0.04 CPM | Should have improved revenue share | Encoding wasn't the constraint |
 | Terminal state | Fast encoding, no creators left | Platform dies with excellent infrastructure | Local optimum, wrong problem |
@@ -1823,8 +1828,8 @@ Six scenarios where the math says "optimize" but reality says "wait":
 | Scenario | Signal | Why Defer | Action |
 | :--- | :--- | :--- | :--- |
 | **Demand unsolved** | p95 >400ms, no protocol migration | Users abandon before seeing content | Fix latency first |
-| **Churn not measured** | No upload→retention attribution | May churn for other reasons | Instrument funnel, prove causality |
-| **Volume <500K DAU** | <5K creators, <10K uploads/day | ROI = 0.4× (fails threshold) | Use CPU encoding for PMF |
+| **Churn not measured** | No upload-to-retention attribution | May churn for other reasons | Instrument funnel, prove causality |
+| **Volume <500K DAU** | <5K creators, <10K uploads/day | ROI = 0.4x (fails threshold) | Use CPU encoding for PMF |
 | **GPU quota not secured** | Launch <2 weeks, no request | Default 8 instances = 2.8hr queue | Submit immediately, have CPU fallback |
 | **Caption budget rejected** | Finance denies $625/day | WCAG non-negotiable (>$100K lawsuits) | Escalate as compliance |
 | **Analytics team unavailable** | No Kafka/Flink expertise | Real-time requires specialists | Use batch ($5K/mo, 30-60min latency) |
@@ -1839,7 +1844,7 @@ Creator pipeline is the THIRD constraint. Solving supply before demand is capita
 | :--- | :--- | ---: | :--- | :--- |
 | **GPU instance type (T4 vs A10G)** | Two-way | $50K | 1 week | Ship & iterate |
 | **ASR provider (Deepgram vs Whisper)** | Two-way | $180K | 2 weeks | A/B test first |
-| **Analytics architecture (Batch vs Stream)** | One-way | **$859K** | 6 months | 100× rigor |
+| **Analytics architecture (Batch vs Stream)** | One-way | **$859K** | 6 months | 100x rigor |
 | **Multi-region encoding** (same-jurisdiction) | Two-way | $429K | 3 months | Ship & iterate |
 | **Multi-region encoding** (cross-jurisdiction/GDPR) | **One-way** | **$13.4M** | 12-18 months | **Cross-functional / ARB + Legal** |
 
@@ -1847,10 +1852,10 @@ Creator pipeline is the THIRD constraint. Solving supply before demand is capita
 
 | Decision | Calculation | Result |
 | :--- | :--- | ---: |
-| GPU instance type | $50K/year delta × 1 week recovery ≈ $1K actual, rounded to annual delta | $50K |
-| ASR provider | $180K/year delta × 2 weeks recovery ≈ $7K actual, rounded to annual delta | $180K |
-| Analytics architecture | 30K creators × $573 LTV × 0.10 P(wrong) × 0.5 years | **$859K** |
-| Multi-region encoding (operational only) | 30K creators × $573 LTV × 0.10 P(wrong) × 0.25 years | **$429K** |
+| GPU instance type | $50K/year delta x 1 week recovery (approximately $1K actual, rounded to annual delta) | $50K |
+| ASR provider | $180K/year delta x 2 weeks recovery (approximately $7K actual, rounded to annual delta) | $180K |
+| Analytics architecture | 30K creators x $573 LTV x 0.10 P(wrong) x 0.5 years | **$859K** |
+| Multi-region encoding (operational only) | 30K creators x $573 LTV x 0.10 P(wrong) x 0.25 years | **$429K** |
 | Multi-region encoding (GDPR-constrained) | $429K operational + $13M GDPR fine exposure | **$13.4M** |
 
 **Architecture Decision Priority (blast radius comparison across series):**
@@ -1865,7 +1870,7 @@ Creator pipeline is the THIRD constraint. Solving supply before demand is capita
 | ASR Provider | $0.18M | 2 weeks | This document | Tech Lead |
 | GPU Instance Type | $0.05M | 1 week | This document | Engineer |
 
-Protocol Migration blast radius ($18.82M) exceeds Analytics Architecture ($0.86M) by **21.9×**. But Multi-region Encoding *with GDPR exposure* ($13.4M) is now the second-highest blast radius in the series - elevated from the second-lowest. This reclassification is why the "Ingress Latency Penalty" analysis in the Graceful Degradation section above replaces naive cross-region overflow with region-pinned GPU pools. The operational blast radius ($0.43M for same-jurisdiction overflow) remains a two-way door; only cross-jurisdiction routing triggers the one-way door classification.
+Protocol Migration blast radius ($18.82M) exceeds Analytics Architecture ($0.86M) by **21.9x**. But Multi-region Encoding *with GDPR exposure* ($13.4M) is now the second-highest blast radius in the series - elevated from the second-lowest. This reclassification is why the "Ingress Latency Penalty" analysis in the Graceful Degradation section above replaces naive cross-region overflow with region-pinned GPU pools. The operational blast radius ($0.43M for same-jurisdiction overflow) remains a two-way door; only cross-jurisdiction routing triggers the one-way door classification.
 
 **Blast Radius Formula:**
 
@@ -1885,7 +1890,7 @@ For creator pipeline decisions, we substitute the creator-specific LTV derived f
 \end{aligned}
 {% end %}
 
-> **Assumption note:** This uses daily ARPU ($0.0573) per view, which implicitly assumes each view represents a unique daily engagement that wouldn't have occurred without this creator's content. This is an upper bound - if users would have watched other content instead, the per-view impact is lower ($0.0573/20 ≈ $0.003 per view, since each DAU watches ~20 videos). The true value depends on content substitutability. For niche educational content with few alternatives, the upper bound is more appropriate; for commoditized topics, divide by 5-10×.
+> **Assumption note:** This uses daily ARPU ($0.0573) per view, which implicitly assumes each view represents a unique daily engagement that wouldn't have occurred without this creator's content. This is an upper bound - if users would have watched other content instead, the per-view impact is lower ($0.0573/20, approximately $0.003 per view, since each DAU watches approximately 20 videos). The true value depends on content substitutability. For niche educational content with few alternatives, the upper bound is more appropriate; for commoditized topics, divide by 5-10x.
 
 **Example: Analytics Architecture Decision at 3M DAU**
 
@@ -1908,15 +1913,15 @@ R_{\text{blast}} &= \text{Creators} \times \text{Creator LTV} \times P(\text{bat
 | Component | Value | Derivation |
 | :--- | :--- | :--- |
 | Batch annual savings | $120K/year | $10K/month (stream $15K - batch $5K) |
-| Savings during T_recovery | $60K | $120K × 0.5 years |
-| Creator LTV (annual) | $573/creator | 10K views × $0.0573 ARPU |
+| Savings during T_recovery | $60K | $120K x 0.5 years |
+| Creator LTV (annual) | $573/creator | 10K views x $0.0573 ARPU |
 | P(batch wrong) | 10% | Estimated: creator workflow dependency on real-time feedback |
 | T_recovery | 6 months | Migration from batch to stream architecture |
 | Total creators at risk | 30,000 | 1% of 3M DAU |
-| **Blast radius** | **$859K** | 30K × $573 × 0.10 × 0.5 |
-| **Downside leverage** | **14.3×** | $859K blast / $60K saved during recovery |
+| **Blast radius** | **$859K** | 30K x $573 x 0.10 x 0.5 |
+| **Downside leverage** | **14.3x** | $859K blast / $60K saved during recovery |
 
-The 14.3× downside leverage means: for every $1 saved by choosing batch, you risk $14.30 if batch turns out to be wrong. This asymmetry demands the 100× analysis rigor applied to one-way doors. The $120K/year savings only justifies batch if P(batch wrong) < 7% ($60K ÷ $859K), which requires high confidence that creators do not need real-time feedback.
+The 14.3x downside leverage means: for every $1 saved by choosing batch, you risk $14.30 if batch turns out to be wrong. This asymmetry demands the 100x analysis rigor applied to one-way doors. The $120K/year savings only justifies batch if P(batch wrong) < 7% ($60K ÷ $859K), which requires high confidence that creators do not need real-time feedback.
 
 **Check Impact Matrix (from [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/#one-way-doors-platform-death-checks-the-systems-interaction)):**
 
@@ -1954,7 +1959,7 @@ Marcus uploads at 2:10:00 PM. At 2:10:28 PM, his video is live with captions, ca
 | **Median encoding time** | 20s | 18s encode + 2s overhead |
 | **P95 encoding time** | 28s | Queue wait during normal load |
 | **P99 encoding time** | 45s | Saturday peak queue backlog |
-| **Creator retention protected** | $859K/year @3M DAU | 1,500 creators × 10K views × $0.0573 |
+| **Creator retention protected** | $859K/year @3M DAU | 1,500 creators x 10K views x $0.0573 |
 | **Pipeline cost** | $0.0129/DAU | $38.6K/month ÷ 3M DAU |
 
 ### Uncertainty Quantification
@@ -1962,9 +1967,9 @@ Marcus uploads at 2:10:00 PM. At 2:10:28 PM, his video is live with captions, ca
 **Point estimate:** $859K/year @3M DAU (conservative, using 1% active uploaders)
 
 **Uncertainty bounds (95% confidence):** Using variance decomposition:
-- Creator churn rate: 5% ± 2% (measurement uncertainty)
-- Content multiplier: 10K ± 3K views (engagement variance)
-- ARPU: $0.0573 ± $0.005 (Duolingo actual, market variance)
+- Creator churn rate: 5% plus or minus 2% (measurement uncertainty)
+- Content multiplier: 10K plus or minus 3K views (engagement variance)
+- ARPU: $0.0573 plus or minus $0.005 (Duolingo actual, market variance)
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -1975,7 +1980,7 @@ Marcus uploads at 2:10:00 PM. At 2:10:28 PM, his video is live with captions, ca
 \end{aligned}
 {% end %}
 
-**95% Confidence Interval:** $859K ± 1.96 × $436K = **[$0K, $1.71M]**
+**95% Confidence Interval:** $859K plus or minus 1.96 x $436K = **[$0K, $1.71M]**
 
 The wide confidence interval reflects high uncertainty in creator churn attribution. The lower bound of $0 indicates that if creator churn is due to factors OTHER than encoding latency (monetization, audience, competition), the intervention has zero value.
 
@@ -1984,7 +1989,7 @@ The wide confidence interval reflects high uncertainty in creator churn attribut
 - **[C2] Demand-side latency solved** - viewer p95 <300ms, otherwise creators churn due to viewer abandonment
 - **[C3] Content quality sufficient** - bad content encoded fast is still bad content
 
-**Falsified if:** A/B test (fast encoding vs slow encoding) shows creator retention delta <$423K/year (below 1σ threshold: $859K - $436K).
+**Falsified if:** A/B test (fast encoding vs slow encoding) shows creator retention delta <$423K/year (below 1 standard deviation threshold: $859K - $436K).
 
 ### The Supply Side Is Flowing
 

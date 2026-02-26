@@ -13,88 +13,73 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 3
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Tactical edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures—systems that self-measure, self-heal, and self-optimize when human operators cannot intervene."""
+series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures—systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base) and commercial deployments (AUTOHAULER mining fleet, GRIDEDGE power distribution, HYPERSCALE data centers, SMARTBLDG building automation), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity."""
 +++
 
 ---
 
 ## Prerequisites
 
-This article builds on the self-measurement foundation:
+Two prior results converge here, each answering half of the question this article completes.
 
-- **[Contested Connectivity](@/blog/2026-01-15/index.md)**: The connectivity regimes (connected, degraded, denied, adversarial) define when self-healing must operate autonomously. The capability hierarchy (L0-L4) defines what healing must preserve.
-- **[Self-Measurement](@/blog/2026-01-22/index.md)**: Anomaly detection and distributed health inference provide the inputs to healing decisions. The observability constraint sequence (P0-P4) defines what we know about system state.
+From [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md): the {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regimes{% end %} define *when* the system must heal without human oversight. During Intermittent and Denied regimes, there is no operator to call. The capability hierarchy (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) defines *what* healing must preserve — at minimum, the survival capability \\(\mathcal{L}_0\\) must be maintained through any failure sequence. An edge system that loses basic function during self-repair has failed at its primary design goal.
 
-The measurement-action loop closes here: we measure system health in order to act on it. Self-measurement without self-action is mere logging. Self-action without self-measurement is blind intervention. The autonomic system requires both.
+From [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md): anomaly detection produces a confidence estimate \\(c \in [0,1]\\) for every observed deviation from nominal behavior. The optimal detection threshold \\(\theta^*\\) calibrates the trade-off between false positives (acting on noise) and missed detections (ignoring real failures). The observability constraint sequence established which health signals remain available as resources shrink.
 
-This part develops the engineering principles for the action side: how systems repair themselves when they cannot escalate to human operators, when the network is partitioned, when there is no time to wait for instructions.
+The logical connection is direct. The self-measurement article answered: *what is the system's current state, and how confident are we?* This article answers: *what should the system do about it?*
 
----
-
-## Theoretical Contributions
-
-This article develops the theoretical foundations for autonomous self-healing in distributed systems under connectivity constraints. We make the following contributions:
-
-1. **Edge-Adapted MAPE-K Framework**: We extend the autonomic computing control loop for edge environments, deriving stability conditions for closed-loop healing with delayed feedback and incomplete observation.
-
-2. **Confidence-Based Healing Triggers**: We formalize the decision-theoretic framework for healing under uncertainty, deriving optimal confidence thresholds as a function of asymmetric error costs and action reversibility.
-
-3. **Dependency-Aware Recovery Ordering**: We model recovery sequencing as constrained optimization over dependency graphs, providing polynomial-time algorithms for DAG structures and approximations for cyclic dependencies.
-
-4. **Cascade Prevention Theory**: We analyze resource contention during healing and derive bounds on healing resource quotas that prevent cascade failures while maximizing recovery throughput.
-
-5. **Minimum Viable System Characterization**: We formalize MVS as a set cover optimization problem and derive greedy approximation algorithms for identifying critical component subsets.
-
-These contributions connect to and extend prior work on autonomic computing (Kephart & Chess, 2003), control-theoretic stability (Astrom & Murray, 2008), and Markov decision processes (Puterman, 1994), adapting these frameworks for contested edge deployments where human oversight is unavailable.
+The confidence threshold that gates healing actions — act when \\(c > \theta^*(a)\\) — depends on the cost asymmetry between wrong action types. High-severity actions (restarting a fusion node, isolating a cluster) require high confidence before execution. Low-severity actions (increasing gossip rate, clearing a cache) can proceed at lower confidence because reverting them is cheap. This article derives those thresholds formally and establishes the stability conditions under which closed-loop healing converges rather than oscillates.
 
 ---
 
-## Opening Narrative: RAVEN Drone Down
+## Overview
 
-The RAVEN swarm of 47 drones is executing surveillance 15km from base, 40% coverage complete.
+Self-healing enables autonomous systems to recover from failures without human intervention. Each concept integrates theory with design consequence:
 
-Drone 23 broadcasts: battery critical (3.21V vs 3.40V threshold), 8 minutes flight time, confidence 0.94. The [self-measurement system](@/blog/2026-01-22/index.md) detected the anomaly correctly—lithium cell imbalance from high-current maneuvers.
+| Concept | Formal Contribution | Design Consequence |
+| :--- | :--- | :--- |
+| **MAPE-K Control** | Stability: \\(K \cdot \tau < \pi/2\\) | Reduce controller gain when feedback delayed |
+| **Healing Triggers** | \\(\theta^*(a) = C_{FP}/(C_{FP} + C_{FN} + V_{\text{heal}})\\) | Match threshold to action severity |
+| **Recovery Ordering** | Topological sort on dependency DAG | Heal foundations before dependents |
+| **Cascade Prevention** | Resource quota \\(Q_{\text{heal}} < Q_{\text{total}} - Q_{\text{min}}\\) | Reserve capacity for mission function |
+| **MVS** | Greedy \\(O(\ln n)\\)-approximation | Prioritize minimum viable components |
 
-Operations center unreachable. Connectivity at \\(C(t) < 0.1\\) for 23 minutes. The swarm cannot request guidance.
+This extends autonomic computing (Kephart & Chess, 2003) and control theory (Astrom & Murray, 2008) for contested edge deployments.
 
-The decision space:
+---
 
-**Option A: Continue mission, lose drone 23**
-- Drone 23 continues until battery exhausted
-- Crash in contested terrain (potential data/asset compromise)
-- Swarm loses 1/47 of coverage capacity
-- Expected mission completion: 92%
+## Opening Narrative: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} Drone Down
 
-**Option B: Drone 23 returns to base**
-- Drone 23 departs immediately
-- Neighbors expand sectors to cover gap
-- Reduced sensor density on eastern edge
-- Expected mission completion: 97%
+The {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm of 47 drones is executing surveillance 15km from base, 40% coverage complete. Drone 23 broadcasts: battery critical (3.21V vs 3.40V threshold), 8 minutes flight time, confidence 0.94. The [self-measurement system](@/blog/2026-01-22/index.md) detected the anomaly correctly—lithium cell imbalance from high-current maneuvers.
 
-**Option C: Compress entire formation**
-- All drones move inward to maintain mesh density
-- Reduced total coverage area
-- Drone 23 can fly shorter distance home
-- Expected mission completion: 89%
+Operations center unreachable. Connectivity \\(C(t) < 0.1\\) for 23 minutes. The swarm cannot request guidance and has 8 minutes to decide and execute. Options considered:
 
-The swarm has 8 minutes to decide and execute. The MAPE-K loop must analyze options, select a healing action, and coordinate execution—all without human intervention.
+- **Continue mission**: Drone 23 flies until exhaustion; crash in contested terrain risks data compromise; 92% mission completion.
+- **Return to base**: Drone 23 departs; neighbors expand sectors; reduced eastern coverage; 97% mission completion.
+- **Compress formation**: All drones tighten inward; Drone 23 flies shorter path home; total coverage area reduced; 89% mission completion.
 
-Self-healing means repairing, reconfiguring, and adapting in response to failures—without waiting for someone to tell you what to do.
+The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop must analyze these options, select a healing action, and coordinate execution—all without human intervention. Self-healing means repairing, reconfiguring, and adapting in response to failures without waiting for someone to tell you what to do.
 
 ---
 
 ## The Autonomic Control Loop
 
+<span id="term-mape-k"></span>
 ### The MAPE-K Model
 
-**Definition 8** (Autonomic Control Loop). *An autonomic control loop is a tuple \\((M, A, P, E, K)\\) where:*
+<span id="def-8"></span>
+**Definition 8** (Autonomic Control Loop). *An {% term(url="#def-8", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}autonomic control loop{% end %} is a tuple \\((M, A, P, E, K)\\) where:*
 - *\\(M: \mathcal{O} \rightarrow \mathcal{S}\\) is the monitor function mapping observations to state estimates*
 - *\\(A: \mathcal{S} \rightarrow \mathcal{D}\\) is the analyzer mapping state estimates to diagnoses*
 - *\\(P: \mathcal{D} \times K \rightarrow \mathcal{A}\\) is the planner selecting healing actions*
 - *\\(E: \mathcal{A} \rightarrow \mathcal{O}\\) is the executor applying actions and returning observations*
 - *\\(K\\) is the knowledge base encoding system model and healing policies*
 
-IBM's autonomic computing initiative formalized the control loop for self-managing systems as MAPE-K: Monitor, Analyze, Plan, Execute, with shared Knowledge.
+In other words, each component of the loop has a defined input and output type: Monitor consumes raw sensor observations and produces state estimates; Analyzer consumes state estimates and produces diagnoses; Planner consumes diagnoses plus knowledge and produces healing actions; Executor consumes actions and produces new observations that feed back into Monitor.
+
+IBM's autonomic computing initiative formalized the control loop for self-managing systems as {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %}: Monitor, Analyze, Plan, Execute, with shared Knowledge.
+
+The diagram below shows how the four phases form a closed feedback cycle, with the Knowledge base feeding into every stage rather than sitting at a single point.
 
 {% mermaid() %}
 graph TD
@@ -137,9 +122,11 @@ The cycle time—how fast the loop iterates—determines system responsiveness. 
 
 ### Closed-Loop vs Open-Loop Healing
 
-Control theory distinguishes two fundamental approaches:
+Two control approaches apply to healing:
 
-**Closed-loop control**: Observe outcome, compare to desired state, adjust, repeat. The feedback loop enables correction of errors and adaptation to disturbances.
+**Proportional Feedback Law**: Observe outcome, compare to target, adjust. Corrects errors but requires feedback delay \\(\tau_{\text{feedback}}\\).
+
+The closed-loop control action \\(U_t\\) is proportional to the error between the desired and observed state, scaled by gain \\(K\\):
 
 {% katex(block=true) %}
 U_t = K \cdot (X_{\text{desired}} - X_{\text{observed}})
@@ -149,11 +136,15 @@ Where \\(U_t\\) is control action, \\(K\\) is gain, and the difference is the er
 
 **Open-loop control**: Predetermined response without verification. Execute the action based on input, assume it works.
 
+The open-loop action is a fixed function of the current observation only, with no error correction:
+
 {% katex(block=true) %}
 U_t = f(X_{\text{observed}})
 {% end %}
 
 The action depends only on observed state, not on the outcome of previous actions.
+
+The following table compares the two approaches across four engineering properties that matter most for edge healing.
 
 <style>
 #tbl_control + table th:first-of-type { width: 25%; }
@@ -181,11 +172,15 @@ Drone 23's battery failure illustrates this hybrid:
 
 ### Healing Latency Budget
 
-Just as the [contested connectivity framework](@/blog/2026-01-15/index.md) decomposes latency for mission operations, self-healing requires its own latency budget:
+Just as the [contested connectivity framework](@/blog/2026-01-15/index.md) decomposes latency for mission operations, self-healing requires its own latency budget.
+
+The total healing time \\(T_{\text{heal}}\\) is the sum of five sequential phase durations: detection, analysis, planning, coordination, and physical execution.
 
 {% katex(block=true) %}
 T_{\text{heal}} = T_{\text{detect}} + T_{\text{analyze}} + T_{\text{plan}} + T_{\text{coordinate}} + T_{\text{execute}}
 {% end %}
+
+The table below breaks down realistic time budgets for each phase across the two primary scenarios, and identifies the bottleneck that sets the floor for each value.
 
 <style>
 #tbl_latency + table th:first-of-type { width: 20%; }
@@ -195,7 +190,7 @@ T_{\text{heal}} = T_{\text{detect}} + T_{\text{analyze}} + T_{\text{plan}} + T_{
 </style>
 <div id="tbl_latency"></div>
 
-| Phase | RAVEN Budget | CONVOY Budget | Limiting Factor |
+| Phase | RAVEN Budget | {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} Budget | Limiting Factor |
 | :--- | :--- | :--- | :--- |
 | Detection | 5-10s | 10-30s | Gossip convergence |
 | Analysis | 1-2s | 2-5s | Diagnostic complexity |
@@ -204,6 +199,180 @@ T_{\text{heal}} = T_{\text{detect}} + T_{\text{analyze}} + T_{\text{plan}} + T_{
 | Execution | 10-60s | 30-300s | Physical action time |
 | **Total** | **23-92s** | **62-410s** | Mission tempo |
 
+**Healing Sequence Timeline**:
+
+Complete healing sequence for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} Drone 23's battery failure—each {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} phase with timing, state transitions, and decision points:
+
+{% mermaid() %}
+sequenceDiagram
+    autonumber
+    participant D as Drone 23
+    participant M as Monitor
+    participant A as Analyzer
+    participant P as Planner
+    participant E as Executor
+    participant F as Fleet
+
+    Note over D,F: t=0: Anomaly Detected
+    rect rgb(200, 230, 201)
+        Note right of D: MONITOR PHASE (5-10s)
+        D->>M: Battery: 3.21V, dropping 0.02V/min
+        D->>M: Current draw: 12.3A (elevated)
+        M->>M: Compare to baseline (3.7V nominal)
+        M->>A: Anomaly score: 0.94
+    end
+
+    rect rgb(187, 222, 251)
+        Note right of A: ANALYZE PHASE (1-2s)
+        A->>A: Classify: power subsystem failure
+        A->>A: Project: 8 minutes to critical (3.0V)
+        A->>A: Impact: loss of drone, mission degradation
+        A->>P: Diagnosis: battery_critical, TTL=480s
+    end
+
+    rect rgb(225, 190, 231)
+        Note right of P: PLAN PHASE (2-5s)
+        P->>P: Option 1: RTB (safest, 6 min)
+        P->>P: Option 2: Nearest landing (3 min)
+        P->>P: Option 3: Power reduction (extend 4 min)
+        P->>P: Select: Option 3 -> Option 2
+        P->>E: Plan: reduce_power, then land_nearest
+    end
+
+    Note over D,F: t=15s: Coordination
+    rect rgb(255, 243, 224)
+        Note right of E: EXECUTE PHASE (10-60s)
+        E->>D: Disable: HD camera, ML inference
+        D-->>E: Power reduced to 8.1A
+        E->>F: Broadcast: Drone 23 emergency landing
+        F-->>E: Ack: Coverage reassigned to Drones 21, 25
+        E->>D: Navigate to landing zone Delta
+        D-->>E: ETA: 2 min 40s
+    end
+
+    Note over D,F: t=45s: Healing Complete
+    rect rgb(232, 245, 233)
+        Note right of M: VERIFY PHASE
+        M->>M: Battery stable at 3.18V
+        M->>M: Landing confirmed at t=180s
+        M->>A: Healing outcome: SUCCESS
+    end
+{% end %}
+
+**State Transition During Healing**:
+
+The diagram below traces Drone 23's operational state from mission start through healing to either a safe landing or asset loss; read it left-to-right, where each arrow is a triggering event and each note box gives the operational detail for that state.
+
+{% mermaid() %}
+stateDiagram-v2
+    direction LR
+
+    [*] --> Nominal: Mission Start
+
+    Nominal --> Degraded: Anomaly Detected
+    note right of Degraded
+        Power subsystem failing
+        8 min to critical
+    end note
+
+    Degraded --> Stabilizing: Healing Initiated
+    note right of Stabilizing
+        Non-essential load shed
+        Planning emergency landing
+    end note
+
+    Stabilizing --> Recovering: Plan Executing
+    note right of Recovering
+        Navigating to landing zone
+        Fleet coverage reassigned
+    end note
+
+    Recovering --> Safe: Landing Complete
+    note right of Safe
+        Drone preserved
+        Awaiting retrieval
+    end note
+
+    Recovering --> Failed: Healing Failed
+    note right of Failed
+        Battery exhausted
+        Uncontrolled descent
+    end note
+
+    Safe --> [*]: Mission Continue (without D23)
+    Failed --> [*]: Asset Lost
+{% end %}
+
+**Healing Action Selection: Formal Optimization**
+
+The planner selects the optimal action \\(a^*\\) from the action space \\(\mathcal{A}\\) by maximizing expected utility given current system state \\(\Sigma\\) and failure severity \\(\delta\\):
+
+{% katex(block=true) %}
+a^* = \arg\max_{a \in \mathcal{A}} \mathbb{E}[U(a \mid \Sigma, \delta)]
+{% end %}
+
+The utility \\(U\\) decomposes into three terms — the value of recovery weighted by confidence \\(c\\), the resource cost of the action, and the disruption cost weighted by the probability the diagnosis is wrong:
+
+{% katex(block=true) %}
+U(a \mid \Sigma, \delta) = c \cdot V_{\text{recovery}}(a, \delta) - C_{\text{resource}}(a) - (1-c) \cdot C_{\text{disruption}}(a)
+{% end %}
+
+with confidence \\(c\\) from the diagnosis. The action must also satisfy three hard constraints — healing must finish before the failure becomes critical (\\(g_1\\)), the action must fit within available resources (\\(g_2\\)), and the action's severity must not exceed the delegated authority of the local node (\\(g_3\\)):
+
+{% katex(block=true) %}
+\begin{aligned}
+g_1: && T_{\text{heal}}(a) + T_{\text{margin}} &\leq T_{\text{crit}} && \text{(deadline)} \\
+g_2: && R(a) &\leq R_{\text{available}}(t) && \text{(resources)} \\
+g_3: && \varsigma(a) &\leq \varsigma_{\max}(\mathcal{Q}_{\text{delegated}}) && \text{(authority)}
+\end{aligned}
+{% end %}
+
+The state transition model captures what happens after action \\(a\\) is executed: the system moves to healthy with probability proportional to both success rate and diagnosis confidence, remains degraded if the action fails, or stays unchanged if the diagnosis was wrong (probability \\(1-c\\)):
+
+{% katex(block=true) %}
+\Sigma_{t+1} = \begin{cases}
+\Sigma_{\text{healthy}} & \text{prob } p_{\text{success}}(a, \delta) \cdot c \\
+\Sigma_{\text{degraded}} & \text{prob } (1 - p_{\text{success}}(a, \delta)) \cdot c \\
+\Sigma_t & \text{prob } 1 - c
+\end{cases}
+{% end %}
+
+The decision tree below encodes the planner's logic for Drone 23: starting from the battery-critical anomaly, each diamond is a yes/no check that gates which action path is taken, and the green Monitor node at the bottom marks the verification step that closes the loop.
+
+{% mermaid() %}
+flowchart TD
+    START["Anomaly: Battery Critical<br/>TTL = 8 minutes"]
+
+    START --> Q1{"Time to safe<br/>landing < TTL?"}
+
+    Q1 -->|"Yes (6 min < 8 min)"| Q2{"Mission impact<br/>of landing?"}
+    Q1 -->|"No"| EMERGENCY["EMERGENCY<br/>Immediate autorotation"]
+
+    Q2 -->|"Low"| LAND["Plan: Land at nearest<br/>safe zone"]
+    Q2 -->|"High"| Q3{"Can extend TTL?"}
+
+    Q3 -->|"Yes"| EXTEND["Plan: Reduce power<br/>+ delayed landing"]
+    Q3 -->|"No"| LAND
+
+    LAND --> EXEC1["Execute: Navigate<br/>+ Notify fleet"]
+    EXTEND --> Q4{"Extended TTL<br/>sufficient?"}
+
+    Q4 -->|"Yes"| EXEC2["Execute: Power reduction<br/>+ Navigate"]
+    Q4 -->|"No"| LAND
+
+    EXEC1 --> MONITOR["Monitor: Verify<br/>healing success"]
+    EXEC2 --> MONITOR
+
+    EMERGENCY --> MONITOR
+
+    style START fill:#ffcdd2,stroke:#c62828
+    style EMERGENCY fill:#ffcdd2,stroke:#c62828
+    style MONITOR fill:#c8e6c9,stroke:#388e3c
+    style LAND fill:#fff9c4,stroke:#f9a825
+    style EXTEND fill:#e3f2fd,stroke:#1976d2
+{% end %}
+
+<span id="prop-8"></span>
 **Proposition 8** (Healing Deadline). *For a failure with time-to-criticality \\(T_{\text{crit}}\\), healing must complete within margin:*
 
 {% katex(block=true) %}
@@ -212,18 +381,17 @@ T_{\text{heal}} < T_{\text{crit}} - T_{\text{margin}}
 
 *where \\(T_{\text{margin}}\\) accounts for execution variance and verification time. If this inequality cannot be satisfied, the healing action must be escalated to a faster (but possibly more costly) intervention.*
 
-For Drone 23 with 8 minutes to battery exhaustion:
-- \\(T_{\text{crit}} = 480\\)s
-- Required \\(T_{\text{margin}} = 60\\)s (landing time)
-- Available healing window: 420s
-- Actual healing time: ~45s (well within budget)
+In other words, healing must finish early enough to leave a safety buffer before the failure becomes irreversible; if no action fits within that window, the system must escalate to a more disruptive but faster intervention.
+
+For Drone 23, with 8 minutes to battery exhaustion and a 60-second landing margin, the healing window comfortably exceeds the ~45-second healing sequence.
 
 When the healing deadline cannot be met, the system must either:
 1. Execute partial healing (stabilize but not fully recover)
-2. Skip to emergency protocols (bypass normal MAPE-K)
+2. Skip to emergency protocols (bypass normal {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %})
 3. Accept degraded state (capability reduction)
 
-**Proposition 9** (Closed-Loop Healing Stability). *For an autonomic control loop with feedback delay \\(\tau\\) and controller gain \\(K\\), stability requires the gain-delay product to satisfy:*
+<span id="prop-9"></span>
+**Proposition 9** (Closed-Loop Healing Stability). *For an {% term(url="#def-8", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}autonomic control loop{% end %} with feedback delay \\(\tau\\) and controller gain \\(K\\), stability requires the gain-delay product to satisfy:*
 
 {% katex(block=true) %}
 K \cdot \tau < \frac{\pi}{2}
@@ -232,13 +400,16 @@ K \cdot \tau < \frac{\pi}{2}
 *This bound follows from the Nyquist stability criterion: feedback delay \\(\tau\\) introduces phase lag \\(\omega\tau\\) at frequency \\(\omega\\). At the gain crossover frequency \\(\omega_c = K\\), the phase margin becomes \\(\pi/2 - K\tau\\), which must remain positive for stability.*
 
 *Proof*: For a proportional controller with delay, the open-loop transfer function is \\(G(s) = K e^{-s\tau} / s\\). The phase at crossover is \\(-\pi/2 - \omega_c \tau\\). Phase margin \\(\phi_m = \pi - (\pi/2 + K\tau) > 0\\) requires \\(K\tau < \pi/2\\).
+
+In other words, the slower the feedback (larger \\(\tau\\)), the more gently the controller must react (smaller \\(K\\)); aggressive corrections in a slow-feedback environment cause the system to oscillate rather than converge.
+
 **Corollary 4**. *Increased feedback delay (larger \\(\tau\\)) requires more conservative controller gains, trading response speed for stability.*
 
 ### Adaptive Gain Scheduling
 
-The stability condition \\(K \cdot \tau < \pi/2\\) suggests a key insight: as feedback delay \\(\tau\\) varies with connectivity regime, the controller gain \\(K\\) should adapt accordingly.
+The stability condition \\(K \cdot \tau < \pi/2\\) suggests a key insight: as feedback delay \\(\tau\\) varies with {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, the controller gain \\(K\\) should adapt accordingly.
 
-**Gain scheduling by connectivity regime**:
+**Gain scheduling by {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}**:
 
 Define regime-specific gains that maintain stability margins across all operating conditions:
 
@@ -246,18 +417,20 @@ Define regime-specific gains that maintain stability margins across all operatin
 K_{\text{regime}} = \frac{\phi_{\text{target}}}{\tau_{\text{regime}}}
 {% end %}
 
-where \\(\phi_{\text{target}} \approx \pi/4\\) provides adequate stability margin (phase margin of 45°).
+where \\(\phi_{\text{target}} \approx \pi/4\\) provides adequate stability margin (phase margin of \\(45^\circ\\)).
+
+The table below translates this formula into concrete gain values for each {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, with the Healing Response column describing the behavioral consequence of operating at that gain.
 
 | Regime | Typical \\(\tau\\) | Controller Gain \\(K\\) | Healing Response |
 |:-------|:-------------------|:------------------------|:-----------------|
-| Full | 2-5s | 0.15-0.40 | Aggressive, fast convergence |
-| Degraded | 10-30s | 0.025-0.08 | Moderate, stable |
-| Intermittent | 30-120s | 0.007-0.025 | Conservative, slow |
-| Denied | ∞ (timeout) | 0.005 | Minimal, open-loop fallback |
+| Full | 2-5s | 0.15-0.40 | Aggressive corrections; fast convergence to target state |
+| Degraded | 10-30s | 0.025-0.08 | Moderate corrections; stable but slower to converge |
+| Intermittent | 30-120s | 0.007-0.025 | Conservative corrections; accepts slow convergence to avoid oscillation |
+| Denied | \\(\infty\\) (timeout) | 0.005 | Minimal corrections; reverts to open-loop predetermined responses |
 
 **Smooth gain transitions**:
 
-Abrupt gain changes can destabilize the control loop. Use exponential smoothing:
+Abrupt gain changes can destabilize the control loop. The exponential smoothing formula below blends the new target gain with the previous gain using mixing coefficient \\(\alpha \approx 0.1\\), so that each timestep moves only a small fraction of the way toward the target.
 
 {% katex(block=true) %}
 K(t) = \alpha \cdot K_{\text{target}}(\text{regime}(t)) + (1 - \alpha) \cdot K(t-1)
@@ -276,7 +449,7 @@ When switching between regime-specific gains, maintain controller output continu
 
 **Proactive gain adjustment**:
 
-Rather than waiting for regime transitions, predict upcoming delays from connectivity trends:
+Rather than waiting for a regime transition to trigger a gain change, the controller linearly extrapolates the current feedback delay trend to predict the delay \\(\hat{\tau}\\) at lookahead time \\(\Delta\\) and pre-adjusts the gain before the delay actually increases.
 
 {% katex(block=true) %}
 \hat{\tau}(t + \Delta) = \tau(t) + \frac{d\tau}{dt} \cdot \Delta
@@ -284,7 +457,170 @@ Rather than waiting for regime transitions, predict upcoming delays from connect
 
 If predicted delay exceeds current regime threshold, preemptively reduce gain before connectivity degrades.
 
-**CONVOY example**: During mountain transit, connectivity degradation is predictable from terrain maps. The healing controller reduces gain 30 seconds before entering known degraded zones, preventing oscillatory healing behavior when feedback delays suddenly increase.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} example**: During mountain transit, connectivity degradation is predictable from terrain maps. The healing controller reduces gain 30 seconds before entering known degraded zones, preventing oscillatory healing behavior when feedback delays suddenly increase.
+
+<span id="scenario-hyperscale"></span>
+### Commercial Application: {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} Data Center Self-Healing
+
+{% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} operates edge data centers serving low-latency requirements. When central orchestration becomes unreachable—partition, DDoS, or maintenance—each site must heal autonomously. Sites contain compute nodes, storage, network infrastructure, and microservices with complex dependency graphs.
+
+**The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} implementation for {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} edge sites**:
+
+The diagram expands the abstract {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop into concrete {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} components, showing three parallel monitor sources feeding a three-stage analysis pipeline before reaching execution — note how the Knowledge base feeds into Analyze and Plan but not Execute directly.
+
+{% mermaid() %}
+graph TD
+    subgraph "Monitor Layer"
+        M1["Metrics Collector<br/>Node health, latency<br/>Every 5s"]
+        M2["Log Aggregator<br/>Error patterns<br/>Streaming"]
+        M3["Synthetic Probes<br/>End-to-end health<br/>Every 15s"]
+    end
+
+    subgraph "Analyze Layer"
+        A1["Anomaly Detector<br/>Statistical analysis"]
+        A2["Dependency Mapper<br/>Runtime discovery"]
+        A3["Impact Assessor<br/>Blast radius calc"]
+    end
+
+    subgraph "Plan Layer"
+        P1["Action Generator<br/>Candidate healing ops"]
+        P2["Risk Evaluator<br/>Side effect analysis"]
+        P3["Coordinator<br/>Multi-action sequencing"]
+    end
+
+    subgraph "Execute Layer"
+        E1["Orchestrator<br/>Container/VM control"]
+        E2["Network Controller<br/>Route, firewall"]
+        E3["Load Balancer<br/>Traffic steering"]
+    end
+
+    subgraph "Knowledge Base"
+        K1["Service Catalog<br/>Dependencies, SLOs"]
+        K2["Healing History<br/>What worked before"]
+        K3["Current State<br/>Cluster snapshot"]
+    end
+
+    M1 --> A1
+    M2 --> A1
+    M3 --> A1
+    A1 --> A2
+    A2 --> A3
+    A3 --> P1
+    P1 --> P2
+    P2 --> P3
+    P3 --> E1
+    P3 --> E2
+    P3 --> E3
+    E1 -->|"feedback"| M1
+    K1 -.-> A2
+    K2 -.-> P1
+    K3 -.-> A1
+
+    style K1 fill:#fff9c4,stroke:#f9a825
+    style K2 fill:#fff9c4,stroke:#f9a825
+    style K3 fill:#fff9c4,stroke:#f9a825
+{% end %}
+
+**Healing latency budget for {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %}**:
+
+| Phase | Budget | Limiting Factor |
+| :--- | ---: | :--- |
+| Detection | 15-30s | Metrics collection interval + anomaly threshold |
+| Analysis | 5-10s | Dependency graph traversal, impact calculation |
+| Planning | 2-5s | Action enumeration, risk scoring |
+| Coordination | 10-30s | Multi-service sequencing, pre-flight checks |
+| Execution | 30-180s | Container restart, health check convergence |
+| **Total** | **62-255s** | SLO: 95% of incidents resolved in <5 minutes |
+
+**Dependency-aware restart sequence**: When the payment microservice fails, {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %}'s analyzer discovers the dependency chain. The diagram below shows the runtime dependencies read left-to-right: arrows point from caller to dependency, the red node is the failed service, and the orange nodes are downstream services affected by the failure.
+
+{% mermaid() %}
+graph LR
+    LB["Load Balancer"] --> API["API Gateway"]
+    API --> AUTH["Auth Service"]
+    API --> PAY["Payment Service<br/>(FAILED)"]
+    PAY --> DB["Payment DB"]
+    PAY --> QUEUE["Message Queue"]
+    PAY --> FRAUD["Fraud Check"]
+    FRAUD --> ML["ML Scoring"]
+
+    style PAY fill:#ffcdd2,stroke:#c62828
+    style FRAUD fill:#fff3e0,stroke:#f57c00
+    style ML fill:#fff3e0,stroke:#f57c00
+{% end %}
+
+The healing sequence respects dependencies:
+1. Verify Payment DB is healthy (no restart needed if healthy)
+2. Verify Message Queue is accepting connections
+3. Restart Payment Service with fresh state
+4. Wait for health check (HTTP 200 on /healthz)
+5. Re-enable traffic via Load Balancer
+6. Verify end-to-end transaction success via synthetic probe
+
+**Cascade prevention in practice**: During a storage node failure, {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} caps the number of simultaneously restarting nodes to one-third of the currently healthy nodes, ensuring at least two-thirds of the cluster remains serving traffic at any moment while healing proceeds.
+
+{% katex(block=true) %}
+\text{Max concurrent restarts} = \max\left(1, \left\lfloor \frac{n_{\text{healthy}}}{3} \right\rfloor\right)
+{% end %}
+
+With 28 storage nodes and 1 failed, maximum concurrent restarts = 9. This ensures at least 18 nodes remain serving traffic during any healing operation.
+
+### Game-Theoretic Extension: Healing Resource Congestion
+
+When multiple {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loops coexist — one per monitored subsystem — each loop solves its healing action optimization independently. Their resource claims compete for shared capacity (CPU, bandwidth, power), forming a **congestion game**.
+
+**Congestion game**: Each {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop \\(i\\) selects a healing action \\(a_i \in \mathcal{A}_i\\) requiring resource vector \\(\mathbf{r}(a_i)\\). The cost of action \\(a_i\\) increases with the number of loops simultaneously using the same resources (congestion level \\(n_r\\) on resource \\(r\\)).
+
+By Rosenthal's theorem (1973), congestion games always admit a pure Nash equilibrium, which minimizes the potential function \\(\Phi(\mathbf{a})\\): the sum over all resources \\(r\\) of the cumulative marginal costs incurred as each successive loop claims that resource, where \\(n_r(\mathbf{a})\\) is the number of loops simultaneously using resource \\(r\\) under action profile \\(\mathbf{a}\\).
+
+{% katex(block=true) %}
+\Phi(\mathbf{a}) = \sum_{r \in R} \sum_{k=1}^{n_r(\mathbf{a})} c_r(k)
+{% end %}
+where \\(c_r(k)\\) is the marginal cost of resource \\(r\\) at congestion level \\(k\\).
+
+**Coordination protocol**: Each {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop selects healing actions to minimize \\(\Phi\\) (best-response descent) respecting the aggregate resource constraint \\(Q_{\text{heal}} < Q_{\text{total}} - Q_{\text{min}}\\). The healing coordination game admits a pure Nash equilibrium (Rosenthal 1973). Best-response dynamics converge in potential games, but MAPE-K healing uses gradient-based updates rather than pure best-response; convergence to Nash should be verified empirically for each deployment. In practice, this means a shared resource declaration table: loops register resource requirements and receive grants only when the current allocation remains feasible.
+
+**Practical implication**: Replace the heuristic "max concurrent restarts = \\(\lfloor n_{\text{healthy}}/3 \rfloor\\)" with a congestion game coordination layer. When multiple failures occur simultaneously ({% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} jamming causes multi-component failures), loops negotiate resource grants through potential-function minimization rather than competing independently. This generalizes to heterogeneous resource requirements without per-scenario tuning.
+
+**{% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}-based healing action selection**: {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} tracks success rates for each healing action by failure category. The table below shows accumulated attempt and success counts alongside the {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} score that the exploration-exploitation formula assigns, which blends estimated success rate with an exploration bonus that grows when an action has been tried infrequently.
+
+| Failure Type | Action | Attempts | Successes | UCB Score |
+| :--- | :--- | ---: | ---: | ---: |
+| Pod crash loop | Restart pod | 847 | 712 | 0.89 |
+| Pod crash loop | Delete + recreate | 234 | 198 | 0.91 |
+| Pod crash loop | Scale to 0, then up | 89 | 81 | 0.95 |
+| Memory pressure | Evict low-priority | 412 | 389 | 0.96 |
+| Memory pressure | Add node | 67 | 51 | 0.84 |
+
+For crash loops, "scale to 0, then up" has highest {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} despite fewer attempts—the exploration bonus rewards trying this promising action more often.
+
+**Control plane partition handling**: When an edge site loses connectivity to the central control plane:
+
+1. **Detection** (T+0s): Central API unreachable for 3 consecutive health checks
+2. **Mode transition** (T+15s): Site enters "autonomous mode" with elevated local authority
+3. **State snapshot** (T+20s): Capture current configuration for later reconciliation
+4. **Threshold adjustment** (T+25s): Tighten healing thresholds by 15% (more conservative without central backup)
+5. **Operation logging** (T+continuous): All healing actions logged with causality metadata
+
+Upon reconnection, the site uploads its healing log. Central platform reconciles any conflicts (e.g., site promoted a replica to primary that central also promoted elsewhere) using timestamp-based conflict resolution with site-local decisions having priority for their own resources.
+
+**Utility analysis**:
+
+The MTTR improvement \\(\Delta \text{MTTR}\\) equals the manual resolution time \\(T_{\text{human}}\\) minus the automated detection and healing time, where \\(T_{\text{human}}\\) includes paging delay, context acquisition, and decision time.
+
+{% katex(block=true) %}
+\Delta \text{MTTR} = \text{MTTR}_{\text{manual}} - \text{MTTR}_{\text{auto}} = T_{\text{human}} - (T_{\text{detect}} + T_{\text{heal}})
+{% end %}
+
+**Escalation rate bound**: For healing actions with success probability \\(p_s\\) and \\(k\\) retry attempts:
+
+{% katex(block=true) %}
+P(\text{escalate}) = (1 - p_s)^k
+{% end %}
+
+With \\(p_s \geq 0.9\\) and \\(k = 3\\): \\(P(\text{escalate}) \leq 0.001\\). Adding unknown failure modes (\\(\approx 5\\%\\) of incidents): \\(P(\text{escalate}) \approx 0.05\\).
+
+**Utility improvement**: \\(\Delta U = \Delta \text{MTTR} \cdot V_{\text{availability}} - \text{FPR} \cdot C_{\text{unnecessary}}\\). Sign(\\(\Delta U\\)) > 0 when \\(\Delta \text{MTTR} \cdot V > \text{FPR} \cdot C\\).
 
 ---
 
@@ -301,7 +637,7 @@ At the edge, the requirements for root cause analysis may not be met:
 
 **Symptom-based remediation** addresses this gap. Instead of "if we understand cause C, apply solution S," we use "if we observe symptoms Y, try treatment T."
 
-Examples of symptom-based rules:
+The table below gives four representative symptom-treatment pairings together with the rationale explaining why the treatment addresses multiple possible root causes.
 
 | Symptom | Treatment | Rationale |
 | :--- | :--- | :--- |
@@ -319,23 +655,51 @@ Mitigations:
 
 ### Confidence Thresholds for Healing Actions
 
-From [self-measurement](@/blog/2026-01-22/index.md), health estimates come with confidence intervals. When is confidence "enough" to justify a healing action?
+From [self-measurement](@/blog/2026-01-22/index.md), health estimates come with confidence intervals. The act/wait decision is formalized as a constrained optimization.
 
-**Definition 9** (Healing Action Severity). *The severity \\(S(a) \in [0, 1]\\) of healing action \\(a\\) is determined by its reversibility \\(R(a)\\) and impact scope \\(I(a)\\): \\(S(a) = (1 - R(a)) \cdot I(a)\\). Actions with \\(S(a) > 0.8\\) are classified as high-severity.*
+<span id="def-9"></span>
+**Definition 9** (Healing Action Severity). *The severity \\(\varsigma(a) \in [0, 1]\\) of healing action \\(a\\) is determined by its reversibility \\(R(a) \in [0,1]\\) and impact scope \\(I(a) \in [0,1]\\): \\(\varsigma(a) = (1 - R(a)) \cdot I(a)\\). Actions with \\(\varsigma(a) > 0.8\\) are classified as high-severity.*
 
-The decision depends on the cost model:
+In other words, severity is high when an action is both hard to undo and affects many components simultaneously; a cache flush scores near zero (fully reversible, narrow scope) while isolating a node from the fleet scores near one (irreversible, wide impact).
+
+**Act/Wait Decision Problem**:
+
+Given a confidence estimate \\(c\\) from the anomaly detector and a candidate healing action \\(a\\), the system must decide whether to act now or wait for more evidence. The objective selects the binary decision \\(d^*\\) that maximizes expected utility, where acting incurs a false-positive cost when the diagnosis is wrong and waiting incurs a false-negative cost when the failure is real.
 
 {% katex(block=true) %}
-\text{Expected cost of action} = C_{\text{act}} \cdot P(\text{wrong}) + C_{\text{benefit}} \cdot P(\text{right})
+d^* = \arg\max_{d \in \{0, 1\}} \mathbb{E}[U(d \mid c, a)]
 {% end %}
+
+where \\(d = 1\\) indicates "act" and \\(d = 0\\) indicates "wait", with:
 
 {% katex(block=true) %}
-\text{Expected cost of inaction} = C_{\text{inaction}} \cdot P(\text{problem real})
+\mathbb{E}[U(d \mid c, a)] = \begin{cases}
+c \cdot V_{\text{heal}}(a) - (1-c) \cdot C_{\text{FP}}(a) & \text{if } d = 1 \\
+-c \cdot C_{\text{FN}}(a) & \text{if } d = 0
+\end{cases}
 {% end %}
 
-Act when expected cost of action is less than expected cost of inaction.
+**Optimal Decision Rule**:
 
-Different actions have different severities and thus different confidence thresholds:
+Act when \\(\mathbb{E}[U(1)] > \mathbb{E}[U(0)]\\), which yields:
+
+{% katex(block=true) %}
+d^* = 1 \iff c > \theta^*(a) = \frac{C_{\text{FP}}(a)}{C_{\text{FP}}(a) + C_{\text{FN}}(a) + V_{\text{heal}}(a)}
+{% end %}
+
+This is the full form stated in Proposition 10. When \\(V_{\text{heal}}\\) is folded into the effective false-negative cost (i.e., \\(C_{\text{FN}}^{\text{eff}} = C_{\text{FN}} + V_{\text{heal}}\\)), this reduces to the simplified form of Corollary 10.1.
+
+Three constraints bound the threshold regardless of what the cost-ratio formula produces: a minimum floor so the system is never trigger-happy at near-zero confidence, a maximum ceiling so critical failures are never silently ignored, and a hard floor specifically for high-severity actions.
+
+{% katex(block=true) %}
+\begin{aligned}
+g_1: && \theta &\geq \theta_{\min} = 0.05 && \text{(minimum confidence)} \\
+g_2: && \theta &\leq \theta_{\max} = 0.95 && \text{(never ignore critical)} \\
+g_3: && \varsigma(a) > 0.8 &\Rightarrow \theta \geq 0.90 && \text{(high-severity floor)}
+\end{aligned}
+{% end %}
+
+The table below applies Proposition 10's formula to six representative healing actions: as severity rises and reversibility falls, the Required Confidence column rises correspondingly, demanding stronger evidence before the system acts.
 
 <style>
 #tbl_thresholds + table th:first-of-type { width: 25%; }
@@ -360,27 +724,70 @@ For Drone 23:
 - Required confidence: 0.80
 - Decision: 0.94 > 0.80, proceed with return
 
-**Proposition 10** (Optimal Confidence Threshold). *The optimal confidence threshold \\(\theta^\*(a)\\) for healing action \\(a\\) is:*
+<span id="prop-10"></span>
+**Proposition 10** (Optimal Confidence Threshold). *The optimal confidence threshold \\(\theta^\*(a)\\) for healing action \\(a\\) satisfies:*
 
 {% katex(block=true) %}
-\theta^*(a) = \frac{C_{\text{FP}}(a)}{C_{\text{FP}}(a) + C_{\text{FN}}(a)}
+\theta^*(a) = \frac{C_{\text{FP}}(a)}{C_{\text{FP}}(a) + C_{\text{FN}}(a) + V_{\text{heal}}(a)}
 {% end %}
 
-*where \\(C_{\text{FP}}(a)\\) is the cost of false positive (unnecessary healing) and \\(C_{\text{FN}}(a)\\) is the cost of false negative (missed problem).*
+*where \\(C_{\text{FP}}(a)\\) is the cost of false positive (unnecessary healing), \\(C_{\text{FN}}(a)\\) is the cost of false negative (missed problem), and \\(V_{\text{heal}}(a)\\) is the value recovered by successful healing.*
 
-*Proof*: At confidence \\(c\\), acting costs \\(C_{\text{FP}} \cdot (1-c)\\) in expectation (wrong with probability \\(1-c\\)), while not acting costs \\(C_{\text{FN}} \cdot c\\) (needed with probability \\(c\\)). Act when \\(C_{\text{FP}}(1-c) < C_{\text{FN}} \cdot c\\), which simplifies to \\(c > C_{\text{FP}}/(C_{\text{FP}} + C_{\text{FN}})\\).
-The threshold must account for asymmetric costs. If false positive (treating healthy as sick) has low cost but false negative (missing real problem) has catastrophic cost, lower the threshold—accept more false positives to avoid false negatives.
+In other words, set the confidence bar at the fraction of total expected cost attributable to false positives: if unnecessary healing is nine times cheaper than the combined cost of missing a real failure plus the value of recovery, act as soon as confidence exceeds 10%.
+
+**Corollary 10.1.** *When \\(V_{\text{heal}}\\) is absorbed into effective false-negative cost \\(C_{\text{FN}}^{\text{eff}} = C_{\text{FN}} + V_{\text{heal}}\\), the threshold simplifies to:*
+
+{% katex(block=true) %}
+\theta^*(a) = \frac{C_{\text{FP}}(a)}{C_{\text{FP}}(a) + C_{\text{FN}}^{\text{eff}}(a)}
+{% end %}
+
+*Proof*: When \\(c \in [0,1]\\) is the posterior probability \\(P(\text{failure} \mid \text{observation})\\), the expected costs of acting and waiting are:
+
+{% katex(block=true) %}
+\mathbb{E}[\text{Cost}(\text{act})] = (1-c) \cdot C_{\text{FP}}, \quad \mathbb{E}[\text{Cost}(\text{wait})] = c \cdot C_{\text{FN}}^{\text{eff}}
+{% end %}
+
+Acting is preferred when \\(\mathbb{E}[\text{Cost}(\text{act})] < \mathbb{E}[\text{Cost}(\text{wait})]\\):
+
+{% katex(block=true) %}
+(1-c) \cdot C_{\text{FP}} < c \cdot C_{\text{FN}}^{\text{eff}} \implies c > \frac{C_{\text{FP}}}{C_{\text{FP}} + C_{\text{FN}}^{\text{eff}}} = \theta^*
+{% end %}
+
+The threshold structure implies: asymmetric costs (\\(C_{\text{FN}}^{\text{eff}} \gg C_{\text{FP}}\\)) yield lower thresholds, accepting more false positives to avoid missed failures.
+
+### Game-Theoretic Extension: Adversarial Threshold Manipulation
+
+Proposition 10's optimal threshold \\(\theta^\*(a)\\) is derived against a non-strategic failure process. The dynamic threshold adaptation mechanism — which modulates \\(\theta^\*\\) through \\(f_{\text{resource}}, f_{\text{cascade}}, f_{\text{mission}}, f_{\text{connectivity}}\\) — is itself manipulable if the adversary can influence the context variables.
+
+**Attack pattern**: An adversary who can cause spurious cascade events inflates \\(f_{\text{cascade}}\\), which raises \\(\theta^*(t)\\), which then suppresses detection of the real attack. The threshold-raising event sequence is itself an anomaly signature.
+
+**Maximin threshold**: The adversarially robust threshold \\(\theta^*_{\text{robust}}\\) chooses the threshold that keeps detection probability as high as possible even when the adversary selects the attack signal \\(a_A\\) from their action space \\(\mathcal{A}_A\\) that most suppresses detection.
+
+{% katex(block=true) %}
+\theta^*_{\text{robust}}(a) = \arg\max_{\theta} \min_{a_A \in \mathcal{A}_A} P(\text{detect} \mid \theta, a_A)
+{% end %}
+
+**Second-order defense**: Monitor the pattern of threshold-raising events. A cluster of false positives that raises \\(\theta^\*\\) immediately before a partition event is itself an anomaly warranting elevated alertness — the dynamic threshold adaptation should include an adversarial-signature monitor that temporarily freezes \\(\theta^\*\\) when manipulation signatures are detected.
+
+**Practical implication**: For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} and {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} operating in adversarial environments, bound the maximum rate at which \\(\theta^*\\) can increase per unit time (a rate limiter on threshold escalation). Sudden large threshold increases — whether from genuine context changes or adversarial manipulation — should trigger a brief period of heightened sensitivity at the prior (lower) threshold before committing to the new one.
 
 ### Dynamic Threshold Adaptation
 
-Static thresholds assume fixed cost ratios. In contested environments, costs vary with context:
+Static thresholds assume fixed cost ratios. In practice, the relative cost of acting versus waiting shifts with mission phase, resource availability, and connectivity — so the threshold must update continuously. The context-dependent optimization selects \\(\theta^*(t)\\) at each timestep by minimizing expected total cost under current system state \\(\Sigma_t\\), where the state captures resource level, mission phase, connectivity, and the number of healing actions already in progress.
 
-- **Resource scarcity**: When power is low, false positive healing actions become more costly (wasted resources)
-- **Mission criticality**: During high-stakes phases, false negatives become catastrophic
-- **Connectivity**: In denied regime, healing must be more decisive (can't wait for confirmation)
-- **Fleet state**: If many nodes are degraded, aggressive healing risks cascade
+{% katex(block=true) %}
+\theta^*(t) = \arg\min_{\theta \in [\theta_{\min}, \theta_{\max}]} \mathbb{E}[\text{Cost}(\theta, \Sigma_t)]
+{% end %}
 
-**Context-dependent cost modulation**:
+The expected cost at threshold \\(\theta\\) given current system state \\(\Sigma_t\\) is the sum of two terms: the effective false-positive cost \\(C_{\text{FP}}^{\text{eff}}(t)\\) scaled by the false-positive rate \\(P_{\text{FP}}(\theta)\\), plus the effective false-negative cost \\(C_{\text{FN}}^{\text{eff}}(t)\\) scaled by the miss rate \\(P_{\text{FN}}(\theta)\\).
+
+{% katex(block=true) %}
+\mathbb{E}[\text{Cost}(\theta, \Sigma_t)] = C_{\text{FP}}^{\text{eff}}(t) \cdot P_{\text{FP}}(\theta) + C_{\text{FN}}^{\text{eff}}(t) \cdot P_{\text{FN}}(\theta)
+{% end %}
+
+The effective costs are functions of system state {% katex() %}\Sigma_t = (R_t, \text{phase}_t, C_t, n_{\text{healing}}(t)){% end %}:
+
+The effective false-positive cost \\(C_{\text{FP}}^{\text{eff}}\\) grows when resources are scarce or many healings are already in progress, while the effective false-negative cost \\(C_{\text{FN}}^{\text{eff}}\\) grows during critical mission phases and when connectivity is denied (because no external help is available to handle a missed failure).
 
 {% katex(block=true) %}
 C_{\text{FP}}^{\text{eff}}(t) = C_{\text{FP}}^{\text{base}} \cdot f_{\text{resource}}(R(t)) \cdot f_{\text{cascade}}(n_{\text{healing}}(t))
@@ -394,40 +801,28 @@ C_{\text{FN}}^{\text{eff}}(t) = C_{\text{FN}}^{\text{base}} \cdot f_{\text{missi
 
 - \\(f_{\text{resource}}(R) = 1 + 2 \cdot (1 - R/R_{\max})\\): FP cost triples when resources depleted
 - \\(f_{\text{cascade}}(n) = 1 + 0.5n\\): Each concurrent healing increases FP cost by 50%
-- \\(f_{\text{mission}}(\text{phase}) \in [1, 5]\\): Critical phases multiply FN cost up to 5×
+- \\(f_{\text{mission}}(\text{phase}) \in [1, 5]\\): Critical phases multiply FN cost up to \\(5\times\\)
 - \\(f_{\text{connectivity}}(C) = 2 - C\\): Full connectivity halves FN cost; denied doubles it
 
-**Dynamic threshold update**:
+Applying Proposition 10's ratio formula to the effective costs gives the time-varying threshold — at each timestep, \\(\theta^*(t)\\) is simply the fraction of total effective cost attributable to false positives.
 
 {% katex(block=true) %}
 \theta^*(t) = \frac{C_{\text{FP}}^{\text{eff}}(t)}{C_{\text{FP}}^{\text{eff}}(t) + C_{\text{FN}}^{\text{eff}}(t)}
 {% end %}
 
-**RAVEN example**: During extraction phase (mission-critical), \\(f_{\text{mission}} = 4\\). With 60% resource remaining and good connectivity:
-
-{% katex(block=true) %}
-\begin{aligned}
-C_{\text{FP}}^{\text{eff}} &= 1.0 \cdot 1.8 \cdot 1.0 = 1.8 \\
-C_{\text{FN}}^{\text{eff}} &= 5.0 \cdot 4.0 \cdot 1.1 = 22.0 \\
-\theta^* &= \frac{1.8}{1.8 + 22.0} = 0.076
-\end{aligned}
-{% end %}
-
-The threshold drops to 7.6%—the system heals at very low confidence during critical phases, accepting many false positives to avoid any missed failures.
+During critical mission phases (\\(f_{\text{mission}} \to 5\\)) with good connectivity, the denominator grows large relative to the numerator, driving \\(\theta^*(t)\\) well below 0.1—the system heals at very low confidence, accepting many false positives to avoid any missed failures.
 
 **Threshold bounds**:
 
-Unconstrained adaptation can lead to pathological behavior. Impose bounds:
+Unconstrained adaptation can lead to pathological behavior. The hard bounds below enforce a safety interval for \\(\theta^*(t)\\): \\(\theta_{\min} = 0.05\\) ensures the system always requires at least some confidence, and \\(\theta_{\max} = 0.95\\) ensures it never completely ignores a detected problem.
 
 {% katex(block=true) %}
 \theta_{\min} \leq \theta^*(t) \leq \theta_{\max}
 {% end %}
 
-where \\(\theta_{\min} = 0.05\\) (always require some confidence) and \\(\theta_{\max} = 0.95\\) (never completely ignore problems).
-
 **Hysteresis for threshold changes**:
 
-Rapidly fluctuating thresholds cause inconsistent behavior. Apply hysteresis:
+Rapidly fluctuating thresholds cause inconsistent behavior. The hysteresis rule below holds the current threshold fixed if the change demanded by \\(\theta^*(t)\\) is smaller than the dead-band \\(\delta_\theta \approx 0.1\\), preventing threshold jitter from triggering spurious mode changes.
 
 {% katex(block=true) %}
 \theta(t) = \begin{cases}
@@ -438,21 +833,35 @@ Rapidly fluctuating thresholds cause inconsistent behavior. Apply hysteresis:
 
 where \\(\delta_{\theta} \approx 0.1\\) prevents threshold jitter.
 
+**State Transition Model**: The complete threshold state at time \\(t+1\\) is the triple of the updated threshold value and the two effective costs that drive it at that timestep.
+
+{% katex(block=true) %}
+\Sigma_{t+1}^{\theta} = \left(\theta(t+1), C_{\text{FP}}^{\text{eff}}(t+1), C_{\text{FN}}^{\text{eff}}(t+1)\right)
+{% end %}
+
+The threshold itself steps toward the target \\(\theta^\*(t+1)\\) by increment \\(\gamma\\) only when the gap \\(\Delta\theta = \theta^\*(t+1) - \theta(t)\\) exceeds the hysteresis band \\(\delta_\theta\\), and is hard-clipped to the safety interval \\([\theta_{\min}, \theta_{\max}]\\).
+
+{% katex(block=true) %}
+\theta(t+1) = \text{clip}\left(\theta(t) + \gamma \cdot \mathbb{1}[|\Delta\theta| > \delta_\theta] \cdot \text{sign}(\Delta\theta), \theta_{\min}, \theta_{\max}\right)
+{% end %}
+
+where \\(\Delta\theta = \theta^*(t+1) - \theta(t)\\) and \\(\gamma \leq |\Delta\theta|\\) is the adaptation rate.
+
 ### The Harm of Wrong Healing
 
 Healing actions can make things worse:
 
-**False positive healing**: Restarting a healthy component because of anomaly detector error. The restart itself causes momentary unavailability. In RAVEN, restarting a drone's flight controller mid-maneuver could destabilize formation.
+**False positive healing**: Restarting a healthy component because of anomaly detector error. The restart itself causes momentary unavailability. In {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, restarting a drone's flight controller mid-maneuver could destabilize formation.
 
-**Resource consumption**: MAPE-K consumes CPU, memory, and bandwidth. If healing is triggered too frequently, the healing overhead starves the mission. The system spends its energy on healing rather than on its primary function.
+**Resource consumption**: {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} consumes CPU, memory, and bandwidth. If healing is triggered too frequently, the healing overhead starves the mission. The system spends its energy on healing rather than on its primary function.
 
-**Cascading effects**: Healing component A affects component B. In CONVOY, restarting vehicle 4's communication system breaks the mesh path to vehicles 5-8. The healing of one component triggers failures in others.
+**Cascading effects**: Healing component A affects component B. In {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, restarting vehicle 4's communication system breaks the mesh path to vehicles 5-8. The healing of one component triggers failures in others.
 
 **Healing loops**: A heals B (restart), B heals A (because A restarted affected B), A heals B again, infinitely. The system oscillates between healing states, never stabilizing.
 
 Detection and prevention mechanisms:
 
-**Healing attempt tracking**: Log each healing action with timestamp and outcome. If the same action triggers repeatedly in short time, something is wrong with the healing strategy, not just the target.
+**Healing attempt tracking**: Log each healing action with timestamp and outcome. If the same action triggers repeatedly in short time, something is wrong with the healing strategy, not just the target. The healing rate metric below quantifies this: it counts attempts in a sliding window of length \\(T\\) and divides by \\(T\\) to yield an instantaneous rate.
 
 {% katex(block=true) %}
 \text{Healing rate} = \frac{\text{healing attempts in window } T}{T}
@@ -460,7 +869,7 @@ Detection and prevention mechanisms:
 
 If healing rate exceeds threshold, reduce healing aggressiveness or pause healing entirely.
 
-**Cooldown periods**: After healing action A, impose minimum time before A can trigger again. This prevents oscillation and allows time to observe outcomes.
+**Cooldown periods**: After healing action A, impose minimum time before A can trigger again. This prevents oscillation and allows time to observe outcomes. The cooldown constraint below ensures action \\(A\\) cannot fire again until at least \\(\tau_{\text{cooldown}}(A)\\) seconds have elapsed since its last execution.
 
 {% katex(block=true) %}
 t_{\text{next}(A)} \geq t_{\text{last}(A)} + \tau_{\text{cooldown}}(A)
@@ -508,6 +917,8 @@ Some systems have circular dependencies that prevent topological sorting.
 
 Example: Authentication service A depends on database D for user storage. Database D depends on authentication service A for access control. Neither can start without the other.
 
+The diagram below shows the mutual dependency as a cycle: each arrow indicates a startup requirement, and both nodes are red because neither can satisfy the other's precondition.
+
 {% mermaid() %}
 graph LR
     A["Auth Service"] -->|"needs users from"| D["Database"]
@@ -521,13 +932,13 @@ Strategies for breaking cycles:
 
 **Cold restart all simultaneously**: Start all components in the cycle at once. Race condition: hope they stabilize. Works for simple cases but unreliable for complex cycles.
 
-**Stub mode**: Start A in degraded mode that doesn't require D (e.g., allow anonymous access temporarily). Start D using A's degraded mode. Once D is healthy, promote A to full mode requiring D.
+**Stub mode**: Start A in degraded mode that doesn't require D (e.g., allow anonymous access temporarily). Start D using A's degraded mode. Once D is healthy, promote A to full mode requiring D. The three-step startup order is: A in stub mode first, then D, then A promoted to full mode.
 
 {% katex(block=true) %}
 \text{Sequence: } A_{\text{stub}} \rightarrow D \rightarrow A_{\text{full}}
 {% end %}
 
-**Quorum-based**: If multiple instances of A and D exist, restart subset while others continue serving. RAVEN example: restart half the drones while others maintain coverage, then swap.
+**Quorum-based**: If multiple instances of A and D exist, restart subset while others continue serving. {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} example: restart half the drones while others maintain coverage, then swap.
 
 **Cycle detection and minimum-cost break**: Use DFS to find cycles. For each cycle, identify the edge with lowest "break cost"—the dependency that is easiest to stub or bypass. Break that edge.
 
@@ -539,22 +950,50 @@ e^* = \arg\min_{e \in \text{cycle}} C_{\text{break}}(e)
 
 Not all components are equally critical. When resources for healing are limited, prioritize the components that matter most.
 
-**Definition 10** (Minimum Viable System). *The minimum viable system MVS \\(\subseteq V\\) is the smallest subset of components such that \\(\text{capability}(\text{MVS}) \geq L_1\\), where \\(L_1\\) is the basic mission capability threshold. Formally:*
+<span id="def-10"></span>
+**Definition 10** (Minimum Viable System). *The {% term(url="#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm's priority boundary — MVS components are repaired first") %}minimum viable system{% end %} \\(\text{MVS} \subseteq V\\) is the smallest subset of components such that \\(\text{capability}(\text{MVS}) \geq \mathcal{L}_1\\), where \\(\mathcal{L}_1\\) is the basic mission capability threshold. Formally:*
 
 {% katex(block=true) %}
-\text{MVS} = \arg\min_{S \subseteq V} |S| \quad \text{subject to} \quad \text{capability}(S) \geq L_1
+\text{MVS} = \arg\min_{S \subseteq V} |S| \quad \text{subject to} \quad \text{capability}(S) \geq \mathcal{L}_1
 {% end %}
 
-For RAVEN:
+In other words, the {% term(url="#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm's priority boundary — MVS components are repaired first") %}MVS{% end %} is the leanest set of components that still keeps the system above the minimum acceptable capability level \\(\mathcal{L}_1\\); every component outside the MVS is a candidate to remain offline when healing resources are scarce.
+
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}:
 - **MVS components**: Flight controller, collision avoidance, mesh radio, GPS
 - **Non-MVS components**: High-resolution camera, target classification ML, telemetry detail
 
 When healing resources are scarce, heal MVS components first. Non-MVS components can remain degraded.
 
+<span id="prop-11"></span>
 **Proposition 11** (MVS Approximation). *Finding the exact MVS is NP-hard (reduction from set cover). However, a greedy algorithm that iteratively adds the component maximizing capability gain achieves approximation ratio \\(O(\ln |V|)\\).*
 
-*Proof sketch*: MVS is a covering problem: find the minimum set of components whose combined capability exceeds threshold \\(L_1\\). When the capability function exhibits diminishing marginal returns (submodular), the greedy algorithm achieves \\(O(\ln |V|)\\) approximation, matching the bound for weighted set cover.
-For small component sets, enumerate solutions. For larger sets, use the greedy approximation: iteratively add the component that contributes most to capability until L1 is reached.
+*Proof sketch*: MVS is a covering problem: find the minimum set of components whose combined capability exceeds threshold \\(\mathcal{L}_1\\). When the capability function exhibits diminishing marginal returns (submodular), the greedy algorithm achieves \\(O(\ln |V|)\\) approximation, matching the bound for weighted set cover.
+For small component sets, enumerate solutions. For larger sets, use the greedy approximation: iteratively add the component that contributes most to capability until \\(\mathcal{L}_1\\) is reached.
+
+In other words, the exact {% term(url="#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm's priority boundary — MVS components are repaired first") %}MVS{% end %} is computationally intractable for large systems, but always-pick-the-most-useful-component-next finds a solution at most \\(O(\ln |V|)\\) times larger than the true minimum.
+
+### Game-Theoretic Extension: Shapley Values for Critical Component Identification
+
+Proposition 11's greedy set-cover approximation identifies a minimum feasible component set. It does not identify which components are most *critical* to MVS achievability — a question answered by the **Shapley value** of the cooperative game over component contributions.
+
+**MVS cooperative game**: Players are the \\(n\\) nodes (or components). The characteristic function \\(v(S)\\) is the mission completion probability achievable with the components contributed by coalition \\(S\\).
+
+The **Shapley value** of node \\(i\\) measures its average marginal contribution across all possible coalition orderings:
+{% katex(block=true) %}
+\phi_i(v) = \sum_{S \subseteq N \setminus \{i\}} \frac{|S|!\,(|N|-|S|-1)!}{|N|!} \bigl[v(S \cup \{i\}) - v(S)\bigr]
+{% end %}
+
+**Shapley vs. minimum set**: A node can be in many minimum MVS coalitions (high Shapley value) without itself being a minimum set. High-Shapley nodes are single points of failure for MVS achievability — they appear in most coalitions that cross the feasibility threshold.
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} application**: When drone 23 fails and coverage must be redistributed, the drones needed to fill the gap have high Shapley values in the coverage MVS game. Allocating healing resources (battery reserve, repositioning priority) proportional to Shapley values is efficient (total mission value maximized) and satisfies the fairness axioms of efficiency, symmetry, and marginality.
+
+**Practical implication**: Pre-compute Shapley values for the MVS game during mission planning. Nodes with Shapley values above a criticality threshold \\(\phi_i > \phi_{\text{crit}}\\) receive:
+- Higher power reserves
+- Priority positions in healing queues
+- Stricter health monitoring thresholds (lower \\(\theta^*\\))
+
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s 47 drones, computing Shapley values over the relevant MVS coalitions (typically 5-10 drones) is tractable at \\(O(2^{|S_{\text{MVS}}|})\\) per mission phase.
 
 ---
 
@@ -563,7 +1002,7 @@ For small component sets, enumerate solutions. For larger sets, use the greedy a
 ### Resource Contention During Recovery
 
 Healing consumes the resources needed for normal operation:
-- **CPU**: MAPE-K analysis, action planning, coordination
+- **CPU**: {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} analysis, action planning, coordination
 - **Memory**: Healing state, candidate solutions, rollback buffers
 - **Bandwidth**: Gossip for healing coordination, status updates
 - **Power**: Additional computation and communication
@@ -583,19 +1022,19 @@ If healing demands exceed quota, prioritize by severity and queue the remainder.
 2. Expected time to complete
 3. Resource requirements (prefer low-resource actions)
 
-Formally, this is a scheduling problem:
+Formally, the goal is to minimize total weighted completion time across all pending healing actions, where each action \\(i\\) carries a priority weight \\(w_i\\) and a completion time \\(C_i\\).
 
 {% katex(block=true) %}
 \min \sum_i w_i \cdot C_i
 {% end %}
 
-Where \\(w_i\\) is priority weight and \\(C_i\\) is completion time for action \\(i\\). Classic scheduling algorithms (shortest job first, weighted shortest job first) apply.
+Classic scheduling algorithms (shortest job first, weighted shortest job first) apply directly.
 
 ### Thundering Herd from Synchronized Restart
 
 After a partition heals, multiple nodes may attempt simultaneous healing. This **thundering herd** can overwhelm shared resources.
 
-Scenario: CONVOY of 12 vehicles experiences 30-minute partition. During partition, vehicles 3, 5, and 9 developed issues requiring healing but couldn't coordinate with convoy lead. When partition heals, all three simultaneously:
+Scenario: {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} of 12 vehicles experiences 30-minute partition. During partition, vehicles 3, 5, and 9 developed issues requiring healing but couldn't coordinate with convoy lead. When partition heals, all three simultaneously:
 - Request lead approval for healing
 - Download healing policies
 - Execute restart sequences
@@ -603,13 +1042,13 @@ Scenario: CONVOY of 12 vehicles experiences 30-minute partition. During partitio
 
 The convoy's limited bandwidth is overwhelmed. Healing takes longer than if coordinated sequentially.
 
-**Jittered restarts**: Each node waits random delay before initiating healing:
+**Jittered restarts**: Each node draws a random delay uniformly from \\([0, T_{\text{jitter}}]\\) and waits that long after the partition ends before initiating its healing sequence, spreading simultaneous arrivals across the jitter window.
 
 {% katex(block=true) %}
 t_{\text{heal}} = t_{\text{partition-end}} + \text{Uniform}(0, T_{\text{jitter}})
 {% end %}
 
-Expected load with \\(n\\) nodes, healing rate \\(\lambda\\), jitter window \\(T\\):
+The effect on load is dramatic: without jitter all \\(n\\) nodes hit at once at rate \\(n \cdot \lambda\\); with jitter the average load is reduced by the window length \\(T\\).
 
 {% katex(block=true) %}
 \text{Peak load (no jitter)} = n \cdot \lambda
@@ -621,7 +1060,15 @@ Expected load with \\(n\\) nodes, healing rate \\(\lambda\\), jitter window \\(T
 
 Jitter spreads load over time, preventing spike.
 
-**Staged recovery**: Define recovery waves. Wave 1 heals highest-priority nodes. Wave 2 waits for Wave 1 to complete. This requires coordination but provides better control than random jitter.
+**Staged recovery**: Define recovery waves. Wave 1 heals highest-priority nodes. Wave 2 waits for Wave 1 to complete.
+
+*Formal comparison*: With \\(k\\) waves of \\(n/k\\) nodes each, staged recovery achieves:
+
+{% katex(block=true) %}
+\text{Var}[T_{\text{recovery}}^{\text{staged}}] = \frac{1}{k} \cdot \text{Var}[T_{\text{recovery}}^{\text{jitter}}]
+{% end %}
+
+For \\(k = 3\\) waves, variance reduces by factor of 3, providing tighter bounds on total recovery time at the cost of \\(k-1\\) synchronization barriers.
 
 ### Progressive Healing with Backoff
 
@@ -638,7 +1085,7 @@ The **healing escalation ladder**:
 
 Progress up the ladder only when lower levels fail.
 
-**Exponential backoff** between levels:
+Between each escalation level, the system waits an exponentially increasing observation window: at level \\(k\\) with base wait \\(t_0\\), the wait doubles with each level so that higher-severity interventions receive more time to demonstrate success before further escalation is triggered.
 
 {% katex(block=true) %}
 t_{\text{wait}}(k) = t_0 \cdot 2^k
@@ -650,52 +1097,444 @@ After action at level \\(k\\), wait \\(t_{\text{wait}}(k)\\) before concluding i
 
 **Multi-armed bandit formulation**: Each healing action is an "arm" with unknown success probability. The healing controller must explore (try different actions to learn effectiveness) and exploit (use actions known to work).
 
-The UCB algorithm from [anti-fragile learning](@/blog/2026-02-12/index.md) applies:
+The Upper Confidence Bound ({% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}) algorithm provides optimal exploration-exploitation tradeoff:
 
 {% katex(block=true) %}
 \text{UCB}(a) = \hat{p}_a + c\sqrt{\frac{\ln t}{n_a}}
 {% end %}
 
-Where \\(\hat{p}_a\\) is estimated success probability for action \\(a\\), \\(t\\) is total attempts, \\(n_a\\) is attempts for action \\(a\\).
+where \\(\hat{p}_a\\) is the estimated success probability for action \\(a\\), \\(n_a\\) is the attempt count for action \\(a\\), and \\(t\\) is total attempts across all actions. The exploration bonus \\(c\sqrt{\ln t / n_a}\\) grows for under-tried actions, ensuring eventual exploration.
 
-Select the action with highest UCB. This naturally balances trying known-good actions with exploring potentially better alternatives.
+*Derivation*: The exploration term follows from Hoeffding's inequality. For a random variable bounded in \\([0,1]\\), \\(P(|\hat{p} - p| > \epsilon) \leq 2e^{-2n\epsilon^2}\\). Setting \\(\epsilon = c\sqrt{\ln t / n}\\) yields confidence that scales appropriately with sample count.
 
-The UCB algorithm achieves regret bound \\(O(\sqrt{K \cdot T \cdot \ln T})\\) where \\(K\\) is the number of healing actions and \\(T\\) is the number of healing episodes. For RAVEN with \\(K = 6\\) healing actions over \\(T = 100\\) episodes, expected regret is bounded by \\(\sim 40\\) suboptimal decisions—the system converges to near-optimal healing policy within the first deployment month.
+Select the action with highest {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}. This naturally balances known-good actions with under-explored alternatives.
+
+**Regret bound**: {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} achieves \\(R_T = O(\sqrt{KT \ln T})\\) where \\(K\\) is the number of actions and \\(T\\) is episodes. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} with \\(K = 6\\) healing actions over \\(T = 100\\) episodes, expected regret is bounded by \\(\sim 53\\) suboptimal decisions—the system converges to near-optimal healing policy within the first deployment month.
+
+---
+
+## Model Scope and Failure Envelope
+
+Before extending the framework with game-theoretic and RL methods, we bound its validity.
+
+Each mechanism has bounded validity. When assumptions fail, so does the mechanism.
+
+### MAPE-K Stability Analysis
+
+**Validity Domain**:
+
+The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} stability analysis holds only when the system state \\(S\\) satisfies all three assumptions simultaneously; violations narrow or eliminate the domain within which \\(K\tau < \pi/2\\) guarantees stability.
+
+{% katex(block=true) %}
+\mathcal{D}_{\text{MAPE-K}} = \{S \mid A_1 \land A_2 \land A_3\}
+{% end %}
+
+where:
+- \\(A_1\\): System dynamics are approximately linear near operating point
+- \\(A_2\\): Feedback delay \\(\tau\\) is approximately constant
+- \\(A_3\\): No nested feedback loops (healing action does not affect its own sensing)
+
+**Stability Criterion**: \\(K \cdot \tau < \pi/2\\) ensures stability under linear approximation.
+
+The following table maps each assumption violation to its observable symptom, how to detect it, and a concrete engineering mitigation.
+
+| Assumption Violation | Failure Mode | Detection | Mitigation |
+| :--- | :--- | :--- | :--- |
+| Nonlinear dynamics | Oscillation at large perturbations | Amplitude exceeds linear regime | Gain scheduling; saturation limits |
+| Variable delay | Unpredictable oscillation | Delay variance high | Robust controller design |
+| Nested feedback | Instability; runaway | Correlation between action and sensor | Decouple sensing from action |
+
+**Counter-scenario**: A healing action that restores a sensor affects the very metric being monitored (e.g., restarting a process causes temporary CPU spike). The stability analysis assuming independent sensing does not apply. Detection: correlation coefficient between healing actions and subsequent sensor anomalies exceeds 0.5.
+
+### UCB Action Selection
+
+**Validity Domain**:
+
+{% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}'s regret bound \\(O(\sqrt{TK \ln T})\\) holds only when the reward distribution is stable and actions can be safely retried; the validity domain captures these preconditions formally.
+
+{% katex(block=true) %}
+\mathcal{D}_{\text{UCB}} = \{S \mid B_1 \land B_2 \land B_3\}
+{% end %}
+
+where:
+- \\(B_1\\): Reward distribution is stationary over learning horizon
+- \\(B_2\\): Actions are repeatable (can try same action multiple times)
+- \\(B_3\\): Rewards are bounded in \\([0, 1]\\)
+
+**Regret Bound**: \\(O(\sqrt{TK \ln T})\\) holds under stated assumptions.
+
+The table below describes what goes wrong when each {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} assumption is violated, the observable signal that reveals the violation, and the recommended corrective design.
+
+| Assumption Violation | Failure Mode | Detection | Mitigation |
+| :--- | :--- | :--- | :--- |
+| Non-stationary environment | Converges to stale optimum | Performance decline over time | Sliding window; discounted UCB |
+| Catastrophic actions | Cannot learn from irreversible failure | Action leads to system loss | Action cost constraints; simulation |
+| Sparse rewards | Slow convergence | Samples per action < 10 | Prior from similar contexts |
+
+**Uncertainty bound**: Practical convergence requires \\(T > 10K\\) where \\(K\\) is number of actions. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} with 5 healing actions, meaningful learning requires 50+ samples. Novel failures with < 10 samples should use conservative defaults.
+
+### Staged Recovery
+
+**Validity Domain**:
+
+Staged recovery reduces completion-time variance only when each stage can be verified independently and reversed if it fails; the domain excludes systems where those conditions do not hold.
+
+{% katex(block=true) %}
+\mathcal{D}_{\text{staged}} = \{S \mid C_1 \land C_2 \land C_3\}
+{% end %}
+
+where:
+- \\(C_1\\): Recovery stages are independently verifiable
+- \\(C_2\\): Partial success is detectable (intermediate states observable)
+- \\(C_3\\): Rollback is possible at each stage
+
+The table below shows what breaks when staged recovery's assumptions do not hold, and the corresponding engineering response.
+
+| Assumption Violation | Failure Mode | Detection | Mitigation |
+| :--- | :--- | :--- | :--- |
+| Atomic failures | Cannot decompose; all-or-nothing | Recovery has no checkpoints | Accept atomic recovery |
+| Unobservable intermediate | Cannot verify stage completion | Verification timeout | Probabilistic advancement |
+| No rollback | Partial recovery may be worse | Rollback fails | Forward-only with safeguards |
+
+**Counter-scenario**: Database corruption where partial recovery may leave inconsistent state. Staged recovery may be worse than atomic restore from backup. Detection: data integrity checks fail after partial recovery. Response: atomic restore is preferred for integrity-critical systems.
+
+### Cascade Prevention
+
+**Validity Domain**:
+
+Resource quotas and dependency ordering prevent cascade only when the dependency graph is known, resource pools can be isolated, and each healing action consumes a bounded share of those pools.
+
+{% katex(block=true) %}
+\mathcal{D}_{\text{cascade}} = \{S \mid D_1 \land D_2 \land D_3\}
+{% end %}
+
+where:
+- \\(D_1\\): Failure dependencies are known and acyclic
+- \\(D_2\\): Resource pools are isolable
+- \\(D_3\\): Healing actions have bounded resource cost
+
+The table below identifies the three main ways cascade prevention breaks down, the observable signal in each case, and the mitigation.
+
+| Assumption Violation | Failure Mode | Detection | Mitigation |
+| :--- | :--- | :--- | :--- |
+| Hidden dependencies | Cascade propagates unexpectedly | Correlated failures | Dependency discovery; testing |
+| Shared resource pools | Healing exhausts shared resources | Resource contention | Resource isolation; budgets |
+| Unbounded healing cost | Healing action triggers cascade | Healing resource > available | Cost limits; staged healing |
+
+### Summary: Claim-Assumption-Failure Table
+
+The summary table below consolidates all four mechanisms into a single reference, showing the essential claim, the assumptions that support it, and the conditions under which each claim breaks down.
+
+| Claim | Key Assumptions | Valid When | Fails When |
+| :--- | :--- | :--- | :--- |
+| MAPE-K converges | Linear dynamics, constant delay | Small perturbations | Large failures; variable delay |
+| UCB minimizes regret | Stationary environment, repeatable | Stable system | Non-stationary; catastrophic actions |
+| Staged recovery reduces variance | Stages separable, observable | Modular recovery | Atomic failures; unobservable |
+| Cascade prevention isolates failures | Dependencies known, resources isolable | Well-understood system | Hidden dependencies; shared resources |
+
+---
+
+### Reinforcement Learning for Adaptive Recovery
+
+{% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} treats healing actions as independent arms. In practice, optimal healing depends on **context**: failure type, system state, resource availability, and environmental conditions. Reinforcement learning (RL) learns context-dependent healing policies.
+
+**Contextual Bandits for State-Dependent Healing**
+
+Contextual bandits extend {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} by selecting the action that maximizes a linear reward estimate \\(\theta_a^T x\\) for the current context vector \\(x\\), plus a confidence-weighted exploration bonus that is large when the covariance \\(A_a^{-1}\\) indicates the action is under-explored in this region of the context space.
+
+{% katex(block=true) %}
+a^* = \arg\max_a \left[ \theta_a^T x + \alpha \sqrt{x^T A_a^{-1} x} \right]
+{% end %}
+
+where \\(x\\) is the context vector (failure features), \\(\theta_a\\) is the learned parameter for action \\(a\\), and \\(A_a\\) is the covariance matrix tracking uncertainty.
+
+**Context features for healing decisions**:
+
+These six features form the context vector \\(x\\) that LinUCB conditions on; the Range column indicates what the endpoints represent for each feature.
+
+| Feature | Description | Range |
+| :--- | :--- | :--- |
+| \\(x_1\\) | Failure severity (from anomaly score) | [0 = nominal, 1 = critical] |
+| \\(x_2\\) | Time since last healing | \\([0, \infty)\\) normalized |
+| \\(x_3\\) | Resource availability (power, CPU) | [0 = depleted, 1 = full capacity] |
+| \\(x_4\\) | Connectivity state | {0, 0.33, 0.67, 1} |
+| \\(x_5\\) | Cluster health (avg neighbor status) | [0 = all failed, 1 = all healthy] |
+| \\(x_6\\) | Mission criticality | [0 = routine, 1 = mission-critical] |
+
+**LinUCB for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} healing**:
+
+The diagram below traces a single decision cycle: context features are extracted, scored against each action's {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} value, and the highest-scoring action is selected and used to update the model.
+
+{% mermaid() %}
+graph TD
+    subgraph "Context Extraction"
+        F["Failure detected<br/>Anomaly score: 0.85"]
+        S["State features<br/>x = [0.85, 0.2, 0.6, 0.67, 0.9, 0.7]"]
+    end
+
+    subgraph "LinUCB Policy"
+        A1["Restart (a1)<br/>UCB: 0.72"]
+        A2["Reconfigure (a2)<br/>UCB: 0.81"]
+        A3["Reboot (a3)<br/>UCB: 0.65"]
+        A4["Failover (a4)<br/>UCB: 0.78"]
+    end
+
+    subgraph "Execution"
+        E["Execute a2<br/>Observe outcome"]
+        U["Update theta2, A2"]
+    end
+
+    F --> S
+    S --> A1
+    S --> A2
+    S --> A3
+    S --> A4
+    A2 -->|"max UCB"| E
+    E --> U
+
+    style A2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+{% end %}
+
+**Sample efficiency**: LinUCB's regret bound \\(O(d\sqrt{T \ln T})\\) scales with feature dimension \\(d\\) rather than action count \\(K\\), providing better sample efficiency when \\(d < K\\). Context features enable generalization—a healing action effective for high-severity failures can be immediately applied to new high-severity failures without re-exploration.
+
+**Deep Reinforcement Learning for Complex Healing**
+
+When the healing problem involves sequential decisions and complex state spaces, deep RL provides more expressive policies.
+
+**Policy Network Architecture for Healing**:
+
+The diagram below shows how state history passes through an embedding and recurrent layer before splitting into a policy head (action probabilities) and a value head (expected return), the two outputs that drive actor-critic training.
+
+{% mermaid() %}
+graph LR
+    subgraph "Input"
+        S["State<br/>32 features"]
+        H["History<br/>Last 5 states"]
+    end
+
+    subgraph "Network"
+        E["Embedding<br/>32 to 16"]
+        L["LSTM<br/>16 x 5 to 32"]
+        P["Policy head<br/>32 to K actions"]
+        V["Value head<br/>32 to 1"]
+    end
+
+    S --> E
+    H --> E
+    E --> L
+    L --> P
+    L --> V
+
+    style P fill:#e3f2fd,stroke:#1976d2
+    style V fill:#fff3e0,stroke:#f57c00
+{% end %}
+
+**Actor-Critic for edge deployment**:
+
+The policy (actor) selects healing actions; the value function (critic) estimates expected future reward:
+
+{% katex(block=true) %}
+\begin{aligned}
+\pi_\theta(a|s) &= \text{softmax}(f_\theta(s)) && \text{(policy)} \\
+V_\phi(s) &= g_\phi(s) && \text{(value)}
+\end{aligned}
+{% end %}
+
+PPO maximizes the policy objective \\(L(\theta)\\) by taking the minimum of the unclipped and clipped probability-ratio objective, preventing any single update from moving the policy too far from the previous version and thus avoiding destructive overshooting.
+
+{% katex(block=true) %}
+L(\theta) = \mathbb{E}\left[\min\left(r_t(\theta) A_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t\right)\right]
+{% end %}
+
+where \\(r_t(\theta) = \pi_\theta(a_t|s_t) / \pi_{\theta_{\text{old}}}(a_t|s_t)\\) is the probability ratio and \\(A_t\\) is the advantage estimate.
+
+**Model size for edge**:
+- State embedding: \\(32\times16 = 512\\) parameters
+- LSTM: \\(4\times(16+32)\times32 = 6{,}144\\) parameters
+- Policy head: \\(32\times6 = 192\\) parameters
+- Value head: \\(32\times1 = 32\\) parameters
+- **Total: 6,880 parameters = ~27 KB** (float32)
+
+**Training approach**:
+1. **Simulation pretraining**: Train in simulated environment with synthetic failures
+2. **Deployment fine-tuning**: Continue learning from real failures with reduced learning rate
+3. **Policy distillation**: Compress large trained policy into edge-deployable network
+
+**Healing Policy Comparison** (theoretical bounds):
+
+Each row reports the asymptotic regret bound, sample complexity to reach \\(\epsilon\\)-optimality, and the limiting success rate, showing the progression from fixed rules through deep RL.
+
+| Method | Regret Bound | Convergence | Success Rate Bound |
+| :--- | :--- | :--- | :--- |
+| Fixed rules | \\(\Omega(T)\\) (linear) | N/A | \\(p_{\text{best rule}}\\) |
+| UCB bandit | \\(O(\sqrt{KT \ln T})\\) | \\(O(K^2/\epsilon^2)\\) | \\(1 - O(1/\sqrt{T})\\) |
+| LinUCB | \\(O(d\sqrt{T \ln T})\\) | \\(O(d^2/\epsilon^2)\\) | \\(1 - O(d/\sqrt{T})\\) |
+| PPO | \\(O(1/\sqrt{T})\\) | \\(O(1/\epsilon^2)\\) | \\(\to \pi^*\\) (optimal) |
+
+**Utility ordering derivation**: Let \\(U_i = \sum_t r_t^{(i)}\\) be cumulative reward for method \\(i\\).
+
+{% katex(block=true) %}
+U_{\text{PPO}} > U_{\text{LinUCB}} > U_{\text{UCB}} > U_{\text{fixed}}
+{% end %}
+
+follows from tighter regret bounds and context-awareness. PPO's policy gradient exploits state structure; LinUCB exploits linear reward structure; {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} exploits only action averages; fixed rules have no adaptation.
+
+**Model-Based RL for Sample Efficiency**
+
+Edge systems have limited failure data. Model-based RL learns a dynamics model {% katex() %}\hat{s}_{t+1} = f_\psi(s_t, a_t){% end %} and plans using it, enabling policy improvement from synthetic rollouts without requiring many real failures. For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}, where sensor failures occur roughly once per 30 days, the model is initialized from similar deployments, updated after each real failure, and then used to generate 100+ synthetic rollouts for policy improvement—reducing real-world sample requirements substantially relative to model-free approaches.
+
+**Safe Reinforcement Learning with Constraints**
+
+Healing actions have constraints: power budget, time limits, safety requirements. Unlike unconstrained RL, Safe RL finds the policy \\(\pi\\) that maximizes discounted cumulative reward while simultaneously keeping the discounted cumulative cost of each constraint \\(i\\) below its threshold \\(d_i\\), so that power, cascade risk, and time violations are penalized structurally rather than through a hand-tuned reward term.
+
+{% katex(block=true) %}
+\max_\pi \mathbb{E}\left[\sum_t \gamma^t R(s_t, a_t)\right] \quad \text{subject to} \quad \mathbb{E}\left[\sum_t \gamma^t C_i(s_t, a_t)\right] \leq d_i \quad \forall i
+{% end %}
+
+where \\(C_i\\) are cost functions and \\(d_i\\) are constraint thresholds.
+
+**Constraint types for edge healing**:
+
+The table maps each operational constraint to its cost function \\(C_i\\) and the threshold \\(d_i\\) that CPO must not exceed.
+
+| Constraint | Cost Function | Threshold |
+| :--- | :--- | :--- |
+| Power budget | Energy consumed by healing | 10% of battery |
+| Cascade risk | P(healing causes secondary failure) | 5% |
+| Time bound | Recovery duration | 5 minutes |
+| Service level | Capability degradation during healing | \\(\mathcal{L}_1\\) minimum |
+
+**Constrained Policy Optimization (CPO)**:
+
+Each CPO policy update finds the parameter \\(\theta_{k+1}\\) that maximizes the objective \\(L(\theta)\\) subject to two constraints: the KL divergence from the old policy must not exceed \\(\delta\\) (keeping updates small), and the expected cumulative cost of every constraint \\(i\\) must remain at or below its threshold \\(d_i\\).
+
+{% katex(block=true) %}
+\theta_{k+1} = \arg\max_\theta L(\theta) \quad \text{s.t.} \quad D_{\text{KL}}(\pi_\theta || \pi_{\theta_k}) \leq \delta, \quad J_{C_i}(\pi_\theta) \leq d_i
+{% end %}
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} safe healing example**:
+
+Drone healing must not deplete battery below safe return threshold. CPO learns to:
+- Prefer low-energy healing actions (reconfigure > reboot)
+- Delay healing if battery is marginal
+- Accept slightly lower success rate to preserve energy margin
+
+The utility loss \\(\Delta U\\) of using CPO instead of the unconstrained policy equals the Lagrange multiplier \\(\lambda^*\\) multiplied by how much the unconstrained policy would have exceeded the constraint threshold \\(d\\), quantifying the cost of the safety guarantee.
+
+{% katex(block=true) %}
+\Delta U = U_{\text{CPO}} - U_{\text{unconstrained}} = -\lambda^* \cdot (d - J_C(\pi^*_{\text{unc}}))
+{% end %}
+
+where \\(\lambda^*\\) is the optimal Lagrange multiplier. CPO trades a lower success rate for a hard constraint-satisfaction guarantee: it never violates constraints by construction, while the unconstrained policy violates them with probability \\(\epsilon_C > 0\\).
+
+{% katex(block=true) %}
+P(\text{CPO violates}) = 0, \quad P(\text{unconstrained violates}) = \epsilon_C > 0
+{% end %}
+
+\\(\text{sign}(\Delta U) < 0\\) but bounded: the constraint guarantee has value \\(V_{\text{constraint}}\\) such that total utility \\(U_{\text{CPO}} + V_{\text{constraint}} > U_{\text{unconstrained}}\\) when constraint violation is catastrophic.
+
+**Hierarchical RL for Multi-Level Healing**
+
+Healing operates at multiple levels (component, node, cluster, fleet). Hierarchical RL decomposes the problem: each tier learns a simpler policy scoped to its level, enabling temporal abstraction (high-level decides "what," low-level decides "how") and modularity (low-level policies reusable across deployments).
+
+{% mermaid() %}
+graph TD
+    subgraph "High-Level Policy (Fleet)"
+        HLP["Fleet healer<br/>Decides: which cluster"]
+    end
+
+    subgraph "Mid-Level Policy (Cluster)"
+        MLP1["Cluster healer 1<br/>Decides: which node"]
+        MLP2["Cluster healer 2<br/>Decides: which node"]
+    end
+
+    subgraph "Low-Level Policy (Node)"
+        LLP1["Node healer<br/>Decides: which action"]
+        LLP2["Node healer<br/>Decides: which action"]
+    end
+
+    HLP -->|"heal cluster 1"| MLP1
+    HLP -->|"monitor"| MLP2
+    MLP1 -->|"heal node 3"| LLP1
+    MLP1 -->|"monitor"| LLP2
+
+    style HLP fill:#e3f2fd,stroke:#1976d2
+    style MLP1 fill:#fff3e0,stroke:#f57c00
+    style LLP1 fill:#e8f5e9,stroke:#388e3c
+{% end %}
+
+**Transfer Learning Across Scenarios**
+
+{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, and {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} share healing patterns. Transfer learning leverages this:
+
+{% katex(block=true) %}
+\theta_{\text{target}} = \theta_{\text{source}} + \Delta\theta_{\text{fine-tune}}
+{% end %}
+
+**Transfer from {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} to {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}**:
+
+1. **Shared representation**: State embedding layer transfers (both have connectivity, power, health features)
+2. **Policy adaptation**: Policy head retrained on {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}-specific actions
+3. **Value fine-tuning**: Value function recalibrated for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} reward scale
+
+**Transfer efficiency bound**:
+
+Learning from scratch to \\(\epsilon\\)-optimality requires \\(O(|S||A|/\epsilon^2)\\) samples — proportional to the full state-action space — while transfer learning from a related source policy reduces this to \\(O(d_{\text{diff}}/\epsilon^2)\\), where \\(d_{\text{diff}}\\) is the \\(L_1\\) distance between source and target transition dynamics.
+
+{% katex(block=true) %}
+N_{\text{scratch}} = O\left(\frac{|S||A|}{\epsilon^2}\right), \quad N_{\text{transfer}} = O\left(\frac{d_{\text{diff}}}{\epsilon^2}\right)
+{% end %}
+
+where \\(d_{\text{diff}} = \|P_{\text{target}} - P_{\text{source}}\|_1\\) is the domain difference.
+
+The table below shows how domain similarity translates into concrete sample savings: the closer the source and target dynamics, the smaller \\(d_{\text{diff}}\\), and the larger the fraction of training samples that transfer replaces.
+
+| Target | Domain Diff \\(d_{\text{diff}}\\) | Complexity Ratio | Sample Reduction |
+| :--- | :--- | :--- | :--- |
+| Similar (e.g., drone-to-drone) | \\(O(0.1)\\) | \\(O(0.1)\\) | \\(\approx 90\\%\\) |
+| Related (e.g., drone-to-vehicle) | \\(O(0.3)\\) | \\(O(0.3)\\) | \\(\approx 70\\%\\) |
+| Distant (e.g., drone-to-building) | \\(O(0.5)\\) | \\(O(0.5)\\) | \\(\approx 50\\%\\) |
+
+\\(\text{sign}(\Delta N) < 0\\) (transfer reduces samples) when \\(d_{\text{diff}} < |S||A|\\)—i.e., when source and target share structure.
+
+**Meta-Learning for Rapid Adaptation**: MAML trains an initialization \\(\theta^*\\) across diverse healing scenarios so that the policy can fine-tune to a new scenario in 5-10 episodes rather than 100+. This is essential for novel deployments where collecting large amounts of real healing experience is impractical before the system must operate.
+
+**Online vs Offline RL Tradeoffs**
+
+The three training regimes differ in where data comes from, whether unsafe exploration is possible during training, and how efficiently each uses the available healing experience.
+
+| Approach | Data Source | Safety | Sample Efficiency |
+| :--- | :--- | :--- | :--- |
+| Online RL | Real-time interaction | Risk of bad actions | Lower |
+| Offline RL | Historical logs | Safe (no exploration) | Higher |
+| Hybrid | Offline pretrain + online fine-tune | Balanced | Best |
+
+**Recommended approach for edge healing**:
+1. **Offline phase**: Train on historical healing logs (no risk)
+2. **Simulation phase**: Fine-tune in simulated environment (controlled risk)
+3. **Deployment phase**: Conservative online updates with safety constraints (managed risk)
+
+This progression minimizes risk while enabling continuous improvement from operational experience.
 
 ---
 
 ## RAVEN Self-Healing Protocol
 
-Return to Drone 23's battery failure. How does the RAVEN swarm heal?
+Return to Drone 23's battery failure. How does the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm heal?
 
 ### Healing Decision Analysis
 
-The MAPE-K loop executes:
+Drone 23's battery alert propagates via gossip. Within 15 seconds, all swarm members know Drone 23's status. Each drone's local analyzer assesses impact: Drone 23 will fail in 8 minutes; if it fails in place, a coverage gap opens on the eastern sector with potential crash in contested area; if it returns, neighbors must expand coverage.
 
-**Monitor**: Drone 23's battery alert propagates via gossip. Within 15 seconds, all swarm members know Drone 23's status.
-
-**Analyze**: Each drone's local analyzer assesses impact:
-- Drone 23 will fail in 8 minutes
-- If 23 fails in place: coverage gap on eastern sector, potential crash in contested area
-- If 23 returns: neighbors must expand coverage
-
-**Plan**: Cluster lead (Drone 1) computes options by evaluating expected mission value for each healing alternative:
-
-{% katex(block=true) %}
-E[\text{mission} | a] = \sum_{o \in \text{outcomes}} P(o | a) \cdot V(o)
-{% end %}
-
-**Decision-theoretic framework**: Each healing option \\(a\\) induces a probability distribution over outcomes. The optimal action maximizes expected value subject to risk constraints:
+Cluster lead (Drone 1) selects the optimal action by evaluating expected mission value for each alternative:
 
 {% katex(block=true) %}
 a^* = \arg\max_a E[V | a] \quad \text{subject to} \quad P(\text{catastrophic} | a) < \epsilon
 {% end %}
 
-For the drone return scenario, you're trading **coverage preservation against asset recovery**. Compression maintains formation integrity but sacrifices coverage area. Return to base maintains coverage but accepts execution risk.
+The trade-off is **coverage preservation against asset recovery**. Compression maintains formation integrity but sacrifices coverage area. Return to base preserves the drone but requires neighbor expansion. **Proactive extraction dominates passive observation** when asset value exceeds the coverage loss—get the degraded asset out rather than watching it fail in place.
 
-**Proactive extraction dominates passive observation** when asset value exceeds the coverage loss. When in doubt, get the degraded asset out rather than watching it fail in place.
-
-**Execute**: Coordinated healing sequence. The cluster lead broadcasts the healing plan. Within one second, neighbors acknowledge sector expansion and Drone 23 acknowledges its return path. Formation adjustment begins and completes in roughly 8 seconds. Drone 23 departs, neighbors restore coverage to L2, and twelve minutes later Drone 23 reports safe landing at base.
+The cluster lead broadcasts the healing plan. Within one second, neighbors acknowledge sector expansion and Drone 23 acknowledges its return path. Formation adjustment completes in roughly 8 seconds. Drone 23 departs, neighbors restore coverage to \\(\mathcal{L}_2\\), and twelve minutes later Drone 23 reports safe landing at base.
 
 ### Healing Coordination Under Partition
 
@@ -709,7 +1548,7 @@ Fallback protocol:
 3. Drone 30 independently detects Drone 23's status from cached gossip
 4. Eastern cluster executes local healing plan (may differ from western cluster's plan)
 
-Post-reconnection [reconciliation](@/blog/2026-02-05/index.md) compares healing logs from both clusters, verifies formation consistency, and merges any conflicting state.
+Post-reconnection reconciliation compares healing logs from both clusters, verifies formation consistency, and merges any conflicting state using commutative, associative, idempotent merge operations—ensuring that applying updates in any order produces the same final state.
 
 ### Edge Cases
 
@@ -717,7 +1556,7 @@ Post-reconnection [reconciliation](@/blog/2026-02-05/index.md) compares healing 
 
 If Drones 21, 22, 24, 25 all have elevated failure risk, they cannot safely expand coverage. The healing plan must account for cascading risk.
 
-Solution: Healing confidence check before acceptance:
+Before accepting any healing plan, the system checks joint stability: all affected nodes must remain healthy throughout the healing window, so the probability of a stable outcome is the product of each individual node's health probability across the affected set \\(\text{affected}\\).
 
 {% katex(block=true) %}
 P(\text{healing stable}) = \prod_{i \in \text{affected}} P(\text{node } i \text{ healthy during healing})
@@ -735,7 +1574,7 @@ Solution: Incorporate threat model into path planning. Choose return route that 
 
 ## CONVOY Self-Healing Protocol
 
-Vehicle 4 experiences engine failure during mountain transit. The CONVOY healing protocol differs from RAVEN's due to ground vehicle constraints.
+Vehicle 4 experiences engine failure during mountain transit. The {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} healing protocol differs from {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s due to ground vehicle constraints.
 
 ### Failure Assessment
 
@@ -793,7 +1632,7 @@ The transition dynamics \\(P(s\' | s, a)\\) encode operational realities: field 
 
 These probabilities are estimated from operational logs and updated via Bayesian learning as the convoy gains experience.
 
-**Reward structure** captures the multi-objective nature:
+The reward function combines four weighted terms: mission completion value \\(V_{\text{mission}}\\) minus time cost, asset loss cost, and security risk cost, with weights \\(w_i\\) encoding the mission's priority ordering among these objectives.
 
 {% katex(block=true) %}
 R(s, a) = w_1 \cdot V_{\text{mission}}(s, a) - w_2 \cdot C_{\text{time}}(s, a) - w_3 \cdot C_{\text{asset}}(s, a) - w_4 \cdot C_{\text{risk}}(s, a)
@@ -801,7 +1640,7 @@ R(s, a) = w_1 \cdot V_{\text{mission}}(s, a) - w_2 \cdot C_{\text{time}}(s, a) -
 
 The weights \\(w_i\\) encode mission priorities—time-critical missions weight \\(w_2\\) heavily; asset-preservation missions weight \\(w_3\\); etc.
 
-**Optimal policy via Bellman recursion**:
+The optimal value function \\(V^*(s)\\) satisfies the Bellman equation: the best achievable cumulative reward from state \\(s\\) equals the immediate reward plus the discounted value of the best reachable next state, where \\(\gamma \in [0,1)\\) is the discount factor weighting future versus immediate outcomes.
 
 {% katex(block=true) %}
 V^*(s) = \max_a \left[ R(s, a) + \gamma \sum_{s'} P(s' | s, a) V^*(s') \right]
@@ -835,9 +1674,11 @@ If lead is unreachable:
 
 ## OUTPOST Self-Healing
 
-The OUTPOST sensor mesh faces unique healing challenges: remote locations preclude physical intervention, and ultra-low power budgets constrain healing actions.
+The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor mesh faces unique healing challenges: remote locations preclude physical intervention, and ultra-low power budgets constrain healing actions.
 
 ### Failure Modes and Healing Actions
+
+Each failure mode in the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} mesh has a characteristic detection signal and a preferred low-energy healing action; the target success rate reflects design goals under nominal environmental conditions.
 
 <style>
 #tbl_outpost_healing + table th:first-of-type { width: 20%; }
@@ -847,7 +1688,7 @@ The OUTPOST sensor mesh faces unique healing challenges: remote locations preclu
 </style>
 <div id="tbl_outpost_healing"></div>
 
-| Failure Mode | Detection | Healing Action | Success Rate |
+| Failure Mode | Detection | Healing Action | Target Success Rate* |
 | :--- | :--- | :--- | :--- |
 | Sensor drift | Cross-correlation with neighbors | Recalibration routine | 85% |
 | Communication loss | Missing heartbeats | Frequency hop, power increase | 70% |
@@ -855,15 +1696,17 @@ The OUTPOST sensor mesh faces unique healing challenges: remote locations preclu
 | Software hang | Watchdog timeout | Controller restart | 95% |
 | Memory corruption | CRC check failure | Reload from backup | 80% |
 
+*Target rates are design goals; actual rates depend on deployment conditions and calibration.
+
 ### Power-Constrained Healing
 
-OUTPOST healing actions compete with the power budget. Each healing action has an energy cost:
+{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} healing actions compete with the power budget. Each healing action consumes energy \\(E_{\text{heal}}\\) equal to the product of action power draw \\(P_{\text{action}}\\) and its duration \\(T_{\text{duration}}\\), plus the fixed communication overhead \\(E_{\text{communication}}\\) for coordinating the action.
 
 {% katex(block=true) %}
 E_{\text{heal}} = P_{\text{action}} \cdot T_{\text{duration}} + E_{\text{communication}}
 {% end %}
 
-The healing budget is constrained:
+The total energy spent on all healing actions \\(i\\) must not exceed the available reserve minus the minimum energy needed to keep the mission running.
 
 {% katex(block=true) %}
 \sum_i E_{\text{heal},i} \leq E_{\text{reserve}} - E_{\text{mission,min}}
@@ -871,7 +1714,7 @@ The healing budget is constrained:
 
 Where \\(E_{\text{reserve}}\\) is current battery capacity and \\(E_{\text{mission,min}}\\) is minimum energy required to maintain mission capability.
 
-**Healing action scheduling**: When multiple healing actions are needed, prioritize by utility-per-energy:
+**Healing action scheduling**: When multiple healing actions compete for the limited energy budget, the priority score below ranks them by expected capability restored per unit of energy spent, ensuring the most energy-efficient healings execute first.
 
 {% katex(block=true) %}
 \text{Priority}(a) = \frac{V_{\text{restored}}(a) \cdot P_{\text{success}}(a)}{E_{\text{heal}}(a)}
@@ -879,7 +1722,7 @@ Where \\(E_{\text{reserve}}\\) is current battery capacity and \\(E_{\text{missi
 
 ### Mesh Reconfiguration
 
-When a sensor fails beyond repair, the mesh must reconfigure:
+When a sensor fails beyond repair, the mesh must reconfigure; the diagram shows how neighbors of the failed Sensor 3 extend their sensitivity to partially cover the gap while the dashed arrow marks the coverage zone that remains degraded.
 
 {% mermaid() %}
 graph TD
@@ -928,7 +1771,7 @@ Sensors adjacent to the failed sensor can increase their effective range through
 - Duty cycle increase (more power consumption)
 - Orientation adjustment (if mechanically possible)
 
-The trade-off is quantified:
+The net extended coverage sums the original field of view, the marginal gains \\(\Delta\text{Coverage}_j\\) contributed by each neighbor \\(j \in \mathcal{N}\\) that extends its sensitivity, minus the Overlap between those extended zones to avoid double-counting.
 
 {% katex(block=true) %}
 \text{Coverage}_{\text{extended}} = \text{Coverage}_{\text{original}} + \sum_{j \in \mathcal{N}} \Delta\text{Coverage}_j - \text{Overlap}
@@ -944,7 +1787,7 @@ If a fusion node fails, its sensor cluster must find an alternative:
 **Secondary**: Peer-to-peer mesh among sensors, with one sensor acting as temporary aggregator
 **Tertiary**: Each sensor operates independently with local decision authority
 
-The failover sequence executes automatically:
+The fusion state at time \\(t\\) is determined by a priority cascade: use the primary fusion node while reachable, fall back to the alternate fusion node if primary is lost, and revert to fully autonomous per-sensor operation only when both are unreachable.
 
 {% katex(block=true) %}
 \text{FusionState}(t) = \begin{cases}
@@ -958,16 +1801,157 @@ Each state has different capability levels and power costs. The system tracks ti
 
 ---
 
+<span id="scenario-smartbldg"></span>
+
+## Commercial Application: {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} Building Automation
+
+{% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} manages building automation for commercial high-rise towers. Systems controlled: HVAC, lighting, access control, and fire safety. When the BMS server fails or loses connectivity, subsystems must heal autonomously while maintaining occupant safety and comfort.
+
+**The healing challenge**: Building systems have extreme reliability requirements (fire safety must work always) but limited local compute (PLCs with kilobytes of memory). The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop must be distributed across multiple controllers with varying capabilities.
+
+**Hierarchical {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} for {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %}**:
+
+The diagram shows four control levels from building-wide BMS down to individual devices, with the key pattern that each level runs its own local {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop so that zone controllers remain autonomous when higher tiers are unreachable.
+
+{% mermaid() %}
+graph TD
+    subgraph "Building Level"
+        BMS["BMS Server<br/>Global optimization<br/>Trend analysis"]
+    end
+
+    subgraph "Floor Level (52 floors)"
+        FC1["Floor Controller 12<br/>Local MAPE-K<br/>Zone coordination"]
+        FC2["Floor Controller 13<br/>Local MAPE-K<br/>Zone coordination"]
+        FC3["..."]
+    end
+
+    subgraph "Zone Level (4-8 per floor)"
+        ZC1["Zone Controller<br/>VAV, lighting<br/>Occupancy response"]
+        ZC2["Zone Controller<br/>VAV, lighting<br/>Occupancy response"]
+    end
+
+    subgraph "Device Level"
+        VAV["VAV Box<br/>Damper, reheat"]
+        LIGHT["Lighting<br/>On/off, dim"]
+        SENSOR["Sensors<br/>Temp, CO2, motion"]
+    end
+
+    BMS -.->|"Setpoints<br/>Schedules"| FC1
+    BMS -.->|"Setpoints<br/>Schedules"| FC2
+    FC1 --> ZC1
+    FC1 --> ZC2
+    ZC1 --> VAV
+    ZC1 --> LIGHT
+    SENSOR --> ZC1
+
+    style BMS fill:#e3f2fd,stroke:#1976d2
+    style FC1 fill:#fff3e0,stroke:#f57c00
+    style FC2 fill:#fff3e0,stroke:#f57c00
+    style ZC1 fill:#e8f5e9,stroke:#388e3c
+    style ZC2 fill:#e8f5e9,stroke:#388e3c
+{% end %}
+
+**Failure modes and healing authority by tier**:
+
+The table maps each building failure type to its normal and disconnected healing authority, with the Safety Override column showing the inviolable constraint that supersedes all comfort-oriented decisions.
+
+<style>
+#tbl_smartbldg_healing + table th:first-of-type { width: 18%; }
+#tbl_smartbldg_healing + table th:nth-of-type(2) { width: 27%; }
+#tbl_smartbldg_healing + table th:nth-of-type(3) { width: 27%; }
+#tbl_smartbldg_healing + table th:nth-of-type(4) { width: 28%; }
+</style>
+<div id="tbl_smartbldg_healing"></div>
+
+| Failure | Normal Authority | Disconnected Authority | Safety Override |
+| :--- | :--- | :--- | :--- |
+| VAV damper stuck | Zone Controller | Zone Controller | Full open if fire alarm |
+| AHU fan failure | Floor Controller | Floor Controller | Smoke evacuation priority |
+| Chiller fault | BMS | Floor Controllers coordinate | Maintain minimum cooling |
+| BACnet network down | BMS diagnoses | Local fallback schedules | Fire systems on dedicated net |
+| Floor controller crash | BMS restarts | Neighbor floor assists | Zone controllers autonomous |
+
+**{% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} at the zone controller level** (8KB RAM, 16KB flash):
+
+The zone controller implements a minimal {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop:
+
+**Monitor** (every 30 seconds): Read temperature, CO2, occupancy sensors. Compute rolling average and deviation. Memory cost: 200 bytes for 5-minute history.
+
+**Analyze** (event-triggered): Compare readings against setpoints and learned patterns. Flag anomalies:
+- Temperature deviation > \\(2^\circ\\)F for > 5 minutes
+- CO2 > 1000 ppm (indicates poor ventilation)
+- Occupancy detected but HVAC in unoccupied mode
+
+**Plan** (on anomaly): Select from predefined healing actions:
+1. Adjust VAV damper position (primary response)
+2. Request help from floor controller
+3. Override to failsafe (full cooling)
+
+**Execute** (immediate): Send BACnet commands to actuators. Log action for later upload.
+
+**Knowledge** (static + learned): Factory setpoints + learned occupancy patterns + healing action success rates.
+
+**Power-constrained healing parallels {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}**: Zone controllers operate on 24VAC power derived from HVAC transformers. When analyzing healing options, energy is not the binding constraint—actuator wear is, and the healing cost for action \\(a\\) is therefore the per-cycle wear cost \\(C_{\text{actuator cycles}}\\) multiplied by the number of actuator cycles the action requires.
+
+{% katex(block=true) %}
+\text{Healing cost} = C_{\text{actuator cycles}} \cdot \text{expected cycles}(a)
+{% end %}
+
+VAV dampers are rated for 100,000 cycles. Excessive hunting (oscillating between positions) accelerates wear. The healing policy limits damper adjustments to once per 5 minutes except for safety overrides.
+
+**Cascade prevention during chiller failure**: When a chiller fails on a \\(95^\circ\\)F day, 52 floor controllers simultaneously demand maximum cooling from remaining chillers. Without coordination, this cascades to remaining chiller overload.
+
+{% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} prevents cascade by allocating the available cooling capacity \\(Q_{\text{available}}\\) proportionally: each floor receives a share weighted by its priority factor and current occupancy, normalized across all floors.
+
+{% katex(block=true) %}
+\text{Cooling allocation to floor } f = \frac{Q_{\text{available}} \cdot \text{Priority}_f \cdot \text{Occupancy}_f}{\sum_i \text{Priority}_i \cdot \text{Occupancy}_i}
+{% end %}
+
+Priority factors:
+- Data center floors: 2.0 (equipment damage risk)
+- Occupied offices: 1.0
+- Unoccupied floors: 0.3
+- Storage/mechanical: 0.1
+
+This weighted allocation ensures critical spaces get cooling while preventing cascade. Floor controllers receive their allocation and independently manage distribution to zones.
+
+**BMS server failure healing protocol**:
+
+1. **Detection** (T+0s): Floor controllers detect BMS heartbeat timeout (30s threshold)
+2. **Local mode activation** (T+30s): Each floor controller activates "standalone" mode
+3. **Schedule fallback** (T+35s): Use cached weekly schedule (last sync from BMS)
+4. **Peer discovery** (T+60s): Floor controllers discover neighbors via BACnet broadcast
+5. **Distributed coordination** (T+90s): Elect temporary coordinator for inter-floor decisions
+6. **Setpoint adjustment** (T+120s): Widen temperature deadbands by \\(2^\circ\\)F (reduce hunting without BMS optimization)
+
+**Building remains comfortable for 8+ hours** in standalone mode. Occupants rarely notice BMS outages because floor controllers maintain local comfort.
+
+**Fire safety independence**: Critical insight—fire and life safety systems operate on dedicated networks with independent controllers. {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %}'s {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} for HVAC/lighting never interferes with fire safety. When a fire alarm is active, the HVAC mode switches according to fire condition, overriding any comfort-oriented healing decision in progress.
+
+{% katex(block=true) %}
+\text{HVAC mode} = \begin{cases}
+\text{Smoke evacuation} & \text{if fire in building} \\
+\text{100\% outside air} & \text{if smoke detected} \\
+\text{Normal} & \text{otherwise}
+\end{cases}
+{% end %}
+
+This safety override supersedes all comfort-oriented healing. The healing hierarchy respects life safety as an inviolable constraint.
+
+**Economic benefit**: Self-healing reduces comfort complaints during BMS outages, eliminates unnecessary maintenance dispatches, limits energy waste from actuator oscillation, and dramatically reduces time to restoration versus manual intervention.
+
+---
+
 ## The Limits of Self-Healing
 
 ### Damage Beyond Repair Capacity
 
 Some failures cannot be healed autonomously:
-- Physical destruction (RAVEN drone collision)
+- Physical destruction ({% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone collision)
 - Critical component failure without redundancy
-- Environmental damage (waterlogged OUTPOST sensor)
+- Environmental damage (waterlogged {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor)
 
-Self-healing must recognize when to stop trying. The **healing utility function** becomes negative when:
+Self-healing must recognize when to stop trying. The system should abandon autonomous repair and defer to graceful degradation once the expected value recovered by healing falls below the expected cost — resource drain, risk of worsening the failure, and opportunity cost — of attempting it.
 
 {% katex(block=true) %}
 E[\text{value of healing}] < E[\text{cost of healing}]
@@ -977,14 +1961,14 @@ At this point, [graceful degradation](@/blog/2026-01-15/index.md) takes over. Th
 
 ### Failures That Corrupt Healing Logic
 
-If the failure affects the MAPE-K components themselves, healing may not be possible:
+If the failure affects the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} components themselves, healing may not be possible:
 - Monitor fails: Can't detect problems
 - Analyze fails: Can't interpret observations
 - Plan fails: Can't generate solutions
 - Execute fails: Can't apply solutions
 - Knowledge corrupted: Wrong information drives wrong actions
 
-Defense: Redundant MAPE-K instances. RAVEN maintains simplified healing logic in each drone's flight controller, independent of main processing unit. If main unit fails, flight controller can still execute basic healing (return to base, emergency land).
+Defense: Redundant {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} instances. {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} maintains simplified healing logic in each drone's flight controller, independent of main processing unit. If main unit fails, flight controller can still execute basic healing (return to base, emergency land).
 
 ### Adversary Exploiting Healing Predictability
 
@@ -1025,30 +2009,182 @@ Each healing episode generates data:
 
 This data improves future healing. Healing policies adapt based on observed effectiveness. Actions that consistently fail are deprioritized. Actions that work in specific contexts are preferentially selected.
 
+The context-conditional success probability \\(P_{\text{success}}(a \mid \text{context})\\) tracks how often action \\(a\\) has worked in this specific operational context, estimated as a simple empirical frequency.
+
 {% katex(block=true) %}
 P_{\text{success}}(a | \text{context}) = \frac{\text{successes of } a \text{ in context}}{\text{attempts of } a \text{ in context}}
 {% end %}
 
-Over time, the system's healing effectiveness improves through operational experience—the [anti-fragile property](@/blog/2026-02-12/index.md) that emerges from systematic learning under stress.
+*Formal improvement condition*: The system's healing effectiveness improves after each failure episode if the expected success probability at the next timestep exceeds the current baseline:
+
+{% katex(block=true) %}
+\mathbb{E}[P_{\text{success}}(t+1) \mid \text{failure}_t] > \mathbb{E}[P_{\text{success}}(t)]
+{% end %}
+
+This holds when:
+1. Failure provides information gain: \\(I(\text{context} ; \text{outcome}) > 0\\)
+2. Policy update incorporates observation: \\(\theta_{t+1} = \theta_t + \eta \nabla_\theta \log P(\text{outcome} \mid a, \theta)\\)
+3. Failure mode is within learning distribution: \\(P(\text{failure type seen before}) > 0\\)
+
+*Uncertainty bound*: \\(P(\text{improvement} \mid \text{failure}) \in [0.6, 0.9]\\) depending on novelty of failure mode. Novel failures outside training distribution may not yield improvement.
 
 ---
 
-## Closing: From Healing to Coherence
+## Irreducible Trade-offs
 
-Self-healing addresses individual component and cluster failures. But what about fleet-wide state when partitioned?
+No design eliminates these tensions. The architect selects a point on each Pareto front.
 
-RAVEN healed Drone 23's failure successfully. But consider: during the healing coordination, a partition occurred. The eastern cluster executed healing independently. Now the swarm has two different records of what happened:
-- Western cluster: "Drone 23 returned via northern route"
-- Eastern cluster: "Drone 23 status unknown, assumed failed"
+### Trade-off 1: Healing Aggressiveness vs. Stability
 
-Both clusters operated correctly given their information. But their states have diverged. When the partition heals, the swarm has inconsistent knowledge about its own history.
+**Multi-objective formulation**:
 
-This is the **coherence problem**: maintaining consistent fleet-wide state when partition prevents coordination. Self-healing assumes local decisions can be made. Coherence asks: what happens when local decisions conflict?
+The objective jointly maximizes recovery utility and stability utility while minimizing overshoot cost, with \\(K\\) as the single parameter that moves the operating point along the Pareto front.
 
-The [next article on fleet coherence](@/blog/2026-02-05/index.md) develops the engineering principles for maintaining coordinated behavior under partition:
-- State divergence detection
-- Reconciliation protocols
-- Hierarchical decision authority
-- Conflict resolution when local decisions are irreconcilable
+{% katex(block=true) %}
+\max_{K} \left( U_{\text{recovery}}(K), U_{\text{stability}}(K), -C_{\text{overshoot}}(K) \right)
+{% end %}
 
-Drone 23 landed safely at base. The swarm maintained coverage. Self-healing succeeded. But the fleet's shared understanding of that success—the knowledge that enables future decisions—requires coherence mechanisms beyond individual healing.
+where \\(K\\) is controller gain.
+
+**Stability constraint**: \\(K \cdot \tau < \pi/2\\)
+
+The table below traces the Pareto front for controller gain \\(K\\): moving down the rows buys faster recovery (lower recovery time) at the cost of a narrower stability margin and higher overshoot risk.
+
+| Gain \\(K\\) | Recovery Time | Stability Margin | Overshoot Risk |
+| :--- | ---: | ---: | ---: |
+| 0.2 | 15s | 1.37 | 0.02 |
+| 0.5 | 6s | 1.07 | 0.08 |
+| 0.8 | 4s | 0.77 | 0.18 |
+| 1.0 | 3s | 0.57 | 0.31 |
+
+Higher gain achieves faster recovery but risks oscillation and overshoot. Cannot achieve instant recovery with zero overshoot risk.
+
+### Trade-off 2: Local vs. Coordinated Healing
+
+**Multi-objective formulation**:
+
+The objective selects a healing mode \\(m\\) that simultaneously maximizes initiation speed, decision optimality, and fleet coordination quality — three objectives that cannot all be maximized under partition.
+
+{% katex(block=true) %}
+\max_{m \in \{\text{local}, \text{cluster}, \text{fleet}\}} \left( U_{\text{speed}}(m), U_{\text{optimality}}(m), U_{\text{coordination}}(m) \right)
+{% end %}
+
+The Pareto front shows that each step toward better decision quality requires waiting longer, moving the operating point from instantaneous-but-suboptimal local decisions to slow-but-optimal fleet coordination.
+
+| Healing Mode | Initiation Time | Decision Quality | Coordination |
+| :--- | ---: | :---: | :---: |
+| Local-only | <1s | Suboptimal | None |
+| Cluster consensus | 2-5s | Better | Local |
+| Fleet coordination | 10-30s | Optimal | Full |
+
+Cannot achieve fast initiation AND optimal decision AND full coordination. Partition forces choice between speed and optimality.
+
+### Trade-off 3: Exploration vs. Exploitation (Action Selection)
+
+**Multi-objective formulation**:
+
+The exploration parameter \\(c\\) controls a direct trade-off: larger \\(c\\) improves long-term optimality by exploring more alternatives, but lowers short-term utility by deferring exploitation of the current best action.
+
+{% katex(block=true) %}
+\max_{c} \left( U_{\text{short-term}}(c), U_{\text{long-term}}(c) \right)
+{% end %}
+
+where \\(c\\) is {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} exploration parameter.
+
+**{% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} formula**:
+
+The exploration bonus \\(c\sqrt{\ln t / n_a}\\) grows as action \\(a\\) is under-tried (small \\(n_a\\)) and the parameter \\(c\\) scales how strongly that bonus drives selection toward unexplored actions.
+
+{% katex(block=true) %}
+\text{UCB}(a) = \hat{\mu}_a + c \sqrt{\frac{\ln t}{n_a}}
+{% end %}
+
+The table shows how three representative values of \\(c\\) move the operating point along the exploration-exploitation spectrum and the resulting regret profile.
+
+| \\(c\\) Value | Exploration | Exploitation | Regret Profile |
+| :--- | :---: | :---: | :--- |
+| 0.5 | Low | High | Fast convergence, possible local optimum |
+| 1.0 | Medium | Medium | Balanced |
+| 2.0 | High | Low | Slow convergence, global exploration |
+
+Low \\(c\\) minimizes short-term regret (exploit current best). High \\(c\\) minimizes long-term regret (explore alternatives). No single \\(c\\) optimizes both.
+
+### Trade-off 4: Healing Depth vs. Cascade Risk
+
+**Multi-objective formulation**:
+
+Deeper healing actions are more thorough but touch more shared resources, so the objective balances thoroughness utility against the probability of triggering secondary failures, parameterized by healing depth \\(d\\).
+
+{% katex(block=true) %}
+\max_{d} \left( U_{\text{thoroughness}}(d), -P_{\text{cascade}}(d) \right)
+{% end %}
+
+where \\(d\\) is healing action depth.
+
+The table below shows how the three canonical healing depths compare on thoroughness, cascade risk, and the expected fraction of root-cause failures resolved.
+
+| Healing Depth | Thoroughness | Cascade Risk | Recovery Completeness |
+| :--- | :---: | :---: | :---: |
+| Shallow (restart) | Low | Low | 0.60 |
+| Medium (reconfigure) | Medium | Medium | 0.80 |
+| Deep (rebuild) | High | High | 0.95 |
+
+Deeper healing is more thorough but risks triggering cascades. Shallow healing is safer but may not resolve root cause.
+
+### Cost Surface: Healing Under Resource Constraints
+
+The total cost of a healing action decomposes into three terms — the direct action cost, the connectivity-dependent coordination cost, and the opportunity cost of resources diverted from mission — each of which varies with the {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %} \\(\Xi\\).
+
+{% katex(block=true) %}
+C_{\text{heal}}(a, \Xi) = C_{\text{action}}(a) + C_{\text{coordination}}(a, \Xi) + C_{\text{opportunity}}(a)
+{% end %}
+
+where:
+- \\(C_{\text{action}}(a)\\): Direct cost of healing action \\(a\\)
+- \\(C_{\text{coordination}}(a, \Xi)\\): Coordination cost under connectivity \\(\Xi\\)
+- \\(C_{\text{opportunity}}(a)\\): Cost of resources diverted from mission
+
+The coordination cost \\(C_{\text{coordination}}\\) grows with both the scope of the healing action and the degradation of connectivity: local actions in full connectivity cost \\(O(1)\\), cluster-wide actions under degraded connectivity cost \\(O(\log n)\\), fleet-wide actions under intermittent connectivity cost \\(O(n)\\), and fleet-wide actions under denied connectivity are infeasible.
+
+{% katex(block=true) %}
+C_{\text{coordination}}(a, \Xi) = \begin{cases}
+O(1) & \Xi = \mathcal{C}, a = \text{local} \\
+O(\log n) & \Xi = \mathcal{D}, a = \text{cluster} \\
+O(n) & \Xi = \mathcal{I}, a = \text{fleet} \\
+\infty & \Xi = \mathcal{N}, a = \text{fleet}
+\end{cases}
+{% end %}
+
+### Resource Shadow Prices
+
+Shadow prices quantify the marginal value of each scarce resource to the healing system; a higher shadow price means that resource is the binding constraint on healing performance, so relaxing it yields the greatest improvement.
+
+| Resource | Shadow Price \\(\lambda\\) | Interpretation |
+| :--- | ---: | :--- |
+| Healing compute | \$0.15/action | Value of faster recovery |
+| Coordination bandwidth | \$1.80/sync | Value of coordinated healing |
+| Mission capacity | \$2.50/%-hr | Cost of diverted resources |
+| Redundancy margin | \$4.00/node | Value of spare capacity |
+
+### Irreducible Trade-off Summary
+
+Each row names a fundamental design tension, the two objectives that pull against each other, and the specific outcome that no implementation can achieve regardless of engineering effort.
+
+| Trade-off | Objectives in Tension | Cannot Simultaneously Achieve |
+| :--- | :--- | :--- |
+| Speed-Stability | Fast recovery vs. no overshoot | Instant recovery with zero risk |
+| Local-Coordinated | Fast initiation vs. optimal decision | Both under partition |
+| Explore-Exploit | Short-term vs. long-term optimality | Both with finite samples |
+| Depth-Cascade | Thorough healing vs. cascade safety | Deep healing with zero cascade risk |
+
+---
+
+## Closing
+
+Drone 23 landed safely. {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} vehicle 4 was towed to the objective. {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensors reconfigured around the failed node. {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} healed microservice failures autonomously. {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} maintained comfort through central server outages.
+
+The common thread: each system detected its own faults, selected a remediation strategy, and executed recovery without waiting for human authorization. The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} control loop—operating continuously at the speed of local computation, not the speed of communication—enabled this autonomy.
+
+Three conditions made autonomous healing tractable. First, anomaly detection (Self-Measurement Without Central Observability) provided calibrated confidence estimates rather than binary alerts, enabling the confidence-threshold framework of Prop 10. Second, the capability hierarchy from the contested-connectivity foundations gave healing a clear priority ordering: MVS components before non-MVS, survival capability before mission capability. Third, the stability condition of Prop 9 bound the controller gain to the feedback delay, preventing healing from oscillating.
+
+What this framework does not address: healing succeeds locally, but independent local decisions can produce globally inconsistent state. When {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s eastern cluster lost contact during the Drone 23 healing sequence, both clusters made correct decisions given their information. Their records diverged. That divergence—and the problem of reconciling it—is a distinct challenge from healing itself, one that requires different mechanisms. [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md) addresses exactly that: CRDTs, causal ordering, and the authority tiers that determine who wins when clusters disagree.

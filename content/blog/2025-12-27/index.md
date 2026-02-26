@@ -109,7 +109,7 @@ For step-function damage, the framework applies a **Loss Aversion Multiplier**:
 M(d) = 1 + \alpha \cdot \ln\left(1 + \frac{d}{7}\right)
 {% end %}
 
-Where \\(d\\) is the accumulated investment (streak length in days) and \\(\alpha = 1.2\\) is calibrated to behavioral economics research showing losses are felt 2× more intensely than equivalent gains. The divisor 7 normalizes to the habit-formation threshold (one week). A user losing 16 days of accumulated progress experiences \\(M(16) = 2.43\\times\\) the churn probability of losing 1 day.
+Where \\(d\\) is the accumulated investment (streak length in days) and \\(\alpha = 1.2\\) is calibrated to behavioral economics research showing losses are felt \\(2\times\\) more intensely than equivalent gains. The divisor 7 normalizes to the habit-formation threshold (one week). A user losing 16 days of accumulated progress experiences \\(M(16) = 2.43\times\\) the churn probability of losing 1 day.
 
 <style>
 #tbl_damage_patterns + table th:first-of-type { width: 22%; }
@@ -127,7 +127,7 @@ Where \\(d\\) is the accumulated investment (streak length in days) and \\(\alph
 
 **Compound Failure (Double-Weibull):** When the output of one Weibull process becomes the input to another, failures compound. Supply-side abandonment (creators leaving due to slow processing) reduces catalog quality, which triggers demand-side abandonment (viewers leaving due to poor content). Both populations have independent Weibull parameters, but the second process inherits degraded initial conditions from the first.
 
-> **Series Validation:** Weibull modeling demonstrated in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) with viewer parameters \\(k_v = 2.28\\), \\(\lambda_v = 3.39s\\) showing gradual patience erosion. Double-Weibull Trap demonstrated in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) where creator abandonment (\\(k_c > 4\\), cliff behavior) triggers downstream viewer abandonment. Loss Aversion Multiplier demonstrated in [Consistency Destroys Trust](/blog/microlearning-platform-part5-data-state/) where 16-day streak loss produces 25× ROI for prevention.
+> **Series Validation:** Weibull modeling demonstrated in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) with viewer parameters \\(k_v = 2.28\\), \\(\lambda_v = 3.39s\\) showing gradual patience erosion. Double-Weibull Trap demonstrated in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) where creator abandonment (\\(k_c > 4\\), cliff behavior) triggers downstream viewer abandonment. Loss Aversion Multiplier demonstrated in [Consistency Destroys Trust](/blog/microlearning-platform-part5-data-state/) where 16-day streak loss produces \\(25\times\\) ROI for prevention.
 
 **Limitation:** Reliability models describe individual system components but do not specify how constraints interact or which to address first when multiple constraints exist.
 
@@ -147,7 +147,7 @@ Where \\(d\\) is the accumulated investment (streak length in days) and \\(\alph
 
 No prior methodology combines these four traditions. Theory of Constraints provides sequencing but no causal validation. OKRs and KPIs provide goal alignment but no resource sequencing. DORA metrics measure outcomes but do not prioritize interventions. SRE practices define reliability targets but do not extend to non-operational constraints. Agile methodologies enable iteration but lack formal stopping criteria.
 
-The Constraint Sequence Framework extends the **Four Laws** pattern used throughout this series - Universal Revenue (converting constraints to dollar impact), Weibull Abandonment (modeling stakeholder tolerance), Theory of Constraints (single binding constraint), and ROI Threshold (3× investment gate) - by adding causal validation before intervention, explicit stopping criteria, and meta-constraint awareness.
+The Constraint Sequence Framework extends the **Four Laws** pattern used throughout this series - Universal Revenue (converting constraints to dollar impact), Weibull Abandonment (modeling stakeholder tolerance), Theory of Constraints (single binding constraint), and ROI Threshold (\\(3\times\\) investment gate) - by adding causal validation before intervention, explicit stopping criteria, and meta-constraint awareness.
 
 The Constraint Sequence Framework synthesizes:
 
@@ -262,7 +262,7 @@ P(Y | do(X = x)) = \sum_z P(Y | X = x, Z = z) \cdot P(Z = z)
 
 Stratifying on observable confounders and computing weighted average effects estimates causal impact rather than confounded correlation.
 
-> **Series Validation:** Five-test causal protocol demonstrated across all constraint domains: latency causality in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) (within-user fixed-effects regression), encoding causality in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) (creator exit surveys + behavioral signals), cold start causality in [Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/) (cohort comparison + onboarding A/B), consistency causality in [Consistency Destroys Trust](/blog/microlearning-platform-part5-data-state/) (incident correlation + severity gradient). Each part adapts the five tests to domain-specific observables while maintaining the ≥3 PASS decision rule.
+> **Series Validation:** Five-test causal protocol demonstrated across all constraint domains: latency causality in [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) (within-user fixed-effects regression), encoding causality in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) (creator exit surveys + behavioral signals), cold start causality in [Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/) (cohort comparison + onboarding A/B), consistency causality in [Consistency Destroys Trust](/blog/microlearning-platform-part5-data-state/) (incident correlation + severity gradient). Each part adapts the five tests to domain-specific observables while maintaining the 3 or more PASS decision rule.
 
 ### Investment Threshold
 
@@ -295,7 +295,7 @@ Engineering investments carry inherent uncertainty. The threshold must account f
 | Technical risk | Migrations fail or take longer than estimated | +0.5x |
 | Measurement uncertainty | Objective estimates may be wrong | +0.5x |
 | General margin | Unforeseen complications | +0.5x |
-| **Minimum threshold** | 1.0x + 4×0.5x | **3.0x** |
+| **Minimum threshold** | 1.0x + 4 x 0.5x | **3.0x** |
 
 **Market Reach Coefficient:** Real-world ROI must account for population segments that cannot benefit from the intervention. Platform fragmentation (browser compatibility, device capabilities, regional restrictions) reduces effective reach.
 
@@ -303,13 +303,13 @@ Engineering investments carry inherent uncertainty. The threshold must account f
 \text{ROI}_{\text{effective}} = \text{ROI}_{\text{theoretical}} \times C_{\text{reach}}
 {% end %}
 
-Where \\(C_{\text{reach}} \in [0, 1]\\) is the fraction of users who can receive the improvement. This coefficient raises the scale threshold required to achieve 3× effective ROI:
+Where \\(C_{\text{reach}} \in [0, 1]\\) is the fraction of users who can receive the improvement. This coefficient raises the scale threshold required to achieve \\(3\times\\) effective ROI:
 
 {% katex(block=true) %}
 \text{DAU}_{\text{threshold}} = \frac{\text{DAU}_{\text{theoretical}}}{C_{\text{reach}}}
 {% end %}
 
-> **Series Validation:** Market Reach Coefficient demonstrated in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) where Safari/iOS users (42% of mobile traffic) cannot use QUIC features, yielding \\(C_{\text{reach}} = 0.58\\). This raises the 3× ROI threshold from ~8.7M DAU (theoretical) to ~15M DAU (Safari-adjusted). The "Safari Tax" adds $0.32M/year in LL-HLS bridge infrastructure to maintain feature parity.
+> **Series Validation:** Market Reach Coefficient demonstrated in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) where Safari/iOS users (42% of mobile traffic) cannot use QUIC features, yielding \\(C_{\text{reach}} = 0.58\\). This raises the \\(3\times\\) ROI threshold from ~8.7M DAU (theoretical) to ~15M DAU (Safari-adjusted). The "Safari Tax" adds $0.32M/year in LL-HLS bridge infrastructure to maintain feature parity.
 
 **Decision Rule:**
 
@@ -325,11 +325,11 @@ Where \\(C_{\text{reach}} \in [0, 1]\\) is the fraction of users who can receive
 4. Lead time exceeds 6 months (cannot defer and deploy just-in-time)
 5. Decision is a one-way door or has high switching cost
 
-> **Series Validation:** Strategic Headroom demonstrated in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) where QUIC+MoQ migration shows ROI 0.60× @3M DAU → 2.0× @10M DAU → 10.1× @50M DAU (scale factor 16.8×). Fixed infrastructure cost ($2.90M/year) with linear revenue scaling creates super-linear ROI trajectory, justifying investment before threshold is reached.
+> **Series Validation:** Strategic Headroom demonstrated in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) where QUIC+MoQ migration shows ROI \\(0.60\times\\) @3M DAU, \\(2.0\times\\) @10M DAU, \\(10.1\times\\) @50M DAU (scale factor \\(16.8\times\\)). Fixed infrastructure cost ($2.90M/year) with linear revenue scaling creates super-linear ROI trajectory, justifying investment before threshold is reached.
 
-**One-Way Door Decisions:** Irreversible decisions require additional margin beyond the 3× threshold. A one-way door is any decision where reversal cost exceeds the original investment: protocol migrations, schema changes, vendor lock-in, and architectural commitments.
+**One-Way Door Decisions:** Irreversible decisions require additional margin beyond the \\(3\times\\) threshold. A one-way door is any decision where reversal cost exceeds the original investment: protocol migrations, schema changes, vendor lock-in, and architectural commitments.
 
-For one-way doors, apply the **2× Runway Rule**:
+For one-way doors, apply the **\\(2\times\\) Runway Rule**:
 
 {% katex(block=true) %}
 T_{\text{runway}} \geq 2 \times T_{\text{migration}}
@@ -337,11 +337,11 @@ T_{\text{runway}} \geq 2 \times T_{\text{migration}}
 
 Do not begin a migration unless financial runway exceeds twice the migration duration. An 18-month migration with 14-month runway means the organization fails mid-execution. No ROI justifies starting what cannot be finished.
 
-> **Series Validation:** One-way door analysis demonstrated in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) where TCP+HLS → QUIC+MoQ is identified as "highest blast radius in the series." The analysis shows: at 3M DAU with 14-month runway and 18-month migration time, the decision is REJECT regardless of the 10.1× ROI at 50M DAU. Survival precedes optimization.
+> **Series Validation:** One-way door analysis demonstrated in [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) where TCP+HLS to QUIC+MoQ is identified as "highest blast radius in the series." The analysis shows: at 3M DAU with 14-month runway and 18-month migration time, the decision is REJECT regardless of the \\(10.1\times\\) ROI at 50M DAU. Survival precedes optimization.
 
-**Enabling Infrastructure Exception:** A third category exists: investments with negative standalone ROI that are prerequisites for other investments to function. These are components that do not generate value directly but unlock the value of downstream systems. An investment qualifies as Enabling Infrastructure if removing it breaks a downstream system that itself exceeds 3× ROI. The combined ROI of the dependency chain must exceed 3×, not the individual component.
+**Enabling Infrastructure Exception:** A third category exists: investments with negative standalone ROI that are prerequisites for other investments to function. These are components that do not generate value directly but unlock the value of downstream systems. An investment qualifies as Enabling Infrastructure if removing it breaks a downstream system that itself exceeds \\(3\times\\) ROI. The combined ROI of the dependency chain must exceed \\(3\times\\), not the individual component.
 
-> **Series Validation:** Enabling Infrastructure demonstrated in [Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/) where Prefetch ML has standalone ROI of 0.44× @3M DAU but enables the recommendation pipeline that delivers 6.3× combined ROI. Without prefetching, personalized recommendations that predict the right video still deliver 300ms delays, negating the personalization benefit.
+> **Series Validation:** Enabling Infrastructure demonstrated in [Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/) where Prefetch ML has standalone ROI of \\(0.44\times\\) @3M DAU but enables the recommendation pipeline that delivers \\(6.3\times\\) combined ROI. Without prefetching, personalized recommendations that predict the right video still deliver 300ms delays, negating the personalization benefit.
 
 **Existence Constraint Exception:** A fourth category addresses investments where the standard ROI framework fails because the counterfactual is system non-existence, not degraded operation. Some constraints have unbounded derivatives: \\(\partial \text{System} / \partial c_i \to \infty\\). For these constraints, the ROI formula (which assumes the system operates in both scenarios) produces undefined results.
 
@@ -360,14 +360,14 @@ An investment qualifies as an Existence Constraint if:
 </style>
 <div id="tbl_exception_types"></div>
 
-| Exception Type | When ROI < 3× | Justification | Example Domain |
+| Exception Type | When ROI < 3x | Justification | Example Domain |
 | :--- | :--- | :--- | :--- |
 | Standard threshold | Do not invest | Insufficient return for risk | Most optimizations |
 | Strategic Headroom | Invest if scale trajectory clear | Super-linear ROI at achievable scale | Fixed-cost infrastructure |
-| Enabling Infrastructure | Invest if dependency chain > 3× | Unlocks downstream value | Prerequisite components |
+| Enabling Infrastructure | Invest if dependency chain > 3x | Unlocks downstream value | Prerequisite components |
 | Existence Constraint | Invest regardless of ROI | System non-existence is unbounded cost | Supply-side minimums |
 
-> **Series Validation:** Existence Constraint demonstrated in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) where Creator Pipeline ROI is 1.9× @3M DAU, 2.3× @10M DAU, 2.8× @50M DAU - never exceeding 3× at any scale. Unlike Strategic Headroom, costs scale linearly with creators (no fixed-cost leverage). Investment proceeds because \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\): without creators, there is no content; without content, there are no viewers; without viewers, there is no platform.
+> **Series Validation:** Existence Constraint demonstrated in [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) where Creator Pipeline ROI is \\(1.9\times\\) @3M DAU, \\(2.3\times\\) @10M DAU, \\(2.8\times\\) @50M DAU - never exceeding \\(3\times\\) at any scale. Unlike Strategic Headroom, costs scale linearly with creators (no fixed-cost leverage). Investment proceeds because \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\): without creators, there is no content; without content, there are no viewers; without viewers, there is no platform.
 
 ### Sequence Ordering
 
@@ -489,6 +489,20 @@ The constraint optimization analog:
 1. **Exploration phase**: Identify and estimate constraint ROIs without committing to resolution
 2. **Exploitation phase**: Resolve the highest-ROI constraint meeting threshold
 3. **Evaluation phase**: After each resolution, determine whether to continue
+
+**Per-Constraint Advancement Criteria:**
+
+A constraint is considered solved — and engineering capacity should shift to the next constraint in dependency order — when all three conditions hold simultaneously:
+
+1. **ROI condition:** Additional optimization of this constraint yields less than 3x return on the marginal engineering investment
+2. **Ceiling condition:** Current implementation achieves at least 95% of the theoretical performance ceiling for this constraint (e.g., latency within 5% of the physical minimum given hardware, bandwidth, and distance constraints)
+3. **Emergence condition:** The next constraint in dependency order has emerged as measurably binding — that is, it is now the largest single driver of user churn or revenue loss
+
+**Partial satisfaction:** If only condition (3) holds but ROI remains high and the ceiling has not been reached, continue optimizing the current constraint before advancing. The emergence of the next constraint does not create an obligation to abandon the current one — it creates an option.
+
+**Override condition:** If the next constraint is causing active platform degradation (>10% churn above baseline attributable to that constraint), advance regardless of conditions (1) and (2). Platform survival takes precedence over optimization sequencing.
+
+The stopping criteria formalize the intuition that constraint resolution is not binary. A constraint transitions from "binding" to "managed" when its cost of further optimization exceeds its marginal revenue protection — not when it is perfectly solved.
 
 ### The Meta-Constraint
 
@@ -763,6 +777,10 @@ The following analysis maps each framework to its theoretical foundation and ide
 - Causal validation (\\(V\\)) modifies threshold (\\(T\\)): uncertain causality requires higher ROI
 - Stopping criterion (\\(S\\)) incorporates meta-constraint (\\(M\\)): overhead reduces effective ROI
 - Sequencing (\\(Q\\)) respects both dependencies and ROI ordering within levels
+
+**Relationship to Theory of Constraints:** Unlike Goldratt's Theory of Constraints (which assumes constraint identification is free and instantaneous), this framework explicitly accounts for the cost of causal validation. Spending 100 engineering-hours on a causal diagnostic (establishing that a proposed constraint is actually binding) delays a 400-hour protocol migration by 25%.
+
+The framework provides a decision rule: when the risk of investing in the wrong constraint exceeds the cost of running the diagnostic, validate first. When the causal evidence is already strong (multiple converging signals, similar platform precedents), skip the diagnostic and begin the intervention. This makes constraint sequencing a decision under uncertainty rather than a deterministic ordering problem.
 
 ---
 
@@ -1065,11 +1083,11 @@ The preceding posts in this series demonstrate the Constraint Sequence Framework
 
 | Part | Constraint Domain | Framework Component Illustrated | Key Validation |
 | :--- | :--- | :--- | :--- |
-| [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) | Physics (demand-side latency) | Four Laws framework, Weibull survival (\\(k_v = 2.28\\)), five-test causality, 3× threshold derivation | ROI scales from 0.8× @3M to 3.5× @50M DAU |
-| [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) | Architecture (transport protocol) | Dependency ordering, Strategic Headroom (0.6× @3M → 10.1× @50M), Safari Tax (\\(C_{\text{reach}} = 0.58\\)) | One-way door requires 15M DAU for 3× ROI |
-| [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) | Resource (supply-side encoding) | Existence Constraint (\\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\)), Double-Weibull Trap | ROI never exceeds 3× but investment required |
-| [Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/) | Information (personalization) | Enabling Infrastructure (prefetch 0.44× enables 6.3× pipeline), bounded downside | Marginal ROI 1.9×, standalone 12.3× |
-| [Consistency Destroys Trust](/blog/microlearning-platform-part5-data-state/) | Trust (data consistency) | Loss Aversion Multiplier (\\(M(d) = 1 + 1.2\ln(1 + d/7)\\)), step-function damage | 25× ROI far exceeds threshold |
+| [Latency Kills Demand](/blog/microlearning-platform-part1-foundation/) | Physics (demand-side latency) | Four Laws framework, Weibull survival (\\(k_v = 2.28\\)), five-test causality, 3x threshold derivation | ROI scales from 0.8x @3M to 3.5x @50M DAU |
+| [Protocol Choice Locks Physics](/blog/microlearning-platform-part2-video-delivery/) | Architecture (transport protocol) | Dependency ordering, Strategic Headroom (0.6x @3M to 10.1x @50M), Safari Tax (\\(C_{\text{reach}} = 0.58\\)) | One-way door requires 15M DAU for 3x ROI |
+| [GPU Quotas Kill Creators](/blog/microlearning-platform-part3-creator-pipeline/) | Resource (supply-side encoding) | Existence Constraint (\\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\)), Double-Weibull Trap | ROI never exceeds 3x but investment required |
+| [Cold Start Caps Growth](/blog/microlearning-platform-part4-ml-personalization/) | Information (personalization) | Enabling Infrastructure (prefetch 0.44x enables 6.3x pipeline), bounded downside | Marginal ROI 1.9x, standalone 12.3x |
+| [Consistency Destroys Trust](/blog/microlearning-platform-part5-data-state/) | Trust (data consistency) | Loss Aversion Multiplier (\\(M(d) = 1 + 1.2\ln(1 + d/7)\\)), step-function damage | 25x ROI far exceeds threshold |
 
 Each post applies the same framework components to a different constraint domain, demonstrating the framework's generality across the constraint sequence.
 
@@ -1087,13 +1105,13 @@ The series validates each framework component through concrete application:
 | Framework Component | Validation Evidence | Parts Applied |
 | :--- | :--- | :--- |
 | Single binding constraint | Each part identifies exactly one active constraint; predecessors already resolved | All parts |
-| Five-test causal protocol | Tests adapted per domain; ≥3 PASS required before investment | 1, 3, 4, 5 |
-| 3× ROI threshold | Investments below threshold deferred; investments above threshold executed | 1, 2, 4, 5 |
-| Strategic Headroom | Protocol migration (0.6× @3M → 10.1× @50M) justified by super-linear scaling | 1, 2 |
-| Enabling Infrastructure | Prefetch ML (0.44×) enables recommendation pipeline (6.3× combined) | 1, 4 |
-| Existence Constraint | Creator pipeline (1.9×) proceeds despite sub-threshold ROI | 3 |
-| Sequence ordering | Physics → Architecture → Resource → Information → Trust; violations not attempted | All parts |
-| Loss Aversion Multiplier | Trust damage modeled as \\(M(d) = 1 + 1.2\ln(1 + d/7)\\); explains 25× ROI | 5 |
+| Five-test causal protocol | Tests adapted per domain; 3 or more PASS required before investment | 1, 3, 4, 5 |
+| 3x ROI threshold | Investments below threshold deferred; investments above threshold executed | 1, 2, 4, 5 |
+| Strategic Headroom | Protocol migration (0.6x @3M to 10.1x @50M) justified by super-linear scaling | 1, 2 |
+| Enabling Infrastructure | Prefetch ML (0.44x) enables recommendation pipeline (6.3x combined) | 1, 4 |
+| Existence Constraint | Creator pipeline (1.9x) proceeds despite sub-threshold ROI | 3 |
+| Sequence ordering | Physics, Architecture, Resource, Information, Trust; violations not attempted | All parts |
+| Loss Aversion Multiplier | Trust damage modeled as \\(M(d) = 1 + 1.2\ln(1 + d/7)\\); explains 25x ROI | 5 |
 | Double-Weibull | Creator churn (\\(k_c > 4\\)) triggers viewer churn (\\(k_v = 2.28\\)) | 3 |
 | Stopping criterion | At Part 5 completion, remaining constraints are below threshold | Series arc |
 
@@ -1132,30 +1150,402 @@ This checklist operationalizes the entire series into a single decision matrix. 
 
 ---
 
-## Conclusion
+## Conclusion: Six Constraints, One Trajectory
 
-The Constraint Sequence Framework answers a question that existing methodologies leave open: **when should optimization stop?**
+Growing from 3M to 50M daily active users is not a matter of adding servers. It is a matter of knowing which problem to fix first — and having the discipline to stop fixing it when the constraint shifts. This series traced one learning platform through six constraints, in the order they became binding. Each was invisible until its predecessor was resolved. Each had a revenue cost that could be quantified, a causal structure that could be validated, and an ROI threshold that determined whether the investment made economic sense.
 
-Theory of Constraints identifies bottlenecks but assumes correlation implies causation. Causal inference validates interventions but provides no resource allocation methodology. Reliability engineering models tolerance but does not sequence constraints. Second-order cybernetics recognizes the observer-in-system problem but offers no operational exit criteria. Each tradition solves part of the problem. None solves all of it.
+**Part 1: Latency is not a performance metric — it is a revenue leak.** At 370ms video start latency, the platform loses measurable revenue to Weibull abandonment. The shape parameter \\(k_v = 2.28\\) means impatience accelerates: the jump from 1 second to 2 seconds loses more users than the jump from 0 to 1 second. The four laws — universal revenue, Weibull abandonment, Theory of Constraints, and ROI threshold — establish the analytical grammar all five subsequent parts use. Fix latency first, not because it is easiest, but because nothing downstream matters while users abandon before the video starts.
 
-The synthesis produces a complete decision function:
+**Part 2: Transport physics locks in for 18 months.** TCP+HLS has a physics floor of approximately 370ms. QUIC+MoQ has a floor of approximately 100ms. The architecture choice is an 18-month one-way door. A Safari Tax (\\(C_{\text{reach}} = 0.58\\)) applies because 42% of mobile users on iOS fall back to HLS regardless of server-side protocol. This does not invalidate the migration — at 10M DAU the Safari-adjusted ROI still clears 3x — but engineers who ignore the Safari population overstate the benefit by 72%. Quantify the adjustment before committing.
 
-{% katex(block=true) %}
-D(c, \mathcal{S}) \to \{\text{invest}, \text{defer}, \text{stop}\}
-{% end %}
+**Part 3: Without creators, there is no content. Without content, there is no platform.** The creator patience Weibull has a shape parameter \\(k_c = 4.5\\): cliff behavior, not gradual erosion. At 90 seconds of encoding latency, 63% of creators abandon. At 120 seconds, 97%. One creator lost removes 10,000 views of future content annually. The creator pipeline does not clear the 3x ROI threshold at any scale — not because it is unimportant, but because its value is existential rather than marginal. Some constraints must be solved even when the spreadsheet says no. Creator supply is one of them.
 
-This function is deterministic given inputs. It requires no judgment calls during execution - only during parameter estimation. The causal validation protocol produces a binary pass/fail. The ROI threshold is derived from first principles. The stopping criterion compares against a reservation value. The sequence respects dependency ordering.
+**Part 4: Personalization only matters after there is something worth personalizing.** New users with no watch history see popularity-ranked content. On an educational platform, that means beginner material for everyone. Advanced users encounter elementary videos and leave. The cold start cliff sits at three irrelevant videos: \\(F_{\text{cs}}(3) = 42\\%\\). A 100ms personalization pipeline — vector search, knowledge graph traversal, gradient-boosted ranking — costs approximately $150K/year and protects $1.51M/year at 3M DAU. ROI: 10x, validated across all realistic infrastructure cost scenarios. But none of this matters until the encoding pipeline has enough content to personalize in the first place.
 
-For practitioners, the framework reduces to three rules:
+**Part 5: Users who never invest cannot be betrayed. Users who invest 16 days in a streak can.** A single visible streak reset causes \\(M_{\text{loss}}(16) = 2.43\times\\) baseline churn — the loss aversion multiplier grows logarithmically with streak length. At 10.7M consistency incidents per year at 3M DAU, $6.5M in annual revenue is at risk. The fix is architectural: CockroachDB for streak data (CP over AP), a dual-timestamp protocol for offline completion events, and a client-side resilience stack that masks the 85% of incidents caused by brief disconnections. ROI: 25x. But consistency failures only become platform-threatening after personalization creates users who have built meaningful history to lose.
 
-1. **Validate before investing.** Three of five causal tests must pass. If they do not, the identified constraint is a proxy. Find the true cause.
+**Part 6: Knowing what to fix is half the problem. Knowing when to stop is the other half.** A constraint transitions from binding to managed — not when it is perfectly optimized, but when three conditions hold simultaneously: further optimization yields below 3x return, performance is within 95% of the theoretical ceiling, and the next constraint is measurably binding. The framework accounts for its own cost: running causal validation consumes engineering time. When that time exceeds the value of the knowledge gained, skip the diagnostic and act on existing evidence.
 
-2. **Respect the sequence.** Resolving a successor before its predecessor wastes investment. The improvement cannot flow through the still-binding predecessor.
+---
 
-3. **Stop when ROI falls below threshold.** When the next constraint yields less than feature development, exit the optimization loop. Shift resources. Monitor for re-entry conditions.
+**The constraints are not independent.** Protocol migration (Part 2) creates the latency floor that makes personalization (Part 4) measurably valuable rather than marginal. Personalization creates the behavioral investment that makes consistency failures (Part 5) trust-destroying rather than merely annoying. Resolve them in the wrong order and each fix underperforms. Resolve them in dependency order and the 3M-to-50M trajectory becomes predictable, justified, and executable.
 
-The framework does not eliminate the meta-constraint. That is impossible - optimization consumes resources that could otherwise improve the system. The framework manages the meta-constraint by specifying when to exit. The strange loop is broken not by solving it but by leaving it.
+**The models are not the truth.** The Weibull parameters, the cold start cliff, the loss aversion coefficient \\(\alpha = 1.2\\) — each is an estimate with a confidence interval. The falsification criteria in each part exist precisely because the estimates can be wrong. Run the pilots. Validate the A/B tests. Treat the quantitative model as a prior that the data will correct, not a conclusion the data must confirm.
 
-Systems fail in a specific order. The Constraint Sequence Framework provides the methodology to address them in that order, validate causality before investing, and stop before optimization consumes more value than it creates.
+**The sequence is the discipline.** Engineering capacity is finite. Constraints are not. The framework does not promise that solving these six constraints in order will carry every platform to 50M DAU. It promises that solving them without validating causality, or in the wrong order, will cost more than the constraints themselves. That is a sufficient promise.
+
+Systems fail in a specific order. The Constraint Sequence Framework provides the methodology to address them in that order — and to stop when the next constraint is not yet binding enough to justify the investment.
 
 This is not optimization complete. It is optimization disciplined.
+
+---
+
+## Series Reference: Definitions and Key Results
+
+The following definitions and propositions are the formal backbone of the series. Each entry is quoted from its source part; where a definition appears under a different name in the source, the actual name is noted. These are the constructs that the conclusion narrative above applies — read them as the precise version of what the prose approximates.
+
+This reference replaces any need for a separate glossary. Cross-references throughout Parts 1–5 point here.
+
+---
+
+### Definitions
+
+#### Framework Scope (Constraint Sequence Framework)
+*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+
+**Definition (Constraint Sequence Framework):** Given an engineering system \\(S\\) with:
+
+- Resource capacity \\(R\\) (engineering hours, compute budget, capital)
+- Candidate constraints \\(C = \{c_1, c_2, \ldots, c_n\}\\)
+- Objective function \\(O\\) (revenue, throughput, reliability, or other measurable outcome)
+- Dependency graph \\(G = (C, E)\\) where edge \\((c_i, c_j) \in E\\) indicates \\(c_i\\) must be resolved before \\(c_j\\) becomes binding
+
+The Constraint Sequence Framework provides:
+
+1. **Binding Constraint Identification**: Method to identify \\(c^* \in C\\)
+2. **Causal Validation Protocol**: Five-test protocol to verify intervention will produce expected effect
+3. **Investment Threshold**: Formula to compute intervention ROI with minimum acceptable threshold
+4. **Sequence Ordering**: Algorithm to determine resolution order respecting \\(G\\)
+5. **Stopping Criterion**: Condition \\(\tau\\) defining when to cease optimization
+6. **Meta-Constraint Awareness**: Accounting for the framework's own resource consumption
+
+---
+
+#### Universal Revenue Law
+*(Source: Part 1 — [Why Latency Kills Demand When You Have Supply](../2025-11-22/))*
+
+**Law 1 (Universal Revenue):** The annual revenue protected by resolving a constraint that reduces the abandonment rate by \\(\Delta F\\) is:
+
+{% katex(block=true) %}
+\Delta R_{\text{annual}} = \text{DAU} \times \text{LTV}_{\text{monthly}} \times 12 \times \Delta F
+{% end %}
+
+Where DAU = 3M (series baseline), \\(\text{LTV}_{\text{monthly}} = \\$1.72/\text{month}\\) (Duolingo blended ARPU), and \\(\Delta F\\) is the change in the per-session abandonment rate caused by the constraint. Every constraint bleeds revenue through abandonment; this formula converts any constraint into a dollar impact.
+
+---
+
+#### Weibull Abandonment Model
+*(Source: Part 1 — [Why Latency Kills Demand When You Have Supply](../2025-11-22/))*
+
+**Law 2 (Weibull Abandonment):** User patience follows a Weibull survival function. For viewers (demand-side):
+
+{% katex(block=true) %}
+\begin{aligned}
+S_v(t; \lambda_v, k_v) &= \exp\left[-\left(\frac{t}{\lambda_v}\right)^{k_v}\right] \quad \text{(survival probability)} \\
+F_v(t; \lambda_v, k_v) &= 1 - S_v(t; \lambda_v, k_v) \quad \text{(abandonment CDF)}
+\end{aligned}
+{% end %}
+
+where \\(t \geq 0\\) is latency in seconds, \\(\lambda_v = 3.39\text{s}\\) is the scale parameter (characteristic tolerance), and \\(k_v = 2.28\\) is the shape parameter (\\(k_v > 1\\) indicates accelerating impatience). Parameters estimated via maximum likelihood from \\(n = 47{,}382\\) abandonment events. For creators (supply-side), the same form applies with \\(\lambda_c = 90\text{s}\\), \\(k_c = 4.5\\) (cliff behavior at threshold).
+
+The shape parameter \\(k_v = 2.28\\) reveals accelerating abandonment risk: going from 1s to 2s loses more users than going from 0s to 1s, and each additional 100ms of latency causes disproportionately more abandonment than the previous 100ms.
+
+---
+
+#### Protocol Regime Boundary (Market Reach Coefficient)
+*(Source: Part 2 — [Why Protocol Choice Locks Physics For Years](../2025-11-29/))*
+
+*Note: This definition is presented in Part 2 as the "Market Reach Coefficient" rather than "Protocol Regime Boundary." The regime threshold is the physics floor comparison between TCP+HLS and QUIC+MoQ.*
+
+**Market Reach Coefficient:** All QUIC-dependent optimizations must apply a Market Reach Coefficient to account for users who fall back to TCP+HLS:
+
+{% katex(block=true) %}
+C_{\text{reach}} = 1 - \text{Safari mobile share} = 1 - 0.42 = 0.58
+{% end %}
+
+The blended abandonment rate across the user population is:
+
+{% katex(block=true) %}
+F_{\text{blended}} = (1 - C_{\text{reach}}) \cdot F_{\text{HLS}} + C_{\text{reach}} \cdot F_{\text{MoQ}}
+{% end %}
+
+The TCP+HLS physics floor imposes approximately 370ms p95 Video Start Latency in warm-cache production conditions. QUIC+MoQ achieves approximately 100ms. The protocol regime boundary is the point at which transport physics — not application-layer optimization — becomes the binding constraint. Because Safari/iOS lacks WebTransport and MoQ support (as of 2025), 42% of mobile users remain in the TCP+HLS regime regardless of server-side protocol deployment.
+
+---
+
+#### Connection Migration Cost
+*(Source: Part 2 — [Why Protocol Choice Locks Physics For Years](../microlearning-platform-part2-video-delivery/))*
+
+**Connection Migration:** QUIC's ability to maintain active connections when users switch networks (WiFi to cellular), while TCP requires full reconnection causing session interruption.
+
+TCP reconnect latency: 1,650ms (TCP three-way handshake plus TLS negotiation). QUIC migration latency: approximately 50ms (connection ID preserved, no re-handshake). Mobile usage: approximately 30% of sessions involve a network transition (WiFi to cellular or vice versa).
+
+Revenue impact calculation (Safari-adjusted):
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{Safari-adjusted value} &= \$2.32\text{M} \times C_{\text{reach}} \\
+&= \$2.32\text{M} \times 0.58 \\
+&= \$1.35\text{M/year @3M DAU}
+\end{aligned}
+{% end %}
+
+Without connection migration, 17.6% of users experiencing a 1.65-second reconnect abandon per the Weibull model (\\(F_v(1.65\text{s}) = 17.6\\%\\)). Connection migration eliminates this by allowing the video stream to survive network changes without re-handshaking.
+
+---
+
+#### Creator Pipeline Constraint
+*(Source: Part 3 — [Why GPU Quotas Kill Creators Before Content Flows](../microlearning-platform-part3-creator-pipeline/))*
+
+*Note: Part 3 does not use the term "Creator Pipeline Constraint" as a formal definition. The equivalent concept is the Creator Patience Model and the Upload-to-Live Latency target.*
+
+**Upload-to-Live Latency Target:** The goal for supply-side performance is sub-30-second Upload-to-Live Latency. This metric is distinct from the demand-side Video Start Latency:
+
+| Metric | Target | Perspective | Measured From | Measured To |
+| :--- | :--- | :--- | :--- | :--- |
+| Video Start Latency | <300ms p95 | Viewer (demand) | User taps play | First frame rendered |
+| Upload-to-Live Latency | <30s p95 | Creator (supply) | Upload completes | Video discoverable |
+
+The creator patience model follows a modified Weibull with high shape parameter (cliff behavior):
+
+{% katex(block=true) %}
+F_{\text{creator}}(t; \lambda_c, k_c) = 1 - \exp\left[-\left(\frac{t}{\lambda_c}\right)^{k_c}\right], \quad \lambda_c = 90\text{s}, \; k_c = 4.5
+{% end %}
+
+The supply-side indirect revenue mechanism is: \\(\Delta R_c = C_{\text{lost}} \times M \times r \times T\\), where \\(M = 10{,}000\\) views per creator per year (content multiplier). One creator lost removes 10,000 views of consumption annually.
+
+---
+
+#### Ingress Latency Penalty (Double-Weibull Trap)
+*(Source: Part 3 — [Why GPU Quotas Kill Creators Before Content Flows](../microlearning-platform-part3-creator-pipeline/))*
+
+*Note: The term "Ingress Latency Penalty" does not appear in Part 3. The equivalent construct is the encoding delay tier analysis and the Double-Weibull Trap.*
+
+**Double-Weibull Trap:** When the output of one Weibull process becomes the input to another, failures compound. Supply-side creator abandonment (\\(k_c = 4.5\\), cliff behavior at 90s encoding latency) reduces catalog quality, which triggers demand-side viewer abandonment (\\(k_v = 2.28\\), gradual erosion).
+
+Encoding delay revenue impact at the creator cliff:
+
+| Encoding Time | \\(F_{\text{creator}}\\) | Creators Lost @3M DAU | Annual Revenue Impact |
+| :--- | :--- | :--- | :--- |
+| <30s (target) | 0% (baseline) | 0 | Baseline |
+| 30-60s | 5% | 75 | $43K/year |
+| 60-120s | 15% | 225 | $129K/year |
+| >120s | 65% | 975 | $559K/year |
+
+At 120s encoding delay: \\(F_c(120\text{s}) = 1 - \exp[-(120/90)^{4.5}] = 97.4\\%\\). The creator pipeline qualifies as an Existence Constraint: without creators, there is no content; without content, there are no viewers; without viewers, there is no platform.
+
+---
+
+#### Cold Start Problem
+*(Source: Part 4 — [Why Cold Start Caps Growth Before Users Return](../microlearning-platform-part4-ml-personalization/))*
+
+**Cold Start Problem:** The platform has zero watch history for a new user. Without data, the only fallback is popularity ranking. On an educational platform, most users start at beginner level, so popular content clusters there. Advanced users see elementary material and leave.
+
+The cold start abandonment pattern follows a high-\\(k\\) Weibull in terms of irrelevant videos encountered (not time):
+
+{% katex(block=true) %}
+F_{\text{cs}}(n; \lambda_n, k_n) = 1 - \exp\left[-\left(\frac{n}{\lambda_n}\right)^{k_n}\right], \quad \lambda_n = 3.3 \text{ irrelevant videos}, \; k_n = 3.5
+{% end %}
+
+where \\(n\\) is the number of irrelevant videos encountered. The cliff at \\(n = 3\\) (\\(F_{\text{cs}}(3) = 42\\%\\)) justifies the onboarding quiz investment: preventing users from reaching the abandonment threshold.
+
+Revenue at risk: 20% of DAU experiences cold start; 12% of those never return after a bad first session. At 3M DAU: \$1.51M/year in lost revenue [95% CI: \$0.92M–\$2.10M].
+
+---
+
+#### Personalization Budget
+*(Source: Part 4 — [Why Cold Start Caps Growth Before Users Return](../microlearning-platform-part4-ml-personalization//))*
+
+**The 100ms Personalization Budget:** The fix requires personalization fast enough that a new user never notices it happening. The performance budget is <100ms from request to personalized path. Within that window, the system must:
+
+1. Find videos matching the user's skill level (vector similarity search, 30ms)
+2. Respect prerequisite chains (knowledge graph traversal, 20ms)
+3. Rank candidates by predicted engagement (gradient-boosted decision tree scoring, 40ms)
+4. Remove content the user already knows (adaptive filtering, included in ranking stage)
+
+The 100ms budget operates on the application layer, independent of transport protocol. However, user experience compounds with transport latency: for Safari users on TCP+HLS (529ms video start), personalization adds 100ms to produce 629ms total — a combined abandonment of \\(F_v(0.629\text{s}) = 2.21\\%\\) vs 0.17% for MoQ users.
+
+---
+
+#### State Divergence
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../microlearning-platform-part5-data-state/))*
+
+*Note: Part 5 does not use the term "State Divergence" as a formal definition. The equivalent concept is the consistency failure model and the incident rate derivation.*
+
+**Consistency Failure Model:** When client state and server state disagree due to network delays, offline queuing, or clock skew, user-visible consistency incidents occur:
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{Sessions/day} &= 3\text{M DAU} \times 2 \text{ sessions/user} = 6\text{M} \\
+\text{State-changing actions/session} &= 10 \text{ (completions, quizzes, XP grants)} \\
+\text{Total actions/day} &= 60\text{M} \\
+\text{Incident rate} &= 0.05\% \text{ (network transitions: 2–5\% times partial failure rate)} \\
+\text{Incidents/year} &= 60\text{M} \times 0.0005 \times 365 = \mathbf{10.95\text{M}} \approx 10.7\text{M}
+\end{aligned}
+{% end %}
+
+Of these 10.7M incidents, approximately 10% (1.07M) are user-visible. The underlying cause is the non-monotonicity of streak invariants: streak resets (setting a counter to zero on a missed day) violate the monotonicity assumption required by standard CRDT merge functions.
+
+---
+
+#### CRDT (Conflict-Free Replicated Data Type)
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../2025-12-20/))*
+
+**CRDTs guarantee convergence:** all replicas eventually reach the same state regardless of operation order, through three algebraic properties:
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{merge}(A, \text{merge}(B, C)) &= \text{merge}(\text{merge}(A, B), C) && \text{(associativity)} \\
+\text{merge}(A, B) &= \text{merge}(B, A) && \text{(commutativity)} \\
+\text{merge}(A, A) &= A && \text{(idempotence)}
+\end{aligned}
+{% end %}
+
+**Why CRDTs cannot solve streak consistency:** The streak invariant requires the merge function to know wall-clock order, but CRDTs are explicitly designed to work without temporal coordination:
+
+{% katex(block=true) %}
+\text{merge}(A, B) \neq \text{merge}(B, A) \text{ when correctness is defined temporally}
+{% end %}
+
+Streak consistency therefore requires a CP (Consistency + Partition-tolerance) database (CockroachDB) rather than a CRDT-based AP system.
+
+---
+
+#### Vector Clock (Dual-Timestamp Protocol)
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../2025-12-20/))*
+
+*Note: Part 5 does not use the term "Vector Clock" as a formal definition. The equivalent construct is the Dual-Timestamp Protocol with sequence numbers for causality ordering.*
+
+**Dual-Timestamp Protocol:** Every completion event carries both timestamps:
+
+| Field | Source | Purpose |
+| :--- | :--- | :--- |
+| `client_timestamp` | Device clock at tap time | Streak calculation (user's perceived time) |
+| `server_timestamp` | Server clock at receipt | Audit trail, abuse detection |
+| `client_timezone` | IANA timezone ID | Calendar day determination |
+| `sequence_number` | Monotonic client counter | Causality ordering within session |
+
+The bounded trust window prevents timestamp abuse:
+
+{% katex(block=true) %}
+\Delta_{\text{trust}} = \max(\Delta_{\text{network}}^{p99}, \Delta_{\text{offline}}^{p99.7}) = \max(500\text{ms}, 5\text{min}) = 5\text{ minutes}
+{% end %}
+
+When \\(|t_{\text{client}} - t_{\text{server}}| > 5\text{ min}\\), the event is flagged for review. The system fails open (preserves the streak, logs for audit) rather than fail closed.
+
+---
+
+#### Authority Tier (Clock Authority Model)
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../2025-12-20/))*
+
+*Note: Part 5 uses the term "Clock Authority Models" rather than "Authority Tier." The three models define a hierarchy of timestamp authority.*
+
+**Three Clock Authority Models:**
+
+| Authority | Mechanism | Trade-off |
+| :--- | :--- | :--- |
+| **Server canonical** | \\(t = t_{\text{server}}\\) always | Simple, auditable; network delay harms users |
+| **Client canonical** | \\(t = t_{\text{client}}\\) always | Matches perception; enables abuse |
+| **Bounded trust** | {% katex() %}t = t_{\text{client}}{% end %} if {% katex() %}|t_{\text{client}} - t_{\text{server}}| < \Delta_{\text{trust}}{% end %} | Balanced; requires choosing {% katex() %}\Delta_{\text{trust}}{% end %} |
+
+The series recommends bounded trust (\\(\Delta_{\text{trust}} = 5\text{ min}\\)). The series also applies CAP theorem to select CockroachDB (CP) over Cassandra (AP) for streak data, accepting minority-region write unavailability during partitions (approximately 0.1% of time) to guarantee consistency for 100% of reads.
+
+---
+
+#### Constraint Sequence
+*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+
+**Sequence Ordering — Formal Property:** While constraint \\(c_i\\) is binding, all successor constraints \\(c_j\\) are not yet the bottleneck:
+
+{% katex(block=true) %}
+\text{Binding}(c_i) \Rightarrow \neg\text{Binding}(c_j) \quad \forall j \text{ where } c_i \prec c_j
+{% end %}
+
+The sequence that maximizes total ROI respects topological order of the dependency graph \\(G\\) and processes constraints in decreasing marginal return order within each dependency level. Present-value discounting makes earlier returns more valuable:
+
+{% katex(block=true) %}
+\text{NPV}(\pi^*) = \sum_t \frac{\Delta O_t}{(1+r)^t} > \text{NPV}(\pi') \quad \text{for } r > 0
+{% end %}
+
+The six-constraint sequence for the microlearning platform: Physics (latency) to Architecture (protocol) to Resource (encoding) to Information (cold start) to Trust (consistency) to Economics (unit costs).
+
+---
+
+#### Prerequisite Graph
+*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+
+**Dependency Graph \\(G = (C, E)\\):** Edge \\((c_i, c_j) \in E\\) indicates \\(c_i\\) must be resolved before \\(c_j\\) becomes binding.
+
+**Ordering Rationale:**
+
+| Transition | Why Predecessor Must Be Resolved First |
+| :--- | :--- |
+| Physics to Architecture | Architectural decisions implement physics constraints; wrong architecture locks wrong physics |
+| Architecture to Resource | Resource allocation assumes architecture exists; optimizing resources for wrong architecture wastes investment |
+| Resource to Information | Information systems require resources; personalization requires content; content requires supply |
+| Information to Trust | Users who never engage (information failure) never build state to lose (trust failure) |
+| Trust to Economics | Economics optimization assumes functioning system; cost-cutting a broken system is premature optimization |
+| Economics to Meta | Meta-optimization applies only after system is economically viable |
+
+Resolving a successor constraint before its predecessor yields diminished ROI: the improvement exists but cannot flow through the still-binding predecessor.
+
+---
+
+#### Phase Gate Function (Decision Function)
+*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+
+*Note: Part 6 presents this as the "Decision Function" rather than "Phase Gate Function." It defines the conditions governing when to invest, defer, or stop for each candidate constraint.*
+
+**Decision Function \\(D: C \times \mathcal{S} \to \{\text{invest}, \text{defer}, \text{stop}\}\\):**
+
+{% katex(block=true) %}
+D(c, \mathcal{S}) = \begin{cases}
+\text{invest} & \text{if } V(c) \land B(c) \land [R(c) \geq \theta \lor E(c)] \land P(c) = \emptyset \\
+\text{defer} & \text{if } P(c) \neq \emptyset \\
+\text{stop} & \text{if } \max_{c \in C} R(c) < \theta \land \neg\exists c : E(c)
+\end{cases}
+{% end %}
+
+Where:
+- \\(V(c)\\) = causal validation (five-test protocol passes \\(\geq 3\\))
+- \\(B(c)\\) = binding status (Lagrange multiplier \\(\lambda_c > 0\\))
+- \\(R(c)\\) = ROI under uncertainty (\\(\geq 3.0\\) for 95% confidence of breakeven)
+- \\(E(c)\\) = exception status (Strategic Headroom \\(\lor\\) Enabling Infrastructure \\(\lor\\) Existence Constraint)
+- \\(P(c)\\) = binding predecessors (\\(\{c\' : c\' \prec c \land B(c\')\}\\))
+- \\(\theta\\) = reservation value (\\(\max(R_{\text{features}}, 3.0)\\))
+
+---
+
+### Key Propositions
+
+#### Weibull Abandonment Cliff (Part 1)
+The shape parameter \\(k_v = 2.28 > 1\\) reveals accelerating abandonment risk. Going from 1s to 2s loses 19.9pp of users; going from 2s to 3s loses 27.1pp — a 36% increase in abandonment for the same 1-second delay. The hazard rate at baseline (\\(t = 1.0\text{s}\\)) is approximately 0.133/s; each 100ms improvement at that operating point prevents 1.3% user abandonment, worth \$2.78M/year at 10M DAU.
+
+#### 3x ROI Threshold Derivation (Parts 1, 6)
+Under typical estimation uncertainty (\\(\sigma = 0.3\Delta O\\), cost overrun \\(\tau = 0.5\\)), the minimum ROI required to achieve breakeven with 95% probability is approximately 3.0:
+
+{% katex(block=true) %}
+\frac{\Delta O}{C} \geq 1 + z_{0.95}\sqrt{\text{Var}\left(\frac{\Delta O + \epsilon}{C(1+\delta)}\right)} \approx 3.0
+{% end %}
+
+Components: 1.0x breakeven + 0.5x opportunity cost + 0.5x technical risk + 0.5x measurement uncertainty + 0.5x general margin = 3.0x minimum.
+
+#### Safari Tax — Market Reach Coefficient (Part 2)
+All QUIC+MoQ optimizations apply \\(C_{\text{reach}} = 0.58\\). This raises the 3x ROI scale threshold from approximately 8.7M DAU (theoretical) to approximately 15M DAU (Safari-adjusted) for protocol migration. The "Safari Tax" adds \$0.32M/year in LL-HLS bridge infrastructure to maintain feature parity for the 42% Safari population.
+
+#### Creator Cliff (Part 3)
+At 120s encoding delay: \\(F_c(120\text{s}) = 97.4\\%\\). A 33% increase in encoding time from \\(\lambda_c = 90\text{s}\\) to 120s causes abandonment to jump from 63.2% to 97.4% — a phase transition. Creator pipeline qualifies as an Existence Constraint (ROI 1.9x at 3M DAU, never exceeds 3x at any scale, but \\(\partial\text{Platform}/\partial\text{Creators} \to \infty\\)).
+
+#### Cold Start Cliff (Part 4)
+Users tolerate 1–2 irrelevant videos (\\(F_{\text{cs}}(2) = 12.6\\%\\)); the third irrelevant video triggers the abandonment cliff (\\(F_{\text{cs}}(3) = 42.0\\%\\)). Full ML personalization pipeline (50% churn prevention estimate) yields 6.3x ROI at 3M DAU standalone.
+
+#### Loss Aversion Multiplier (Part 5)
+Consistency failures cause step-function trust destruction amplified by investment in streaks:
+
+{% katex(block=true) %}
+M_{\text{loss}}(d) = 1 + \alpha \cdot \ln(1 + d/7), \quad \alpha = 1.2
+{% end %}
+
+At \\(d = 16\\) days: \\(M = 2.43\times\\) baseline churn. Combined with 10.7M incidents/year, this places \$6.5M/year at risk. The client-side resilience stack achieves 25x ROI by protecting 83% of that exposure at \$264K/year.
+
+#### Optimal Stopping Criterion (Part 6)
+{% katex(block=true) %}
+\text{Stop optimizing when: } \text{ROI}_{\text{next constraint}} < \max(\text{ROI}_{\text{features}}, 3.0)
+{% end %}
+
+With meta-constraint overhead raising the effective threshold:
+
+{% katex(block=true) %}
+\text{Continue if: } \text{ROI}_{\text{next}} > \theta + \frac{C_{\text{analysis}}}{\Delta O_{\text{next}}}
+{% end %}
+
