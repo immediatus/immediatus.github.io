@@ -38,3 +38,61 @@ feather.replace();
     if (t) nudge(t);
   }, true);
 }());
+
+/* ---------------------------------------------------------------
+   Touch tooltip — bottom-sheet for mobile (hover: none) devices
+   CSS counterpart: sass/css/main.scss (#tip-popup)
+   First tap on a .defined-term shows its definition in a panel
+   that slides up from the bottom of the screen; second tap on
+   the same term (or any tap outside) dismisses it.  For <a>
+   terms the second tap also allows the browser to follow the link.
+   --------------------------------------------------------------- */
+(function () {
+  if (!window.matchMedia('(hover: none)').matches) return;
+
+  var popup  = null;   /* created lazily on first use */
+  var active = null;   /* the .defined-term currently shown */
+
+  function getPopup() {
+    if (popup) return popup;
+    popup = document.createElement('div');
+    popup.id = 'tip-popup';
+    popup.setAttribute('role', 'tooltip');
+    popup.setAttribute('aria-live', 'polite');
+    document.body.appendChild(popup);
+    return popup;
+  }
+
+  function show(term) {
+    var def = term.getAttribute('data-def');
+    if (!def) return;
+    var p = getPopup();
+    p.textContent = def;
+    p.classList.add('visible');
+    active = term;
+  }
+
+  function hide() {
+    if (popup) popup.classList.remove('visible');
+    active = null;
+  }
+
+  document.addEventListener('touchend', function (e) {
+    var term = e.target && e.target.closest && e.target.closest('.defined-term');
+    if (term) {
+      if (active === term) {
+        /* Second tap on the same term: dismiss and let <a> links navigate */
+        hide();
+        return;
+      }
+      /* First tap: show tooltip; suppress default action (focus jump, link nav) */
+      e.preventDefault();
+      show(term);
+      return;
+    }
+    /* Tap outside any .defined-term: dismiss */
+    if (popup && popup.classList.contains('visible')) {
+      hide();
+    }
+  }, false);
+}());

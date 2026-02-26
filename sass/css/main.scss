@@ -372,31 +372,55 @@ a.defined-term {
   transform: translateX(calc(-50% + var(--tip-nudge))) translateY(0) scale(1);
 }
 
-/* Touch devices: tooltip below the word, clamped to viewport width */
+/* Touch devices: suppress CSS pseudo-element tooltips; JS bottom-sheet (#tip-popup) takes over */
 @media (hover: none) {
-  .defined-term::after {
-    bottom: auto;
-    top: calc(100% + 10px);
-    left: 0;
-    transform: translateY(-6px) scale(0.97);
-    max-width: min(310px, calc(100vw - 2.5rem));
-  }
-
-  .defined-term::before {
-    bottom: auto;
-    top: calc(100% + 5px);
-    left: 1rem;
-    transform: translateY(-6px);
-    border-top-color: transparent;
-    border-bottom-color: rgba(10, 8, 24, 0.96);
-  }
-
-  .defined-term:focus-visible::after {
-    transform: translateY(0) scale(1);
-  }
-
+  .defined-term::after,
+  .defined-term::before,
+  .defined-term:focus-visible::after,
   .defined-term:focus-visible::before {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
+/* Mobile touch tooltip — slides up from the bottom of the screen */
+#tip-popup {
+  display: block;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(10, 8, 24, 0.95);
+  color: #e2e8f0;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.65;
+  padding: 0 1.25rem 1.5rem;
+  border-radius: 16px 16px 0 0;
+  z-index: 9999;
+  box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.35),
+              inset 3px 0 0 0 rgba(139, 92, 246, 0.65);
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+
+  /* Drag handle */
+  &::before {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 0.6rem auto 0.8rem;
+  }
+
+  &.visible {
+    opacity: 1;
     transform: translateY(0);
+    pointer-events: auto;
   }
 }
 
