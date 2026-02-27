@@ -1,6 +1,10 @@
 # IDE metadata
 **/.vscode/**
 
+# Worktrees
+.worktrees/
+worktrees/
+
 # Build output
 **/public/**
 
