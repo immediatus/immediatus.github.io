@@ -401,6 +401,8 @@ K \cdot \tau < \frac{\pi}{2}
 
 *Proof*: For a proportional controller with delay, the open-loop transfer function is \\(G(s) = K e^{-s\tau} / s\\). The phase at crossover is \\(-\pi/2 - \omega_c \tau\\). Phase margin \\(\phi_m = \pi - (\pi/2 + K\tau) > 0\\) requires \\(K\tau < \pi/2\\).
 
+**Linear approximation warning**: This derivation applies the Nyquist criterion for a continuous-time, linear, time-invariant plant with pure delay \\(\tau\\). The actual MAPE-K loop is none of these: it executes on a discrete timer (period \\(T_{\text{tick}}\\)), its actions are step functions (restart a process, reroute traffic — not proportional corrections), and multiple healing loops may run concurrently on shared hardware. \\(K \cdot \tau < \pi/2\\) is a necessary heuristic for a single, isolated healing loop — not a sufficient stability condition for the full system. For \\(N_{\text{concurrent}}\\) simultaneous healing loops sharing one CPU at \\(u\\%\\) utilization, the effective feedback delay grows to \\(\tau_{\text{eff}} \approx \tau/(1-u)\\), and the effective aggregate gain \\(K_{\text{eff}} \approx K \cdot N_{\text{concurrent}}\\); the stability condition becomes \\(K_{\text{eff}} \cdot \tau_{\text{eff}} < \pi/2\\). Verify concurrent-failure stability through discrete-event simulation before deploying multi-target healing (e.g., simultaneous motor compensation + sensor fallback + communication rerouting on RAVEN Drone 23).
+
 In other words, the slower the feedback (larger \\(\tau\\)), the more gently the controller must react (smaller \\(K\\)); aggressive corrections in a slow-feedback environment cause the system to oscillate rather than converge.
 
 **Corollary 4**. *Increased feedback delay (larger \\(\tau\\)) requires more conservative controller gains, trading response speed for stability.*
@@ -458,6 +460,71 @@ Rather than waiting for a regime transition to trigger a gain change, the contro
 If predicted delay exceeds current regime threshold, preemptively reduce gain before connectivity degrades.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} example**: During mountain transit, connectivity degradation is predictable from terrain maps. The healing controller reduces gain 30 seconds before entering known degraded zones, preventing oscillatory healing behavior when feedback delays suddenly increase.
+
+### The Watchdog Protocol: Layer-0 Hardware Safety
+
+Proposition 9 guarantees closed-loop stability *when the MAPE-K software loop executes correctly*. It provides no guarantee when the loop itself fails: the Monitor thread deadlocks waiting for a gossip response, the Planner enters an infinite loop over a cyclic dependency graph, or the Executor hangs mid-action after a kernel panic. In these cases, the autonomic software that is supposed to heal the system has itself become the patient — with no higher-level authority to call.
+
+The engineering response is a **hardware watchdog timer (WDT)**: a hardware counter that fires a reset interrupt unless software resets it before expiry. The MAPE-K loop "pets" the watchdog at the end of each successful Execute phase. If the loop hangs, the counter expires, the interrupt fires, and control transfers to a pre-certified bypass program that operates entirely without MAPE-K software involvement.
+
+<span id="def-26"></span>
+**Definition 26** (Software Watchdog Timer). *A watchdog protocol is a tuple \\(W = (T_0, T_1, k, \mathbf{B}, \mathcal{R})\\) with three concentric monitoring layers:*
+
+- *Layer 0 (hardware WDT): fires bypass action \\(B_0\\) if the MAPE-K thread does not write a heartbeat within \\(T_0\\) seconds. \\(T_0\\) must satisfy \\(T_0 \leq T_{\text{cycle}}\\) (minimum MAPE-K cycle time) to detect hangs within one loop iteration.*
+- *Layer 1 (software watchdog): a dedicated watchdog thread checks MAPE-K liveness every \\(T_1\\) seconds and triggers restart \\(B_1\\) after \\(k\\) consecutive missed heartbeats.*
+- *Layer 2 (meta-loop): a minimal monitoring process checks that Layer 1 itself is alive; escalates to \\(B_0\\) if Layer 1 fails.*
+
+*\\(\mathbf{B} = (B_0, B_1)\\) is the ordered bypass action pair (\\(B_1\\) attempted first; \\(B_0\\) on escalation). \\(\mathcal{R}\\) is the restoration predicate — the conditions under which the MAPE-K loop may resume control after bypass activation.*
+
+**Layer separation principle**: \\(B_0\\) must be implementable with no component at hardware-interrupt level or above — no OS calls, no shared memory locks, no MAPE-K module dependencies. Each layer must be strictly simpler than the one it monitors.
+
+{% mermaid() %}
+graph TD
+    MAPEK["MAPE-K Software Loop<br/>(heartbeat each cycle)"]
+    L1["Layer 1: Software Watchdog<br/>monitors MAPE-K liveness<br/>every T1 seconds"]
+    L0["Layer 0: Hardware WDT<br/>fires if no heartbeat<br/>within T0 seconds"]
+    B1["Bypass B1<br/>Restart MAPE-K thread<br/>preserve state snapshot"]
+    B0["Bypass B0<br/>Execute safe-state action<br/>no OS involvement"]
+    RESTORE["Restoration check R<br/>resume MAPE-K?"]
+
+    MAPEK -->|"heartbeat"| L0
+    MAPEK -->|"heartbeat"| L1
+    L1 -->|"k misses"| B1
+    L0 -->|"T0 expired"| B0
+    B1 -->|"restart ok"| MAPEK
+    B1 -->|"restart fails"| B0
+    B0 --> RESTORE
+    RESTORE -->|"R satisfied"| MAPEK
+    RESTORE -->|"not satisfied"| B0
+
+    style B0 fill:#ffcdd2,stroke:#c62828
+    style B1 fill:#fff3e0,stroke:#f57c00
+    style MAPEK fill:#c8e6c9,stroke:#388e3c
+    style RESTORE fill:#e3f2fd,stroke:#1976d2
+{% end %}
+
+<span id="prop-27"></span>
+**Proposition 27** (Watchdog Coverage Condition). *Let \\(\lambda_{\text{loop}}\\) be the MAPE-K loop failure rate (events per unit time). With Layer-0 hardware WDT period \\(T_0\\), the expected unprotected exposure time per failure event is bounded:*
+
+{% katex(block=true) %}
+\mathbb{E}[T_{\text{unprotected}}] \leq T_0
+{% end %}
+
+*Without a watchdog, expected unprotected time is \\(T_{\text{human detect}}\\). The watchdog improvement factor is:*
+
+{% katex(block=true) %}
+\text{MTTU gain} = \frac{T_{\text{human detect}}}{T_0}
+{% end %}
+
+*Proof*: A hang at time \\(t\\) is detected by the next WDT expiry at time \\(t + T_0\\) at the latest. The unprotected window \\([t,\, t + T_0]\\) is bounded by \\(T_0\\). \\(\square\\)
+
+**Restoration condition \\(\mathcal{R}\\)**: The bypass state is not permanent. The MAPE-K loop may resume when: (1) all \\(\mathcal{L}_0\\) capabilities are independently verified stable, (2) the condition causing the hang is no longer present, and (3) a dry-run MAPE-K cycle completes successfully with no actions executed. The dry-run prevents re-entry into a loop that will immediately hang again.
+
+**Critical design constraint**: All healing actions must be **idempotent and resumable**. If the WDT fires mid-action, re-executing the action from scratch must produce the same outcome as completing the interrupted execution. Non-idempotent actions (e.g., "append to counter") require transaction semantics before they can be managed by a watchdog-protected loop.
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: \\(T_0 = 100\,\text{ms}\\) (maximum tolerable period before attitude control degrades), \\(T_1 = 1\,\text{s}\\), \\(k = 3\\). Bypass \\(B_0\\): maintain current heading, throttle, and altitude in attitude-hold mode. MTTU gain: \\(T_{\text{human detect}} \approx 300\,\text{s}\\) vs. \\(T_0 = 0.1\,\text{s}\\) yields \\(3000\times\\) improvement.
+
+**{% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} calibration**: \\(T_0 = 30\,\text{s}\\) (Kubernetes liveness probe as Layer-0), \\(T_1 = 5\,\text{s}\\), \\(k = 2\\). Bypass \\(B_0\\): stop accepting new requests, drain in-flight transactions, hold persistence layer state steady. The bypass action must never forcibly terminate the database layer regardless of MAPE-K state — data integrity takes precedence over healing speed.
 
 <span id="scenario-hyperscale"></span>
 ### Commercial Application: {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} Data Center Self-Healing
@@ -581,6 +648,65 @@ where \\(c_r(k)\\) is the marginal cost of resource \\(r\\) at congestion level 
 **Coordination protocol**: Each {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop selects healing actions to minimize \\(\Phi\\) (best-response descent) respecting the aggregate resource constraint \\(Q_{\text{heal}} < Q_{\text{total}} - Q_{\text{min}}\\). The healing coordination game admits a pure Nash equilibrium (Rosenthal 1973). Best-response dynamics converge in potential games, but MAPE-K healing uses gradient-based updates rather than pure best-response; convergence to Nash should be verified empirically for each deployment. In practice, this means a shared resource declaration table: loops register resource requirements and receive grants only when the current allocation remains feasible.
 
 **Practical implication**: Replace the heuristic "max concurrent restarts = \\(\lfloor n_{\text{healthy}}/3 \rfloor\\)" with a congestion game coordination layer. When multiple failures occur simultaneously ({% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} jamming causes multi-component failures), loops negotiate resource grants through potential-function minimization rather than competing independently. This generalizes to heterogeneous resource requirements without per-scenario tuning.
+
+### Resource Priority Matrix: Deterministic Conflict Resolution
+
+The congestion game converges to Nash equilibrium via iterative best-response dynamics — but convergence takes multiple coordination rounds. This is too slow when two actions claim the same CPU simultaneously and combined demand exceeds supply. A deterministic preemption layer sits *above* the congestion game: when resource claims conflict, the priority matrix resolves the contest in \\(O(1)\\) time without coordination overhead.
+
+<span id="def-27"></span>
+**Definition 27** (Resource Priority Matrix). *Given resource set \\(\mathcal{R} = \\{r_1, \ldots, r_m\\}\\) and healing action set \\(\mathcal{A} = \\{a_1, \ldots, a_n\\}\\), the Resource Priority Matrix \\(\mathbf{P} \in [0,1]^{n \times m}\\) assigns priority weight \\(P_{ij}\\) to action \\(a_i\\)'s claim on resource \\(r_j\\). When actions \\(a_i\\) and \\(a_k\\) both claim resource \\(r_j\\) with demands \\(d_i, d_k\\) such that \\(d_i + d_k > Q_j\\) (available capacity):*
+
+{% katex(block=true) %}
+\text{alloc}(a_i, r_j) = \begin{cases}
+\min\!\left(d_i,\; Q_j - d_k\right) & P_{ij} > P_{kj} \quad \text{(preempt)} \\
+d_i \cdot Q_j / (d_i + d_k) & P_{ij} = P_{kj} \quad \text{(share proportionally)} \\
+\max\!\left(0,\; Q_j - d_k\right) & P_{ij} < P_{kj} \quad \text{(yield)}
+\end{cases}
+{% end %}
+
+*Priority weights derive from the lexicographic objective hierarchy — Survival \\(\succ\\) Autonomy \\(\succ\\) Coherence \\(\succ\\) Anti-fragility — with the healing action's protected capability tier determining its row weight:*
+
+{% katex(block=true) %}
+P_{ij} = \begin{cases}
+1.0 & a_i \text{ protects } \mathcal{L}_0 \text{ (survival: thermal, power, structural)} \\
+0.8 & a_i \text{ protects } \mathcal{L}_1\text{--}\mathcal{L}_2 \text{ (autonomy)} \\
+0.5 & a_i \text{ protects } \mathcal{L}_3 \text{ (coherence)} \\
+0.3 & a_i \text{ protects } \mathcal{L}_4 \text{ (anti-fragility)}
+\end{cases}
+{% end %}
+
+**Thermal vs. throughput conflict** (the motivating case): thermal emergency cooling protects hardware survival (\\(\mathcal{L}_0\\), \\(P = 1.0\\)); throughput optimization serves mission coherence (\\(\mathcal{L}_3\\), \\(P = 0.5\\)). When both demand the same CPU cores, cooling preempts throughput instantly and deterministically — no negotiation round required.
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} CPU priority matrix** (representative subset):
+
+| Healing action | Protected tier | CPU priority | Preempts |
+| :--- | :--- | :--- | :--- |
+| Battery emergency land | \\(\mathcal{L}_0\\) | 1.0 | All lower tiers |
+| Thermal throttle | \\(\mathcal{L}_0\\) | 1.0 | All lower tiers |
+| Formation rebalance | \\(\mathcal{L}_2\\) | 0.8 | Coherence, anti-fragility |
+| Gossip rate increase | \\(\mathcal{L}_3\\) | 0.5 | Anti-fragility only |
+| Model weight update | \\(\mathcal{L}_4\\) | 0.3 | None (yields to all) |
+
+<span id="prop-28"></span>
+**Proposition 28** (Priority Preemption Deadline Bound). *Under strict priority preemption with the Resource Priority Matrix, action \\(a_i\\) misses its healing deadline \\(T_{\text{dead}}(a_i)\\) only if the total CPU time consumed by strictly higher-priority actions during \\(a_i\\)'s execution window exceeds available slack \\(T_{\text{dead}}(a_i) - T_{\text{exec}}(a_i)\\):*
+
+{% katex(block=true) %}
+P(\text{miss deadline}_{a_i}) \leq P\!\left(\sum_{\substack{a_k:\, P_{kj} > P_{ij}}} T_{\text{exec}}(a_k) > T_{\text{dead}}(a_i) - T_{\text{exec}}(a_i)\right)
+{% end %}
+
+*For {% katex() %}\mathcal{L}_0{% end %} - tier actions (\\(P_{ij} = 1.0\\)): nothing preempts them, so \\(P(\text{miss deadline}) = 0\\) under any resource contention. For throughput optimization (\\(P_{ij} = 0.5\\)): miss probability is bounded by the probability that thermal events last longer than the throughput slack.*
+
+*Proof*: Under strict preemption, a tier-\\(P_{ij}\\) action holds the resource continuously once granted and is interrupted only by a strictly higher-priority preemptor. Worst-case blocking equals the sum of all higher-priority execution times within the same window. Deadline miss requires this sum to exceed available slack. \\(\square\\)
+
+**Anti-starvation aging**: Low-tier actions (\\(P_{ij} = 0.3\\)) could be indefinitely starved if higher-priority actions arrive continuously. Priority is elevated linearly with queue age to bound maximum wait time:
+
+{% katex(block=true) %}
+P_{ij}(t) = \min\!\left(1.0,\; P_{ij}^{\text{base}} + \alpha_{\text{age}} \cdot \frac{t - t_{\text{queued}}}{T_{\text{age}}}\right)
+{% end %}
+
+where \\(\alpha_{\text{age}} \leq 0.5\\) caps maximum elevation from aging, and \\(T_{\text{age}}\\) is the maximum acceptable wait time for any tier.
+
+**Connection to congestion game**: The Resource Priority Matrix is the *initializer* for best-response dynamics. Rather than starting from equal resource weights and iterating toward Nash, the matrix provides an initial allocation already aligned with the lexicographic objective. The congestion game then fine-tunes within-tier resource sharing.
 
 **{% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}-based healing action selection**: {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} tracks success rates for each healing action by failure category. The table below shows accumulated attempt and success counts alongside the {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} score that the exploration-exploitation formula assigns, which blends estimated success rate with an exploration bonus that grows when an action has been tried infrequently.
 
@@ -877,6 +1003,71 @@ t_{\text{next}(A)} \geq t_{\text{last}(A)} + \tau_{\text{cooldown}}(A)
 
 **Dependency tracking**: Before healing A, check if healing A will affect critical components B. If so, either heal B first, or delay healing A until B is stable.
 
+### Control-Theoretic Stability: Damping, Anti-Windup, and Refractory Periods
+
+Proposition 9's stability condition \\(K \cdot \tau < \pi/2\\) governs the proportional behavior of the MAPE-K controller. But two failure modes remain outside its scope: **high-frequency chatter** (the loop triggers healing faster than the system can respond, oscillating between degraded and over-corrected states) and **integral windup** (healing demand accumulates while resources are blocked and discharges as a burst of simultaneous actions when resources free). In classical PID terms, the proportional term is bounded by Proposition 9, but the derivative and integral behaviors need their own treatment.
+
+<span id="def-28"></span>
+**Definition 28** (Healing Dead-Band and Refractory State). *The healing actuator for action \\(a\\) is governed by three parameters and occupies one of three states:*
+
+- *\\(\varepsilon_{\text{db}}\\) (dead-band threshold): healing is suppressed unless the anomaly score \\(z_t^K\\) exceeds \\(\varepsilon_{\text{db}}\\) for \\(\tau_{\text{confirm}}\\) consecutive samples — the "Wait-and-See" confirmation window. Single-sample noise spikes are ignored.*
+- *\\(\tau_{\text{ref}}(a)\\) (refractory period): after executing action \\(a\\), the healing gate for \\(a\\) closes for \\(\tau_{\text{ref}}\\) seconds. This is the mandatory observation window during which the system watches the action take effect before issuing another.*
+- *\\(Q_{\text{aw}}\\) (anti-windup cap): accumulated healing demand \\(D(t)\\) is capped at \\(Q_{\text{aw}}\\). Demand arriving when \\(D(t) = Q_{\text{aw}}\\) is discarded, preventing burst discharge after a resource-blocked period.*
+
+{% mermaid() %}
+stateDiagram-v2
+    direction LR
+    [*] --> READY
+    READY --> REFRACTORY: action executed
+    REFRACTORY --> READY: tau_ref elapsed
+    REFRACTORY --> ANTI_WINDUP: D(t) >= Q_aw
+    ANTI_WINDUP --> REFRACTORY: D(t) < Q_aw / 2
+    ANTI_WINDUP --> READY: tau_ref elapsed, D = 0
+    note right of READY
+        suppressed while z_t < epsilon_db
+        for tau_confirm consecutive samples
+    end note
+{% end %}
+
+**Design parameters by severity tier**:
+
+| Severity tier | \\(\varepsilon_{\text{db}}\\) | \\(\tau_{\text{confirm}}\\) | \\(\tau_{\text{ref}}\\) | \\(Q_{\text{aw}}\\) |
+| :--- | :--- | :--- | :--- | :--- |
+| Low (\\(\varsigma \leq 0.3\\)) | \\(1\sigma\\) | 3 samples | \\(2\tau_{\text{fb}}\\) | 10 |
+| Medium (\\(0.3 < \varsigma \leq 0.7\\)) | \\(2\sigma\\) | 5 samples | \\(4\tau_{\text{fb}}\\) | 5 |
+| High (\\(\varsigma > 0.7\\)) | \\(3\sigma\\) | 10 samples | \\(8\tau_{\text{fb}}\\) | 2 |
+
+where \\(\tau_{\text{fb}}\\) is the current feedback delay from Proposition 9.
+
+<span id="prop-29"></span>
+**Proposition 29** (Anti-Windup Oscillation Bound). *For the proportional healing controller with gain \\(K\\) and feedback delay \\(\tau_{\text{fb}}\\) satisfying \\(K \cdot \tau_{\text{fb}} < \pi/2\\) (Proposition 9), healing oscillation is suppressed if and only if the refractory period satisfies:*
+
+{% katex(block=true) %}
+\tau_{\text{ref}} \geq \frac{\pi}{K}
+{% end %}
+
+*Substituting the Proposition 9 stability bound \\(K < \pi/(2\tau_{\text{fb}})\\), the sufficient condition in terms of feedback delay alone is:*
+
+{% katex(block=true) %}
+\tau_{\text{ref}} \geq 2\,\tau_{\text{fb}}
+{% end %}
+
+*Proof*: The healing controller with refractory period \\(\tau_{\text{ref}}\\) cannot fire at frequency higher than \\(1/\tau_{\text{ref}}\\). Sustained oscillation requires at least one half-cycle of the control loop at gain crossover frequency \\(\omega_c = K\\), which takes \\(\pi/K\\) seconds. Setting \\(\tau_{\text{ref}} \geq \pi/K\\) prevents any half-cycle from completing. Substituting \\(K < \pi/(2\tau_{\text{fb}})\\) gives \\(\pi/K > 2\tau_{\text{fb}}\\). \\(\square\\)*
+
+**Anti-windup accumulator update**:
+
+{% katex(block=true) %}
+D(t+1) = \min\!\left(D(t) + \mathbb{1}\!\left[z_t^K > \varepsilon_{\text{db}}\right],\; Q_{\text{aw}}\right)
+{% end %}
+
+When \\(D(t)\\) reaches \\(Q_{\text{aw}}\\), the system enters ANTI_WINDUP state and discards new demand until \\(D(t)\\) drains below \\(Q_{\text{aw}}/2\\). This prevents "burst discharge" — where minutes of suppressed healing demand fires simultaneously the moment connectivity or resources recover.
+
+**Relationship to existing results**: The dead-band threshold \\(\varepsilon_{\text{db}}\\) formalizes the minimum-confidence floor \\(\theta_{\min} = 0.05\\) from Proposition 10 (constraint \\(g_1\\)): both prevent trigger-happy behavior at near-zero evidence. The refractory period \\(\tau_{\text{ref}}\\) formalizes the informal cooldown constraint \\(t_{\text{next}(A)} \geq t_{\text{last}(A)} + \tau_{\text{cooldown}}(A)\\) from the section above. Proposition 29 gives the first *derived* lower bound on that cooldown: rather than choosing \\(\tau_{\text{cooldown}}\\) heuristically, set \\(\tau_{\text{ref}} \geq 2\tau_{\text{fb}}\\) and oscillation-freedom follows from Proposition 9's stability condition.
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: Feedback delay \\(\tau_{\text{fb}} \approx 5\,\text{s}\\) (gossip convergence, 47 nodes), regime gain \\(K = 0.3\\). Minimum refractory period: \\(\tau_{\text{ref}} \geq \pi/0.3 \approx 10\,\text{s}\\), consistent with \\(2 \times 5 = 10\,\text{s}\\). Dead-band \\(\varepsilon_{\text{db}} = 2\sigma\\) for medium-severity battery actions. Without this bound, a jamming event that degrades all 47 drones simultaneously triggers 47 concurrent healing cycles — each drone restarting its communication stack causes momentary radio silence, which registers as a new anomaly to neighbors, triggering another round. This is exactly the healing loop failure mode described above, now quantified.
+
+**{% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} anti-windup calibration**: During a 10-minute storage-layer hiccup, health checks degrade for dozens of pods simultaneously. Without the anti-windup cap, the demand accumulator fills to dozens of queued healing actions and discharges as simultaneous pod restarts the moment the health layer recovers — a self-inflicted availability incident. With \\(Q_{\text{aw}} = 5\\), the burst is bounded to 5 concurrent actions regardless of backlog depth.
+
 ---
 
 ## Recovery Ordering
@@ -968,6 +1159,8 @@ When healing resources are scarce, heal MVS components first. Non-MVS components
 <span id="prop-11"></span>
 **Proposition 11** (MVS Approximation). *Finding the exact MVS is NP-hard (reduction from set cover). However, a greedy algorithm that iteratively adds the component maximizing capability gain achieves approximation ratio \\(O(\ln |V|)\\).*
 
+**Precondition — submodularity**: The greedy \\(O(\ln |V|)\\) approximation guarantee requires the capability function to be submodular (diminishing marginal returns): for all \\(S \subseteq T \subseteq V\\) and component \\(i \notin T\\), \\(\text{capability}(S \cup \{i\}) - \text{capability}(S) \geq \text{capability}(T \cup \{i\}) - \text{capability}(T)\\). This holds when no two components are mutual prerequisites for a capability. It fails when two components are jointly required (e.g., a crypto module + networking stack jointly unlock secure gossip, but neither alone contributes). In that case: (1) treat the pair as a single compound component in the greedy algorithm; (2) verify submodularity by checking all component pairs before running greedy. Failure to verify submodularity may produce a greedy solution 2–3x larger than the true MVS.
+
 *Proof sketch*: MVS is a covering problem: find the minimum set of components whose combined capability exceeds threshold \\(\mathcal{L}_1\\). When the capability function exhibits diminishing marginal returns (submodular), the greedy algorithm achieves \\(O(\ln |V|)\\) approximation, matching the bound for weighted set cover.
 For small component sets, enumerate solutions. For larger sets, use the greedy approximation: iteratively add the component that contributes most to capability until \\(\mathcal{L}_1\\) is reached.
 
@@ -994,6 +1187,82 @@ The **Shapley value** of node \\(i\\) measures its average marginal contribution
 - Stricter health monitoring thresholds (lower \\(\theta^*\\))
 
 For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s 47 drones, computing Shapley values over the relevant MVS coalitions (typically 5-10 drones) is tractable at \\(O(2^{|S_{\text{MVS}}|})\\) per mission phase.
+
+---
+
+## Terminal Safety State
+
+The {% term(url="#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm's priority boundary — MVS components are repaired first") %}MVS{% end %} is the floor the healing algorithm defends. But the healing algorithm can itself fail — the MAPE-K loop may crash, its knowledge base may become corrupted, or its resource quota (\\(R_{\text{heal}}\\)) may be exhausted. Below MVS lies the {% term(url="#def-36", def="Operating mode entered when the entire autonomic framework has failed; selected by L0 hardware alone based on remaining energy; no L1-L4 software involvement") %}terminal safety state{% end %}: what the node does when all autonomy has been lost.
+
+<span id="def-36"></span>
+**Definition 36** (Terminal Safety State). *The terminal safety state \\(\mathcal{S}_\mathrm{term}\\)
+is the operating mode the node enters when the entire autonomic framework — including the
+MAPE-K loop and all its L1+ dependencies — has failed and cannot self-repair. It is selected
+by L0 firmware as a function of remaining energy \\(E\\) alone:*
+
+{% katex(block=true) %}
+\mathcal{S}_\mathrm{term}(E) = \begin{cases}
+\mathrm{PLM} & E > E_{\mathrm{PLM}} \\
+\mathrm{BOM} & E_{\mathrm{HSS}} < E \leq E_{\mathrm{PLM}} \\
+\mathrm{HSS} & E \leq E_{\mathrm{HSS}}
+\end{cases}
+{% end %}
+
+*Three concrete states, ordered by endurance:*
+
+- **PLM (Passive Listening Mode)**: Radio in receive-only mode; no transmissions; computation
+  limited to hardware watchdog and energy monitor. Endurance: weeks. The node can receive a
+  recovery command and re-initialize L1+ if the command arrives and power recovers.
+
+- **BOM (Beacon-Only Mode)**: Periodic low-power position and status beacon at fixed interval
+  \\(T_{\mathrm{beacon}}\\); no processing beyond beacon scheduling. Endurance: days. Enables
+  recovery teams to locate the node.
+
+- **HSS (Hardware Safety Shutdown)**: All software subsystems powered off; only tamper-detection
+  circuit and charge controller remain active. Endurance: battery lifetime. Appropriate when
+  continued operation risks mission security (e.g., radio in a denied zone).
+
+**Threshold calibration**: \\(E_{\mathrm{PLM}}\\) and \\(E_{\mathrm{HSS}}\\) are platform-specific measured quantities, not default parameters. The RAVEN scenario (\\(E_{\mathrm{HSS}} = 5\\%\\), \\(E_{\mathrm{PLM}} = 20\\%\\)) is derived as follows:
+
+| Threshold | Requirement | Computation | RAVEN value |
+| :--- | :--- | :--- | :--- |
+| \\(E_{\mathrm{HSS}}\\) | Energy for one secure flash zeroization | 180 mJ measured at 3.7V; 5000 mAh battery: 5\% = 925 mJ; 5x margin | 5\% |
+| \\(E_{\mathrm{PLM}}\\) | PLM endurance until recovery team (72h) at 2 mA draw | 72h x 2 mA = 144 mAh (~3\%) + \\(E_{\mathrm{HSS}}\\) + 2x cold-battery margin | 20\% |
+
+Calibration procedure for any platform: (1) measure secure shutdown energy at minimum operating temperature (worst case); (2) compute minimum PLM endurance from recovery SLA at maximum PLM draw; (3) add 2x margin for battery capacity reduction at minimum operating temperature (Li-Ion loses 30–40\% at \\(-20\\)°C); (4) verify \\(E_{\mathrm{PLM}} > E_{\mathrm{HSS}}\\) by at least 10 percentage points to avoid threshold ambiguity near the boundary.
+
+*Critically, \\(\mathcal{S}_\mathrm{term}\\) selection must be implemented entirely within
+L0 firmware — the transition logic must satisfy the {% term(url="@/blog/2026-01-15/index.md#def-35",
+def="Structural constraint requiring that each capability level's runtime dependencies are confined
+to equal or lower levels; L0 has zero dependencies on any L1-L4 component") %}dependency isolation
+requirement{% end %} (Definition 35): zero imports from L1+ code.*
+
+<span id="prop-37"></span>
+**Proposition 37** (Safety State Reachability). *For any system state \\(S\\) — including states
+where all L1–L4 layers have crashed — \\(\mathcal{S}_\mathrm{term}\\) is reachable via L0
+hardware operations alone:*
+
+{% katex(block=true) %}
+\forall\, S \in \mathcal{S}_\mathrm{system} :\; \exists\; \text{path from } S
+\text{ to } \mathcal{S}_\mathrm{term}\text{ using only } L_0 \text{ operations}
+{% end %}
+
+*Proof*: By Definition 35, L0 has no dependencies on L1+; therefore L0 remains operational when
+all L1+ layers have failed. The {% term(url="#def-26", def="Hardware circuit that resets the processor if the software watchdog heartbeat stops within a defined interval") %}software watchdog
+timer{% end %} (Definition 26) is implemented in dedicated hardware: it fires when the L1+
+software stack stops issuing heartbeats, without requiring any L1+ cooperation. Upon watchdog
+fire, L0 reads the energy register \\(E\\) and enters \\(\mathcal{S}_\mathrm{term}(E)\\). The
+entire path — watchdog trigger, energy read, state entry — uses only hardware registers and L0
+firmware. \\(\square\\)
+
+**RAVEN scenario**: Drone 23's MAPE-K process crashes mid-healing (heap exhausted by a runaway
+recovery action). The L1+ watchdog daemon also fails (same heap). The hardware watchdog fires
+after 500ms — the heartbeat window. L0 reads \\(E = 12\\%\\) (above \\(E_{\mathrm{HSS}} = 5\\%\\),
+below \\(E_{\mathrm{PLM}} = 20\\%\\)) and enters BOM. The drone begins transmitting its position
+beacon at 30-second intervals on the recovery frequency. The swarm's gossip health protocol
+(Definition 5) marks Drone 23 as RECOVERY-BEACON and routes a cluster lead to attempt L1+
+re-initialization via the BOM command channel. This is exactly the failure mode that Proposition
+37 guarantees can be reached: from any state, regardless of which layers have failed.
 
 ---
 

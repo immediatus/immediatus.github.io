@@ -127,6 +127,8 @@ E[D(\tau)] = 1 - e^{-\lambda \tau}
 
 *Proof sketch*: Model state as a binary indicator per key: identical (0) or divergent (1). Under independent Poisson arrivals with rate \\(\lambda\\), the probability a given key remains synchronized is \\(e^{-\lambda \tau}\\). The expected fraction of divergent keys follows the complementary probability. For sparse state changes, \\(E[D(\tau)] \approx 1 - e^{-\lambda \tau}\\) provides a tight upper bound.
 
+**Poisson assumption caveat**: Operational update streams are bursty, not Poisson. During a contact event, 50–100 state updates arrive in 5 seconds; during the following 10-minute lull, zero. The Fano factor \\(F = \mathrm{Var}[\text{updates}] / \mathbb{E}[\text{updates}]\\) for tactical edge systems is typically 3–15 (measured on CONVOY exercises), not \\(F = 1.0\\) as Poisson assumes. Under bursty arrivals with Fano factor \\(F\\), expected divergence during a burst of duration \\(\tau_{\text{burst}}\\) within a partition of total duration \\(\tau\\) grows as \\(E[D] \approx 1 - e^{-F \cdot \lambda \cdot \tau_{\text{burst}}}\\), which can be \\(F\\)x the Poisson estimate if \\(\tau_{\text{burst}} \ll \tau\\). Consequence: size reconciliation buffers for peak burst divergence (\\(F \cdot \lambda \cdot \tau_{\text{peak}}\\), where \\(\tau_{\text{peak}}\\) is the maximum burst window), not mean divergence (\\(\lambda \cdot \tau\\)). For CONVOY with \\(F = 8\\) and 5-minute peak burst windows, reconciliation buffer should be sized 8x the Poisson estimate.
+
 In other words, divergence grows quickly at first and then saturates: a long partition does not drive divergence much higher than a medium one, because most keys diverge within the first few event intervals.
 
 **Corollary 5**. *Reconciliation cost is linear in divergence: \\(\text{Cost}(\tau) = c \cdot D(\tau) \cdot |S_A \cup S_B|\\) where \\(c\\) is per-item sync cost.*
@@ -506,7 +508,44 @@ The update rules are:
 
 **Edge limitation**: Vector clocks grow linearly with node count. For a 50-drone swarm, each message carries 50 integers. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} with 12 vehicles, overhead is acceptable. For larger fleets, compressed representations or hierarchical clocks are needed.
 
+**Bandwidth budget verification**: CONVOY (12 vehicles, 4-byte integers, 100 state updates/minute, 9.6 kbps half-duplex link at 60\% duty cycle = 5,760 bits/s available): vector clock overhead per update = \\(12 \times 4 = 48\\) bytes; at 100/min: \\(48 \times 100/60 = 80\\) bytes/s = 640 bits/s. Overhead fraction: \\(640/5760 \approx 11\\%\\) — acceptable. RAVEN (47 drones, 200 updates/minute per node, same link class): \\(47 \times 4 = 188\\) bytes/update; at 200/min: \\(188 \times 200/60 \approx 627\\) bytes/s = 5,016 bits/s \\(\approx 52\\%\\) overhead — marginal and breaks under burst traffic. **Mitigation for RAVEN**: switch to interval tree clocks (Mukund & Kulkarni 2016) or dotted version vectors — these encode \\(O(\text{clusters})\\) integers instead of \\(O(\text{nodes})\\), reducing per-update overhead to ~48 bytes (8 cluster IDs x 4 bytes + 8 sequence numbers x 4 bytes), dropping link overhead from 52\% to ~10\%. Causality guarantees are preserved at cluster granularity rather than node granularity.
+
 **Mitigation**: Hybrid Logical Clocks add a monotonic counter to wall time to handle NTP skew; see Kulkarni et al. (2014) for details. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, LWW on route decisions is unreliable because a vehicle with a fast clock always wins regardless of information freshness — application semantics require considering intel recency, not just decision timestamp.
+
+### Causal Commit Ordering: NTP-Free Split-Brain Resolution
+
+The CONVOY mitigation above surfaces a deeper structural flaw: wall-clock time defines an ordering that is neither causal nor semantic. It correlates with "which node last touched this value," not "which value is operationally correct." A vehicle whose clock is 3 seconds fast wins every concurrent route decision — regardless of information quality — and this bias is exploitable under active GPS jamming. The fix replaces the \\(t_1 > t_2\\) comparison with a three-level lexicographic ordering that needs no synchronized clocks.
+
+<span id="def-29"></span>
+**Definition 29** (Semantic Commit Order). *For two concurrent update records \\(u_1 = (v_1, V_1, p_1, \mathrm{id}_1)\\) and \\(u_2 = (v_2, V_2, p_2, \mathrm{id}_2)\\) — where \\(V_i\\) is the vector clock (Definition 13), \\(p_i \in \mathbb{Z}^+\\) is the application-assigned semantic priority, and \\(\mathrm{id}_i = (\mathrm{tier}_i, \mathrm{nid}_i)\\) is the authority-tier identity (Definition 14, with \\(\mathrm{nid}\\) fixed at manufacturing) — the Semantic Commit Order \\(\prec\\) is determined by applying the following rule in sequence until a winner is found:*
+
+1. *Causal dominance (no wall clock): if \\(V_1 < V_2\\), then \\(u_2 \succ u_1\\); if \\(V_2 < V_1\\), then \\(u_1 \succ u_2\\). If incomparable (concurrent), proceed to step 2.*
+2. *Semantic priority: the higher-\\(p_i\\) record wins when \\(p_1 \neq p_2\\). If equal, proceed to step 3.*
+3. *Authority tie-breaker: lower tier number wins (L0 authority outranks L1; Definition 14). Among equal tiers, higher \\(\mathrm{nid}\\) wins (globally unique; assigned at manufacture).*
+
+*The order is total: because \\(\mathrm{nid}\\) values are globally unique, step 3 never produces a tie.*
+
+**Semantic priority assignment for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}**:
+
+| Update type | Priority \\(p\\) | Rationale |
+| :--- | :--- | :--- |
+| Threat sighting (confirmed) | 100 | Overrides all other route data |
+| Route closure (kinetic) | 90 | Safety-critical path change |
+| Checkpoint status | 50 | Operational but non-urgent |
+| Fuel and logistics estimate | 20 | Informational; tolerates staleness |
+| Maintenance and comfort report | 5 | Yields to all operational data |
+
+<span id="prop-30"></span>
+**Proposition 30** (NTP-Free Split-Brain Resolution). *The Semantic Commit Order (Definition 29) satisfies all four properties required for correct split-brain resolution:*
+
+1. *Totality: for any two distinct records \\(u_1 \neq u_2\\), exactly one of \\(u_1 \succ u_2\\) or \\(u_2 \succ u_1\\) holds.*
+2. *Causal consistency: if \\(u_1 \to u_2\\) (\\(u_1\\) causally precedes \\(u_2\\)), then \\(u_2 \succ u_1\\).*
+3. *Clock independence: steps 2 and 3 compare fields \\((p_i, \mathrm{id}_i)\\) fixed at write and manufacture time; no wall-clock timestamp appears.*
+4. *Determinism: every node computes the same winner from the same two records, regardless of arrival order or local clock.*
+
+*Proof*: (1) Step 3 compares globally unique \\(\mathrm{nid}\\) values — ties are impossible. (2) \\(u_1 \to u_2\\) iff \\(V_1 < V_2\\) by Proposition 14; step 1 resolves this before reaching steps 2–3. (3) \\(p_i\\) and \\(\mathrm{id}_i\\) are integer constants assigned at write and manufacture time; no clock participates. (4) The rule is a deterministic function of \\((V_1, p_1, \mathrm{id}_1, V_2, p_2, \mathrm{id}_2)\\). \\(\square\\)
+
+**Connection to LWW**: When \\(p_1 = p_2\\) and updates are concurrent, the authority-tier tie-breaker acts as a deterministic LWW with a "clock" that cannot drift — the \\(\mathrm{nid}\\) is fixed at boot and invariant under GPS jamming, NTP failure, and deliberate clock manipulation. This is strictly stronger than wall-clock LWW: consistent under arbitrary clock skew and adversarial time sources.
 
 ### Custom Merge Functions
 
@@ -834,6 +873,38 @@ When Alice's tablet syncs at 14:42:
 3. Her photo adds to media set (G-Set union)
 4. Document now contains both contributions with correct status
 
+**RGA tombstone accumulation**: Every deletion in RGA creates a tombstone — the deleted character record is marked but retained, not hard-removed, because any peer that has not yet received the deletion message would re-insert the character on merge. In a 256KB microcontroller running 30-plus minutes of offline {% term(url="#scenario-multiwrite", def="Field service work-order system for basements, tunnels, and remote sites; CRDT merging resolves concurrent offline edits automatically on reconnection") %}MULTIWRITE{% end %} edits, unacknowledged tombstones accumulate without bound.
+
+<span id="def-30"></span>
+**Definition 30** (RGA Tombstone Pruning Strategy). *An RGA causal sequence is a set of records \\(\mathcal{S}\\), each of the form \\((c, \mathrm{id}, \mathrm{parent}, d, K)\\), where \\(c\\) is the character value (\\(\perp\\) for a tombstone), \\(\mathrm{id} = (\mathrm{site}, \mathrm{seq})\\) is a globally unique causal identifier, \\(\mathrm{parent}\\) is the causal predecessor's \\(\mathrm{id}\\), \\(d \in \\{0,1\\}\\) is the tombstone flag, and \\(K \subseteq V\\) is the set of nodes that have acknowledged this record.*
+
+*The acknowledgement vector \\(A_i[j]\\) at node \\(i\\) stores the highest sequence number from site \\(j\\) that node \\(i\\) has received. A tombstone \\(r\\) satisfies the **global acknowledgement condition** — and is safe to remove — when:*
+
+{% katex(block=true) %}
+\text{safe}(r) \;\iff\; d_r = 1 \;\wedge\; \min_{j \in V}\, A_j[\text{site}(r)] \geq \text{seq}(r)
+{% end %}
+
+*The pruning operation removes all \\(\text{safe}(r)\\) records from \\(\mathcal{S}\\) and re-points parent references in surviving records to the nearest non-pruned ancestor, preserving the causal chain for all live characters. Pruning is triggered when RGA memory consumption exceeds \\(B_{\mathrm{RGA}}/2\\) — the half-budget threshold from the memory budget enforcement above.*
+
+<span id="prop-31"></span>
+**Proposition 31** (Tombstone Pruning Safety Bound). *In an \\(n\\)-node fleet with gossip rate \\(\lambda\\), mesh diameter \\(D\\), and per-message loss probability \\(p_{\mathrm{loss}}\\), the expected time until a tombstone satisfies the global acknowledgement condition is bounded by the convergence time from Proposition 26. At steady state, the unpruned tombstone count and memory footprint satisfy:*
+
+{% katex(block=true) %}
+N_{\text{tombstone}} \leq r_{\text{del}} \cdot \frac{2D\ln n}{\lambda\,(1 - p_{\text{loss}})}, \qquad
+M_{\text{tombstone}} = B_r \cdot N_{\text{tombstone}}
+{% end %}
+
+*where \\(r_{\mathrm{del}}\\) is the fleet-wide deletion rate (deletions per second) and \\(B_r\\) is the per-record byte cost (site + seq + parent pointer + flags). Proof: by Proposition 26, acknowledgement propagates to all nodes within \\(T_{\mathrm{conv}} = 2D\ln n / (\lambda(1-p_{\mathrm{loss}}))\\) seconds with probability \\(\geq 1 - 1/n\\). Tombstones younger than \\(T_{\mathrm{conv}}\\) are unprunable; older ones satisfy the safe condition. The steady-state count follows from Little's Law (\\(N = r \cdot T\\)). \\(\square\\)*
+
+**{% term(url="#scenario-multiwrite", def="Field service work-order system for basements, tunnels, and remote sites; CRDT merging resolves concurrent offline edits automatically on reconnection") %}MULTIWRITE{% end %} calibration** (\\(n = 12\\), \\(D = 3\\), \\(p_{\mathrm{loss}} = 0.1\\), \\(\lambda = 1\\,\text{Hz}\\), \\(r_{\mathrm{del}} = 2\\,\text{s}^{-1}\\), \\(B_r = 24\\,\text{bytes}\\)):
+
+{% katex(block=true) %}
+N_{\text{tombstone}} \leq 2 \times \frac{2 \cdot 3 \cdot \ln 12}{1.0 \cdot 0.9} \approx 17\;\text{records}
+\quad\Longrightarrow\quad 17 \times 24 = 408\;\text{bytes}
+{% end %}
+
+Negligible under normal operation. The risk materialises during extended partitions: a 30-minute offline period at \\(r_{\mathrm{del}} = 2\\,\text{s}^{-1}\\) accumulates \\(2 \times 1800 = 3600\\) tombstones, approximately 86KB — crossing the \\(B_{\mathrm{RGA}}/2\\) pruning threshold and triggering the archival step (step 4 of the memory budget enforcement above).
+
 **Hierarchical authority for documentation**: The three documentation roles form a strict authority containment chain — every action a technician can take is also permitted to a supervisor, and every supervisor action is also permitted to an engineer, but not vice versa.
 
 {% katex(block=true) %}
@@ -994,6 +1065,55 @@ Sync Priority 1 first. If partition recurs, at least safety-critical state is co
 {% end %}
 
 High-impact, stale items should sync first. Low-impact, fresh items can wait.
+
+### Delta-Sync Protocol: Bounded Partial Synchronization
+
+The priority ordering above specifies *what* to sync first but not *how* to bound the sync to a short connectivity window. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} vehicles that reconnect for 5-second windows before returning to dead zones, a protocol that assumes unlimited connectivity will stall mid-sync when the window closes, leaving partial state applied. The Delta-Sync Protocol formalizes the sync as a sequence of atomic, self-contained steps that are safe to interrupt at any point.
+
+<span id="def-31"></span>
+**Definition 31** (Delta-Sync Protocol). *Given reconnected nodes \\(i\\) and \\(j\\) with connectivity window \\(T_W\\) seconds and bandwidth \\(B\\) bits per second, the Delta-Sync Protocol operates in three phases:*
+
+**Phase 1 — Fingerprint exchange** (fixed overhead \\(C_F\\) bytes regardless of state size): Node \\(i\\) transmits a compact fingerprint \\(\Psi_i = (\vec{V}_i, \vec{h}_i)\\), where \\(\vec{V}_i\\) is \\(i\\)'s current vector clock and \\(\vec{h}_i\\) is the vector of Merkle hash roots for each priority tier. Node \\(j\\) reciprocates. Total fingerprint cost: \\(2C_F\\) bytes, completing in \\(2C_F / B\\) seconds.
+
+**Phase 2 — Priority-ordered delta generation**: For each priority tier \\(k \in \\{1,2,3,4\\}\\), node \\(i\\) computes the tier-\\(k\\) delta:
+
+{% katex(block=true) %}
+\Delta_k = \bigl\{\, s \in \mathcal{S}_k \;\big|\; V_i[\text{site}(s)] > V_j[\text{site}(s)] \bigr\}
+{% end %}
+
+Items are serialized in tier order — all \\(\Delta_1\\) items first, then \\(\Delta_2\\), then \\(\Delta_3\\), then \\(\Delta_4\\). Each item is self-contained, carrying its own causal identifier (\\(\mathrm{id} = (\mathrm{site}, \mathrm{seq})\\) from Definition 30) and its full CRDT value.
+
+**Phase 3 — Windowed transmission**: Items from the serialized delta are transmitted in priority order. Transmission halts cleanly at the end of the connectivity window. Because each item is self-contained, a partial sync leaves the recipient in a consistent state — no item is ever half-applied.
+
+<span id="prop-32"></span>
+**Proposition 32** (Delta-Sync Coverage Bound). *Given window \\(T_W\\), bandwidth \\(B\\), fingerprint overhead \\(C_F\\), and per-item byte cost \\(b_k\\) at tier \\(k\\), the number of tier-1 items transmitted in a single window is:*
+
+{% katex(block=true) %}
+n_1^{\max} = \left\lfloor \frac{B \cdot T_W - 2\,C_F}{b_1} \right\rfloor
+{% end %}
+
+*Priority-2 items begin only after all priority-1 items are transmitted, and so on. The minimum window for full-tier coverage is:*
+
+{% katex(block=true) %}
+T_W^* = \frac{2\,C_F + \sum_{k=1}^{4} S_k}{B}
+{% end %}
+
+*where \\(S_k\\) is the byte size of \\(\Delta_k\\). Proof: Phase 1 consumes \\(2C_F\\) bytes. The remaining \\(B \cdot T_W - 2C_F\\) bytes are allocated to delta items in priority order. \\(n_1^{\max}\\) follows from integer division. \\(T_W^\*\\) is the window at which all tiers fit. \\(\square\\)*
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration** (\\(T_W = 5\\,\text{s}\\), \\(B = 250\\,\text{kbps}\\), \\(C_F = 64\\,\text{bytes}\\)):
+
+Available for state sync: \\(31250 \times 5 - 2 \times 64 = 156{,}122\\,\text{bytes} \approx 152\\,\text{KB}\\).
+
+| Tier | Content | Size | Synced in 5 s? |
+| :--- | :--- | :--- | :--- |
+| 1 — Safety-critical | Threat locations, node liveness | 2 KB | Yes — first 0.06 s |
+| 2 — Mission-critical | Objective status, positions | 12 KB | Yes — first 0.4 s |
+| 3 — Operational | Sensor readings, health metrics | 40 KB | Yes — first 1.7 s |
+| 4 — Audit and logging | Decision logs, timestamps | 80 KB | Yes — first 4.3 s |
+
+At 250 kbps, CONVOY achieves full-state sync in 4.3 seconds — inside the 5-second window. Under partial jamming at 50 kbps: \\(6{,}250 \times 5 \approx 30\\,\text{KB}\\) available, covering tiers 1 and 2 with 16 KB to spare. Safety-critical and mission-critical state converges even under heavy jamming; audit logs queue for the next window.
+
+**Why self-contained items matter**: If the window closes mid-transmission, untransmitted items remain in \\(\Delta_{i \to j}\\) for the next window. Transmitted items are applied atomically on receipt. The receiver's state is always the union of fully-applied CRDT records — never a partial merge — because each delta item is a complete causal record, not a raw byte fragment.
 
 ### Handling Actions Taken During Partition
 

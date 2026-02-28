@@ -366,6 +366,108 @@ With threshold \\(\theta = z_\alpha \sigma\\) where \\(z_\alpha = 2.5\\) and ano
 
 {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} Sensor 47 uses EWMA for primary detection: temperature, motion intensity, battery voltage each tracked independently. Cross-sensor correlation uses a lightweight covariance estimate between Sensor 47 and its mesh neighbors.
 
+### Adaptive Change-Point Detection: From Static to Kalman-Optimal Baseline
+
+The CUSUM statistic above uses a fixed nominal mean \\(\mu_0\\). In practice, sensor baselines drift: OUTPOST thermal sensors track diurnal temperature cycles, CONVOY engine metrics shift with load and altitude, RAVEN RF interference patterns change with formation geometry. When \\(\mu_0\\) is stale, every observation accumulates evidence of a "change" that is simply baseline drift — generating false alarms continuously. The fix is to replace the static \\(\mu_0\\) with a Kalman-optimal adaptive estimator that tracks "normal" as it evolves.
+
+<span id="def-23"></span>
+**Definition 23** (Adaptive Baseline Estimator). *Given a sensor time series \\(\\{x_t\\}\\), the adaptive baseline is the Kalman-optimal estimate of the true instantaneous mean \\(\mu_t\\) under the first-order drift model:*
+
+{% katex(block=true) %}
+\begin{aligned}
+\text{State model:} \quad & \mu_t = \mu_{t-1} + w_t, \quad w_t \sim \mathcal{N}(0,\, Q) \\
+\text{Observation model:} \quad & x_t = \mu_t + v_t, \quad v_t \sim \mathcal{N}(0,\, R)
+\end{aligned}
+{% end %}
+
+*The recursive Kalman update at each timestep is:*
+
+{% katex(block=true) %}
+\begin{aligned}
+\hat{P}_{t|t-1} &= P_{t-1} + Q && \text{(prediction: uncertainty grows with drift)} \\
+K_t &= \frac{\hat{P}_{t|t-1}}{\hat{P}_{t|t-1} + R} && \text{(Kalman gain } \in (0,1)\text{)} \\
+\hat{\mu}_t &= \hat{\mu}_{t-1} + K_t\!\left(x_t - \hat{\mu}_{t-1}\right) && \text{(update: weighted correction)} \\
+P_t &= (1 - K_t)\,\hat{P}_{t|t-1} && \text{(updated variance)}
+\end{aligned}
+{% end %}
+
+*The Kalman anomaly score (normalized innovation) is:*
+
+{% katex(block=true) %}
+z_t^K = \frac{x_t - \hat{\mu}_{t-1}}{\sqrt{\hat{P}_{t|t-1} + R}}
+{% end %}
+
+*Under \\(H_0\\) (no anomaly) at steady state: \\(z_t^K \sim \mathcal{N}(0,1)\\).*
+
+**Design parameter** \\(\rho = Q/R\\) (drift-to-noise ratio) controls the adaptation rate:
+- \\(\rho \to 0\\): baseline nearly frozen — correct for very slow drift, wrong for fast environmental shifts
+- \\(\rho \to 1\\): aggressive tracking — follows rapid changes, more false alarms during genuine transients
+
+**Connection to EWMA**: The update {% katex() %}\hat{\mu}_t = \hat{\mu}_{t-1} + K_t(x_t - \hat{\mu}_{t-1}){% end %} is structurally identical to the EWMA update \\(\mu_t = \alpha x_t + (1-\alpha)\mu_{t-1}\\), with \\(K_t\\) in place of \\(\alpha\\). The critical difference: EWMA uses a fixed \\(\alpha\\); the Kalman gain \\(K_t\\) starts large (high initial uncertainty, learns fast) and converges to a smaller steady-state value \\(K_\infty\\) (tracks at the optimal rate for the observed noise level). Fixed-\\(\alpha\\) EWMA is a degenerate Kalman filter with \\(P_{t-1}\\) forced constant at \\(\alpha R/(1-\alpha)\\) every step.
+
+<span id="prop-24"></span>
+**Proposition 24** (Kalman Baseline Convergence Rate). *The Kalman gain sequence \\(\\{K_t\\}\\) converges geometrically to the steady-state value \\(K_\infty\\), where:*
+
+{% katex(block=true) %}
+P_\infty = \frac{-Q + \sqrt{Q^2 + 4QR}}{2}, \qquad K_\infty = \frac{P_\infty + Q}{P_\infty + Q + R}
+{% end %}
+
+*For small drift \\(\rho = Q/R \ll 1\\): \\(K_\infty \approx \sqrt{\rho}\\) — the steady-state gain scales as the square root of the process-to-noise ratio. Convergence to \\(K_\infty\\) is geometric with rate \\((1 - K_\infty)^t\\) from any initial \\(P_0\\), reaching steady state in approximately \\(1/K_\infty\\) samples.*
+
+*Proof*: Substitute \\(P_t = P_{t-1}\\) into the Riccati recursion \\(P_t = R(P_{t-1}+Q)/(P_{t-1}+Q+R)\\) and solve the resulting quadratic \\(P_\infty^2 + QP_\infty - QR = 0\\). Convergence rate follows from linearization of the recursion near \\(P_\infty\\). \\(\square\\)
+
+**Design consequence**: After a transient of approximately \\(1/K_\infty\\) samples, the false positive rate for the Kalman anomaly score is *exactly* \\(2\Phi(-\theta^*)\\) — not an approximation. The EWMA-based score with fixed \\(\alpha\\) is only asymptotically calibrated and may carry excess false-alarm rate during the warm-up period.
+
+**Validity condition — white noise assumption**: The Kalman gain convergence (Prop 24) and the \\(H_0\\) distribution \\(z_t^K \sim N(0,1)\\) both require measurement noise \\(v_t\\) to be approximately i.i.d. Gaussian with stationary variance \\(R\\). Real MEMS sensors violate this: \\(1/f\\) noise dominates below ~1 Hz; variance is temperature-correlated (\\(R(T) \approx R_0(1 + \beta \cdot \Delta T)\\) for thermistors); aging causes slow \\(R\\) drift. Practical remediation: (1) estimate \\(R\\) from a stationary calibration sequence at deployment temperature before each mission; (2) run a chi-squared test on the rolling innovation variance — if the ratio \\(\mathrm{Var}[z_t^K]/1.0\\) exceeds 1.5 over a 5-minute window, \\(R\\) is miscalibrated and must be re-estimated; (3) if temperature correlation is strong (\\(\beta \cdot \Delta T_{\max} > 0.3\\)), use an adaptive-\\(R\\) Kalman (Sage-Husa estimator). The false-alarm guarantee is void if \\(R\\) is off by more than 50\% — the actual false-alarm rate scales as \\(P(|N(0,1)| > \theta \cdot \sqrt{R_{\text{assumed}}/R_{\text{actual}}})\\).
+
+**OUTPOST calibration**: Temperature sensors drift at \\(\approx 1\,^\circ\text{C}\,\text{day}^{-1}\\) with sensor noise \\(\sigma_{\text{sens}} = 0.1\,^\circ\text{C}\\). At \\(\lambda = 1\,\text{Hz}\\): \\(Q = (1/86400)^2 \approx 1.3 \times 10^{-10}\,\text{K}^2/\text{sample}\\), \\(R = 0.01\,\text{K}^2\\), giving \\(\rho \approx 1.3 \times 10^{-8}\\) and \\(K_\infty \approx 1.1 \times 10^{-4}\\). Baseline adapts on a timescale of \\(1/K_\infty \approx 9000\,\text{s} \approx 2.5\,\text{h}\\) — slow enough to track seasonal drift without following measurement noise.
+
+<span id="def-24"></span>
+**Definition 24** (Bayesian Surprise Metric). *The Bayesian Surprise statistic \\(S_t^K\\) is the adaptive-baseline generalization of CUSUM, accumulating Kalman log-likelihood ratios:*
+
+{% katex(block=true) %}
+S_t^K = \max\!\left(0,\; S_{t-1}^K + \Lambda_t^K - \kappa\right)
+{% end %}
+
+*where the log-likelihood ratio under a \\(\delta\\)-standard-deviation shift is:*
+
+{% katex(block=true) %}
+\Lambda_t^K = \delta \cdot z_t^K - \frac{\delta^2}{2}
+{% end %}
+
+*and \\(\kappa > 0\\) is the allowance that prevents indefinite accumulation. Alert condition: \\(S_t^K > h\\) for threshold \\(h\\).*
+
+**Difference from static CUSUM**: The static form \\(S_t = \max(0, S_{t-1} + x_t - \mu_0 - k)\\) uses a fixed \\(\mu_0\\). Definition 24 replaces \\(x_t - \mu_0\\) with \\(\Lambda_t^K\\), computed from the Kalman innovation \\(z_t^K\\) normalized by the current innovation variance \\(\hat{P}_{t|t-1} + R\\). When the baseline drifts by \\(5\,^\circ\text{C}\\) over a season, \\(\Lambda_t^K \approx 0\\) throughout (the Kalman filter tracks the drift), while the static form accumulates \\(S_t \propto 5/\sigma\\) — triggering continuous false alarms.
+
+**Bayesian interpretation**: \\(S_t^K\\) is a discounted accumulation of log Bayes factors. An alarm at \\(S_t^K > h\\) corresponds to posterior odds \\(P(\text{change} \mid x_{1:t})/P(\text{no change}) > e^h\\) — the detector declares a change when the Bayesian evidence ratio exceeds \\(e^h\\).
+
+<span id="prop-25"></span>
+**Proposition 25** (Sensor Death Override Condition). *The Brownian diffusion confidence interval (Proposition 5) is derived under the assumption that the sensor innovation \\(z_t^K\\) is \\(\mathcal{N}(0,1)\\). Two sensor death modes violate this assumption in opposite directions; both are detected by the sample chi-squared statistic over window \\(w\\):*
+
+{% katex(block=true) %}
+\chi^2_w(t) = \frac{1}{w} \sum_{s=t-w+1}^{t} \left(z_s^K\right)^2
+{% end %}
+
+*Under \\(H_0\\) (alive sensor): \\(\mathbb{E}[\chi^2_w] = 1\\). The diffusion model is overridden — and the node is flagged P_CRITICAL regardless of staleness — whenever:*
+
+{% katex(block=true) %}
+\chi^2_w(t) \notin [\delta_{\text{flat}},\; \delta_{\text{noise}}]
+{% end %}
+
+*Failure modes detected:*
+- *\\(\chi^2_w < \delta_{\text{flat}}\\)*: **Flatline death** — sensor stuck at constant value, innovations collapse to zero. The diffusion model produces an artificially narrow CI suggesting high confidence, but the reading is uninformative.
+- *\\(\chi^2_w > \delta_{\text{noise}}\\)*: **Noise death** — sensor producing random garbage, innovations explode. The diffusion model produces a wide CI suggesting uncertainty, but the reading is adversarially misleading.
+
+*Proof*: Under \\(H_0\\), \\(z_s^K \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)\\) asymptotically (Proposition 24), so \\(w \cdot \chi^2_w \sim \chi^2_w\\) (chi-squared with \\(w\\) degrees of freedom). For window \\(w = 30\\): \\(P(\chi^2_{30}/30 < 0.1) = P(\chi^2_{30} < 3) \approx 2 \times 10^{-10}\\) and \\(P(\chi^2_{30}/30 > 10) = P(\chi^2_{30} > 300) < 10^{-50}\\) — false override rates are negligible. \\(\square\\)
+
+**Calibration**: Set \\(\delta_{\text{flat}} = 0.1\\), \\(\delta_{\text{noise}} = 10\\), \\(w = \max(30, \tau_{\max} \cdot \lambda)\\). The window must span at least \\(\tau_{\max}\\) seconds (Prop 5) to ensure the chi-squared test has power against slow-onset flatline failures.
+
+| Failure mode | \\(\chi^2_w(t)\\) signature | CI behavior | Override effect |
+| :--- | :--- | :--- | :--- |
+| Alive sensor | \\(\approx 1.0\\) | Correct width | No override |
+| Flatline death | \\(\to 0\\) | Falsely narrow (high false confidence) | Flags P_CRITICAL |
+| Noise death | \\(\gg 1\\) | Wide but misleading | Flags P_CRITICAL |
+
 ### Optional: Game-Theoretic Extension — Adversarial Threshold Selection
 
 Proposition 3 derives \\(\theta^\*\\) against a non-strategic anomaly distribution. An adversary who controls a compromised sensor (as in the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} scenario) can output \\(z_t = \theta^\* - \varepsilon\\) continuously, evading detection with zero effort. The correct defense is a **randomized threshold** - the Nash equilibrium of the inspection game.
@@ -724,6 +826,46 @@ In other words, fleet-wide awareness scales only logarithmically with fleet size
 *Proof sketch*: The information spread follows logistic dynamics \\(dI/dt = \lambda I(1 - I)\\) where \\(I\\) is the fraction of informed nodes. Solving with initial condition \\(I(0) = 1/n\\) and computing time to reach \\(I = 1 - 1/n\\) yields \\(T = (2 \ln(n-1))/\lambda\\).
 **Corollary 2**. *Doubling swarm size adds only \\(O(\ln 2 / \lambda) \approx 0.69/\lambda\\) seconds to convergence time, making {% term(url="#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip protocol{% end %}s inherently scalable for edge fleets.*
 
+The lossless fully-connected model of Proposition 4 is a lower bound. Real edge meshes are sparse and contested: OUTPOST operates on a 127-sensor mesh with diameter \\(D \approx 8\\) hops under sustained jamming at \\(p_{\text{loss}} = 0.35\\). The actual convergence time is not \\(O(\ln n / \lambda)\\) but a function of both topology and loss rate.
+
+<span id="prop-26"></span>
+**Proposition 26** (Gossip Convergence on Lossy Sparse Mesh). *Let \\(G = (V, E)\\) be a connected graph with \\(n\\) nodes and edge conductance:*
+
+{% katex(block=true) %}
+\Phi = \min_{\substack{S \subseteq V \\ 0 < |S| \leq n/2}} \frac{|E(S,\, V \setminus S)|}{|S| \cdot (n - |S|)/n}
+{% end %}
+
+*Under push-pull gossip with rate \\(\lambda\\) and independent per-message loss probability \\(p_{\text{loss}} \in [0, 1)\\), the expected convergence time satisfies:*
+
+{% katex(block=true) %}
+\mathbb{E}[T_{\text{convergence}}] \leq \frac{2\ln n}{\lambda \cdot (1 - p_{\text{loss}}) \cdot \Phi}
+{% end %}
+
+*with probability at least \\(1 - 1/n\\). For any connected graph with diameter \\(D\\), the operational bound \\(\Phi \geq 1/D\\) gives:*
+
+{% katex(block=true) %}
+\mathbb{E}[T_{\text{convergence}}] \leq \frac{2 D \ln n}{\lambda \cdot (1 - p_{\text{loss}})}
+{% end %}
+
+*Proof sketch*: Let \\(S_t\\) denote the informed set at gossip round \\(t\\), with \\(|S_t| = k\\). By definition of \\(\Phi\\), the number of boundary edges is at least \\(\Phi \cdot k(n-k)/n\\). Each boundary edge activates — an informed node contacts an uninformed neighbor and the message arrives — with probability \\((1-p_{\text{loss}})/\bar{d}\\) per round (\\(\bar{d}\\) = average degree). The expected growth satisfies \\(\mathbb{E}[|S_{t+1}| - |S_t|] \geq (1-p_{\text{loss}}) \cdot \Phi \cdot k(n-k)/n\\). This is the discrete logistic equation with rate \\(r = (1-p_{\text{loss}})\Phi\\). The logistic ODE solution \\(dI/dt = r \cdot I(1-I)\\) reaches \\(I = 1 - 1/n\\) from \\(I = 1/n\\) in \\(T = (2\ln(n-1))/r\\). Applying \\(\Phi \geq 1/D\\) gives the diameter bound. Probability bound follows from Markov's inequality on the stopping time. \\(\square\\)
+
+**Specializations**:
+
+| Graph topology | \\(\Phi\\) | Expected convergence |
+| :--- | :--- | :--- |
+| Fully connected, lossless | \\(1\\) | \\(O(\ln n / \lambda)\\) — recovers Prop 4 |
+| \\(k\\)-regular expander, lossless | \\(\Omega(1)\\) | \\(O(\ln n / \lambda)\\) |
+| Grid (\\(\sqrt{n} \times \sqrt{n}\\)), lossless | \\(\Omega(1/\sqrt{n})\\) | \\(O(\sqrt{n}\ln n / \lambda)\\) |
+| OUTPOST mesh (\\(D=8\\), \\(p_{\text{loss}}=0.35\\)) | \\(\geq 1/8\\) | \\(\leq 2 \cdot 8 \cdot \ln(127)/(\lambda \cdot 0.65) \approx 119/\lambda\,\text{s}\\) |
+
+**OUTPOST calibration gap**: At \\(\lambda = 0.5\,\text{Hz}\\), Proposition 4 predicts \\(T \approx 9.7\,\text{s}\\); Proposition 26 predicts \\(T \leq 238\,\text{s} \approx 4\,\text{min}\\) under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap. The correct design response is to either increase \\(\lambda\\) (higher energy cost from Definition 21), decrease \\(D\\) by adding mesh relay nodes, or build decision logic that tolerates 4-minute-stale health data (increasing \\(\tau_{\max}\\) from Proposition 5 accordingly).
+
+**Corollary 3** (Loss-Rate Gossip Budget). *To maintain convergence within target time \\(T^\*\\) under loss probability \\(p_{\text{loss}}\\) on a diameter-\\(D\\) mesh, the minimum gossip rate is:*
+
+{% katex(block=true) %}
+\lambda^* \geq \frac{2 D \ln n}{T^* \cdot (1 - p_{\text{loss}})}
+{% end %}
+
 **Gossip Rate Selection: Formal Optimization**
 
 **Objective Function**: The formula finds the gossip rate \\(\lambda^*\\) that best balances convergence speed (which benefits from higher \\(\lambda\\)) against communication power cost (which scales linearly with \\(\lambda\\)).
@@ -908,6 +1050,50 @@ Accounting for message overhead and collision backoff, the expected speedup is a
 
 where \\(\rho_{\text{max}} \approx 0.01\\) messages/second. Exceeding this rate triggers trust decay.
 
+### Bandwidth Asymmetry and Ingress Filtering
+
+The gossip prioritization above assumes backhaul bandwidth is scarce but nonzero. At the extreme — when the radio link is a tiny fraction of the local sensor bus — prioritization alone is insufficient. The node must also decide which metrics are worth transmitting at all.
+
+Define the **bandwidth asymmetry ratio**:
+
+{% katex(block=true) %}
+\beta = \frac{B_b}{B_l}
+{% end %}
+
+where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus bandwidth (intra-node sensor bus). Typical edge values: \\(B_b \approx 9.6\,\text{kbps}\\) (tactical HF radio), \\(B_l \approx 100\,\text{Mbps}\\) (sensor bus), giving \\(\beta \approx 10^{-4}\\). At \\(\beta < 0.01\\), the backhaul is less than 1% of local capacity. Sending everything the node observes locally is physically impossible.
+
+<span id="def-22"></span>
+**Definition 22** (Bandwidth-Asymmetry Ingress Filter). *The ingress filter \\(\Pi: \mathcal{T} \times \mathbb{R}_{\geq 0} \to \{0,1\}\\) determines whether metric \\(m \in \mathcal{T}\\) observed at time \\(t\\) is transmitted:*
+
+{% katex(block=true) %}
+\Pi(m,\,t) = \begin{cases}
+1 & \text{if priority}(m) = P_{\text{CRITICAL}} \\
+1 & \text{if } t - t_{\text{last}}(m) > \tau_{\max} \\
+1 & \text{if } \dfrac{|m(t) - m(t_{\text{last}})|}{m_{\text{range}}} > \dfrac{\theta_\Pi}{\beta} \\
+0 & \text{otherwise}
+\end{cases}
+{% end %}
+
+*where \\(m(t_{\text{last}})\\) is the last transmitted value of \\(m\\), \\(m_{\text{range}}\\) is the metric's operational dynamic range, \\(\theta_\Pi\\) is a baseline sensitivity parameter, \\(\beta = B_b/B_l\\) is the bandwidth asymmetry ratio, and \\(\tau_{\max}\\) is the maximum useful staleness bound from Proposition 5.*
+
+**Interpretation**: Three conditions trigger transmission (any one suffices):
+1. **Critical override**: P_CRITICAL metrics bypass the filter entirely — safety-critical information always transmits.
+2. **Staleness override**: Even if a metric is slowly changing, it transmits at least once per \\(\tau_{\max}\\) — the MAPE-K loop never starves on stale P2/P3 inputs. This ties directly to Proposition 5: a metric silent beyond \\(\tau_{\max}\\) carries zero confidence, so it must refresh.
+3. **Magnitude threshold**: As \\(\beta \to 0\\), the normalized-change threshold \\(\theta_\Pi/\beta \to \infty\\), so only extreme deviations transmit in normal operation.
+
+**Calibration example for OUTPOST** (\\(\beta = 10^{-4}\\), \\(\theta_\Pi = 0.001\\)):
+
+| Metric | Normal threshold | Filtered threshold (\\(\theta_\Pi/\beta\\)) | Interpretation |
+| :--- | :--- | :--- | :--- |
+| Temperature drift | \\(0.1\,^\circ\text{C}\\) (0.1% of \\(100\,^\circ\text{C}\\) range) | \\(10\,^\circ\text{C}\\) (10% of range) | Only transmit on significant excursion |
+| Battery state-of-charge | 1% change | 10% change | Coarse reporting only |
+| Seismic amplitude | any spike | always (P_CRITICAL) | Bypasses filter |
+| Mesh link quality | 5% drop | 50% drop | Catastrophic degradation only |
+
+The filter preserves the P0–P2 observability hierarchy: availability (P0) and resource exhaustion (P1) metrics carry P_CRITICAL priority and are never dropped; performance (P2) and anomaly (P3) metrics are subject to the \\(\beta\\)-scaled threshold.
+
+**Energy connection**: Each filtered-out metric saves \\(T_s\\) joules (Definition 21). Over a 72-hour partition with 1,000 sensor metrics updating at 1 Hz, filtering to \\(\beta = 10^{-4}\\) reduces transmissions from 259 million potential packets to fewer than 2,600 — a 100,000x reduction in radio energy expenditure, directly extending battery life.
+
 ### Gossip Under Partition
 
 Fleet partition creates isolated gossip domains. Within each cluster, convergence continues at rate \\(O(\ln n_{\text{cluster}})\\). Between clusters, state diverges until reconnection.
@@ -1014,6 +1200,8 @@ Here \\(\lambda\\) is the observation rate (samples per second); \\(\tau_{\text{
 
 **Corollary 3**. *The quadratic relationship \\(\tau_{\text{max}} \propto (\sigma / \Delta h)^2\\) implies that tightening decision margins dramatically reduces useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}. Systems with narrow operating envelopes require proportionally higher observation frequency.*
 
+**Time-varying \\(\sigma\\) caveat**: Prop 5 assumes constant measurement volatility \\(\sigma\\). OUTPOST thermistors exhibit \\(\sigma(T) \approx 0.05 + 0.003 \cdot |T - T_{\text{ref}}|\\) °C — three times higher at \\(-30\\)°C than at 20°C. For sensors with temperature-correlated variance: substitute \\(\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T)\\) as a conservative upper bound on \\(\tau_{\max}\\). This produces a shorter, conservative staleness limit. To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance \\(\sqrt{P_\infty + R}\\) and recompute \\(\tau_{\max}\\) at each measurement cycle. Decision systems with narrow operating envelopes (\\(\Delta h < 0.1\\)°C) will find \\(\tau_{\max}\\) below 10 seconds in cold conditions — requiring far higher gossip rates than lab calibration suggests.
+
 ### Byzantine-Tolerant Health Aggregation
 
 In contested environments, some nodes may be compromised. They may inject false health values to:
@@ -1063,6 +1251,8 @@ Repeated suspicious reports decrease trust score for node \\(i\\).
 *This generalizes the classical \\(f < n/3\\) bound: with uniform trust weights \\(T_i = 1\\), this reduces to \\(f < n/3\\) (fewer than one third of nodes are Byzantine). With trust decay on suspicious nodes, Byzantine influence decreases over time, allowing tolerance of more compromised nodes provided their accumulated trust is low.*
 
 This is not foolproof - a sophisticated adversary who understands the aggregation mechanism can craft attacks that pass consistency checks. Byzantine tolerance provides defense in depth, not absolute security.
+
+**Bootstrap dependency**: Trust weights \\(w_i\\) require an initialization source. Without a functional PKI at deployment time, the only option is uniform \\(w_i = 1\\), which reduces Prop 6 to the classical \\(f < n/3\\) bound. A Byzantine node that corrupts its weight record before the reputation system accumulates any observations inflates its influence above the \\(1/3\\) threshold from the first gossip round. The operational implication: trust weight initialization requires a hardware root of trust — secure boot attestation or a pre-deployment enrollment step that cryptographically binds \\(w_i\\) to a device identity. Systems without enrollment have no Byzantine tolerance guarantee at startup; Prop 6 applies only after each node has accumulated sufficient legitimate observations to build a meaningful trust differential (in practice: \\(\geq 20\\) gossip exchanges with a given peer).
 
 **Trust accumulation attack**: The f<n/3 bound is *instantaneous*. An adversary can compromise nodes gradually, with each behaving honestly until sufficient trust accumulates. When \\(\sum_{\text{compromised}} T_i\\) approaches \\(\frac{1}{3} \sum_{\text{all}} T_i\\), coordinated Byzantine behavior can dominate aggregation before detection triggers trust decay. **Countermeasure**: Implement trust budget decay - total system trust \\(\sum_i T_i\\) should decrease over time unless re-earned through verified behavior: \\(T_{\text{budget}}(t+1) = T_{\text{budget}}(t) \cdot (1 - \epsilon) + T_{\text{earned}}(t)\\) where \\(\epsilon \ll \gamma_{\text{recover}}\\). This bounds the maximum trust any coalition can accumulate.
 
@@ -1145,6 +1335,43 @@ T_{\text{cluster}} = \max_{i \in \text{cluster}} T_i \quad \text{(not sum)}
 - After 1 hour of consistency: Trust returns to 0.95
 
 The slow recovery prevents adversaries from rapidly cycling between attack and "good behavior" phases.
+
+### Behavioral Fingerprinting and Proof of Useful Work
+
+Trust decay and cross-validation (above) detect nodes that report inconsistent health values. They do not detect a more sophisticated adversary: a node that reports *plausible* health values — passing every consistency check — while its anomaly detector has been disabled, replaced with a random-number generator, or is producing outputs uncalibrated to actual sensor data. A heartbeat proves the node is alive; cross-validation proves the node is reporting plausibly; neither proves the node is doing *useful work*.
+
+<span id="def-25"></span>
+**Definition 25** (Behavioral Fingerprint). *The behavioral fingerprint of node \\(i\\) over observation window \\([t - w, t]\\) is the tuple \\(\varphi_i(t) = (\mathcal{F}_i,\, \mathcal{K}_i,\, \mathcal{R}_i)\\):*
+
+- *{% katex() %}\mathcal{F}_i{% end %}: the empirical CDF of Kalman anomaly scores \\(\\{z_s^K\\}_{s \in [t-w,t]}\\). Under a calibrated detector running on real data, \\(\mathcal{F}_i \approx \Phi\\) (standard normal CDF).*
+- *{% katex() %}\mathcal{K}_i{% end %}: the cross-correlation matrix \\(\rho_{ij} = \operatorname{Corr}(z_i^K(s), z_j^K(s))\\) for each neighbor \\(j \in N(i)\\) over \\([t-w,t]\\). Under genuine sensor readings, \\(\rho_{ij}\\) matches the known physical correlation from the deployment calibration.*
+- *\\(\mathcal{R}_i\\): the action rate vector — counts of healing decisions per severity level per hour, which must be consistent with the observed anomaly rate implied by \\(\mathcal{F}_i\\).*
+
+**Proof of Useful Work** (KS test on anomaly score distribution). *Node \\(i\\) passes the fingerprint test if the Kolmogorov-Smirnov statistic \\(D_w\\) is below the critical value:*
+
+{% katex(block=true) %}
+D_w = \sup_{x \in \mathbb{R}} \left|\hat{F}_i(x) - \Phi(x)\right| \leq c_{\alpha,w} = \sqrt{\frac{-\ln(\alpha/2)}{2w}}
+{% end %}
+
+*where {% katex() %}\hat{F}_i{% end %} is the empirical CDF of \\(\\{z_s^K\\}\\) and \\(c_{\alpha,w}\\) is the KS critical value at significance \\(\alpha\\) with window \\(w\\).*
+
+**What each component catches**:
+
+| Adversary behavior | \\(\mathcal{F}_i\\) signature | \\(\mathcal{K}_i\\) signature | Detected? |
+| :--- | :--- | :--- | :--- |
+| Dead detector (always \\(z=0\\)) | \\(D_w \approx 0.5\\) (point mass at 0) | \\(\rho_{ij} \approx 0\\) | Yes — \\(\mathcal{F}_i\\) fails KS |
+| Frozen detector (constant \\(z\\)) | \\(D_w \approx 0.5\\) | \\(\rho_{ij} \to \infty\\) | Yes — \\(\mathcal{F}_i\\) fails KS |
+| Spoofed: fake \\(\mathcal{N}(0,1)\\) draws | \\(D_w \approx 0\\) — passes \\(\mathcal{F}_i\\) | \\(\rho_{ij} \approx 0\\) — wrong | Yes — \\(\mathcal{K}_i\\) fails |
+| Calibrated Byzantine (inverted) | \\(D_w \approx 0\\) | \\(\rho_{ij}\\) matches | No — actions \\(\mathcal{R}_i\\) inconsistent |
+| Genuine useful work | \\(D_w \leq c_{\alpha,w}\\) | \\(\rho_{ij}\\) matches | Passes all three |
+
+**Why spoofing the fingerprint requires doing the work**: To pass both \\(\mathcal{F}_i\\) (genuine normal distribution) and \\(\mathcal{K}_i\\) (correct spatial correlation with all neighbors), an adversary must either:
+1. Run a genuinely calibrated detector on actual sensor data — which is the useful work we require, or
+2. Learn the full spatial correlation structure \\(\\{\\rho_{ij}\\}\\) for all neighbors and generate synthetic correlated noise — which requires communicating with all neighbors continuously, making the adversary detectable via traffic analysis and increasing their energy expenditure above Definition 21's threshold.
+
+**Connection to Definition 7** (Byzantine Node): Def 7 identifies Byzantine nodes as those that may deviate arbitrarily from the protocol. Prop 6's trust bound stops them from dominating aggregation. Definition 25 adds a third line of defense that complements both: it is triggered not by *what* a node reports but by *whether the reporting process itself is consistent with genuine sensor-coupled inference*. A Byzantine node that understands and avoids Prop 6's trust threshold can still be caught by the fingerprint's spatial correlation test, provided the physical environment is not under the adversary's full control.
+
+**OUTPOST calibration**: Window \\(w = 1800\\) samples (30 minutes at \\(\lambda = 1\,\text{Hz}\\)), \\(\alpha = 0.01\\) — giving \\(c_{0.01,\, 1800} \approx 0.038\\). For a dead detector: \\(D_w = 0.5 \gg 0.038\\) — detected in 30 minutes. For a fake-\\(\mathcal{N}(0,1)\\) generator: {% katex() %}\mathcal{F}_i{% end %} passes, but \\(\rho_{ij} = 0\\) vs. expected \\(\rho_{ij} \approx 0.3\\) (thermal correlation between adjacent sensors) — detected by Fisher z-test on the correlation difference within the same window.
 
 ### Federated Learning for Distributed Health Models
 

@@ -231,6 +231,8 @@ The chart below plots performance against stress magnitude for each archetype; t
 
 Real systems exhibit *bounded* {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %}: convex response for moderate stress \\(\sigma < \sigma^*\\), transitioning to concave for extreme stress. Exercise strengthens muscle up to a point; beyond that point, it causes injury. The design goal is to keep the system operating in the convex regime where stress improves performance.
 
+**\\(\sigma_H\\) calibration procedure**: \\(\sigma_H\\) (destructive zone onset) is a measured physical property, not a design parameter. Measure it as follows: (1) run \\(N \geq 30\\) controlled stress trials at increasing \\(\sigma\\) values, recording \\(A = (P_1 - P_0)/\sigma\\) after each; (2) fit a quadratic to \\(A(\sigma)\\); the root where \\(A = 0\\) is the empirical \\(\sigma_H\\); (3) set operational \\(\sigma_{\max} = 0.7 \cdot \sigma_H\\) as a 30\% safety margin. **RAVEN measurement**: 30-day chaos runs (visible in the anti-fragility chart) showed \\(A > 0\\) for all partition durations up to 47 minutes. \\(A\\) fell below zero at 52-minute partitions — the swarm loses spatial coherence beyond drone fuel margin at that point. Empirical \\(\sigma_H \approx 50\\) min; \\(\sigma_{\max} = 35\\) min. Any RAVEN scenario claiming anti-fragility must verify that partition duration stays below 35 minutes. For systems without 30-day historical data: start with \\(\sigma_{\max} = 10\\) min and extend by 5 min per deployment cycle until \\(A(\sigma_{\max}) < 0\\) is observed.
+
 The diagram below partitions the stress axis into four operating zones, showing how performance trajectory and learning value shift as stress magnitude crosses each threshold.
 
 {% mermaid() %}
@@ -448,6 +450,8 @@ I(\text{failure}) = -\log_2 P(\text{failure})
 {% end %}
 
 *Rare failures carry maximum learning value. A failure with probability \\(10^{-3}\\) carries approximately 10 bits of information, while a failure with probability \\(10^{-1}\\) carries only 3.3 bits.*
+
+**Adversarial non-stationarity caveat**: Prop 17 applies when \\(P(\text{failure})\\) is a property of the stationary environment. Under the adversarial Markov game (Def 32), the adversary controls the jamming schedule and can therefore set \\(P(\sigma)\\). An adversary who learns your anomaly detection threshold can make harmful stress *common* — driving \\(P(\text{failure})\\) from \\(10^{-3}\\) to \\(10^{-1}\\) reduces Shannon surprise from 10 bits to 3.3 bits while potentially increasing impact. In contested environments, use Prop 17 for offline post-hoc calibration only. For real-time learning prioritization, use the action-correlation CUSUM (Def 34): the adversarial signature is correlation between defender actions and \\(Q\\)-changes, not event rarity. An adversary deliberately making failures common cannot fake the absence of action-correlation without abandoning their adaptive strategy.
 
 *Proof*: Direct application of Shannon information theory. Self-information is defined as \\(I(x) = -\log P(x)\\), which is the fundamental measure of surprise associated with observing event \\(x\\).
 **Corollary 6**. *{% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} systems should systematically capture and analyze rare events, as these provide the highest-value learning opportunities per occurrence.*
@@ -816,6 +820,135 @@ where \\(\hat{r}_i(t) = r_i(t) \cdot \mathbb{1}[I_t = i] / p_i(t)\\) is the impo
 **The {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} connection**: {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}'s convergence to a single arm is fragile in adversarial settings - it creates a predictable target. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s regret bound holds against an *oblivious adversary* — one who fixes their strategy before the game begins. Against a fully adaptive adversary who responds to algorithm outputs, {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s minimax bound still holds as a worst-case guarantee over all oblivious strategies, but cannot match an adversary who observes selections and responds in real time. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s maintained randomization is genuinely {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %}: its performance improves relative to the adversary's best fixed strategy as \\(T \to \infty\\).
 
 **Practical implication**: For all {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} applications in contested environments - gossip interval tuning (Self-Measurement Without Central Observability), healing action selection (Self-Healing Without Connectivity) - replace {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} with {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %} is a drop-in replacement with the same interface; only the weight update rule changes. Use {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} only for non-adversarial commercial applications ({% term(url="#scenario-adaptshop", def="E-commerce platform with bandit-optimized recommendations, rankings, and discounts; converts every user interaction into a parameter learning signal") %}ADAPTSHOP{% end %} discount optimization, {% term(url="@/blog/2026-01-22/index.md#scenario-predictix", def="Aerospace CNC machine monitoring platform; predicts spindle, thermal, and power failures 2–8 hours ahead using local edge algorithms — preventing costly component scrap during plant-floor network outages") %}PREDICTIX{% end %} threshold tuning) where the adversary assumption does not apply.
+
+### From Stochastic to Adversarial: The Markov Game
+
+The gap identified above — EXP3's bound holds against oblivious adversaries but not adaptive ones — motivates formalizing what "adaptive adversary" means in the connectivity regime model. The CTMC (Def 3) represents the environment as a fixed generator matrix \\(Q\\). When the adversary is adaptive, \\(Q\\) is not fixed: the adversary *sets* it depending on what the defender does.
+
+During {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s reconciliation phase (3–8 s after a partition heals), gossip-interval selections are observable to an adversary monitoring RF patterns. Self-measurement confidence is lowest in this window — an adaptive adversary times the next jamming strike for this exact moment. The CTMC cannot model this because \\(Q\\) is not a property of the environment alone; it is a function of both defender and adversary choices.
+
+<span id="def-32"></span>
+
+**Definition 32** (Adversarial Markov Game). An adversarial connectivity game is a 6-tuple \\(\mathcal{G} = (S, A, B, Q, R, \gamma)\\) where:
+
+- \\(S = \\{C, D, I, N\\}\\) — connectivity regimes (Definition 2)
+- \\(A\\) — \\(K\\) defender actions (healing responses, bandit arms)
+- \\(B\\) — adversary action set (jamming intensities, timing windows)
+- \\(Q: A \times B \to\\) generator matrices — the CTMC generator when defender plays \\(a \in A\\) and adversary plays \\(b \in B\\)
+- \\(R: S \times A \times B \to \mathbb{R}\\) — per-step mission throughput reward
+- \\(\gamma \in (0,1)\\) — discount factor; adversary plays **adaptive** policy \\(\tau_t = \tau(h_t)\\) where \\(h_t\\) is the full defender action history
+
+The *security value* is:
+
+{% katex(block=true) %}
+V^* = \max_{\sigma:\, S \to \Delta(A)}\; \min_{\tau}\; \mathbb{E}\!\left[\sum_{t=0}^{\infty} \gamma^t R(s_t, a_t, b_t) \,\Big|\, s_0\right]
+{% end %}
+
+where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ranges over all adaptive adversary strategies. \\(\square\\)
+
+<span id="prop-33"></span>
+
+**Proposition 33** (Deterministic Policies Are Dominated). For any pure (deterministic) policy \\(\pi_D: S \to A\\), there exists an adversary strategy \\(\tau^\*\\) such that \\(V(\pi_D, \tau^\*) < V^\*\\). The minimax mixed policy \\(\sigma^\*\\) achieves \\(V^\*\\) under all adversary strategies.
+
+*Proof.* By the minimax theorem (von Neumann, 1928) for finite \\(S, A, B\\):
+
+{% katex(block=true) %}
+\max_{\sigma}\, \min_{\tau}\, V(\sigma, \tau) = \min_{\tau}\, \max_{\sigma}\, V(\sigma, \tau) = V^*
+{% end %}
+
+Any pure \\(\pi_D\\) is a degenerate mixed policy, so \\(V(\pi_D, \tau) \leq V^*\\) for all \\(\tau\\). Strict inequality holds when the adversary observes the deterministic recovery action and can exploit the predictable response window — e.g., scheduling the next jamming burst during the fixed interval {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} uses to re-establish mesh topology. \\(\square\\)
+
+**Operational consequence**: \\(\sigma^*\\) assigns positive probability to all \\(K\\) healing actions. The adversary cannot predict the exact response action and cannot exploit any specific recovery window. This is the formal justification for {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s permanent randomization in contested environments.
+
+---
+
+### EXP3-IX: Optimal Response Under Adaptive Adversaries
+
+Standard {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %} uses importance-weighted estimator \\(\hat{r}_i(t) = r_i(t) \cdot \mathbf{1}[I_t = i] / p_i(t)\\) with variance \\(\mathrm{Var}[\hat{r}_i] \leq 1/p_i^2\\). An adaptive adversary who observes action probabilities can manipulate \\(p_i\\) to be small — driving variance to explode and breaking {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s martingale analysis. The Implicit eXploration (IX) estimator bounds this by adding \\(\gamma\\) to the denominator.
+
+<span id="def-33"></span>
+
+**Definition 33** (EXP3-IX Algorithm). EXP3 with Implicit eXploration uses parameters \\(\eta = \sqrt{2 \ln K / (TK)}\\) and \\(\gamma = \eta\sqrt{K/2}\\). The IX estimator replaces the standard importance-weighted estimate:
+
+{% katex(block=true) %}
+\hat{r}_i^{\mathrm{IX}}(t) = \frac{r_i(t) \cdot \mathbf{1}[I_t = i]}{p_i(t) + \gamma}
+{% end %}
+
+Weights and selection probabilities update as:
+
+{% katex(block=true) %}
+w_i(t+1) = w_i(t) \cdot \exp\!\left(\eta \cdot \hat{r}_i^{\mathrm{IX}}(t)\right), \qquad
+p_i(t) = \frac{w_i(t)}{\sum_{j=1}^K w_j(t)}
+{% end %}
+
+No forced exploration floor is required — the implicit \\(\gamma\\) bias in the estimator alone bounds regret. EXP3-IX is a drop-in replacement for {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}: same weight structure, same selection rule; only the estimator changes. \\(\square\\)
+
+<span id="prop-34"></span>
+
+**Proposition 34** (EXP3-IX Regret Bound). With optimal \\(\eta\\) and \\(\gamma\\) as in Definition 33:
+
+{% katex(block=true) %}
+R_T^{\mathrm{IX}} \leq 2\sqrt{T K \ln K} = O\!\left(\sqrt{T \ln T}\right)
+{% end %}
+
+since \\(K \leq T \Rightarrow \ln K \leq \ln T\\). This bound holds against **fully adaptive** adversaries where \\(r_i(t)\\) may depend on past action probabilities \\(\\{p_j(s)\\}_{s < t}\\).
+
+*Proof sketch.* The second moment of the IX estimator satisfies \\(\mathbb{E}[(\hat{r}_i^{\mathrm{IX}})^2] \leq 1/\gamma\\) (bounded because \\(p_i(t) + \gamma \geq \gamma\\) always). A potential function \\(\Phi_t = \sum_i w_i(t)\\) satisfies a standard recursion; summing over \\(t\\) and optimizing \\(\eta, \gamma\\) jointly yields \\(R_T^{\mathrm{IX}} \leq (\ln K)/\eta + \eta TK/(2\gamma) = 2\sqrt{TK \ln K}\\). \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration** (\\(K = 5\\) healing actions, \\(T = 1000\\) decision rounds): \\(\eta \approx 0.018\\), \\(\gamma \approx 0.028\\); minimum arm probability \\(p_i \geq 0.12\\) (no arm collapses to zero). Regret \\(R_T^{\mathrm{IX}} \leq 180\\) rounds — an 18% "cost of unpredictability" — meaning the adversary cannot exploit any recovery window regardless of their observation capability.
+
+---
+
+### Adversarial Non-Stationarity Detection
+
+EXP3-IX randomizes responses optimally but does not detect *when* the adversary changes strategy. Natural \\(Q\\)-changes (weather, battery depletion) and adversarial \\(Q\\)-changes (coordinated jamming) produce similar rate-shift signatures on the transition dimension alone. The discriminating signal is that adversarial changes are **correlated with defender actions**: the adversary observes selections and responds. Natural environmental drift is uncorrelated with what the defender just chose.
+
+<span id="def-34"></span>
+
+**Definition 34** (Adversarial Non-Stationarity Detector). Two parallel CUSUM statistics track transition rate \\(q_{ij}\\) for a monitored regime pair \\((i, j)\\):
+
+*Rate-shift CUSUM*:
+
+{% katex(block=true) %}
+S_t^Q = \max\!\left(0,\; S_{t-1}^Q + \hat{q}_{ij}(t) - q_{ij}^{\mathrm{base}} - \delta_Q\right)
+{% end %}
+
+*Action-correlation CUSUM*:
+
+{% katex(block=true) %}
+S_t^{\mathrm{corr}} = \max\!\left(0,\; S_{t-1}^{\mathrm{corr}} + \hat{\rho}(a_t,\, \Delta q_t) - \delta_{\mathrm{corr}}\right)
+{% end %}
+
+where \\(\hat{\rho}(a_t, \Delta q_t)\\) is the sliding-window sample correlation between the defender's most recent action \\(a_t\\) and the concurrent \\(Q\\)-change magnitude \\(\Delta q_t\\). Alarms fire when \\(S_t^Q > h_Q\\) and/or \\(S_t^{\mathrm{corr}} > h_{\mathrm{corr}}\\).
+
+| \\(S_t^Q\\) | \\(S_t^{\mathrm{corr}}\\) | Diagnosis | Response |
+| :--- | :--- | :--- | :--- |
+| Below \\(h_Q\\) | Below \\(h_{\mathrm{corr}}\\) | No change | Continue current policy |
+| Above \\(h_Q\\) | Below \\(h_{\mathrm{corr}}\\) | Natural drift | Update \\(Q\\) baseline |
+| Above \\(h_Q\\) | Above \\(h_{\mathrm{corr}}\\) | Adversarial | Switch to EXP3-IX \\(\sigma^*\\); alert operators |
+| Below \\(h_Q\\) | Above \\(h_{\mathrm{corr}}\\) | Spurious | Log; no action |
+
+\\(\square\\)
+
+<span id="prop-35"></span>
+
+**Proposition 35** (Q-Change Detection Delay Bound). For an adversarial rate shift of size \\(\delta > \delta_Q\\), the expected detection delay from onset \\(\tau\\) satisfies:
+
+{% katex(block=true) %}
+\mathbb{E}[T_{\mathrm{detect}} - \tau] \leq \frac{h_Q + O(1)}{\delta - \delta_Q}
+{% end %}
+
+The dual false alarm rate satisfies:
+
+{% katex(block=true) %}
+P\!\left(S_t^Q > h_Q \wedge S_t^{\mathrm{corr}} > h_{\mathrm{corr}} \;\Big|\; H_0\right) \leq \alpha_Q \cdot \alpha_{\mathrm{corr}}
+{% end %}
+
+where \\(\alpha_Q, \alpha_{\mathrm{corr}}\\) are the individual CUSUM false-alarm rates under null hypothesis \\(H_0\\) (no adversarial change).
+
+*Proof.* The rate-CUSUM delay bound follows from Wald's identity applied to the CUSUM random walk with drift \\(\delta - \delta_Q > 0\\). The product bound follows from the independence of \\(S_t^Q\\) and \\(S_t^{\mathrm{corr}}\\) under \\(H_0\\): when no adversarial change is present, defender actions and natural \\(Q\\)-changes are uncorrelated by design (the defender's randomized policy is independent of environmental noise). \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration** (\\(h_Q = 5\\), \\(\delta_Q = 0.2 \cdot q_{\mathrm{base}}\\), \\(h_{\mathrm{corr}} = 3\\), \\(\alpha_Q = 0.01\\), \\(\alpha_{\mathrm{corr}} = 0.05\\)): dual false alarm rate \\(\leq 0.0005\\) (approximately one false alarm per 33 h of operation); detection delay \\(\leq 13\\) transitions from jamming onset (approximately 2 min at {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s observed transition rates).
 
 <span id="term-thompson"></span>
 

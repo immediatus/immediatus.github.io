@@ -141,6 +141,8 @@ Each symbol has exactly one meaning throughout the series. The table below cover
 | \\(\Gamma\\) | Constraint set (set of all deployment constraints) | Determining which capabilities must be built first and in what order | Uppercase Greek gamma; appears in \\(c \in \Gamma\\), \\(\sigma: \Gamma \to \mathbb{N}\\) |
 | \\(\mathcal{C}\\) | Connected regime (highest connectivity state) in connectivity context; also used as constraint set in The Edge Constraint Sequence — context disambiguates | All connectivity regime analysis; always one element of the full regime space | Always appears in the regime tuple \\(\{\mathcal{C}, \mathcal{D}, \mathcal{I}, \mathcal{N}\}\\) or as \\(\Xi = \mathcal{C}\\) |
 | \\(E\\) | Edge-ness Score — scalar in \\([0,1]\\) classifying how strongly a deployment exhibits edge vs. cloud characteristics | Architecture selection; Section "Quantifying Edge-ness" | Italic capital E; appears in threshold comparisons \\(E < 0.3\\), \\(E \geq 0.6\\) |
+| \\(T_d\\) | Energy cost of one local compute decision (joules). Subscript d = "decide." Typical range \\(10\text{–}100\,\mu\text{J}\\) for microcontroller-class inference. | Energy-per-Decision analysis; constraint structure | Always a joule scalar with lowercase letter subscript; never a time value |
+| \\(T_s\\) | Energy cost of one radio packet transmission (joules). Subscript s = "send." Typical range \\(1\text{–}10\,\text{mJ}\\) at tactical radio power levels. | Energy-per-Decision analysis; Ingress Filter threshold | \\(T_s / T_d \approx 10^2\text{–}10^3\\) — radio dominates the energy budget by two to three orders of magnitude |
 
 ### Constraint Structure
 
@@ -153,6 +155,44 @@ Three constraints bound all subsequent analysis: \\(B(t)\\) is available bandwid
 &K \cdot \tau < \pi/2 && \text{(control loop stability)}
 \end{aligned}
 {% end %}
+
+A fourth constraint captures the energy asymmetry that distinguishes edge from cloud: radio transmission costs two to three orders of magnitude more energy than local computation.
+
+{% katex(block=true) %}
+T_s / T_d \gg 1 \quad \text{(radio dominates the energy budget)}
+{% end %}
+
+<span id="def-21"></span>
+**Definition 21** (Energy-per-Decision Metric). *The total energy cost of decision \\(a\\) is:*
+
+{% katex(block=true) %}
+\mathcal{E}(a,\,C) = n_c(a)\cdot T_d \;+\; n_s(a,\,C)\cdot T_s
+{% end %}
+
+*where \\(n_c(a)\\) is the number of local compute cycles required, \\(n_s(a, C)\\) is the number of radio packets required (zero when \\(C = 0\\)), \\(T_d\\) is joules per compute operation, and \\(T_s\\) is joules per transmitted packet.*
+
+This metric reframes every architectural choice as an energy budget problem. Sending one gossip packet costs the same as running \\(T_s/T_d \approx 10^3\\) local inference cycles. The system that offloads decisions to the cloud to "save compute" actually spends orders of magnitude more energy on the radio link than it saves on silicon.
+
+<span id="prop-23"></span>
+**Proposition 23** (Compute-Transmit Dominance Threshold). *Local computation is energetically dominant — cheaper than radio-assisted offloading — for any decision requiring fewer than \\(1/\rho\\) compute cycles, where \\(\rho = T_d/T_s\\):*
+
+{% katex(block=true) %}
+\mathcal{E}(a,\,C > 0) < \mathcal{E}(a,\,C = 0) \iff n_c(a) < \frac{1}{\rho} = \frac{T_s}{T_d}
+{% end %}
+
+*For \\(\rho = 10^{-3}\\) (tactical radio): any decision requiring fewer than 1,000 local compute cycles is cheaper to run locally than to transmit — even when connectivity is available.*
+
+**Design consequence**: The inversion threshold \\(\tau^\*\\) from Proposition 1 has an energy analog. Even when \\(C(t) > \tau^*\\) and distributed autonomy does not strictly dominate cloud control on latency or capability grounds, it may still dominate on energy grounds if \\(n_c < 1/\rho\\). At the edge, physics — not just connectivity — mandates local compute.
+
+**Scenario calibration**:
+
+| System | \\(T_d\\) | \\(T_s\\) | \\(\rho\\) | Local-dominant threshold |
+| :--- | :--- | :--- | :--- | :--- |
+| RAVEN drone MCU | \\(50\,\mu\text{J}\\) | \\(5\,\text{mJ}\\) | \\(10^{-2}\\) | \\(<100\\) compute cycles |
+| CONVOY vehicle ECU | \\(20\,\mu\text{J}\\) | \\(8\,\text{mJ}\\) | \\(2.5\times10^{-3}\\) | \\(<400\\) compute cycles |
+| OUTPOST sensor node | \\(10\,\mu\text{J}\\) | \\(10\,\text{mJ}\\) | \\(10^{-3}\\) | \\(<1000\\) compute cycles |
+
+*Values are illustrative; calibrate \\(T_d\\) and \\(T_s\\) from hardware datasheets for the target platform.*
 
 ### Prerequisite Ordering
 
@@ -279,6 +319,8 @@ For systems where \\(T_s = kT_d\\) with \\(k \geq 5\\) (synchronization slower t
 {% end %}
 
 For \\(k = 5\\): \\(\tau^* = 0.4\\). Including retry storms (\\(\rho\\) increases superlinearly with \\(p\\)), the effective threshold drops to \\(\tau^* \in [0.12, 0.18]\\).
+
+The retry storm correction is derived as follows. Under TCP-like congestion collapse, each retry attempt contends with active retries: \\(\rho(p) \approx \rho_0/(1-p)\\) (linear in availability pressure). Substituting into the \\(\tau^*\\) formula with \\(k=5\\), \\(\rho = \rho_0/(1-p)\\), and solving \\(U_{\text{cloud}} = U_{\text{edge}}\\) numerically for \\(p\\): at \\(\rho_0 = T_s\\) (retry cost equals one sync period), the crossover shifts from \\(p = 0.40\\) to \\(p \approx 0.17\\). At \\(\rho_0 = 2T_s\\): \\(p \approx 0.13\\). The range \\([0.12, 0.18]\\) corresponds to \\(\rho_0 \in [T_s, 2T_s]\\) — one to two sync periods of retry overhead, consistent with measured backoff behavior on contested tactical links.
 
 **Utility improvement under partition-first design**: The formula below quantifies the net utility gain from switching to partition-first design, expressed as the difference between the coordination delay saved and the reconciliation cost incurred.
 
@@ -885,7 +927,7 @@ A \\(100\times\\) reduction makes satellite backhaul feasible even during Degrad
 
 ### Commercial Application: GRIDEDGE Power Distribution
 
-{% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} manages a distribution network: 180,000 customers, 12,000 km², with 847 transformers, 156 reclosers, 43 capacitor banks, and 12 substations. Smart grid sensors must coordinate protection decisions in milliseconds while regional control center connectivity may be unavailable.
+{% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} manages a distribution network: 180,000 customers, \\(12{,}000\,\text{km}^2\\), with 847 transformers, 156 reclosers, 43 capacitor banks, and 12 substations. Smart grid sensors must coordinate protection decisions in milliseconds while regional control center connectivity may be unavailable.
 
 Power distribution faces a unique connectivity challenge: the very events that require coordination - storms, equipment failures, vegetation contact - are the same events that damage communication infrastructure. A storm that causes a line fault likely also damages the cellular tower serving that feeder.
 
@@ -1937,15 +1979,69 @@ Define {% term(url="#term-capability-level", def="Five-tier hierarchy from parti
 | L3 | Fleet Coordination | Cross-cluster task allocation | 0.8 | 6.0 |
 | L4 | Full Integration | Real-time coordination, full sensor streaming | 0.9 | 8.0 |
 
+*Unit definition*: \\(\Delta V_i\\) values are dimensionless mission utility scores, normalized so that maximum full-integration performance = 21.5 points. For RAVEN, each level's \\(\Delta V_i\\) was calibrated as: \\(P(\text{mission success} \mid \text{level achieved}) \times \text{expected coverage fraction} \times 10\\), measured over 200 simulation runs. The span from \\(\Delta V_4 = 8.0\\) to \\(\Delta V_0 = 0\\) (coverage contribution) reflects the RAVEN mission structure: L0 alone provides no operational coverage, while L4 enables real-time cross-cluster coordination that saturates the coverage function (the table assigns \\(\Delta V_0 = 1.0\\) as a survival-credit baseline, not a coverage score). AUTOHAULER weights L3 at 9.0 (vs. RAVEN's 6.0) because hauling throughput is dominated by fleet-level task allocation. These values are scenario-specific inputs, not universal constants.
+
 Each level requires minimum connectivity \\(\theta_i\\) and contributes marginal value \\(\Delta V_i\\). Total capability is the sum of achieved levels: a system at L3 achieves \\(\Delta V_0 + \Delta V_1 + \Delta V_2 + \Delta V_3 = 13.5\\) out of maximum 21.5.
 
 **Capability level evaluation** (continuous, per-node):
 
 1. **Measure**: Estimate \\(C(t)\\) via EWMA: \\(\hat{C}(t) = 0.3 \cdot C_{\text{observed}} + 0.7 \cdot \hat{C}(t-1)\\)
+
+   (The gain \\(\alpha = 0.3\\) is not a universal constant. The optimal \\(\alpha = 1 - e^{-\lambda_{\min} \cdot \Delta t}\\), where \\(\lambda_{\min}\\) is the fastest connectivity transition rate worth tracking and \\(\Delta t\\) is the measurement interval. At \\(\Delta t = 1\\)s and RAVEN's observed transition rate of ~0.35 transitions/min \\(\approx 0.006\\)/s: \\(\alpha = 1 - e^{-0.006} \approx 0.006\\) — very slow adaptation. At 0.35 transitions/s: \\(\alpha \approx 0.30\\). The value 0.3 is calibrated to a system that transitions regimes roughly once every 3 seconds; slower-changing environments should use smaller \\(\alpha\\).)
+
 2. **Determine level**: Find highest \\(L_i\\) where \\(\hat{C}(t) \geq \theta_i\\)
 3. **Check peer consensus**: For L2+, verify peers report same capability; downgrade if mismatch
 4. **Apply hysteresis**: Maintain level unless threshold crossed for \\(T_{\text{stable}} = 10\\)s
 5. **Execute**: Activate selected level's behaviors, deactivate higher levels
+
+### Hardened Hierarchy: Dependency Isolation
+
+The capability table above lists five levels. A critical implementation constraint governs
+the relationship between them: no level may depend on any level above it at runtime. Without
+this constraint, an L4 model-update service that L0 boot logic imports creates a circular
+failure — when the autonomic stack degrades, it may take L0 survival with it.
+
+<span id="def-35"></span>
+**Definition 35** (Dependency Isolation Requirement). *A capability stack satisfies the
+{% term(url="#def-35", def="Structural constraint requiring that each capability level's runtime dependencies are confined to equal or lower levels; L0 has zero dependencies on any L1-L4 component") %}dependency isolation requirement{% end %} if the runtime dependency set of each
+level is confined to equal or lower levels:*
+
+{% katex(block=true) %}
+\forall\, i \in \{0,1,2,3,4\}:\quad \mathrm{deps}(L_i) \subseteq \bigcup_{j \leq i} L_j
+{% end %}
+
+*The L0 constraint is the binding one:*
+
+{% katex(block=true) %}
+\mathrm{deps}(L_0) \cap \bigcup_{i \geq 1} L_i = \emptyset
+{% end %}
+
+*Operationally, L0 code must:*
+- *Be compiled as an independent firmware image with no shared-library dependencies on L1-L4*
+- *Use only C or Rust — no garbage collector, no managed runtime, no dynamic dispatch into upper layers*
+- *Pass a static symbol-dependency graph check: zero upward references*
+- *Fit entirely in on-chip SRAM — no swap, no dynamic allocation requiring heap from upper layers*
+
+<span id="prop-36"></span>
+**Proposition 36** (Hardened Hierarchy Fail-Down). *If a system satisfies Definition 35,
+then failure of level \\(L_i\\) cannot cause failure of any level \\(L_j\\) with \\(j < i\\):*
+
+{% katex(block=true) %}
+\mathrm{failure}(L_i) \;\Rightarrow\; \forall\, j < i : L_j \text{ remains operational}
+{% end %}
+
+*Proof*: By Definition 35, every component at level \\(j < i\\) satisfies
+\\(\mathrm{deps}(L_j) \subseteq \bigcup_{k \leq j} L_k\\). Since \\(j < i\\), we have
+\\(L_i \notin \mathrm{deps}(L_j)\\). Failure of \\(L_i\\) therefore creates no failed
+dependency in \\(L_j\\). By induction over all \\(j < i\\), the entire stack below \\(L_i\\)
+remains operational. \\(\square\\)
+
+**Corollary**: The CONVOY failure case in the [constraint sequence article](@/blog/2026-02-19/index.md)
+— L3 fleet analytics built before L0 survival was validated — violates Definition 35. The
+analytics service imported the health-monitoring framework (L1+), which in turn depended on
+dynamic memory allocation not present in the bare-metal boot environment. When the stack
+degraded, L0 could not re-initialize because its required allocator was in a crashed L1 process.
+Definition 35, verified statically before deployment, would have caught this at link time.
 
 ### Expected Capability Under Contested Connectivity
 

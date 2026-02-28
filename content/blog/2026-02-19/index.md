@@ -527,6 +527,8 @@ G_i(S) = \bigwedge_{p \in P_i} \mathbb{1}[V_p(S) \geq \theta_p]
 
 Where \\(P_i\\) is the set of validation predicates for phase \\(i\\), \\(V_p(S)\\) is the validation score for predicate \\(p\\) given state \\(S\\), and \\(\theta_p\\) is the threshold for predicate \\(p\\).
 
+**Statistical note**: Each predicate \\(V_p(S) \geq \theta_p\\) is evaluated against observed test runs. A single pass provides one data point, not a distribution. For pass/fail predicates (\\(V_{\mathrm{surv}}\\), \\(V_{\mathrm{zero}}\\), \\(V_{\mathrm{heal}}\\)), the 95\% Clopper-Pearson lower confidence bound on the true pass probability after \\(k\\) successes in \\(N\\) trials is \\(p_L(k, N, 0.05)\\). Achieving \\(p_L(N, N, 0.05) \geq 0.95\\) requires \\(N \geq 28\\) trials — not 1. In practice: hardware-layer tests (H1–H4) can be run on production samples; system-level gates (C1–C7) satisfy the statistical requirement via combined simulation and hardware runs, with the trial count tracked in the certification evidence package. A single 24-hour chaos run satisfies C1–C7 as an integration check; it does not constitute a statistically valid certification until replicated \\(N \geq 28\\) times or complemented by model checking for the correctness predicates (\\(V_{\mathrm{merge}}\\), \\(V_{\mathrm{reconcile}}\\)).
+
 <span id="prop-22"></span>
 **Proposition 22** (Phase Progression Invariant). *The system can only enter phase \\(i+1\\) if all prior gates remain valid:*
 
@@ -563,7 +565,25 @@ V_{\text{safe}}(S) &= \mathbb{1}[\text{CriticalFailure}(t) \Rightarrow S(t + \ep
 
 Typical survival duration thresholds: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} 24 hours, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} 72 hours, {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} 30 days.
 
-**Phase 0 gate**: \\(G_0(S) = V_{\text{attest}} \land V_{\text{surv}} \land V_{\text{budget}} \land V_{\text{safe}}\\)
+The survival duration test (\\(V_{\text{surv}}\\)) confirms the node stays alive under partition. A stricter predicate, \\(V_{\text{zero}}\\), confirms it stays alive under **complete radio silence** — no \\(T_s\\) transmissions permitted — for the full mission-critical window. This distinguishes partition survival (where the node may attempt transmissions that fail) from zero-backhaul operation (where the radio is deliberately off or physically destroyed).
+
+{% katex(block=true) %}
+V_{\text{zero}}(S) = \mathbb{1}\!\left[B_b(t) = 0,\; \forall t \in [0,\,\tau_0] \;\Rightarrow\; \text{Alive}(n,\,\tau_0) \;\land\; U_E(S) \leq B_E\right]
+{% end %}
+
+where \\(\tau_0 = 72\,\text{h}\\) is the zero-backhaul duration, \\(B_b(t) = 0\\) enforces no radio transmission, \\(U_E(S)\\) is energy consumed over \\([0, \tau_0]\\), and \\(B_E = E_{\text{battery}} - E_{\text{reserve}}\\) is the usable energy budget.
+
+**Why \\(\tau_0 = 72\,\text{h}\\)**: This matches {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s worst-case terrain crossing window (72 hours per the foundational constraint analysis). {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} uses 24 hours; {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} uses 30 days. The predicate threshold scales with the target system but 72 hours is the standard tactical stress duration.
+
+**What the zero-backhaul test validates**:
+1. **Energy budget**: The node's baseline draw (compute, sensors, MAPE-K loop) does not exhaust the battery before \\(\tau_0\\). Because \\(T_s = 0\\) (no radio energy spent), this isolates the pure compute-plus-sensors energy envelope.
+2. **Local MAPE-K loop**: All healing decisions execute using only local state — no coordination messages, no remote health reports, no gossiped vectors.
+3. **State preservation**: The node accumulates divergence \\(D(t)\\) over \\(\tau_0\\) but does not corrupt its local state; reconciliation remains possible when \\(B_b\\) recovers.
+4. **Ingress filter correctness**: The \\(\Pi\\) filter (Definition 22) operates at \\(\beta = 0\\) — all non-critical telemetry is suppressed, confirming the filter does not deadlock the MAPE-K loop by starving it of P0 metrics.
+
+**CONVOY scenario**: Vehicle 7 enters a 3 km canyon with no line-of-sight radio propagation. The radio transceiver is powered down (zero \\(T_s\\) cost). Over 72 hours, the vehicle continues route execution, logs all autonomous decisions, maintains local health monitoring via MAPE-K, and stores diverged state in its CRDT buffers. On canyon exit, it reconnects and reconciles. Phase 0 requires demonstrating this entire sequence before any coordination protocol is integrated.
+
+**Phase 0 gate**: \\(G_0(S) = V_{\text{attest}} \land V_{\text{surv}} \land V_{\text{budget}} \land V_{\text{safe}} \land V_{\text{zero}}\\)
 
 ### Phase 1: Local Autonomy Layer
 
@@ -703,6 +723,98 @@ The validation framework adapts to changing conditions. Formal triggers for re-e
 - **Operational learning**: \\(\text{ObservedFailure}(f_{\text{new}}) \Rightarrow \text{Extend}(\mathcal{F})\\)
 
 Each trigger initiates re-evaluation of affected gates. The regression invariant ensures re-validation propagates to all dependent phases.
+
+### Field Autonomic Certification
+
+Phase gates formalize *can the system pass a threshold?* Field Autonomic Certification (FAC)
+formalizes *is this system safe to label "Autonomic" and deploy without a human in the loop?*
+The distinction matters: a system can pass Phase 0 in a lab environment but fail in the field
+because L0 was never tested without L1+ present, or because no one verified the terminal safety
+state is reachable.
+
+<span id="def-37"></span>
+**Definition 37** (Field Autonomic Certification). *A system achieves
+{% term(url="#def-37", def="The minimum bar required to label a system Autonomic: passes all phase gates through G_0, plus dependency isolation check, terminal safety state verification, and a 24-hour isolation-and-chaos test") %}Field Autonomic Certification{% end %} if:*
+
+{% katex(block=true) %}
+\mathrm{FAC}(S) = G_0(S) \;\land\; V_{\mathrm{depiso}}(S) \;\land\; V_{\mathrm{term}}(S) \;\land\; V_{\mathrm{isolchaos}}(S,\, 24\mathrm{h})
+{% end %}
+
+*Where:*
+- *\\(V_{\mathrm{depiso}}(S) = \mathbb{1}[\text{static symbol check: no L0 binary references L1+ symbols}]\\)*
+- *\\(V_{\mathrm{term}}(S) = \mathbb{1}[\text{killing L1+ causes correct } \mathcal{S}_\mathrm{term} \text{ entry within watchdog window}]\\)*
+- *\\(V_{\mathrm{isolchaos}}(S, 24\mathrm{h}) = \mathbb{1}[\text{system survives 24h: zero backhaul, random process kills, fault injection, 10 partition cycles}]\\)*
+
+*Systems that pass only \\(G_0\\) may be labeled "Phase 0 Certified" but not "Autonomic."
+The "Autonomic" label requires \\(\mathrm{FAC}\\).*
+
+<span id="prop-38"></span>
+**Proposition 38** (Certification Completeness). *\\(\mathrm{FAC}(S) \Rightarrow G_3(S)\\):
+a system with Field Autonomic Certification satisfies all phase gates through Phase 3.*
+
+*Proof sketch*: \\(\mathrm{FAC}\\) includes \\(G_0\\) directly. \\(V_{\mathrm{depiso}}\\) implies Proposition 36 (fail-down), satisfying the structural requirement for \\(G_1\\)–\\(G_3\\). The remaining question is whether 10 partition-rejoin cycles provide sufficient statistical evidence for \\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\).
+
+Let \\(p_{\text{conflict}}\\) denote the per-cycle probability that a genuine CRDT merge conflict occurs and is incorrectly resolved. The minimum cycle count \\(N\\) to detect systematic reconciliation failures with confidence \\(1 - \alpha\\) satisfies \\(N \geq \log(\alpha)/\log(1 - p_{\text{conflict}})\\). For \\(p_{\text{conflict}} = 0.01\\): \\(N = \log(0.05)/\log(0.99) \approx 299\\) cycles. For \\(p_{\text{conflict}} = 0.26\\): \\(N = 10\\) cycles. The checklist value \\(C5 = 10\\) cycles is sufficient only if \\(p_{\text{conflict}} \geq 0.26\\) — i.e., the system fails 1-in-4 merges, a failure mode that would be immediately observable without formal testing. The correct interpretation: 10 cycles is a smoke test, not a certification bound.
+
+\\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\) are certified by one of two methods: (a) static verification via Alloy model checking that confirms correct merge for all conflict types in the state schema (the RAVEN TLA+ model handles this at \\(\leq 50\\) nodes); or (b) \\(N \geq \log(0.05)/\log(1 - p_{\text{estimated}})\\) hardware cycles where \\(p_{\text{estimated}}\\) is derived from the measured state update rate and concurrent edit probability during the 24-hour run. Random process kills imply \\(V_{\mathrm{heal}}\\) (Phase 1); 30\% garbage injection implies \\(V_{\mathrm{detect}}\\) (Phase 1). Phases 4–5 require additional adversarial testing (\\(V_{\mathrm{adv}}\\)) beyond \\(\mathrm{FAC}\\) scope. \\(\square\\)
+
+**The 24-Hour Isolation and Chaos Checklist**
+
+The following checklist formalizes \\(V_{\mathrm{isolchaos}}\\). A system cannot be labeled
+"Autonomic" until every item is checked.
+
+<style>
+#tbl_fac + table th:first-of-type { width: 5%; }
+#tbl_fac + table th:nth-of-type(2) { width: 35%; }
+#tbl_fac + table th:nth-of-type(3) { width: 35%; }
+#tbl_fac + table th:nth-of-type(4) { width: 25%; }
+</style>
+<div id="tbl_fac"></div>
+
+**Hardware layer (pre-software — must pass before any autonomy testing):**
+
+| # | Test | Pass Criterion | Linked Predicate |
+| :--- | :--- | :--- | :--- |
+| H1 | Secure boot chain end-to-end | All signatures verify; tamper bit unset | \\(V_{\mathrm{attest}}\\) |
+| H2 | Hardware watchdog fires on software hang | L1+ killed; watchdog fires within \\(T_{\mathrm{wd}}\\) | \\(V_{\mathrm{term}}\\) |
+| H3 | Terminal safety state entry correct | After H2, node enters \\(\mathcal{S}_\mathrm{term}(E)\\) correctly | \\(V_{\mathrm{term}}\\) |
+| H4 | Energy measurement calibrated | Measured vs. known load within 5% | \\(V_{\mathrm{budget}}\\) |
+
+**L0 isolation layer (\\(V_{\mathrm{depiso}}\\)):**
+
+| # | Test | Pass Criterion | Linked Predicate |
+| :--- | :--- | :--- | :--- |
+| I1 | L0 binary compiled independently | No shared libraries; linker map shows zero L1+ symbols | \\(V_{\mathrm{depiso}}\\) |
+| I2 | L0 boots with no other software present | Stable operation for 1h with only L0 firmware flashed | \\(V_{\mathrm{depiso}}\\) |
+| I3 | L0 survives 24h with L1+ absent | All L1+ processes killed or firmware removed; L0 stable | \\(V_{\mathrm{depiso}}\\) |
+| I4 | Static symbol-dependency graph clean | Automated check: `nm`/`objdump` shows no upward references | \\(V_{\mathrm{depiso}}\\) |
+
+**24-hour Isolation and Chaos test (\\(V_{\mathrm{isolchaos}}\\)):**
+
+| # | Test | Pass Criterion | Linked Predicate |
+| :--- | :--- | :--- | :--- |
+| C1 | Zero backhaul for full 24h | Radio disabled or absent; no cloud/command contact | \\(V_{\mathrm{zero}}\\) |
+| C2 | Random process kills every 30 min | MAPE-K, measurement, healing daemons killed randomly; all restart | \\(V_{\mathrm{heal}}\\) |
+| C3 | 30% garbage sensor injection | Anomaly detection identifies injected faults; false-negative rate \\(< 0.05\\) | \\(V_{\mathrm{detect}}\\) |
+| C4 | Full threat-model fault injection | Each fault in threat model injected once; all healed within \\(T_{\mathrm{heal}}\\) | \\(V_{\mathrm{heal}}\\) |
+| C5 | Partition-rejoin cycles (minimum 10 as smoke test) | After each rejoin, state converges within \\(\tau_{\mathrm{reconcile}}\\); for \\(V_{\mathrm{reconcile}}\\) certification, supplement with Alloy/TLA+ verification or \\(N \geq \log(0.05)/\log(1-p_{\text{est}})\\) cycles where \\(p_{\text{est}}\\) is the per-cycle conflict probability | \\(V_{\mathrm{merge}}, V_{\mathrm{reconcile}}\\) |
+| C6 | Energy floor reached | Push \\(E\\) to \\(E_{\mathrm{HSS}}\\); node enters HSS; recovers when \\(E\\) rises | \\(V_{\mathrm{term}}\\) |
+| C7 | Performance at T+24h vs T+0 | \\(\mathbb{E}[\mathrm{Performance}(T{+}24)] \geq \mathbb{E}[\mathrm{Performance}(T{+}0)]\\) | \\(V_{\mathrm{antifragile}}\\) |
+
+**Final gate — FAC issued only when all pass:**
+
+{% katex(block=true) %}
+\mathrm{FAC}(S) = \bigwedge_{i \in \{H1..H4,\, I1..I4,\, C1..C7\}} \mathrm{Passed}(i)
+{% end %}
+
+**RAVEN certification example**: Phase 0 gate passed in month 2 of development
+(\\(V_{\mathrm{attest}}, V_{\mathrm{surv}}, V_{\mathrm{budget}}, V_{\mathrm{safe}}, V_{\mathrm{zero}}\\) all green).
+FAC required an additional 3 weeks: I3 revealed that Drone 23's L0 binary had an implicit
+dependency on a shared allocator (caught by I4's symbol check). After fixing, the 24-hour chaos
+run (C1–C7) passed with one failure on C6 — the HSS recovery path had an off-by-one on the
+energy threshold register. Both defects were caught before field deployment. The CONVOY team's
+failure would have been caught at I1: the ML inference service's allocator was statically linked
+into the L0 boot image.
 
 ---
 
