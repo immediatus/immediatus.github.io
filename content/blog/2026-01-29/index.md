@@ -407,6 +407,103 @@ In other words, the slower the feedback (larger \\(\tau\\)), the more gently the
 
 **Corollary 4**. *Increased feedback delay (larger \\(\tau\\)) requires more conservative controller gains, trading response speed for stability.*
 
+**Stochastic extension: when \\(\tau\\) is not constant**
+
+Prop 9 assumes a fixed delay \\(\tau\\). In tactical environments \\(\tau\\) is a stochastic process; its distribution governs whether any finite gain \\(K\\) can maintain stability.
+
+<span id="def-38"></span>
+**Definition 38** (Stochastic Transport Delay Model). *Let \\(\tau(t) \geq 0\\) denote the one-way transport delay at time \\(t\\), distributed conditionally on connectivity regime \\(C\\).*
+
+**Connected (\\(C = 1.0\\))**: \\(\tau \sim \mathrm{LogNormal}(\mu_c, \sigma_c^2)\\) with \\(\sigma_c\\) much smaller than \\(\mu_c\\) (coefficient of variation approximately 10%). Additive propagation and queuing delays compose multiplicatively across many independent hops, producing a log-normal tail.
+
+**Degraded (\\(C = 0.5\\))**: \\(\tau \sim \mathrm{LogNormal}(\mu_d, \sigma_d^2)\\) with \\(\sigma_d \approx \mu_d\\) (coefficient of variation approximately 100%). Retransmission bursts and partial-outage rerouting drive variance to the same order as the mean.
+
+**Contested (\\(C = 0.0\\))**: \\(\tau \sim \mathrm{Pareto}(\tau_{\min}, \alpha)\\) with \\(\alpha \in (1, 2)\\):
+
+{% katex(block=true) %}
+f_\tau(t) = \frac{\alpha \, \tau_{\min}^\alpha}{t^{\alpha+1}}, \quad t \geq \tau_{\min}
+{% end %}
+
+p-th percentile: \\(\tau_p = \tau_{\min} \cdot (1-p)^{-1/\alpha}\\). Mean: \\(E[\tau] = \alpha \tau_{\min} / (\alpha - 1)\\) for \\(\alpha > 1\\). Variance: **undefined** (infinite) for \\(\alpha \leq 2\\).
+
+The Pareto model is natural under adversarial conditions: an adversary who controls jamming duration selects from a strategic distribution, producing power-law delay tails. Shape parameter \\(\alpha\\) encodes adversarial capability — RAVEN contested-link measurements yield \\(\alpha \approx 1.6\\), giving \\(E[\tau] \approx 2.7\tau_{\min}\\) with unbounded variance.
+
+**Critical consequence**: With \\(\mathrm{Var}[\tau] = \infty\\) in the Contested regime, the estimation error of any EWMA or Kalman filter tracking \\(\tau\\) also has infinite variance, regardless of filter design. Mean-plus-\\(k\\)-sigma stability margins are meaningless; all quantitative bounds must use percentiles.
+
+<span id="prop-39"></span>
+**Proposition 39** (Robust Gain Scheduling under Stochastic Delay). *Let \\(\delta \in (0,1)\\) be the acceptable per-cycle instability probability. The regime-dependent robust gain bound is:*
+
+{% katex(block=true) %}
+K_{\mathrm{robust}}(C, \delta) \leq \frac{\pi}{2 \cdot \tau_{1-\delta}(C)}
+{% end %}
+
+*where \\(\tau_{1-\delta}(C)\\) is the \\((1-\delta)\\)-th percentile of \\(F_\tau(\cdot \mid C)\\):*
+
+| Regime | Distribution | \\(\tau_{1-\delta}\\) | Permissible actions |
+| :--- | :--- | :--- | :--- |
+| Connected (C=1.0) | LogNormal | \\(e^{\mu_c + z_{1-\delta} \sigma_c}\\) | All severities |
+| Degraded (C=0.5) | LogNormal | \\(e^{\mu_d + z_{1-\delta} \sigma_d}\\) | Severity 1 and 2 only |
+| Contested (C=0.0) | Pareto | \\(\tau_{\min} \cdot \delta^{-1/\alpha}\\) | Severity 1 local only |
+
+For RAVEN (\\(\tau_{\min} = 0.2\\)s, \\(\alpha = 1.6\\), \\(\delta = 0.01\\)):
+
+{% katex(block=true) %}
+\tau_{0.99} = 0.2 \times (0.01)^{-1/1.6} = 0.2 \times 100^{0.625} \approx 3.16\text{ s}
+{% end %}
+
+This gives \\(K_{\mathrm{robust}} \leq \pi / (2 \times 3.16) \approx 0.497\\)/s. However, \\(\tau_{1-\delta}\\) scales as \\(\delta^{-0.625}\\): driving \\(\delta \to 0.001\\) pushes \\(\tau_{0.999} \approx 25.1\\)s and \\(K_{\mathrm{robust}} \leq 0.063\\)/s. For any operationally meaningful \\(\delta\\), no finite gain satisfies the stability condition for remote actions in Contested conditions — all Severity 2 and above actions must be suppressed.
+
+*Proof*: From Prop 9, stability requires \\(K\tau < \pi/2\\). Under stochastic \\(\tau\\): \\(P(\text{stable}) = F_\tau(\pi/(2K) \mid C)\\). Setting this to \\(1-\delta\\) inverts to \\(K \leq \pi/(2\tau_{1-\delta})\\). For \\(\alpha \leq 2\\), \\(\tau_{1-\delta} = \tau_{\min}\delta^{-1/\alpha}\\) grows without bound as \\(\delta \to 0\\), so no bounded \\(K > 0\\) achieves arbitrary confidence in the Contested regime. \\(\square\\)
+
+<span id="def-39"></span>
+**Definition 39** (MAPE-K Predictive Dead-Band). *Let \\(A\\) be a healing action recommended at \\(t_{\mathrm{sense}}\\). The Execute phase suppresses \\(A\\) if any of the following hold at \\(t_{\mathrm{exec}}\\):*
+
+**(a) Delay invalidity** — estimated transport delay exceeds the Stale Data Threshold (Prop 40):
+
+{% katex(block=true) %}
+\hat{\tau}(t_{\mathrm{exec}}) > T_{\mathrm{stale}}
+{% end %}
+
+**(b) Self-correction** — probability the target remains in failure state has fallen below \\(p_{\mathrm{suppress}}\\):
+
+{% katex(block=true) %}
+e^{-\mu_h \cdot (t_{\mathrm{exec}} - t_{\mathrm{sense}})} < p_{\mathrm{suppress}}
+{% end %}
+
+equivalently \\(t_{\mathrm{exec}} - t_{\mathrm{sense}} > -\ln(p_{\mathrm{suppress}}) / \mu_h\\), where \\(\mu_h\\) is the autonomous self-healing rate of the target component.
+
+**(c) Gain violation** — current delay estimate violates the stability condition from Prop 39:
+
+{% katex(block=true) %}
+K_{\mathrm{current}} \cdot \hat{\tau}(t_{\mathrm{exec}}) > \pi/2
+{% end %}
+
+All three conditions suppress action independently. Condition (b) is the MAPE-K analog of the Smith Predictor's inner model path: it estimates whether the system will have self-corrected before \\(A\\) arrives, suppressing \\(A\\) if so. In the Contested regime, the prediction error \\(\varepsilon(t) = \tau(t) - \hat{\tau}(t)\\) carries the same Pareto tail as \\(\tau(t)\\) regardless of predictor design — the Smith Predictor reduces the effective delay in the characteristic equation from \\(\tau(t)\\) to \\(\varepsilon(t)\\), but both are unbounded in variance. Condition (a) remains the primary suppressor. Condition (b) also prevents the anti-windup oscillation that Prop 29 bounds: acting on a stale recommendation after the target has already self-healed is precisely the over-correction scenario Def 28 blocks.
+
+<span id="prop-40"></span>
+**Proposition 40** (Stale Data Threshold). *Let \\(\lambda_{\mathrm{total}} = \mu_h + \mu_f + \mu_c\\) be the total state-change rate (healing, failure, and coordination events); \\(p_{\mathrm{stale}} \in (0,1)\\) the maximum acceptable probability that state has changed since \\(t_{\mathrm{sense}}\\); \\(T_{\mathrm{heal}}\\) the healing deadline from Prop 8; and \\(k \geq 1\\) a deadline safety factor. The Stale Data Threshold is:*
+
+{% katex(block=true) %}
+T_{\mathrm{stale}} = \min\!\left(\frac{T_{\mathrm{heal}}}{k},\ \frac{-\ln(1 - p_{\mathrm{stale}})}{\lambda_{\mathrm{total}}}\right)
+{% end %}
+
+*A node must re-run Sense and Analyze before executing if \\(t_{\mathrm{exec}} - t_{\mathrm{sense}} > T_{\mathrm{stale}}\\).*
+
+*Proof*: State transitions form a Poisson process at rate \\(\lambda_{\mathrm{total}}\\). The probability of at least one transition in \\([t_{\mathrm{sense}}, t_{\mathrm{exec}}]\\) is \\(1 - e^{-\lambda_{\mathrm{total}} \cdot \Delta t}\\). Setting this equal to \\(p_{\mathrm{stale}}\\) and solving for \\(\Delta t\\) gives the second term. The constraint \\(T_{\mathrm{heal}}/k\\) ensures timely execution within the healing deadline if re-sensing is infeasible. \\(\square\\)
+
+**Contested regime — feasibility window**: In \\(C = 0\\), coordination is absent (\\(\mu_c \approx 0\\)), so \\(\lambda_{\mathrm{total}} \approx \mu_f\\). Simultaneously, Prop 39 requires \\(\tau < T_{\mathrm{stale}}\\) with probability \\(1 - \delta\\), imposing a lower bound from the Pareto quantile:
+
+{% katex(block=true) %}
+T_{\mathrm{stale}} \geq \tau_{\min} \cdot \delta^{-1/\alpha}
+{% end %}
+
+For RAVEN (\\(\tau_{\min} = 0.2\\)s, \\(\alpha = 1.6\\), \\(\delta = 0.01\\), \\(\mu_f = 0.02\\)/s, \\(p_{\mathrm{stale}} = 0.20\\)):
+
+- **Upper bound** (state-change): \\(T_{\mathrm{stale}} \leq -\ln(0.80)/0.02 \approx 11.2\\) s
+- **Lower bound** (transport): \\(T_{\mathrm{stale}} \geq 3.16\\) s
+
+The feasibility window for remote healing actions in Contested RAVEN is \\([3.16, 11.2]\\) s. Below 3.16 s the action arrives too late with probability above 1%; after 11.2 s the system state has changed with probability above 20%. Outside this window all Severity 2 and above actions are suppressed; only Severity 1 local actions remain valid. In the Degraded regime (\\(\mu_d = 0.8\\)s, \\(\sigma_d = 0.8\\)s): \\(\tau_{0.99} = e^{0.8 + 2.33 \times 0.8} \approx 14.4\\)s, which already exceeds the upper bound — the feasibility window collapses, signaling that remote actions are inadvisable even at Degraded connectivity during high-failure-rate episodes.
+
 ### Adaptive Gain Scheduling
 
 The stability condition \\(K \cdot \tau < \pi/2\\) suggests a key insight: as feedback delay \\(\tau\\) varies with {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, the controller gain \\(K\\) should adapt accordingly.
@@ -1190,6 +1287,77 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surve
 
 ---
 
+## Dynamic Fidelity Scaling
+
+Self-measurement is a parasitic load. Every gossip round, every Kalman update, every reputation EWMA consumed by the autonomic framework is energy subtracted from the mission. At full battery this overhead is negligible; near the survival threshold it competes directly with the functions it was designed to protect. Dynamic Fidelity Scaling (DFS) formalizes the feedback loop that throttles autonomic overhead as resources deplete — treating monitoring as a luxury that must be earned by having a surplus.
+
+<span id="def-46"></span>
+**Definition 46** (Autonomic Overhead Power Map). *Let \\(\mathcal{P}_k\\) denote the sustained power draw of level \\(L_k\\) autonomic tasks — monitoring, analysis, learning, and fleet coordination — excluding mission payload (propulsion, weapons sensors, payload compute). Decompose as:*
+
+{% katex(block=true) %}
+\mathcal{P}_k = P_{\mathrm{radio}}(k) + P_{\mathrm{compute}}(k) = \lambda_k \cdot T_s + f_{\mathrm{alg}}(k) \cdot T_d
+{% end %}
+
+*where \\(\lambda_k\\) is the gossip rate at level \\(k\\) (packets/second), \\(T_s\\) is the energy per radio packet, \\(f_{\mathrm{alg}}(k)\\) is the decision rate of level-\\(k\\) algorithms, and \\(T_d\\) is the energy per local compute decision (both from Def 21). Because \\(T_s / T_d \approx 10^2\text{–}10^3\\), radio cost dominates — gossip rate is the primary autonomic power lever.*
+
+For RAVEN (\\(T_s = 5\\) mJ/packet, \\(T_d = 50\\,\mu\text{J}\\)/decision):
+
+| Level | Primary autonomic tasks | Gossip \\(\lambda_k\\) | \\(P_{\mathrm{radio}}\\) | \\(P_{\mathrm{compute}}\\) | \\(\mathcal{P}_k\\) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| L0 | Heartbeat beacon | 1/60 Hz | ~0.08 mW | ~0 | ~0.1 mW |
+| L1 | EWMA anomaly detection | 0.5 Hz | 2.5 mW | ~0.05 mW | ~3 mW |
+| L2 | Kalman filter + state sync | 2 Hz | 10 mW | ~0.5 mW | ~11 mW |
+| L3 | HLC + BFT peer validation | 4 Hz | 20 mW | ~1 mW | ~21 mW |
+| L4 | Quorum + reputation learning | 8 Hz | 40 mW | ~2 mW | ~42 mW |
+
+*The L0–L4 ratio \\(\mathcal{P}_4 / \mathcal{P}_0 \approx 420\\) means full-fidelity autonomic operation consumes 420 times the power of heartbeat-only mode — a factor that dominates survival time in power-limited emergency conditions.*
+
+<span id="def-47"></span>
+**Definition 47** (Observation Regime Schedule). *Let \\(R(t) \in [0,1]\\) be the normalized resource availability (battery SOC for power-constrained nodes). Define five observation regimes with hysteretic thresholds — downgrade threshold \\(\theta_k^{\mathrm{dn}}\\) and upgrade threshold \\(\theta_k^{\mathrm{up}} = \theta_k^{\mathrm{dn}} + \delta_{\mathrm{hyst}}\\) with hysteresis band \\(\delta_{\mathrm{hyst}} = 0.05\\):*
+
+| Regime | \\(R(t)\\) range (downgrade) | Active level | Suspended tasks |
+| :--- | :--- | :--- | :--- |
+| \\(O_4\\) High Fidelity | \\(R \geq 0.90\\) | L0–L4 | None |
+| \\(O_3\\) Reduced Learning | \\([0.50,\; 0.90)\\) | L0–L3 | Bandit/Q-learning updates (Def 33), reputation EWMA (Def 44) |
+| \\(O_2\\) Conservation | \\([E_{\mathrm{PLM}},\; 0.50)\\) | L0–L1 | Kalman (Def 23), HLC tracking (Def 40), BFT validation (Def 43), gossip reduced to 0.5 Hz |
+| \\(O_1\\) Survival | \\([E_{\mathrm{HSS}},\; E_{\mathrm{PLM}})\\) | L0 only | All radio transmissions, all analysis, all learning |
+| \\(O_0\\) Terminal | \\(R < E_{\mathrm{HSS}}\\) | None | Trigger \\(\mathcal{S}_{\mathrm{term}}\\) (Def 36) |
+
+*Downgrade is immediate on threshold crossing; upgrade requires \\(R(t) > \theta_k^{\mathrm{dn}} + \delta_{\mathrm{hyst}}\\) to prevent oscillation near the boundary.*
+
+<span id="prop-45"></span>
+**Proposition 45** (Self-Throttling Survival Gain). *Let \\(Q\\) be the mission payload power (propulsion, payload compute; \\(Q = 0\\) in emergency ground mode). The survival time from current resource level \\(R(t)\\) to the next critical threshold \\(\theta_{k-1}\\) under regime \\(O_k\\) is:*
+
+{% katex(block=true) %}
+T_{\mathrm{survive}}^{(k)}(R) = \frac{\bigl(R(t) - \theta_{k-1}\bigr) \cdot E_{\max}}{Q + \mathcal{P}_k}
+{% end %}
+
+*The marginal survival gain from downgrading \\(O_{k+1} \to O_k\\) is:*
+
+{% katex(block=true) %}
+\Delta T^{(k)} = \bigl(R(t) - \theta_{k-1}\bigr) \cdot E_{\max} \cdot \left(\frac{1}{Q + \mathcal{P}_k} - \frac{1}{Q + \mathcal{P}_{k+1}}\right) > 0
+{% end %}
+
+*since {% katex() %}\mathcal{P}_k < \mathcal{P}_{k+1}{% end %} by construction. Throttling always extends survival time; the only cost is reduced observability fidelity.*
+
+*Self-throttling trigger*: the node transitions \\(O_{k+1} \to O_k\\) the instant \\(R(t)\\) crosses \\(\theta_k^{\mathrm{dn}}\\) from above, and immediately suspends the tasks listed in Def 47. Regime state is stored in non-volatile memory so that a warm-reboot restores the correct throttle level without re-running \\(R(t)\\) estimation from scratch. \\(\square\\)
+
+<span id="prop-46"></span>
+**Proposition 46** (Autonomic Overhead Paradox). *In PLM mode (\\(Q = Q_{\mathrm{sensors}} \approx 5\\) mW for residual sensor power; propulsion off), the full-fidelity vs. survival-mode survival times to \\(E_{\mathrm{HSS}}\\) starting from \\(E_{\mathrm{PLM}} = 0.20\\) are:*
+
+{% katex(block=true) %}
+T_{\mathrm{survive}}^{(4)} = \frac{0.15 \times 1{,}110\;\mathrm{mWh}}{5 + 42\;\mathrm{mW}} \approx 3.5\;\mathrm{h}, \qquad
+T_{\mathrm{survive}}^{(1)} = \frac{0.15 \times 1{,}110\;\mathrm{mWh}}{5 + 0.1\;\mathrm{mW}} \approx 32.7\;\mathrm{h}
+{% end %}
+
+*The L4-to-L0 throttle multiplier is \\(T_{\mathrm{survive}}^{(1)} / T_{\mathrm{survive}}^{(4)} \approx 9.3\\times\\) — the difference between a recovery team arriving before battery death and the drone expiring unrecovered.*
+
+**The autonomic overhead paradox**: at \\(\theta_{\mathrm{survival}}\\), the monitoring infrastructure designed to keep the node alive must be the first thing suspended. A node that refuses to throttle its L4 autonomic tasks in a resource crisis consumes itself — the MAPE-K loop becomes the proximate cause of death rather than its cure. The correct model is lexicographic: survival first, then observability, then fidelity. When \\(R(t) \leq \theta_k^{\mathrm{dn}}\\), the node does not ask "will suspending this task hurt the mission?" — it asks "does this task cost more energy than it saves?"
+
+**Interaction with Prop 40** (Stale Data Threshold): In \\(O_1\\) (Survival), gossip is suspended entirely — no new measurements arrive, so \\(T_{\mathrm{stale}}\\) expires for all remote state. The node operates on stale world-state for the duration of \\(O_1\\). This is acceptable: in survival mode the only decision is whether to remain in \\(O_1\\) or transition to \\(O_0\\) (terminal), both of which are local decisions requiring no remote data.
+
+---
+
 ## Terminal Safety State
 
 The {% term(url="#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm's priority boundary — MVS components are repaired first") %}MVS{% end %} is the floor the healing algorithm defends. But the healing algorithm can itself fail — the MAPE-K loop may crash, its knowledge base may become corrupted, or its resource quota (\\(R_{\text{heal}}\\)) may be exhausted. Below MVS lies the {% term(url="#def-36", def="Operating mode entered when the entire autonomic framework has failed; selected by L0 hardware alone based on remaining energy; no L1-L4 software involvement") %}terminal safety state{% end %}: what the node does when all autonomy has been lost.
@@ -1229,7 +1397,7 @@ by L0 firmware as a function of remaining energy \\(E\\) alone:*
 | \\(E_{\mathrm{HSS}}\\) | Energy for one secure flash zeroization | 180 mJ measured at 3.7V; 5000 mAh battery: 5\% = 925 mJ; 5x margin | 5\% |
 | \\(E_{\mathrm{PLM}}\\) | PLM endurance until recovery team (72h) at 2 mA draw | 72h x 2 mA = 144 mAh (~3\%) + \\(E_{\mathrm{HSS}}\\) + 2x cold-battery margin | 20\% |
 
-Calibration procedure for any platform: (1) measure secure shutdown energy at minimum operating temperature (worst case); (2) compute minimum PLM endurance from recovery SLA at maximum PLM draw; (3) add 2x margin for battery capacity reduction at minimum operating temperature (Li-Ion loses 30–40\% at \\(-20\\)°C); (4) verify \\(E_{\mathrm{PLM}} > E_{\mathrm{HSS}}\\) by at least 10 percentage points to avoid threshold ambiguity near the boundary.
+Calibration procedure for any platform: (1) measure secure shutdown energy at minimum operating temperature (worst case); (2) compute minimum PLM endurance from recovery SLA at maximum PLM draw; (3) add 2x margin for battery capacity reduction at minimum operating temperature (Li-Ion loses 30–40\% at \\(-20^\circ\mathrm{C}\\)); (4) verify \\(E_{\mathrm{PLM}} > E_{\mathrm{HSS}}\\) by at least 10 percentage points to avoid threshold ambiguity near the boundary.
 
 *Critically, \\(\mathcal{S}_\mathrm{term}\\) selection must be implemented entirely within
 L0 firmware — the transition logic must satisfy the {% term(url="@/blog/2026-01-15/index.md#def-35",
@@ -1263,6 +1431,98 @@ beacon at 30-second intervals on the recovery frequency. The swarm's gossip heal
 (Definition 5) marks Drone 23 as RECOVERY-BEACON and routes a cluster lead to attempt L1+
 re-initialization via the BOM command channel. This is exactly the failure mode that Proposition
 37 guarantees can be reached: from any state, regardless of which layers have failed.
+
+---
+
+## Autonomic Gateway
+
+Most engineering analysis in this series assumes the managed hardware presents an observable health telemetry API — a process that responds to queries, emits structured health metrics, and accepts configuration commands. That assumption fails for legacy industrial equipment, embedded controllers, and tactical hardware designed before autonomic systems existed.
+
+A 1990s diesel generator does not report its internal temperature. A legacy motor controller does not export a health vector. A cold-war-era radio does not accept remote restart commands. Yet these devices must participate in the MAPE-K healing loop — the system cannot simply exclude them because they lack a modern interface.
+
+The **Autonomic Gateway** is a software adapter that presents legacy hardware to the MAPE-K loop as if it were a fully observable, API-driven system: it synthesizes health metrics from proxy signals, maps healing actions onto physical actuation primitives, and enforces cooldown and pre-condition constraints that the underlying hardware cannot enforce itself.
+
+<span id="def-48"></span>
+**Definition 48** (Autonomic Gateway). An *Autonomic Gateway* for a legacy hardware device \\(D\\) is a tuple \\(G = (H, O, \varphi, A, \Gamma)\\) where:
+
+- \\(H = \\{h_1, \ldots, h_m\\}\\) is the set of *target health metrics* that the MAPE-K Monitor phase expects (e.g., temperature, fuel level, operational state)
+- \\(O = \\{o_1, \ldots, o_k\\}\\) is the set of *observable proxy signals* physically accessible from the gateway controller (e.g., current draw, ambient temperature, vibration amplitude, exhaust flow)
+- \\(\varphi : O \to H\\) is the *inference function* mapping observable proxies to health metric estimates; for each \\(h_i \in H\\), \\(\varphi_i(o)\\) yields a point estimate \\(\hat{h}_i\\) and uncertainty interval \\(\sigma_i\\)
+- \\(A = \\{a_1, \ldots, a_p\\}\\) is the set of *physical actuation primitives* the gateway can execute on \\(D\\) (e.g., Modbus register write, GPIO signal, relay close, power cycle)
+- \\(\Gamma : \text{HealingAction} \to 2^A\\) is the *actuation mapping* from MAPE-K healing commands to ordered sequences of physical primitives, including pre-conditions, post-conditions, and cooldown requirements
+
+The gateway presents \\((H, \Gamma(\cdot))\\) to the MAPE-K loop and hides \\((O, \varphi, A)\\) as implementation details.
+
+**OUTPOST generator example**: \\(H = \\{\text{coolant\\_temp}, \text{fuel\\_level}, \text{op\\_state}\\}\\). The generator has no telemetry port. The gateway observes current draw, ambient temperature, exhaust temperature, and vibration. The MAPE-K loop sees structured health reports and issues restart/shutdown commands; the gateway translates those commands into Modbus register writes and GPIO relay signals.
+
+<span id="def-49"></span>
+**Definition 49** (Synthetic Health Metric). A *synthetic health metric* \\(\hat{h} = \varphi_i(o_1, \ldots, o_k)\\) is an inferred measurement of a device-internal quantity that the hardware does not report directly, derived from a physical model relating observable proxy signals to the target quantity.
+
+For the OUTPOST diesel generator, the gateway infers engine thermal state from an RC thermal circuit model. Let \\(P_\text{loss}(t) = V_\text{run} \cdot I(t) \cdot (1 - \eta)\\) be the waste-heat power at time \\(t\\), where \\(I(t)\\) is measured current draw, \\(V_\text{run}\\) is nominal supply voltage, and \\(\eta\\) is mechanical efficiency. Engine temperature evolves as:
+
+{% katex(block=true) %}
+\hat{T}_\text{engine}(t) = T_\text{amb}(t) + R_\text{th} \cdot P_\text{loss}(t) \cdot \left(1 - e^{-s(t)/\tau_\text{th}}\right)
+{% end %}
+
+where \\(R_\text{th}\\) is thermal resistance, \\(\tau_\text{th}\\) is the thermal time constant, and \\(s(t)\\) is elapsed run time since the last cold start. Both \\(R_\text{th}\\) and \\(\tau_\text{th}\\) are calibrated once at commissioning by running the generator to thermal steady state while logging current draw and exhaust temperature.
+
+**Model uncertainty**: \\(\varphi_i\\) carries irreducible estimation error \\(\sigma_i^2 = \sigma_\text{model}^2 + \sigma_\text{sensor}^2\\), where \\(\sigma_\text{model}^2\\) is the model residual variance and \\(\sigma_\text{sensor}^2\\) is proxy sensor measurement noise. The MAPE-K Analyze phase must treat \\(\hat{h}_i \pm k\sigma_i\\) as the health estimate, not \\(\hat{h}_i\\) as a point truth.
+
+<span id="prop-47"></span>
+**Proposition 47** (Gateway Signal Coverage Condition). *A gateway \\(G = (H, O, \varphi, A, \Gamma)\\) provides valid synthetic observability to the MAPE-K loop if and only if the following three conditions hold for every health metric \\(h_i \in H\\):*
+
+{% katex(block=true) %}
+\begin{aligned}
+(\text{Coverage})    &\quad \exists\;\varphi_i : O \to \hat{h}_i \;\text{ with }\; \mathbb{E}\!\left[|\hat{h}_i - h_i|\right] \leq \delta_i \\[4pt]
+(\text{Timeliness})  &\quad T_\text{infer}(o \to \hat{h}_i) \leq T_\text{monitor} \\[4pt]
+(\text{Uncertainty}) &\quad \sigma_i \leq \sigma_{\text{threshold},i}
+\end{aligned}
+{% end %}
+
+*where \\(\delta_i\\) is the acceptable bias for metric \\(h_i\\), \\(T_\text{monitor}\\) is the MAPE-K monitor period, and \\(\sigma_{\text{threshold},i}\\) is the maximum uncertainty the anomaly detector can tolerate while maintaining its false-alarm guarantee (Prop 3).*
+
+*Proof sketch*: If Coverage holds, the Analyze phase operates on a \\(\delta_i\\)-biased estimate, expanding the anomaly detection threshold by \\(k\delta_i\\). If Timeliness holds, the Monitor phase is not stale — inference completes within one monitoring window. If Uncertainty holds, the false-alarm rate of Prop 3 is preserved: substituting {% katex() %}\hat{h}_i \pm \sigma_i{% end %} into the threshold criterion expands the effective threshold by at most \\(k\sigma_i\\), which stays within the design margin when \\(\sigma_i \leq \sigma_{\text{threshold},i}\\). If any condition fails, monitoring quality for that metric degrades to at most Heartbeat-Only (L0) level. \\(\square\\)
+
+**OUTPOST calibration**: At commissioning, the thermal model achieves mean absolute error \\(3.2^\circ\text{C}\\) — below \\(\delta_T = 5^\circ\text{C}\\). Inference runs in 2ms on the gateway ARM processor — below \\(T_\text{monitor} = 5\text{s}\\). Cold-start uncertainty (first 30 seconds before \\(\tau_\text{th}\\) stabilizes) produces \\(\sigma_T = 8^\circ\text{C}\\), exceeding \\(\sigma_\text{threshold} = 5^\circ\text{C}\\): the gateway signals "thermal state uncertain" and the MAPE-K loop withholds temperature-dependent healing decisions until \\(s(t) > 30\text{s}\\).
+
+<span id="def-50"></span>
+**Definition 50** (Legacy Recovery Cascade). A *Legacy Recovery Cascade* for hardware \\(D\\) is an ordered sequence of recovery tiers \\(\mathcal{T} = \langle T_1, T_2, T_3, T_4 \rangle\\), where each tier \\(T_k\\) is a tuple \\((\text{pre}_k, \text{act}_k, \text{post}_k, W_k, C_k)\\):
+
+- \\(\text{pre}_k\\): pre-condition predicate that must hold before \\(T_k\\) may execute
+- \\(\text{act}_k\\): the physical actuation sequence (ordered primitives from \\(A\\))
+- \\(\text{post}_k\\): post-condition predicate verifying that the tier had effect
+- \\(W_k\\): recovery observation window [s] — time to wait before evaluating \\(\text{post}_k\\)
+- \\(C_k\\): cooldown period [s] — minimum time between successive invocations of tier \\(k\\)
+
+The cascade executes tiers in order, advancing to \\(T_{k+1}\\) only if \\(\text{post}_k\\) evaluates false after \\(W_k\\) seconds.
+
+**OUTPOST generator cascade**:
+
+| Tier | Action | Pre-condition | Post-condition | Window | Cooldown |
+| :--- | :--- | :--- | :--- | ---: | ---: |
+| \\(T_1\\) | Modbus soft reset | Link up; engine below \\(90^\circ\text{C}\\) | Op state = RUNNING within 30s | 30s | 60s |
+| \\(T_2\\) | Controlled stop then start (GPIO) | Engine below \\(70^\circ\text{C}\\); at least 60s since \\(T_1\\) | Current resumes baseline +/-10 A | 45s | 300s |
+| \\(T_3\\) | Full power cycle via relay | At least 5 min since \\(T_2\\); fuel above 20% | Op state = RUNNING and current above 0 | 60s | 900s |
+| \\(T_4\\) | Human escalation | All prior tiers failed; mission at or below BOM threshold | Operator acknowledged | — | — |
+
+<span id="prop-48"></span>
+**Proposition 48** (Recovery Cascade Correctness). *Let \\(D_\text{recovery}\\) be the deadline by which the MAPE-K healing loop must restore \\(D\\) to an operational state. The Legacy Recovery Cascade \\(\mathcal{T}\\) satisfies the healing deadline (Prop 8) if:*
+
+{% katex(block=true) %}
+\sum_{k=1}^{K^*} \left(W_k + C_k + t_{\text{act},k}\right) \leq D_\text{recovery}
+{% end %}
+
+*where \\(K^\*\\) is the highest tier that must be attempted before declaring the device failed, and \\(t_{\text{act},k}\\) is the actuation duration of tier \\(k\\). Additionally, the thermal pre-condition {% katex() %}\hat{T}_\text{engine} < T_{\max,k}{% end %} must hold at each tier boundary; if violated, the cascade suspends until the thermal model predicts cooling below the threshold.*
+
+*Proof*: By induction on tier index. Base: \\(T_1\\) executes if {% katex() %}\text{pre}_1{% end %} holds and completes in \\(t_{\text{act},1} + W_1\\). Inductive step: if \\(T_k\\) fails ({% katex() %}\text{post}_k{% end %} is false), the cascade advances to {% katex() %}T_{k+1}{% end %} after cooldown \\(C_k\\). Total elapsed time at tier \\(K^\*\\) is \\(\sum_{k=1}^{K^\*}(t_{\text{act},k} + W_k + C_k)\\). Deadline satisfaction follows. The thermal suspension is correct: a hot restart at \\(\hat{T}_\text{engine} > 90^\circ\text{C}\\) risks mechanical seizure, converting a recoverable fault into permanent failure. \\(\square\\)
+
+**OUTPOST worst case**: \\(D_\text{recovery} = 90\\) min (MVS requirement: backup power within 90 minutes of primary failure). Attempting \\(T_1 \to T_2 \to T_3\\) in sequence: \\((30+60) + (45+300) + (60+900) = 1395\\text{s} = 23.25\\) min — well within the deadline. If the generator is hot at failure (\\(\hat{T}_\text{engine} = 92^\circ\text{C}\\)), the cascade suspends \\(T_1\\) and \\(T_2\\) until cooling. Using the thermal model, cooldown from \\(92^\circ\text{C}\\) to \\(70^\circ\text{C}\\) at ambient \\(30^\circ\text{C}\\):
+
+{% katex(block=true) %}
+t_\text{cool} = \tau_\text{th} \cdot \ln\!\left(\frac{92 - 30}{70 - 30}\right) \approx 1800 \cdot \ln(1.55) \approx 756\;\text{s} \approx 12.6\;\text{min}
+{% end %}
+
+Total cascade time with thermal wait: \\(12.6 + 23.25 = 35.85\\) min — still within the 90-minute deadline, but consuming 40% of the available budget, leaving limited margin if \\(T_3\\) also fails.
 
 ---
 

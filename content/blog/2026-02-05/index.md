@@ -510,7 +510,193 @@ The update rules are:
 
 **Bandwidth budget verification**: CONVOY (12 vehicles, 4-byte integers, 100 state updates/minute, 9.6 kbps half-duplex link at 60\% duty cycle = 5,760 bits/s available): vector clock overhead per update = \\(12 \times 4 = 48\\) bytes; at 100/min: \\(48 \times 100/60 = 80\\) bytes/s = 640 bits/s. Overhead fraction: \\(640/5760 \approx 11\\%\\) — acceptable. RAVEN (47 drones, 200 updates/minute per node, same link class): \\(47 \times 4 = 188\\) bytes/update; at 200/min: \\(188 \times 200/60 \approx 627\\) bytes/s = 5,016 bits/s \\(\approx 52\\%\\) overhead — marginal and breaks under burst traffic. **Mitigation for RAVEN**: switch to interval tree clocks (Mukund & Kulkarni 2016) or dotted version vectors — these encode \\(O(\text{clusters})\\) integers instead of \\(O(\text{nodes})\\), reducing per-update overhead to ~48 bytes (8 cluster IDs x 4 bytes + 8 sequence numbers x 4 bytes), dropping link overhead from 52\% to ~10\%. Causality guarantees are preserved at cluster granularity rather than node granularity.
 
-**Mitigation**: Hybrid Logical Clocks add a monotonic counter to wall time to handle NTP skew; see Kulkarni et al. (2014) for details. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, LWW on route decisions is unreliable because a vehicle with a fast clock always wins regardless of information freshness — application semantics require considering intel recency, not just decision timestamp.
+**Mitigation**: Hybrid Logical Clocks add a monotonic counter to wall time to handle NTP skew; see Kulkarni et al. (2014) for the foundational analysis. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, LWW on route decisions is unreliable because a vehicle with a fast clock always wins regardless of information freshness — application semantics require considering intel recency, not just decision timestamp. Def 40–42 below formalize the HLC structure, the causality-aware merge function, and the re-sync protocol for massively drifted nodes.
+
+<span id="def-40"></span>
+**Definition 40** (Hybrid Logical Clock). *A Hybrid Logical Clock on node \\(j\\) is a tuple \\(h_j = (l_j, c_j)\\) where \\(l_j\\) is the logical watermark — the maximum physical timestamp ever observed by node \\(j\\) from its own clock or received messages — and \\(c_j\\) is a counter that increments when consecutive events share the same watermark. HLC tuples are ordered lexicographically:*
+
+{% katex(block=true) %}
+(l_1, c_1) \prec (l_2, c_2) \;\iff\; l_1 < l_2, \;\text{or}\; (l_1 = l_2 \text{ and } c_1 < c_2)
+{% end %}
+
+*On a local send or write event at node \\(j\\), letting \\(l_j^{\mathrm{prev}}\\) denote the watermark before the event and \\(\lfloor \mathrm{pt}_j \rfloor\\) the current physical clock reading:*
+
+{% katex(block=true) %}
+l_j \leftarrow \max(l_j^{\mathrm{prev}},\, \lfloor \mathrm{pt}_j \rfloor), \qquad
+c_j \leftarrow \begin{cases} c_j + 1 & \text{if } l_j = l_j^{\mathrm{prev}} \\ 0 & \text{otherwise} \end{cases}
+{% end %}
+
+*On receiving a message with HLC \\((l_m, c_m)\\), letting {% katex() %}l' = \max(l_j, l_m, \lfloor \mathrm{pt}_j \rfloor){% end %}:*
+
+{% katex(block=true) %}
+c_j \leftarrow \begin{cases}
+\max(c_j, c_m) + 1 & \text{if } l' = l_j = l_m \\
+c_j + 1            & \text{if } l' = l_j > l_m \\
+c_m + 1            & \text{if } l' = l_m > l_j \\
+0                  & \text{otherwise}
+\end{cases}, \qquad l_j \leftarrow l'
+{% end %}
+
+*Each CRDT operation carries metadata \\((n_j, h_j)\\) where \\(n_j\\) is the node identifier. The pair \\((n_j, h_j)\\) globally and uniquely identifies the operation.*
+
+<span id="prop-41"></span>
+**Proposition 41** (HLC Causal Ordering Properties). *For any two events \\(e\\), \\(f\\) with HLC timestamps \\(h_e\\), \\(h_f\\) on a fleet with maximum physical clock skew \\(\epsilon\\):*
+
+1. *\\(l_j \geq \lfloor \mathrm{pt}_j \rfloor\\) at all times — the HLC watermark never lags physical time.*
+2. *If \\(e \to f\\) (e causally precedes f ), then \\(h_e \prec h_f\\).*
+3. *\\(l_j - \lfloor \mathrm{pt}_j \rfloor \leq \epsilon\\) — the watermark exceeds physical time by at most the fleet-wide clock skew.*
+4. *If a received message has \\(l_m - \lfloor \mathrm{pt}_j \rfloor > \epsilon\\), the sender's clock is anomalous — the message was generated from an out-of-bound clock state.*
+
+*Proof sketch*: Properties 1–2 follow from the update rules: \\(l\\) always advances by at least the current physical timestamp, and a receive event produces \\(h_j\\) strictly greater than \\(h_m\\) (by incrementing \\(c\\) when watermarks coincide), preserving causal monotonicity. Property 3 holds when fleet clocks are bounded by a common authority (GPS PPS or NTP stratum 1) with skew \\(\leq \epsilon\\). Property 4 follows from property 3: any correctly-synchronized receiver seeing a watermark more than \\(\epsilon\\) above its physical time has received evidence of a clock anomaly. \\(\square\\)
+
+<span id="def-41"></span>
+**Definition 41** (HLC-Aware CRDT Merge Function). *Let \\(s_1, s_2\\) be CRDT states with HLC timestamps \\(h_1, h_2\\) and node identifiers \\(n_1, n_2\\). The HLC-Aware Merge function replaces the physical-timestamp LWW test `if ts1 > ts2`:*
+
+{% katex(block=true) %}
+\mathbf{Merge}(s_1, h_1;\; s_2, h_2) =
+\begin{cases}
+s_2      & \text{if } h_1 \prec h_2 \\
+s_1      & \text{if } h_2 \prec h_1 \\
+s_1 \sqcup s_2 & \text{if } h_1 \parallel h_2
+\end{cases}
+{% end %}
+
+*where \\(h_1 \parallel h_2\\) denotes causal concurrency (neither precedes the other) and \\(\sqcup\\) is the CRDT join (least upper bound in the semilattice). When \\(h_1 \parallel h_2\\), no write is discarded — the join resolves the conflict without relying on clock ordering.*
+
+Per-type instantiation of the concurrent case:
+
+| CRDT type | Causal case | Concurrent case (\\(s_1 \sqcup s_2\\)) |
+| :--- | :--- | :--- |
+| LWW-Register | Higher \\(h\\) wins | Deterministic tiebreaker: higher \\(n\\) wins |
+| G-Counter | Not applicable | Componentwise max per node |
+| OR-Set | Not applicable | Union of (element, tag) pairs |
+| RGA sequence | Insert ordered by \\(h\\) | Concurrent inserts ordered by \\((h, n)\\) |
+
+The node-ID tiebreaker for concurrent LWW-Register writes gives every node a deterministic, agreed-upon total order extension — no coordination required. A clock that drifts 10 minutes fast no longer silently wins all concurrent decisions; it simply dominates the \\(l\\) field, which after Phase 2 repair (Def 42) is corrected before merging.
+
+<span id="def-42"></span>
+**Definition 42** (Drift-Quarantine Re-sync Protocol). *When partitioned node \\(j\\) rejoins with signed drift \\(\Delta_j = l_j - \max_{i \in \mathrm{peers}} l_i\\) (positive: clock ran fast; negative: clock ran slow), execute the following four phases:*
+
+**Phase 0 — Detection**: Compute \\(\Delta_j\\) on first peer message exchange. If \\(|\Delta_j| \leq \epsilon\\): normal rejoin. If \\(|\Delta_j| > \epsilon\\): quarantine.
+
+**Phase 1 — Quarantine**: Node \\(j\\) enters read-only mode — no new local writes are accepted; only incoming gossip is processed.
+
+**Phase 2 — HLC Repair**: Reset the watermark and advance the counter past all observed peers:
+
+{% katex(block=true) %}
+l_j \leftarrow \max\!\left(l_j,\; \max_{i \in \mathrm{peers}} l_i\right), \qquad c_j \leftarrow \max_{i \in \mathrm{peers}} c_i + 1
+{% end %}
+
+**Phase 3 — Causality Audit**: For each operation \\(o = (s, h_{\mathrm{local}}, n_j)\\) generated during the partition:
+
+- **Concurrent** (\\(h_{\mathrm{local}} \parallel h_{\mathrm{peers}}\\) for all conflicting peers at that key): legitimate concurrent write — apply \\(\mathbf{Merge}\\) (Def 41) using the CRDT join \\(\sqcup\\). No data is discarded.
+- **Fast-clock** (\\(\Delta_j > 0\\)): \\(h_{\mathrm{local}}\\) may dominate peer HLCs at causally prior positions. Reissue \\(o\\) with repaired HLC \\((l_j^{\mathrm{repaired}}, c_j + k)\\) where \\(k\\) preserves causal order among local operations. The operation joins the fleet as concurrent, not as "future winner."
+- **Slow-clock** (\\(\Delta_j < 0\\)): \\(h_{\mathrm{local}} \prec h_{\mathrm{peers}}\\) — \\(o\\) is causally prior. \\(\mathbf{Merge}\\) overrides \\(o\\) only if a peer write is its causal successor; concurrent peer writes are joined via \\(\sqcup\\), not silently discarded.
+
+**Phase 4 — Exit Quarantine**: When all partition operations are audited and CRDT state has converged with peers, exit read-only mode and resume normal HLC operation.
+
+<span id="prop-42"></span>
+**Proposition 42** (Re-sync Correctness). *The Drift-Quarantine Protocol (Def 42) guarantees:*
+
+1. *Convergence: after re-sync, all nodes agree on the same CRDT state in \\(O(|P| \cdot n)\\) gossip rounds, where \\(|P|\\) is the number of partition operations and \\(n\\) the fleet size.*
+2. *Completeness: no partition operation is silently discarded — every operation is classified as causally ordered or concurrent and handled by Def 41.*
+3. *Fast-clock neutralization: no reissued operation retains an HLC watermark above the repaired network watermark. The "future writes win" failure mode is eliminated.*
+4. *Slow-clock protection: operations with low HLC watermarks are not silently overwritten; they survive as concurrent when no peer operation is their causal successor.*
+
+*Proof sketch*: Property 1 follows from CRDT convergence (Prop 13): the merged state is the join of all operations, converging regardless of evaluation order. Property 2 follows from Phase 3: every operation is explicitly classified. Properties 3–4 follow from Phase 2 HLC repair: after repair, \\(l_j = \max(l_j, l_{\mathrm{network}}) \geq l_{\mathrm{network}}\\), neutralizing the fast-clock advantage; concurrent operations survive via \\(\sqcup\\). \\(\square\\)
+
+**Concrete scenario**: Drone 23 partitioned for 47 minutes; its RTC drifted 12 minutes fast (\\(\Delta_j = +720\\)s). Without HLC: all 847 local writes have {% katex() %}\mathrm{ts}_{\mathrm{local}} > \mathrm{ts}_{\mathrm{network}} + 720{% end %}s, silently overwriting 12 minutes of correct fleet state on rejoin — the fleet loses cohesion. With Def 42: Drone 23 enters quarantine, Phase 2 repairs \\(l_j\\), Phase 3 classifies all 847 writes as causally concurrent with peer writes in the same time window, and they are merged via OR-Set and RGA join operations — not silently winning. Convergence completes in 3 gossip rounds (consistent with Prop 4 on the RAVEN 47-drone topology).
+
+### Logical Validation: Peer Corroboration and Byzantine-Resilient Quorum
+
+Secure Boot attestation (Phase 0 in the FAC, Def 37) proves a node runs verified firmware — it does not prove its sensors report truthful physical state. A physically compromised node with valid attestation can inject false position, sensor readings, or health data, passing all cryptographic checks while corrupting the fleet's shared state model. The following definitions address logical validation: truth as what the fleet independently verifies from physics, not what a node asserts.
+
+<span id="def-43"></span>
+**Definition 43** (Peer-Validation Layer). *For claim \\(c = (\tau_c, v, h, \sigma_j)\\) of type \\(\tau_c\\) with value \\(v\\), HLC timestamp \\(h\\), and signature \\(\sigma_j\\) from node \\(j\\), define the physical plausibility predicate at neighbor \\(i\\) as \\(\phi(c, i) \in \{0, 1\}\\). Per claim type:*
+
+| Claim type | Plausibility condition (\\(\phi(c,i) = 1\\) when) |
+| :--- | :--- |
+| Position | i's LIDAR/radar detects an object within \\(\epsilon_{\mathrm{pos}}\\) of claimed coordinates |
+| Sensor reading | reading deviation from neighbor is bounded by physical gradient times separation distance |
+| Battery state | reported level is within energy-model margin \\(B_{\mathrm{margin}}\\) of the predicted value |
+
+For sensor readings, the condition is \\(\vert v_i - v \vert \leq \sigma_{\mathrm{grad}} \cdot d(i, j)\\), where \\(\sigma_{\mathrm{grad}}\\) is the maximum physical field gradient (e.g., temperature \\(^\circ\text{C/m}\\)). *The corroboration count over \\(k\\) nearest neighbors \\(N_k(j)\\) is:*
+
+{% katex(block=true) %}
+\kappa(c, j) = \sum_{i \in N_k(j)} \phi(c, i)
+{% end %}
+
+*Claim \\(c\\) from node \\(j\\) is accepted into shared CRDT state only if \\(\kappa(c, j) \geq k_{\mathrm{accept}}\\). For RAVEN: \\(k = 6\\) nearest neighbors, \\(k_{\mathrm{accept}} = 4\\) (two-thirds majority of neighbors).*
+
+<span id="prop-43"></span>
+**Proposition 43** (Peer-Validation False-Acceptance Bound). *Let \\(p_{\mathrm{fool}}\\) be the probability that a single neighbor sensor is independently fooled into corroborating a false claim. Under independent sensor compromise, the probability a false claim is accepted is:*
+
+{% katex(block=true) %}
+P(\text{false claim accepted}) = \sum_{m=k_{\mathrm{accept}}}^{k} \binom{k}{m} p_{\mathrm{fool}}^{\,m} (1 - p_{\mathrm{fool}})^{k-m}
+{% end %}
+
+*For RAVEN (\\(k = 6\\), \\(k_{\mathrm{accept}} = 4\\), \\(p_{\mathrm{fool}} = 0.10\\)):*
+
+{% katex(block=true) %}
+P(\text{false accepted}) = \binom{6}{4}(0.1)^4(0.9)^2 + \binom{6}{5}(0.1)^5(0.9) + (0.1)^6 \approx 1.22 \times 10^{-3}
+{% end %}
+
+**Correlated attack caveat**: Independence fails under coordinated GPS spoofing or cluster-level physical compromise. Countermeasure: require corroboration from sensors of distinct physical modalities (LIDAR, radar, optical, magnetometer) — spatial correlation of spoofing across modalities is far lower than within a single modality. An adversary simultaneously fooling \\(k_{\mathrm{accept}}\\) independent sensing principles has achieved a level of compromise that is qualitatively outside the Byzantine fault model of Def 7.
+
+<span id="def-44"></span>
+**Definition 44** (Reputation-Weighted Fleet Coherence Vote). *Each node \\(i\\) maintains a reputation vector \\(\mathbf{r}(t) = [r_1(t), \ldots, r_n(t)]\\) with \\(r_j \in [0, 1]\\), updated by EWMA on corroboration outcomes:*
+
+{% katex(block=true) %}
+r_j(t) \leftarrow \alpha_r \cdot \mathbf{1}[\kappa(c_j, \cdot) \geq k_{\mathrm{accept}}] + (1 - \alpha_r) \cdot r_j(t-1)
+{% end %}
+
+*where \\(\alpha_r \ll 1\\) (slow adaptation — prevents Byzantine manipulation of the reputation update itself). The weighted vote of node \\(i\\) on claim \\(c\\) from node \\(j\\) is \\(V_i(c) = r_i(t) \cdot \phi(c, i)\\). Claim \\(c\\) is accepted under reputation weighting if:*
+
+{% katex(block=true) %}
+\frac{\sum_{i \in N_k(j)} V_i(c)}{\sum_{i \in N_k(j)} r_i(t)} \geq \theta_{\mathrm{vote}}
+{% end %}
+
+*The effective Byzantine fraction after \\(T\\) gossip rounds, as Byzantine nodes consistently fail corroboration and receive EWMA weight 0 each round:*
+
+{% katex(block=true) %}
+f_{\mathrm{eff}}(T) = \frac{\sum_{j \in \mathcal{B}} r_j(T)}{\sum_{j \in V} r_j(T)} \approx \frac{f_0 \cdot (1-\alpha_r)^T}{1 - f_0 + f_0 \cdot (1-\alpha_r)^T}
+{% end %}
+
+*where \\(f_0 = \vert \mathcal{B} \vert / n\\). Byzantine nodes decay toward \\(r_j = 0\\) without removal — their vote weight becomes negligible.*
+
+**Connection to Prop 6**: Prop 6 (Byzantine Tolerance Bound) requires \\(f < n/3\\) under uniform trust weights. Def 44 relaxes this: once \\(f_{\mathrm{eff}}(T) < 1/3\\), the weighted scheme satisfies the tolerance bound even if the physical count \\(\vert \mathcal{B} \vert \geq n/3\\) — provided the reputation system has accumulated sufficient rounds. The minimum round count is \\(T_{\mathrm{excl}} \approx \ln(3f_0 / (1 - 3f_0)) / \alpha_r\\) (the time for \\(f_{\mathrm{eff}}\\) to fall below \\(1/3\\) when \\(f_0 < 1/3\\)).
+
+<span id="def-45"></span>
+**Definition 45** (Logical Quorum for High-Stakes Decisions). *For capability level L3 and above transitions (Collaborative Planning, Full Integration) or commanded terminal safety state triggers (Def 36), a logical quorum \\(Q \subseteq V\\) must satisfy all five conditions simultaneously:*
+
+1. **Size**: \\(\vert Q \vert \geq \lceil 2n/3 \rceil + 1\\)
+2. **Reputation**: \\(\sum_{i \in Q} r_i(t) \geq \theta_Q \cdot \sum_{i \in V} r_i(t)\\)
+3. **Corroboration currency**: every \\(i \in Q\\) has passed peer validation (\\(\kappa(c_i, \cdot) \geq k_{\mathrm{accept}}\\)) within the last \\(T_{\mathrm{stale}}\\) seconds (Prop 40)
+4. **Causal consistency**: \\(\max_{i \in Q} h_i - \min_{i \in Q} h_i \leq \tau_Q\\) where \\(h_i\\) is the HLC vote timestamp (Def 40) — all quorum votes lie in the same causal window
+5. **Spatial diversity**: no single communication cluster contributes more than \\(\lfloor \vert Q \vert / 2 \rfloor\\) votes — the quorum spans at least two physically separated clusters
+
+*Decision \\(D\\) is logically validated if a valid logical quorum \\(Q\\) exists and:*
+
+{% katex(block=true) %}
+\left|\left\{i \in Q : \mathrm{vote}_i(D) = \mathrm{YES}\right\}\right| \geq \left\lceil \frac{2\,|Q|}{3} \right\rceil
+{% end %}
+
+**RAVEN "Change Mission" parameters** (\\(n = 47\\), \\(f \leq 15\\)):
+- Size: \\(\vert Q \vert \geq \lceil 94/3 \rceil + 1 = 33\\)
+- Reputation threshold: \\(\theta_Q = 0.75\\)
+- Causal window: \\(\tau_Q = 11.2\\)s (Contested \\(T_{\mathrm{stale}}\\) from Prop 40)
+
+**HSS trigger asymmetry** (Def 36, Prop 37): Autonomous local HSS trigger (battery below \\(E_{\mathrm{HSS}}\\) and threat conditions met) requires no quorum — it is a unilateral safety action that must remain available in the Denied regime (C=0) where quorum is unreachable. Remotely commanded HSS requires a logical quorum plus pre-enrolled cryptographic command authority. In the Denied regime, commanded HSS must fall back to pre-authorized standing orders in L0 firmware, established at deployment enrollment; real-time quorum formation is impossible when partition is complete.
+
+<span id="prop-44"></span>
+**Proposition 44** (Logical Quorum BFT Resistance). *Under Def 7 with at most \\(f < n/3\\) Byzantine nodes — including nodes with valid Secure Boot attestation:*
+
+1. *Safety: no two contradictory decisions \\(D\\) and \\(\lnot D\\) can both be logically validated — any two valid logical quorums intersect in at least one honest node.*
+2. *Liveness: if \\(n - f\\) honest nodes are connected and currently corroborated, a valid logical quorum exists.*
+3. *Reputation convergence: after \\(T_{\mathrm{excl}} \approx \ln(3f_0 / (1 - 3f_0)) / \alpha_r\\) rounds, Byzantine nodes' combined weight falls below \\(\theta_Q \cdot \sum r_i\\), excluding them from condition 2.*
+4. *Anti-Sybil via spatial diversity: condition 5 prevents a single compromised cluster from unilaterally forming a quorum even if every node in that cluster holds valid attestation.*
+
+*Proof sketch*: **Property 1** — By condition 1, \\(\vert Q_1 \vert + \vert Q_2 \vert \geq 2(\lceil 2n/3 \rceil + 1) > 4n/3\\). By inclusion-exclusion, \\(\vert Q_1 \cap Q_2 \vert \geq \vert Q_1 \vert + \vert Q_2 \vert - n > n/3 > f\\). At least one node in \\(Q_1 \cap Q_2\\) is honest; an honest node votes consistently, so \\(Q_1\\) and \\(Q_2\\) cannot simultaneously validate \\(D\\) and \\(\lnot D\\). **Property 2** — With \\(n - f > 2n/3\\) honest corroborated nodes, condition 1 is satisfiable; conditions 2–4 are satisfiable because honest nodes maintain high and growing reputation, and the fleet topology (Prop 4) ensures multi-cluster connectivity. **Property 3** — Byzantine nodes accumulate EWMA weight 0 each round; \\(f_{\mathrm{eff}}(T) \to 0\\) geometrically at rate \\((1-\alpha_r)\\). **Property 4** — Any single cluster \\(C\\) with \\(\vert C \vert < 2n/3\\) cannot satisfy condition 1 alone; condition 5 forces a second cluster to contribute, and that cluster contains honest nodes whose votes are not controlled by the compromised cluster. \\(\square\\)
 
 ### Causal Commit Ordering: NTP-Free Split-Brain Resolution
 
