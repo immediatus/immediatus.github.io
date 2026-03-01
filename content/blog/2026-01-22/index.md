@@ -580,14 +580,15 @@ where \\(\hat{x} = \text{Decoder}(\text{Encoder}(x))\\) and \\(\sigma^2_{\text{b
 4. **Deployment**: Export quantized weights to edge device
 5. **Threshold calibration**: Compute threshold on-device from first 1000 observations
 
-**Performance bounds** (derived from model capacity analysis): Under assumption set \\(\mathcal{A}_{perf}\\) — anomaly distribution \\(P_1\\) separable from normal \\(P_0\\) with overlap \\(\epsilon\\), model capacity \\(C_m\\), sample complexity \\(n\\) — the table below gives worst-case precision and recall bounds, per-inference computational complexity, and memory footprint for each of the four edge-viable detector families.
+**Performance bounds** (derived from model capacity analysis): Under assumption set \\(\mathcal{A}_{perf}\\) — anomaly distribution \\(P_1\\) separable from normal \\(P_0\\) with overlap \\(\epsilon\\), model capacity \\(C_m\\), sample complexity \\(n\\) — the table below gives worst-case precision and recall bounds, per-inference computational complexity, memory footprint, and drift protection mechanism for each edge-viable detector family.
 
-| Method | Precision Bound | Recall Bound | Complexity | Memory |
-| :--- | :--- | :--- | :--- | ---: |
-| EWMA (per-sensor) | \\(1 - \epsilon_{\text{marginal}}\\) | \\(1 - \text{FNR}(z_\alpha)\\) | \\(O(1)\\) | 96 bytes |
-| Isolation Forest | \\(1 - \epsilon \cdot 2^{-d}\\) | \\(1 - (1-1/2^d)^t\\) | \\(O(\log n)\\) | 25 KB |
-| Autoencoder (INT8) | \\(1 - \epsilon_{\text{joint}}\\) | \\(1 - e^{-C_m/d}\\) | \\(O(d^2)\\) | 280 bytes |
-| Ensemble | \\(\max(P_i) + \delta_{\text{ensemble}}\\) | \\(1 - \prod(1-R_i)\\) | \\(O(\sum C_i)\\) | 376 bytes |
+| Method | Precision Bound | Recall Bound | Complexity | Memory | Drift Protection |
+| :--- | :--- | :--- | :--- | ---: | :--- |
+| EWMA (per-sensor) | \\(1 - \epsilon_{\text{marginal}}\\) | \\(1 - \text{FNR}(z_\alpha)\\) | \\(O(1)\\) | 96 bytes | Kalman baseline tracking |
+| Isolation Forest | \\(1 - \epsilon \cdot 2^{-d}\\) | \\(1 - (1-1/2^d)^t\\) | \\(O(\log n)\\) | 25 KB | Periodic forest replacement |
+| Autoencoder (INT8) | \\(1 - \epsilon_{\text{joint}}\\) | \\(1 - e^{-C_m/d}\\) | \\(O(d^2)\\) | 280 bytes | \\(\sigma_{\text{baseline}}\\) recalibration |
+| One-Class SVM | \\(1 - \nu\\) | \\(1 - \text{VC}(d)/(n\nu)\\) | \\(O(d)\\) | 20 bytes | \\(\lambda_{\text{drift}} + \rho(\mathbf{J}_w) < 1\\) |
+| Ensemble | \\(\max(P_i) + \delta_{\text{ensemble}}\\) | \\(1 - \prod(1-R_i)\\) | \\(O(\sum C_i)\\) | 376 bytes | Component-wise drift checks |
 
 **Utility improvement of autoencoder over EWMA**: The net utility gain \\(\Delta U\\) decomposes into a precision improvement term (joint detection catches more true positives per alarm) minus a recall-reciprocal term penalizing the relative miss rate of each detector weighted by the false-negative cost \\(C_{\text{FN}}\\).
 
@@ -637,6 +638,33 @@ This 5-dimensional feature space captures statistical summaries, enabling effici
 - Inference: Single dot product = **<0.01ms**
 - Memory: 5 support vector weights = **20 bytes** (float32)
 
+**Drift-aware weight update**: Under non-stationary conditions, the distribution of "normal" shifts over time. Without regularization, weights drift toward the current distribution and lose generalization across connectivity regimes. The regularized gradient penalizes deviation from the baseline weight vector \\(w_0\\) calibrated on clean training data:
+
+{% katex(block=true) %}
+\nabla_w \mathcal{L}_\lambda = \frac{\partial \mathcal{L}}{\partial w} + \lambda_{\text{drift}} \cdot (w_t - w_0)
+{% end %}
+
+where \\(\lambda_{\text{drift}} = \alpha \cdot \|x_t - x_{t-1}\|^2\\) scales with local input variation as an edge-practical proxy for distributional shift. (This is a point-to-point heuristic; a sliding-window variance estimate is more robust when compute permits.)
+
+**Jacobian stability check**: Define the weight update map \\(\Phi: w_{t-1} \mapsto w_t = w_{t-1} - \eta \nabla_w \mathcal{L}_\lambda(w_{t-1})\\). Its Jacobian is \\(\mathbf{J}_w = I - \eta H_\lambda\\), where \\(H_\lambda = \partial^2\mathcal{L}/\partial w^2 + \lambda_{\text{drift}} I\\) is the regularized Hessian. The autonomic layer becomes a noise generator when the spectral radius exceeds 1:
+
+{% katex(block=true) %}
+\rho(\mathbf{J}_w) = \max_i \lvert\lambda_i(\mathbf{J}_w)\rvert = \max_i \lvert 1 - \eta\,\lambda_i(H_\lambda)\rvert < 1
+{% end %}
+
+*(Notation: \\(\\rho(\\cdot)\\) here denotes spectral radius. This is distinct from the SVM margin hyperparameter \\(\\rho\\) in the one-class SVM objective and from the gossip observation-age tracker \\(\\rho_i[j]\\) used in the staleness model. Subscripts and function notation differentiate the three in all occurrences.)*
+
+If \\(\rho(\mathbf{J}_w) > 1 + \varepsilon\\), weights are diverging and the SVM must be recalibrated or reverted to \\(w_0\\). For edge deployment with limited compute, estimate the dominant eigenvalue via power iteration:
+
+{% katex(block=true) %}
+\begin{aligned}
+v_{k+1} &= \mathbf{J}_w v_k \;/\; \|\mathbf{J}_w v_k\| \\
+\rho(\mathbf{J}_w) &\approx v_k^T \mathbf{J}_w v_k
+\end{aligned}
+{% end %}
+
+Convergence rate is \\(O(\log(1/\varepsilon)\,/\,\log(\lambda_1/\lambda_2))\\), where \\(\lambda_1/\lambda_2\\) is the dominant spectral gap. For \\(d = 5\\) features with well-separated eigenvalues, typically fewer than 10 iterations.
+
 **Detection rate derivation for {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}**:
 
 For one-class SVM with \\(\nu\\)-parameterization, the fraction of training points outside the boundary is at most \\(\nu\\). Setting \\(\nu = 0.02\\) (the expected anomaly rate), the bounds below give the worst-case false positive rate and the minimum true positive rate as a function of VC dimension \\(\text{VC}(d)\\) and training size \\(n\\).
@@ -646,6 +674,14 @@ For one-class SVM with \\(\nu\\)-parameterization, the fraction of training poin
 {% end %}
 
 For \\(d=5\\) features and \\(n > 500\\) training samples: \\(\text{TPR} \geq 0.80\\). The low FPR is critical for battery-constrained sensors where false positives waste power \\(P_{\text{alert}}\\) on unnecessary transmissions.
+
+**Drift detection trigger**: Recalibrate or revert SVM weights when either condition holds:
+
+{% katex(block=true) %}
+\rho(\mathbf{J}_w) > 1 + \varepsilon \quad \lor \quad \|w_t - w_{t-1}\| > \delta_{\max}
+{% end %}
+
+Typical parameters: \\(\varepsilon = 0.1\\), \\(\delta_{\max} = 0.5 \cdot \|w_0\|\\). The spectral condition catches divergence before it compounds; the weight-norm condition catches slow persistent drift that Jacobian monitoring alone may miss.
 
 **Temporal Convolutional Network (TCN) for Sequence Anomalies**
 

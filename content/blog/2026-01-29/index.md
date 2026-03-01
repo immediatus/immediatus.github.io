@@ -112,6 +112,8 @@ graph TD
 
 **Knowledge**: Distributed state—topology, policies, historical effectiveness, health estimates. Must be eventually consistent and partition-tolerant.
 
+*Implementation note: the Knowledge Base \\(\\mathcal{K}\\) is realized as a CRDT-backed state map ([Part 4, Definition 12](@/blog/2026-02-05/index.md#def-12)) — each monitored variable is a CRDT register. "Successful Knowledge Base synchronization" means all registers have received at least one gossip update from a quorum of reachable nodes within \\(\\tau_{\\max}\\) (Proposition 5, Part 2).*
+
 The control loop executes continuously:
 
 {% katex(block=true) %}
@@ -430,6 +432,14 @@ K < \frac{1}{1 + \tau/T_{\text{tick}}} \qquad \square
 In other words, the slower the feedback (larger \\(\tau\\)), the more gently the controller must react (smaller \\(K\\)); aggressive corrections in a slow-feedback environment cause the system to oscillate rather than converge.
 
 **Corollary 4**. *Increased feedback delay (larger \\(\tau\\)) requires more conservative controller gains, trading response speed for stability.*
+
+**Staleness correction**: When the Knowledge Base has not been synchronized for elapsed time \\(t_{\text{stale}}\\), the error signal \\(x[t-d]\\) may reflect state that has since evolved. The staleness-adjusted gain
+
+{% katex(block=true) %}
+K_{\text{stale}}(t_{\text{stale}}) = K \cdot \bigl(1 - \delta(t_{\text{stale}})\bigr)
+{% end %}
+
+reduces effective gain in proportion to the staleness decay function \\(\delta(t_{\text{stale}}) = 1 - e^{-t_{\text{stale}}/\tau_{\max}}\\) (Definition 9b). Since \\(K_{\text{stale}} \leq K\\), any \\(K\\) satisfying Proposition 9's stability condition continues to satisfy it with \\(K_{\text{stale}}\\) substituted — staleness correction provides additional stability margin when acting on uncertain state, at the cost of reduced healing responsiveness.
 
 **Stochastic extension: when \\(\tau\\) is not constant**
 
@@ -850,7 +860,7 @@ For crash loops, "scale to 0, then up" has highest {% term(url="@/blog/2026-02-1
 4. **Threshold adjustment** (T+25s): Tighten healing thresholds by 15% (more conservative without central backup)
 5. **Operation logging** (T+continuous): All healing actions logged with causality metadata
 
-Upon reconnection, the site uploads its healing log. Central platform reconciles any conflicts (e.g., site promoted a replica to primary that central also promoted elsewhere) using causal ordering with HLC timestamps (Definition 40, Part 4) with site-local decisions taking semantic priority (Proposition 30, Part 4). Wall-clock LWW is unreliable during partition due to clock drift; the NTP-Free Semantic Commit Order of Proposition 30 provides the correct causal resolution.
+Upon reconnection, the site uploads its healing log. Central platform reconciles any conflicts (e.g., site promoted a replica to primary that central also promoted elsewhere) using causal ordering with HLC timestamps ([Proposition 40](#prop-40)) with site-local decisions taking semantic priority (Proposition 30, Part 4). Wall-clock LWW is unreliable during partition due to clock drift; the NTP-Free Semantic Commit Order of Proposition 30 provides the correct causal resolution.
 
 **Utility analysis**:
 
@@ -1094,6 +1104,64 @@ The threshold itself steps toward the target \\(\theta^\*(t+1)\\) by increment \
 {% end %}
 
 where \\(\Delta\theta = \theta^*(t+1) - \theta(t)\\) and \\(\gamma \leq |\Delta\theta|\\) is the adaptation rate.
+
+<span id="def-9b"></span>
+### Staleness-Aware Healing Threshold
+
+**Definition 9b** (Staleness Decay Function). *Let \\(t_{\text{stale}} \geq 0\\) denote elapsed time since the last successful Knowledge Base synchronization. The staleness decay function is:*
+
+{% katex(block=true) %}
+\delta(t_{\text{stale}}) = 1 - e^{-t_{\text{stale}}/\tau_{\max}}
+{% end %}
+
+*where \\(\tau_{\max}\\) is the staleness threshold from Part 2 Proposition 5: \\(\tau_{\max} = (\Delta h / (z_{\alpha/2} \cdot \sigma))^2\\), with \\(\Delta h\\) the acceptable health drift and \\(\sigma\\) measurement noise. At \\(t_{\text{stale}} = 0\\): \\(\delta = 0\\) (fully current). At \\(t_{\text{stale}} = \tau_{\max}\\): \\(\delta \approx 0.63\\). As \\(t_{\text{stale}} \to \infty\\): \\(\delta \to 1\\) (fully stale).*
+
+**Staleness-aware threshold**: Let \\(s(a) = 1 - \theta^*(a) \in [0,1]\\) be the severity of action \\(a\\), derived from Proposition 10's optimal threshold. High \\(s(a)\\) means missing the failure is expensive (low \\(\theta^*\\), large \\(C_{\text{FN}}\\)). The staleness-augmented threshold floor raises as the Knowledge Base ages:
+
+{% katex(block=true) %}
+\theta_{\text{stale}}(a, t_{\text{stale}}) = \theta^*(a) + \delta(t_{\text{stale}}) \cdot (1 - s(a))
+{% end %}
+
+*Critical failures (\\(s(a) \to 1\\)) are immune: \\(\theta_{\text{stale}} \approx \theta^*(a)\\) regardless of \\(t_{\text{stale}}\\). Low-severity actions (\\(s(a) \to 0\\)) are suppressed as \\(\delta\\) grows; when \\(\theta_{\text{stale}} > 1\\) the threshold is above any achievable confidence score, effectively disabling that action class until re-sync.*
+
+**Confidence horizon**: The time at which non-critical healing (\\(s(a) = 0\\)) is suppressed to the maximum threshold \\(\theta_{\max}\\):
+
+{% katex(block=true) %}
+T_{\text{conf}} = \tau_{\max} \cdot \ln\!\left(\frac{1}{1 - (\theta_{\max} - \theta^*(a))}\right)
+{% end %}
+
+*Valid when \\(\theta^*(a) < \theta_{\max}\\). Beyond \\(T_{\text{conf}}\\), the system enters minimal-healing mode: only actions with \\(s(a) > 1 - (\theta_{\max} - \theta^*(a))/\delta(t_{\text{stale}})\\) remain actionable.*
+
+{% mermaid() %}
+graph LR
+    subgraph S0["t = 0"]
+        A["Fresh KB, delta = 0"] --> B["theta_stale = theta_opt\nFull healing active"]
+    end
+
+    subgraph S1["t = tau_max"]
+        C["Stale KB, delta = 0.63"] --> D["theta_stale rises\nLow-severity suppressed"]
+    end
+
+    subgraph S2["t > T_conf"]
+        E["Very stale, delta → 1"] --> F["theta_stale > theta_max\nCritical failures only"]
+    end
+
+    A -.->|time| C -.->|time| E
+
+    style B fill:#c8e6c9,stroke:#388e3c
+    style D fill:#fff9c4,stroke:#f9a825
+    style F fill:#ffcdd2,stroke:#c62828
+{% end %}
+
+*\\(\tau_{\max}\\) from Part 2 Proposition 5 simultaneously calibrates the Brownian staleness model (maximum observation age before health estimates are unreliable) and the exponential time constant of healing suppression. A tightly-calibrated deployment with small \\(\Delta h\\) has a short \\(\tau_{\max}\\) and fast-acting suppression; a loosely-calibrated one tolerates longer Knowledge Base age before healing hesitance sets in.*
+
+The staleness threshold is calibrated from the Brownian diffusion model ([Part 2, Proposition 5](@/blog/2026-01-22/index.md#prop-5)):
+
+{% katex(block=true) %}
+\tau_{\max} = \left(\frac{\Delta h}{z_{\alpha/2} \cdot \sigma}\right)^2
+{% end %}
+
+where \\(\\Delta h\\) is the decision-relevant drift threshold, \\(z_{\\alpha/2}\\) is the normal quantile at confidence \\(1-\\alpha\\), and \\(\\sigma\\) is the observation noise standard deviation. Both \\(\\tau_{\\max}\\) here and the staleness-aware healing threshold \\(\\theta_{\\text{stale}}\\) are governed by this calibrated constant.
 
 ### The Harm of Wrong Healing
 
@@ -1579,6 +1647,8 @@ t_\text{cool} = \tau_\text{th} \cdot \ln\!\left(\frac{92 - 30}{70 - 30}\right) \
 {% end %}
 
 Total cascade time with thermal wait: \\(12.6 + 23.25 = 35.85\\) min — still within the 90-minute deadline, but consuming 40% of the available budget, leaving limited margin if \\(T_3\\) also fails.
+
+*(Propositions 49–50 are reserved for future extension: adaptive gain scheduling under GPS-denied navigation and cascade thermodynamics under sustained high-temperature jamming — these remain open problems outside the scope of this article.)*
 
 ---
 

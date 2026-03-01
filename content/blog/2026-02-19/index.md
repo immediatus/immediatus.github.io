@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
-title = "The Edge Constraint Sequence"
-description = "Building analytics before you've validated basic survival is a reliable way to fail in an unexpected order. This closing article derives the correct build sequence: a prerequisite graph over the five core capabilities, a constraint surface that shifts priorities based on connectivity, resources, and adversary presence, and the uncomfortable meta-constraint that your autonomic infrastructure competes for the same resources it's trying to protect."
+title = "The Constraint Sequence and the Handover Boundary"
+description = "The right build order prevents sophisticated capabilities from collapsing before their foundations exist. This article derives the prerequisite graph, constraint migration, and phase gate framework for sequencing autonomic edge capabilities — then formalizes five handover constructs: predictive triggering for cognitive inertia, asymmetric trust dynamics, Merkle-gated command validation, semantic compression against alert fatigue, and the L0 physical interlock that no autonomic loop can override."
 date = 2026-02-19
 slug = "autonomic-edge-part6-constraint-sequence"
 
@@ -45,6 +45,8 @@ This article develops the theoretical foundations for capability sequencing in a
 4. **Formal Validation Framework**: We define {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %} functions as conjunction predicates over verification conditions, providing a mathematical foundation for systematic validation.
 
 5. **Phase Progression Invariants**: We prove that valid system evolution requires maintaining all prior gate conditions, establishing the regression testing requirement as a theorem.
+
+6. **Human-Machine Teaming Protocols**: We formalize five constructs at the automation boundary — predictive handover triggering (Proposition 52), asymmetric trust dynamics (Definition 51), the causal barrier for stale commands (Definition 52), semantic compression against alert fatigue (Definition 53), and the L0 Physical Safety Interlock that bypasses the entire MAPE-K stack (Definition 54).
 
 These contributions connect to and extend prior work on Theory of Constraints (Goldratt, 1984), formal verification (Clarke et al., 1999), and systems engineering (INCOSE, 2015), adapting these frameworks for contested edge deployments.
 
@@ -288,13 +290,15 @@ R(t) = \frac{E_{\text{battery}}(t)}{E_{\min}} \cdot w_E + \frac{M_{\text{free}}(
 *with weights \\(w_E + w_M + w_C = 1\\). Critical threshold: \\(R_{\text{crit}} \approx 0.2\\) — 20% resource availability triggers survival mode regardless of connectivity state.*
 
 <span id="def-19c"></span>
-**Definition 19c** (Adversary Presence). *Let \\(A(t) \in [0, 1]\\) denote the estimated adversary threat level at time \\(t\\):*
+**Definition 19c** (Adversary Presence). *Let \\(A_{\text{adv}}(t) \in [0, 1]\\) denote the estimated adversary threat level at time \\(t\\):*
 
 {% katex(block=true) %}
-A(t) = P(\text{jamming}) \cdot w_J + P(\text{spoofing}) \cdot w_S + P(\text{physical}) \cdot w_P
+A_{\text{adv}}(t) = P(\text{jamming}) \cdot w_J + P(\text{spoofing}) \cdot w_S + P(\text{physical}) \cdot w_P
 {% end %}
 
-*with weights summing to 1. High threat (\\(A > 0.5\\)) shifts binding priority toward trust verification and anti-fragility learning regardless of connectivity state.*
+*with weights summing to 1. High threat (\\(A_{\text{adv}} > 0.5\\)) shifts binding priority toward trust verification and anti-fragility learning regardless of connectivity state.*
+
+*(renamed \\(A_{\text{adv}}(t)\\) to avoid collision with the defender action set \\(A\\) used in [Part 5, Definition 32](@/blog/2026-02-12/index.md#def-32))*
 
 <span id="prop-20"></span><span id="prop-20b"></span>
 **Proposition 20** (Multi-Dimensional Constraint Migration). *The binding constraint \\(c^\*\\) is determined by the utility gradient across all state dimensions \\((C, R, A)\\):*
@@ -313,7 +317,7 @@ c^*(C, R, A) = \arg\max_{c} \left| \frac{\partial U}{\partial c}(C, R, A) \right
 | Reliability-Balanced | \\(0.3 < C \leq 0.8\\) and \\(R > 0.5\\) | **Reliability** | Scarce connectivity makes delivery the bottleneck |
 | Autonomy-Forced | \\(C \leq 0.3\\) and \\(R > 0.5\\) | **Autonomy** | Isolation requires local decision-making |
 
-*Transition boundaries carry ±10% margins to prevent oscillation.*
+*Transition boundaries carry \\(\pm 10\%\\) margins to prevent oscillation.*
 
 *Proof sketch*: Treating system utility \\(U(C, R, A)\\) as smooth over the state cube, the binding constraint at any state is whichever capability—if improved by 1%—yields the largest utility gain, i.e., the constraint with maximum impact ratio (Definition 19). Survival dominates when \\(R < R_{\text{crit}}\\) — resource exhaustion overrides communication state — or when \\(C = 0\\) and \\(R < 0.5\\), where no external path exists and the resource margin is insufficient for sustained autonomous operation. Trust/anti-fragility dominates at \\(A > 0.5\\) because adversarial interference raises \\(\partial U / \partial \text{Trust}\\) above all other partial derivatives: unverified state and corrupted learning invalidate efficiency and reliability optimizations. The efficiency/reliability/autonomy ordering of the remaining regions follows the connectivity-gradient argument: as \\(C\\) falls below 0.8, message delivery becomes scarce; below 0.3, isolation makes local decision authority the critical capability. These dominance orderings hold when \\(R > 0.5\\) and \\(A < 0.5\\) — the original single-variable model is the cross-section of this surface at favorable resource and threat levels.
 
@@ -387,7 +391,7 @@ During heavy jamming, re-sequenced priorities:
 3. Surveillance (reduced bandwidth)
 4. Learning (suspended)
 
-The jamming environment elevates self-measurement because anomalies must be detected before they cascade. Re-sequencing triggers when \\(A(t) > A_{\text{threshold}}\\) (Definition 19c), not just on anecdotal jamming observation — this connects the formal adversary model to operational priority shifts. This is dynamic re-sequencing based on observed conditions.
+The jamming environment elevates self-measurement because anomalies must be detected before they cascade. Re-sequencing triggers when \\(A_{\text{adv}}(t) > A_{\text{threshold}}\\) (Definition 19c), not just on anecdotal jamming observation — this connects the formal adversary model to operational priority shifts. This is dynamic re-sequencing based on observed conditions.
 
 **Risks of re-sequencing**:
 - **Adversarial gaming**: If the adversary knows re-sequencing rules, they can trigger priority shifts that benefit them
@@ -396,7 +400,7 @@ The jamming environment elevates self-measurement because anomalies must be dete
 
 **Mitigations**:
 - Bound re-sequencing to predefined configurations (no arbitrary priority changes)
-- Require \\(A(t) > A_{\text{threshold}}\\) sustained for \\(\geq T_{\text{confirm}}\\) before triggering re-sequence — this closes the adversarial gaming gap, as an adversary cannot drive priority shifts without sustaining detectable threat levels above the confidence threshold
+- Require \\(A_{\text{adv}}(t) > A_{\text{threshold}}\\) sustained for \\(\geq T_{\text{confirm}}\\) before triggering re-sequence — this closes the adversarial gaming gap, as an adversary cannot drive priority shifts without sustaining detectable threat levels above the confidence threshold
 - Rate-limit priority changes to prevent oscillation
 - Test re-sequencing logic as rigorously as primary logic
 
@@ -421,7 +425,7 @@ R_{\text{autonomic}}^{\max} = R_{\text{total}} - R_{\text{mission}}^{\min}
 
 *Systems where \\(R_{\text{autonomic}}^{\min} > R_{\text{autonomic}}^{\max}\\) cannot achieve both mission capability and self-management.*
 
-For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Part 3, Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 ≈ 0.1 mW through L4 ≈ 42 mW. These figures instantiate the Law 3 constraint for RAVEN and OUTPOST deployments.
+For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Part 3, Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 \\(\approx\\) 0.1 mW through L4 \\(\approx\\) 42 mW. These figures instantiate the Law 3 constraint for RAVEN and OUTPOST deployments.
 
 These resources compete with the primary mission. A drone spending 40% of its CPU on self-measurement has 40% less CPU for threat detection. This creates the **meta-constraint**:
 
@@ -690,11 +694,15 @@ V_{\text{prop}}(S) &= \mathbb{1}[\text{Update}(\theta, n_i) \Rightarrow \forall 
 V_{\text{adapt}}(S) &= \mathbb{1}[\frac{\partial \theta}{\partial t} = f(\text{Performance}(\theta, S))] \\
 V_{\text{learn}}(S) &= \mathbb{1}[\mathbb{E}[\text{Performance}(t + \Delta t)] > \mathbb{E}[\text{Performance}(t)]] \\
 V_{\text{override}}(S) &= \mathbb{1}[\forall d \in \mathcal{D}_{\text{auto}}: \text{Override}(d) \text{ accessible}] \\
-V_{\text{horizon}}(S) &= \mathbb{1}[\forall d \in \mathcal{D}_{\text{human}}: \neg\text{Automated}(d)]
+V_{\text{horizon}}(S) &= \mathbb{1}[\forall d \in \mathcal{D}_{\text{human}}: \neg\text{Automated}(d)] \\
+V_{\text{SA}}(S) &= \mathbb{1}[\text{HandoverLead}(S) \geq \tau_{SA}] \\
+V_{\text{trust}}(S) &= \mathbb{1}[\mathcal{T}\text{-model active} \land \eta_{\text{loss}} > \eta_{\text{gain}}]
 \end{aligned}
 {% end %}
 
-**Phase 4 gate**: \\(G_4(S) = G_3(S) \land V_{\text{prop}} \land V_{\text{adapt}} \land V_{\text{learn}} \land V_{\text{override}} \land V_{\text{horizon}}\\)
+**Phase 4 gate**: \\(G_4(S) = G_3(S) \land V_{\text{prop}} \land V_{\text{adapt}} \land V_{\text{learn}} \land V_{\text{override}} \land V_{\text{horizon}} \land V_{\text{SA}} \land V_{\text{trust}}\\)
+
+where \\(V_{\text{SA}}\\) verifies handover is triggered at least \\(\tau_{SA}\\) seconds before the predicted failure boundary (Proposition 52), and \\(V_{\text{trust}}\\) verifies the asymmetric trust model (Definition 51) is implemented with \\(\eta_{\text{loss}} \gg \eta_{\text{gain}}\\).
 
 ### Phase 5: Integration Layer
 
@@ -710,7 +718,9 @@ V_{\text{antifragile}}(S) &= \mathbb{1}[\text{PostStress}(P) > \text{PreStress}(
 \end{aligned}
 {% end %}
 
-**Phase 5 gate**: \\(G_5(S) = G_4(S) \land V_{L4} \land V_{\text{degrade}} \land V_{\text{cycle}} \land V_{\text{adv}} \land V_{\text{antifragile}}\\)
+**Phase 5 gate**: \\(G_5(S) = G_4(S) \land V_{L4} \land V_{\text{degrade}} \land V_{\text{cycle}} \land V_{\text{adv}} \land V_{\text{antifragile}} \land V_{\text{SOE}} \land V_{\text{causal}} \land V_{\text{L0phys}}\\)
+
+where \\(V_{\text{SOE}}(S)\\) is the Safe Operating Envelope validity predicate: parameter vector \\(\theta \in [\theta_{\min}, \theta_{\max}]\\) and basin occupancy \\(\geq 0.95\\) over the most recent learning window — see [Part 5 Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe). \\(V_{\text{causal}}(S) = \mathbb{1}[\text{CausalBarrier active: all human commands gated by Merkle root validation}]\\) — see [Definition 52](#def-52). \\(V_{\text{L0phys}}(S) = \mathbb{1}[\text{L0 Physical Interlock wired, tested, unreachable from software}]\\) — see [Definition 54](#def-54).
 
 **Red team gate integration**: A failed red team exercise (\\(V_{\text{adv}} = 0\\)) triggers re-evaluation of the preceding gate: if jamming breaks gossip coherence, the Phase 2 gate (\\(V_{\text{gossip}}\\)) is re-validated before re-attempting Phase 5.
 
@@ -796,7 +806,7 @@ The "Autonomic" label requires \\(\mathrm{FAC}\\).*
 **Proposition 38** (Certification Completeness). *\\(\mathrm{FAC}(S) \Rightarrow G_3(S)\\):
 a system with Field Autonomic Certification satisfies all phase gates through Phase 3.*
 
-*Proof sketch*: \\(\mathrm{FAC}\\) includes \\(G_0\\) directly. \\(V_{\mathrm{depiso}}\\) implies Proposition 36 (fail-down), satisfying the structural requirement for \\(G_1\\)–\\(G_3\\). The remaining question is whether 10 partition-rejoin cycles provide sufficient statistical evidence for \\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\).
+*Proof sketch*: \\(\mathrm{FAC}\\) includes \\(G_0\\) directly. \\(V_{\mathrm{depiso}}\\) implies [Proposition 36 (Hardened Hierarchy Fail-Down)](@/blog/2026-01-15/index.md#prop-36), satisfying the structural requirement for \\(G_1\\)–\\(G_3\\). The remaining question is whether 10 partition-rejoin cycles provide sufficient statistical evidence for \\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\).
 
 Let \\(p_{\text{conflict}}\\) denote the per-cycle probability that a genuine CRDT merge conflict occurs and is incorrectly resolved. The minimum cycle count \\(N\\) to detect systematic reconciliation failures with confidence \\(1 - \alpha\\) satisfies \\(N \geq \log(\alpha)/\log(1 - p_{\text{conflict}})\\). For \\(p_{\text{conflict}} = 0.01\\): \\(N = \log(0.05)/\log(0.99) \approx 299\\) cycles. For \\(p_{\text{conflict}} = 0.26\\): \\(N = 10\\) cycles. The checklist value \\(C5 = 10\\) cycles is sufficient only if \\(p_{\text{conflict}} \geq 0.26\\) — i.e., the system fails 1-in-4 merges, a failure mode that would be immediately observable without formal testing. The correct interpretation: 10 cycles is a smoke test, not a certification bound.
 
@@ -909,6 +919,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone s
 - Degradation ladder validated: L4 to L3 to L2 to L1 to L0
 - Red team exercises: simulated adversarial jamming and spoofing
 - Anti-fragility demonstrated: swarm improves after each stress event
+- SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
 
 **Key insight**: Sophisticated swarm behavior (Phase 4-5) comes LAST. The impressive ML analytics and coordinated surveillance are only valuable if built on stable individual drones (Phase 0-1) and reliable coordination (Phase 2-3).
 
@@ -957,6 +968,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicl
 - Degradation ladder validated: L4 to L3 to L2 to L1 to L0
 - Red team exercises: simulated disruption and equipment failure scenarios
 - Anti-fragility demonstrated: convoy improves threat detection after each event
+- SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
 
 **Key insight**: Autonomy foundations (Phase 0-2) enable later integration (Phase 4-5). The convoy can only coordinate effectively if each vehicle is independently reliable.
 
@@ -1005,8 +1017,108 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sens
 - Degradation ladder validated: L4 to L3 to L2 to L1 to L0
 - Red team exercises: simulated intrusion and sensor tampering
 - Anti-fragility demonstrated: mesh improves detection after each incident
+- SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
 
 **Key insight**: Mesh reliability (Phase 2) must precede sensor sophistication (Phase 4). Advanced analytics are worthless if the mesh cannot reliably deliver the data.
+
+---
+
+## Human-Machine Teaming
+
+The preceding framework treats human operators as external authorities at the top of the decision hierarchy. This is necessary but insufficient. The five formal constructs in this section address a harder problem: *how should the system manage the handover boundary when humans are not interchangeable with fast CPUs?*
+
+Cognitive science establishes that human situational awareness (SA) takes time to reconstruct after disengagement. The system must predict operator readiness, not just detect system failure. Trust in automation is asymmetric — easy to lose, slow to rebuild. Human commands can be causally stale if issued against an out-of-date mental model. And beyond all MAPE-K logic sits a hard physical limit that cannot be overridden in software.
+
+### Cognitive Inertia and Predictive Triggering
+
+<span id="prop-52"></span>
+**Proposition 52** (Predictive Handover Criterion). *Let \\(\Psi(t) \in [0,1]\\) denote the system's autonomy confidence — the probability that the current decision context is within the system's validated operating envelope — and \\(\tau_{SA}\\) the situational awareness recovery time: the minimum time for an operator to reconstruct sufficient mission SA after disengagement. The handover trigger \\(\Psi_{\text{trigger}}\\) must satisfy:*
+
+{% katex(block=true) %}
+\Psi_{\text{trigger}} = \Psi_{\text{fail}} + \int_{t}^{t + \tau_{SA}} \frac{d\Psi}{dt}\, dt
+{% end %}
+
+*where \\(\Psi_{\text{fail}}\\) is the minimum confidence at which automation fails safely. Handover must be initiated when \\(\Psi(t) \leq \Psi_{\text{trigger}}\\), not when \\(\Psi(t) \leq \Psi_{\text{fail}}\\).*
+
+The key insight is that \\(\tau_{SA}\\) is measured in minutes, not milliseconds. For RAVEN missions with dense multi-threat environments, empirical SA reconstruction times are 90–180 seconds — comparable to the [judgment horizon](@/blog/2026-02-12/index.md#def-16) window from Part 5. During this interval \\(\Psi(t)\\) continues to decay. A handover initiated at \\(\Psi_{\text{fail}}\\) delivers an operator who is not yet situationally aware, into a system that has already passed the point of safe autonomous recovery.
+
+**Consequence**: The \\(V_{\text{SA}}\\) predicate in Phase 4 gate requires demonstrating that handover triggers are set conservatively enough to provide full SA recovery time before the predicted failure boundary.
+
+### Trust Hysteresis
+
+<span id="def-51"></span>
+**Definition 51** (Asymmetric Trust Dynamics). *Let \\(\mathcal{T}_t \in [0,1]\\) denote the operator's trust in system autonomy at timestep \\(t\\). Trust evolves asymmetrically:*
+
+{% katex(block=true) %}
+\mathcal{T}_{t+1} = \begin{cases}
+\mathcal{T}_t + \eta_{\text{gain}} \cdot (1 - \mathcal{T}_t) & \text{if } \text{outcome}(t) = \text{Success} \\
+\mathcal{T}_t \cdot (1 - \eta_{\text{loss}}) & \text{if } \text{outcome}(t) = \text{Failure}
+\end{cases}
+{% end %}
+
+*with \\(\eta_{\text{loss}} \gg \eta_{\text{gain}}\\). The success branch saturates as trust approaches 1; the failure branch decays multiplicatively toward \\(\mathcal{T}_{\min} > 0\\).*
+
+A single automation failure can erase trust accumulated over many successes. For \\(\eta_{\text{gain}} = 0.05\\) and \\(\eta_{\text{loss}} = 0.40\\), a failure at \\(\mathcal{T} = 0.80\\) reduces trust to \\(\mathcal{T} = 0.48\\), requiring approximately \\(k\\) successes to recover:
+
+{% katex(block=true) %}
+k \geq \frac{\ln(0.80 / 0.48)}{\ln\!\left(1/(1 - 0.05)\right)} \approx 10
+{% end %}
+
+**System implication**: Automation confidence thresholds must be calibrated to the current trust state \\(\mathcal{T}_t\\). When \\(\mathcal{T}_t < \mathcal{T}_{\text{threshold}}\\), the [judgment horizon](@/blog/2026-02-12/index.md#def-16) contracts — more decisions require human authorization even if system-measured confidence \\(\Psi(t)\\) is high. Trust dynamics are a function of the entire operational history, not a moving average.
+
+### Causal Barrier
+
+<span id="def-52"></span>
+**Definition 52** (Causal Barrier). *Let \\(\mathcal{H}_{\text{op}}(t)\\) denote the operator's state snapshot at time \\(t\\), characterized by its Merkle root \\(M_{\text{op}}\\) ([Part 4, state reconciliation](@/blog/2026-02-05/index.md#def-12)). Let \\(M_{\text{edge}}(t)\\) denote the current Merkle root of the edge fleet state. A human command \\(c\\) issued at time \\(t\\) is **causally valid** if and only if:*
+
+{% katex(block=true) %}
+\text{Valid}(c,\, t) = \mathbb{1}\!\left[M_{\text{op}} = M_{\text{edge}}(t - \Delta_{\text{prop}})\right]
+{% end %}
+
+*where \\(\Delta_{\text{prop}}\\) is the propagation delay for state updates to reach the operator. Commands where \\(M_{\text{op}} \neq M_{\text{edge}}(t - \Delta_{\text{prop}})\\) are **causally stale** and must be rejected with a state divergence notification.*
+
+The Causal Barrier addresses a failure mode orthogonal to trust: the operator may be fully trusted, fully engaged, and still issue a harmful command because their mental model of fleet state is out of date. This is particularly acute in contested environments where \\(\Delta_{\text{prop}}\\) can exceed 30 seconds and state can diverge significantly during that window.
+
+**Connection to Fleet Coherence**: The Causal Barrier extends Part 4's Merkle reconciliation protocol from fleet-to-fleet state synchronization to human-to-fleet command validation. The same \\(\Delta_{\text{state}}\\) that drives CRDT merge frequency also determines the maximum safe command lag.
+
+### Semantic Compression
+
+<span id="def-53"></span>
+**Definition 53** (Intent Health Indicator). *Let \\(\Sigma\\) be the space of raw telemetry vectors and \\(\Lambda = \{\text{Aligned},\, \text{Drifted},\, \text{Diverged}\}\\) the 3-state Intent Health space. The semantic compression function \\(f: \Sigma \to \Lambda\\) is:*
+
+{% katex(block=true) %}
+f(\sigma) = \begin{cases}
+\text{Aligned}  & \text{if } \gamma(\sigma) \geq \gamma_{\text{high}} \text{ and no active healing} \\
+\text{Drifted}  & \text{if } \gamma(\sigma) < \gamma_{\text{high}} \text{ or healing active} \\
+\text{Diverged} & \text{if } \gamma(\sigma) < 1 - \varepsilon
+\end{cases}
+{% end %}
+
+*where \\(\gamma(\sigma)\\) is the semantic convergence factor ([Part 1, Definition 1b](@/blog/2026-01-15/index.md#def-1b)) evaluated over telemetry \\(\sigma\\), \\(\gamma_{\text{high}}\\) is the high-confidence threshold, and \\(\varepsilon\\) is the convergence tolerance.*
+
+The 3-state compression maps directly to operator-actionable states: **Aligned** requires no intervention; **Drifted** warrants monitoring (healing protocols are active, [Part 3](@/blog/2026-01-29/index.md)); **Diverged** requires immediate escalation (\\(\gamma < 1 - \varepsilon\\) means consensus has failed, [Part 1, Definition 1b](@/blog/2026-01-15/index.md#def-1b)). The compression eliminates alert fatigue by suppressing the high-dimensional telemetry stream that operators cannot process at the rate of generation.
+
+**Connection to health monitoring**: The Intent Health Indicator is the operator-facing projection of the fleet health state from [Part 2's gossip protocol](@/blog/2026-01-22/index.md). The gossip layer provides \\(\gamma(\sigma)\\); the compression layer translates it into human-actionable signal.
+
+### L0 Physical Safety Interlock
+
+<span id="def-54"></span>
+**Definition 54** (L0 Physical Safety Interlock). *An L0 Physical Safety Interlock is a hardware-level circuit that enforces a safe-state transition independent of and prior to any software layer. It is characterized by:*
+
+- *Non-programmability: the safe-state condition is wired, not configured*
+- *MAPE-K bypass: the circuit fires regardless of MAPE-K state or software health*
+- *Determinism: transition time \\(T_{\text{L0}} < T_{\text{WD}}\\) (watchdog period) with no software path*
+- *Non-resettability from software: recovery from the L0 Physical Interlock requires physical human action*
+
+{% katex(block=true) %}
+\text{L0Physical}(t) = \mathbb{1}\!\left[\exists\, p \in \mathcal{P}_{\text{phys}}:\ \text{HardCondition}(p,\, t)\right]
+{% end %}
+
+*where \\(\mathcal{P}_{\text{phys}}\\) is the set of monitored physical parameters (voltage, temperature, acceleration, arming signal). When \\(\text{L0Physical}(t) = 1\\), the system enters \\(\mathcal{S}_{\text{phys}}\\) — a state that cannot be exited by any software command.*
+
+**Distinction from software watchdogs**: Definition 43 is distinct from the Software Watchdog ([Part 3, Definition 26](@/blog/2026-01-29/index.md#def-26)) and Terminal Safety State ([Part 3, Definition 36](@/blog/2026-01-29/index.md#def-36)). The Software Watchdog detects software failure and triggers a software response. The Terminal Safety State is a MAPE-K outcome. The L0 Physical Interlock bypasses the entire software stack — it fires because a physical condition was met, regardless of whether the software is functioning. The MAPE-K loop cannot override it; neither can a remote command.
+
+**Implementation examples**: Dead Man's Switch (DMS) circuits, hardware-enforced power cutoff, physically irreversible actuation (pyrotechnic separation, thermal runaway inhibitor). The interlock is not part of the autonomic control plane — it is the boundary condition that the autonomic control plane must never violate.
 
 ---
 

@@ -92,6 +92,91 @@ where \\(\nabla_\theta U\\) is the gradient of utility with respect to parameter
 
 In other words, an {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} system does not just survive stress and return to baseline — it finishes in a better state than it started, and this improvement is proportional to how severe the stress was.
 
+### Safe Operating Envelope
+
+The anti-fragility learning loop is only safe if the parameter space has explicit bounds. Without them, a sufficiently stressed system can gradient-descend itself into an unstable regime — unconstrained parameter evolution is a genetic algorithm without fitness cliffs.
+
+<span id="def-soe"></span>
+**Safe Operating Envelope (SOE)**: The learned parameter vector \\(\\theta \\in \\mathbb{R}^d\\) (\\(d\\) = number of independently tunable parameters) must remain within pre-specified bounds:
+
+{% katex(block=true) %}
+\theta \in [\theta_{\min}, \theta_{\max}]
+{% end %}
+
+Each individual update must also be bounded in magnitude to prevent a single high-variance stress event from causing a destabilizing step:
+
+{% katex(block=true) %}
+\|\Delta\theta_t\| < \delta_{\text{safe}}, \qquad \delta_{\text{safe}} = 0.1 \times (\theta_{\max} - \theta_{\min})
+{% end %}
+
+where \\(\delta_{\text{safe}}\\) limits per-step mutation to 10% of the feasible range. **Boundary enforcement**: a proposed update is accepted only when both conditions hold simultaneously:
+
+{% katex(block=true) %}
+\theta_t + \Delta\theta_t \in [\theta_{\min}, \theta_{\max}] \;\land\; \|\Delta\theta_t\| \leq \delta_{\text{safe}}
+{% end %}
+
+If the magnitude bound is violated, the update is scaled to \\(\delta_{\text{safe}} \cdot \Delta\theta_t / \|\Delta\theta_t\|\\), preserving the gradient direction while enforcing the step-size limit.
+
+**Lyapunov stability criterion**: SOE bounds are necessary but not sufficient — an update within \\([\theta_{\min}, \theta_{\max}]\\) can still move the closed-loop system toward instability. The Lyapunov criterion enforces directional safety. A policy update is accepted only if the Lyapunov function \\(V(x)\\) (positive definite, radially unbounded) exhibits exponential decrease:
+
+{% katex(block=true) %}
+\dot{V}(x) = \nabla V \cdot f(x, \theta) \leq -\alpha V(x), \quad \alpha > 0
+{% end %}
+
+*(Notation: throughout this section \\(\\alpha > 0\\) denotes the exponential convergence rate with units \\(\\text{s}^{-1}\\). This is distinct from the false-alarm rates \\(\\alpha_Q, \\alpha_{\\text{corr}}\\) used in the Q-change detector (Proposition 35), the Beta prior shape \\(\\alpha_k\\) used in Thompson Sampling (Proposition 34), and the significance level \\(\\alpha\\) used in hypothesis tests. Context and subscripts differentiate all four uses.)*
+
+**Data-driven verification**: When \\(f(x, \theta)\\) is unknown — the common case in adversarial or non-stationary environments — replace the analytic condition with a finite-difference estimate:
+
+{% katex(block=true) %}
+\dot{V}(x) \approx \frac{V(x_{t+1}) - V(x_t)}{\Delta t}
+{% end %}
+
+Reject the proposed update if this estimate exceeds the stability threshold:
+
+{% katex(block=true) %}
+\frac{V(x_{t+1}) - V(x_t)}{\Delta t} > -\alpha V(x_t) + \varepsilon
+{% end %}
+
+where \\(\varepsilon\\) absorbs measurement noise. On rejection, revert to \\(\theta_{\text{prev}}\\) and log the failure mode for offline analysis.
+
+**Basin of attraction**: SOE-constrained learning is confined to the stability basin:
+
+{% katex(block=true) %}
+\mathcal{B} = \{x : \dot{V}(x) < 0\}
+{% end %}
+
+Policy updates are accepted only when the post-update trajectory remains in \\(\mathcal{B}\\).
+
+**SOE-constrained anti-fragility coefficient**: To prevent \\(\mathbb{A}\\) from inflating when a policy temporarily exits the safe region, cap measured improvement at the maximum performance achieved within confirmed SOE and Lyapunov constraints:
+
+{% katex(block=true) %}
+\mathbb{A}_{\text{constrained}} = \frac{\min(P_1, P_{\max}) - P_0}{\sigma}
+{% end %}
+
+where \\(P_{\max}\\) is the highest performance observed across trials with valid SOE and Lyapunov certificates.
+
+**Practical implementation for edge deployment**:
+
+1. **Define \\(V(x)\\)**: Use a domain-specific stability metric. For altitude control: \\(V(x) = \sum_i (h_i - h_{\text{target}})^2\\). For inter-vehicle spacing: \\(V(x) = \sum_i (d_i - d_{\text{safe}})^2\\).
+
+2. **Estimate \\(\dot{V}\\)**: Sample-based finite-difference over \\(N\\) observations:
+
+{% katex(block=true) %}
+\dot{V}(x) \approx \frac{1}{N} \sum_{i=1}^{N} \frac{V(x_{t+i}) - V(x_t)}{i \cdot \Delta t}
+{% end %}
+
+3. **Set \\(\alpha\\)**: Choose based on required convergence rate. \\(\alpha \in [0.1,\, 1.0]\ \text{s}^{-1}\\) covers most edge deployments; faster dynamics require higher \\(\alpha\\).
+
+4. **Monitor basin occupancy**: Track the fraction of time the system spends in \\(\mathcal{B}\\):
+
+{% katex(block=true) %}
+\text{basin\_occupancy} = \frac{\displaystyle\sum_{t} \mathbf{1}[x_t \in \mathcal{B}]}{T_{\text{total}}}
+{% end %}
+
+Alert if occupancy falls below 0.95 — the system is approaching the boundary of the stability region.
+
+**RAVEN example**: Set \\(V(x) = \sum_i (h_i - h_{\text{target}})^2\\) (aggregate altitude error across the swarm). With \\(\alpha = 0.5\ \text{s}^{-1}\\) and \\(N = 10\\) gossip samples for the \\(\dot{V}\\) estimate, each learning cycle costs 10 scalar comparisons per drone. Basin occupancy below 0.95 triggers a learning-rate rollback.
+
 ### Game-Theoretic Extension: Anti-Fragility as an Evolutionarily Stable Strategy
 
 Evolutionary game theory provides a stronger justification for building {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} in: in any fleet where nodes copy better-performing neighbors' policies, the {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} policy is an **Evolutionarily Stable Strategy (ESS)** — it cannot be invaded by fragile alternatives.
@@ -417,6 +502,40 @@ Four mechanisms enable {% term(url="#def-15", def="System property where perform
 **Stress is information to extract, not just a threat to survive**. Every partition event teaches you about connectivity patterns. Every drone loss teaches you about failure modes. Every adversarial jamming episode teaches you about adversary tactics. An {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} system captures these lessons.
 
 Consider the immune system analogy: exposure to pathogens creates antibodies that provide future protection. The edge equivalent: exposure to jamming creates detector signatures that provide future jamming detection. But unlike biological immunity, which evolved over millions of years, edge {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} must be *designed* - we must intentionally create the mechanisms for learning from stress.
+
+**SOE-constrained learning loop**: The four mechanisms (Learning, Adaptation, Evolution, Pruning) all operate inside the same safety wrapper:
+
+{% mermaid() %}
+graph TD
+    subgraph LP["Learning Phase"]
+        A["Stress event σ"] --> B["Compute gradient ∇U"]
+        B --> C{"SOE bounds check<br/>is ‖Δθ‖ within δ_safe?"}
+        C -->|"Exceeds bound"| D["Scale Δθ to δ_safe"]
+    end
+
+    subgraph SC["Stability Check"]
+        E["Apply update θ + Δθ"]
+        E --> F{"Lyapunov check<br/>is dV/dt ≤ −αV?"}
+        F -->|"Fails"| G["Revert to θ_prev"]
+        F -->|"Passes"| H["Accept update"]
+    end
+
+    subgraph OUT["Outcome"]
+        G --> I["Log failure mode"]
+        H --> J["Update P₁ estimate"]
+        I --> K["Continue operation"]
+        J --> K
+    end
+
+    C -->|"Within bound"| E
+    D --> E
+
+    style C fill:#fff9c4,stroke:#f9a825
+    style F fill:#ffcdd2,stroke:#c62828
+    style H fill:#c8e6c9,stroke:#388e3c
+{% end %}
+
+SOE acts as the first guardrail — every update is magnitude-checked before being applied. The Lyapunov criterion is the second — stability is verified against observed trajectory data before the update is committed. Both checks add one \\(O(d)\\) inner product to the learning step, where \\(d\\) is parameter dimension.
 
 ---
 
@@ -852,7 +971,7 @@ where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ra
 
 <span id="prop-33"></span>
 
-**Proposition 33** (Deterministic Policies Are Dominated). For any pure (deterministic) policy \\(\pi_D: S \to A\\), there exists an adversary strategy \\(\tau^\*\\) such that \\(V(\pi_D, \tau^\*) < V^\*\\). The minimax mixed policy \\(\sigma^\*\\) achieves \\(V^\*\\) under all adversary strategies.
+**Proposition 33** (Deterministic Policies Are Dominated). For any pure (deterministic) policy \\(\pi_D: S \to A\\), there exists an adversary strategy \\(\tau^\*\\) such that \\(V(\pi_D, \tau^\*) < V^\*\\). The minimax mixed policy \\(\sigma^\*\\) achieves \\(V^\*\\) under all adversary strategies. *(\\(\\sigma^*\\) here is the minimax mixed strategy; unsubscripted \\(\\sigma\\) throughout this article is stress magnitude in \\([0, \\sigma_{\\max}]\\).)*
 
 *Proof.* By the minimax theorem (von Neumann, 1928) for finite \\(S, A, B\\):
 

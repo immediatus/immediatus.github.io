@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Why Edge Is Not Cloud Minus Bandwidth"
-description = "At the edge, a radio transmission costs 100× more energy than a local computation, and the network may be unreachable for hours. This article builds the formal foundation: how to model contested connectivity with Markov chains, when local autonomy mathematically beats cloud control, and what keeps autonomous control loops stable when they can't phone home."
+description = "At the edge, a radio transmission costs 100x more energy than a local computation, and the network may be unreachable for hours. This article builds the formal foundation: how to model contested connectivity with Markov chains, when local autonomy mathematically beats cloud control, and what keeps autonomous control loops stable when they can't phone home."
 date = 2026-01-15
 slug = "autonomic-edge-part1-contested-connectivity"
 
@@ -133,20 +133,22 @@ Part 6 uses 'Denied' for \\(0 < C \leq 0.3\\) and 'Emergency' for \\(C = 0\\) as
 
 ### Notation Legend
 
-Each symbol has exactly one meaning throughout the series. The table below covers symbols that might otherwise be confused with similar-looking notation in the literature.
+Each symbol that appears in more than one role across the series is listed below, with the subscript or context that disambiguates it.
 
-| Symbol | Meaning | Problem context | How to recognize it |
-| :--- | :--- | :--- | :--- |
-| \\(\mathcal{A}_{sub}\\) | Assumption set (subscript names the scenario). Cross-part: also used for authority tier (Fleet Coherence Under Partition), anti-fragility coefficient (Anti-Fragile Decision-Making at the Edge), and action space (Self-Healing Without Connectivity) — context distinguishes meaning | Anywhere a formal claim rests on conditions that may not hold in all deployments | Always has a descriptive text subscript: {% katex() %}\mathcal{A}_{inv}{% end %}, {% katex() %}\mathcal{A}_{SS}{% end %}, {% katex() %}\mathcal{A}_{CE}{% end %}, etc. |
-| \\(\mathcal{Q}_j\\) | Authority tier \\(j \in \{0,1,2,3\}\\): Node / Cluster / Fleet / Command | Coordination and decision authority when nodes must act without central oversight | Always has a numeric subscript 0–3 or text variant (\\(\mathcal{Q}_{\text{delegated}}\\)) |
-| \\(\mathbb{A}\\) | Anti-fragility coefficient \\((P_1 - P_0)/\sigma\\) — a scalar, not a set | Measuring whether stress exposure improves rather than merely preserves system performance | Double-struck A; appears in scalar equalities/inequalities |
-| \\(\mathcal{U}\\) | Action or control space in optimization problems | Any adaptive or learning algorithm that selects from a set of decisions or control parameters | Appears as the domain of optimization: \\(a \in \mathcal{U}\\) |
-| \\(\Gamma\\) | Constraint set (set of all deployment constraints) | Determining which capabilities must be built first and in what order | Uppercase Greek gamma; appears in \\(c \in \Gamma\\), \\(\sigma: \Gamma \to \mathbb{N}\\) |
-| \\(\mathcal{C}\\) | Connected regime (highest connectivity state) in connectivity context; also used as constraint set in The Edge Constraint Sequence — context disambiguates | All connectivity regime analysis; always one element of the full regime space | Always appears in the regime tuple \\(\{\mathcal{C}, \mathcal{D}, \mathcal{I}, \mathcal{N}\}\\) or as \\(\Xi = \mathcal{C}\\) |
-| \\(E\\) | Edge-ness Score — scalar in \\([0,1]\\) classifying how strongly a deployment exhibits edge vs. cloud characteristics | Architecture selection; Section "Quantifying Edge-ness" | Italic capital E; appears in threshold comparisons \\(E < 0.3\\), \\(E \geq 0.6\\) |
-| \\(T_d\\) | Energy cost of one local compute decision (joules). Subscript d = "decide." Typical range \\(10\text{–}100\,\mu\text{J}\\) for microcontroller-class inference. | Energy-per-Decision analysis; constraint structure | Always a joule scalar with lowercase letter subscript; never a time value |
-| \\(T_s\\) | Energy cost of one radio packet transmission (joules). Subscript s = "send." Typical range \\(1\text{–}10\,\text{mJ}\\) at tactical radio power levels. | Energy-per-Decision analysis; Ingress Filter threshold | \\(T_s / T_d \approx 10^2\text{–}10^3\\) — radio dominates the energy budget by two to three orders of magnitude |
-| \\(\tau\\) | Reused symbol with four subscript-disambiguated roles across the series: \\(\tau_{\text{fb}}\\) = MAPE-K feedback/loop delay (Parts 1, 3); \\(\tau_{\text{stale}}\\) = observation staleness elapsed time (Part 2, Proposition 5); \\(\tau_{\text{partition}}\\) = partition duration (Part 4, Proposition 12); \\(\tau_{\text{burst}}\\) = burst-phase duration (Part 4, Definition 11b). Special form: \\(\tau^*\\) = Inversion Threshold (this article only). | Symbol disambiguation across series | Subscript unambiguously selects meaning; plain \\(\tau\\) in the stability constraint \\(K < 1/(1+\tau/T_{\text{tick}})\\) means \\(\tau_{\text{fb}}\\); \\(\tau^*\\) is always the Inversion Threshold |
+| Symbol | Meaning | Notes |
+| :--- | :--- | :--- |
+| \\(\mathcal{A}_x\\) | Assumption set — subscript names the scenario | Also used for authority tier, anti-fragility coefficient, and action space in later articles; subscript always disambiguates |
+| \\(\mathcal{Q}_j\\) | Authority tier — Node (0), Cluster (1), Fleet (2), Command (3) | Numeric subscript selects level; text variant \\(\mathcal{Q}_{\text{delegated}}\\) |
+| \\(\mathbb{A}\\) | Anti-fragility coefficient \\((P_1 - P_0)/\sigma\\) — scalar | Double-struck A; distinct from assumption set \\(\mathcal{A}\\) |
+| \\(\mathcal{U}\\) | Action or control space in optimization | Domain of optimization: \\(a \in \mathcal{U}\\) |
+| \\(\Gamma\\) | Constraint set of all deployment constraints | Appears as \\(c \in \Gamma\\) and \\(\sigma: \Gamma \to \mathbb{N}\\) |
+| \\(\mathcal{C}\\) | Connected regime — highest connectivity state | Also: constraint set in Part 6; context selects; regime tuple \\(\mathcal{C}, \mathcal{D}, \mathcal{I}, \mathcal{N}\\) |
+| \\(E\\) | Edge-ness Score \\(\in [0,1]\\) classifying deployment type | Threshold comparisons: \\(E < 0.3\\) = edge, \\(E \geq 0.6\\) = cloud |
+| \\(T_d\\) | Energy per local compute decision — joules, range 10–100 \\(\mu\text{J}\\) | Subscript d = "decide"; never a time value |
+| \\(T_s\\) | Energy per radio packet transmission — joules, range 1–10 mJ | Subscript s = "send"; \\(T_s / T_d \approx 10^2\\)–\\(10^3\\) |
+| \\(\tau\\) | Loop delay \\(\tau_{\text{fb}}\\); staleness \\(\tau_{\text{stale}}\\); partition duration \\(\tau_{\text{partition}}\\); burst duration \\(\tau_{\text{burst}}\\) | Subscript selects role; bare \\(\tau\\) = \\(\tau_{\text{fb}}\\); \\(\tau^*\\) = Inversion Threshold |
+| \\(\gamma\\) | Semantic convergence factor ([Def 1b](#def-1b)); age-decay rate; Holt-Winters seasonality; Byzantine reputation rates \\(\gamma_{\text{decay}}, \gamma_{\text{recover}}\\) | Bare \\(\gamma\\) = Def 1b in this article; subscript selects other roles |
+| \\(\beta\\) | Reconciliation cost ([Prop 1](#prop-1)); Holt-Winters trend coefficient; bandwidth asymmetry \\(\beta = B_{\text{backhaul}}/B_{\text{local}}\\); Gamma prior rate \\(\beta_i^0\\) | Subscript or context selects meaning across articles |
 
 ### Constraint Structure
 
@@ -206,7 +208,7 @@ For \\(U_{\text{detect}} = k \cdot T_s\\), the local-dominant region expands by 
 
 | \\(U_{\text{detect}}\\) | RAVEN extended threshold | Design implication |
 | :--- | :--- | :--- |
-| \\(T_s\\) (one avoided spurious alert) | \\(n_c < 200\\) | Models up to 2× more complex are local-dominant |
+| \\(T_s\\) (one avoided spurious alert) | \\(n_c < 200\\) | Models up to 2x more complex are local-dominant |
 | \\(5\,T_s\\) (cluster-level false positive) | \\(n_c < 600\\) | Medium-complexity models (autoencoder, small TCN) justified |
 | \\(10\,T_s\\) (mission-abort cost) | \\(n_c < 1{,}100\\) | Full TCN ensemble remains energetically dominant |
 
@@ -354,7 +356,17 @@ The retry storm correction is derived as follows. Under TCP-like congestion coll
 - \\(T_s / T_d \geq 5\\) (synchronization substantially slower than local decisions)
 - \\(\rho > 0\\) (retries have non-zero cost)
 - \\(\beta < \alpha T_s\\) (reconciliation cheaper than prolonged waiting)
-- **Conflict rate bounded**: \\(|\text{conflicts}| / \tau_{\text{partition}} < \kappa\\) for some threshold \\(\kappa\\). When clusters make incompatible decisions at high rates, reconciliation cost becomes superlinear: \\(\beta_{\text{actual}} = \beta \cdot (1-p) + \beta_c \cdot |\text{conflicts}|^2\\). The quadratic term dominates when conflict rate exceeds \\(\kappa\\), potentially reversing the inversion advantage.
+- **Conflict rate bounded**: \\(|\text{conflicts}| / \tau_{\text{partition}} < \kappa\\) for some threshold \\(\kappa\\). When clusters make incompatible decisions, reconciliation cost decomposes into data and semantic components: \\(\beta_{\text{actual}} = \beta(1-p) + \beta_c^{\text{data}} \cdot N_d^2 + \beta_c^{\text{sem}} \cdot (1-\gamma)^2 |S_{\text{merged}}|^2\\), where \\(N_d\\) is the CRDT-resolvable data-conflict count and \\(\gamma\\) is the semantic convergence factor (Definition 1b). The CRDT data-conflict term is bounded; the semantic term is not.
+- **Semantic convergence**: \\(\gamma \geq 1 - \varepsilon\\) (policy-violation fraction below tolerance \\(\varepsilon\\); Definition 1b). When this fails, the semantic conflict term can reverse the inversion advantage regardless of how fast data syncs.
+
+<span id="def-1b"></span>
+**Definition 1b** (Semantic Convergence Factor). *Let \\(S_{\text{merged}}\\) be the set of all state items produced by a reconciliation event, and \\(S_{\text{merged}}^{\text{consistent}} \subseteq S_{\text{merged}}\\) the subset with no policy violations after merge. The semantic convergence factor is:*
+
+{% katex(block=true) %}
+\gamma = \frac{|S_{\text{merged}}^{\text{consistent}}|}{|S_{\text{merged}}|}
+{% end %}
+
+*\\(\gamma = 1\\) means all merged state satisfies system policy. When \\(\gamma < 1 - \varepsilon\\), policy violations accumulate faster than they can be resolved — nodes must re-negotiate conflicting decisions, driving the \\(\beta_c^{\text{sem}}\\) term into the storm regime regardless of CRDT sync speed. CRDTs guarantee data convergence (\\(\gamma_{\text{data}} = 1\\)) but have no effect on \\(\gamma\\): CRDT merge is syntactic, policy compliance is semantic.*
 
 **Note:** Setting \\(U_{cloud} = U_{edge}\\) yields a quadratic in the availability parameter \\(p\\): \\(\alpha T_s(1 + \rho p / T_s) = (\alpha T_d + \beta(1-p))(1-p)\\). The closed-form \\(\tau^*\\) is a first-order linear approximation valid when \\(\beta(1-p)\\) is small relative to \\(\alpha T_d\\). For large \\(\beta\\) (high penalty for remote coordination failures), the quadratic root should be solved numerically.
 

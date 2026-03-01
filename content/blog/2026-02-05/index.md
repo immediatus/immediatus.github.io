@@ -189,7 +189,7 @@ In other words, the total work at reconnection scales with how many key-value pa
 D_{\text{worst}}(1800) = 1 - e^{-F \cdot \lambda \cdot \tau_{\text{burst}} - 0.1 \cdot \lambda \cdot (\tau_{\text{max}} - \tau_{\text{burst}})} = 1 - e^{-80 - 359} \approx 1.0
 {% end %}
 
-*Both exponents are large — the burst phase alone (\\(F \cdot \lambda \cdot \tau_{\text{burst}} = 80\\)) saturates divergence near 1.0 within seconds. Buffer ≈ 500 × 32 bytes ≈ 16 KB (size for full state copy). For short partitions (\\(\tau < \tau_{\text{burst}}\\)), the formula reduces to Poisson at elevated rate:*
+*Both exponents are large — the burst phase alone (\\(F \cdot \lambda \cdot \tau_{\text{burst}} = 80\\)) saturates divergence near 1.0 within seconds. Buffer \\(\approx 500 \times 32\\) bytes \\(\approx 16\\) KB (size for full state copy). For short partitions (\\(\tau < \tau_{\text{burst}}\\)), the formula reduces to Poisson at elevated rate:*
 
 {% katex(block=true) %}
 \text{Buffer}_{\text{short}} \approx |S| \cdot \bigl(1 - e^{-F \cdot \lambda \cdot \tau_{\text{max}}}\bigr) \cdot b_{\text{item}}
@@ -238,6 +238,10 @@ s' = \bigsqcup_{\mathcal{W}}(\mathcal{U}) = \bigsqcup_{s_i \in \text{Admitted}(\
 
 *Corollary (Poison Resistance): A "signed but compromised" node cannot poison swarm state unless it controls a coalition with collective weight \\(> \Theta_{\text{trust}}\\). For \\(\Theta_{\text{trust}} = 0.67\\) and uniform weights, this requires \\(f > n/3\\) Byzantine nodes — exactly the BFT threshold.*
 
+**Connection to semantic convergence (Part 1, Definition 1b)**: Definition 12b guarantees \\(\gamma_{\text{data}} = 1\\) — every admitted update is data-consistent after Stage 2 join. It does not guarantee \\(\gamma = 1\\): merged state may still violate system policy even when no Byzantine node contributed (e.g., two clusters both committed the same exclusive resource independently). For the stability condition \\(\gamma \geq 1 - \varepsilon\\) and its effect on reconciliation cost, see Part 1 Definition 1b.
+
+*Note: \\(\\sqcup_W\\) is a **gated union operator**, not a classical semilattice. For any fixed admitted set (all quorum checks pass), it satisfies the commutativity, associativity, and idempotency of Definition 12. The admission gate is monotone: once a node's trust score exceeds \\(\\Theta_{\\text{trust}}\\), it remains admitted absent explicit revocation — so the CRDT convergence guarantee (Proposition 13) holds within the admitted partition.*
+
 In other words, any two replicas that have received the same set of updates will reach the same final state, regardless of the order in which they applied those updates or exchanged state with each other.
 
 Six standard {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} types cover the majority of edge state patterns; selecting the right one depends on whether state grows only, shrinks too, or requires last-writer semantics.
@@ -259,6 +263,21 @@ Six standard {% term(url="#def-12", def="Conflict-free Replicated Data Type; mer
 | **MV-Register** | Multi-value (preserve conflicts) | Fields where concurrent updates from separate clusters must both be preserved for later review |
 
 <sup>†</sup> Requires HLC timestamps (Definition 40) for correctness under clock drift — plain wall-clock LWW-Register does not satisfy semilattice idempotency in contested environments where clocks diverge.
+
+**MV-Register vs. LWW-Register decision criterion**: The choice is primarily driven by write semantics, with cost analysis as confirmation.
+
+- **LWW-Register** applies when writes are *superseding*: each new write represents the authoritative current state, so older concurrent values are irrelevant. Condition: \\(\beta_{\text{lose}} \leq \beta_{\text{preserve}}\\).
+- **MV-Register** applies when writes are *independent observations*: concurrent writes from separate partitions each contribute information that LWW would silently discard. Condition: \\(\beta_{\text{lose}} > \beta_{\text{preserve}}\\).
+
+The causal history \\(H(v)\\) of an MV-Register value \\(v\\) must remain bounded to prevent unbounded memory growth on constrained edge nodes:
+
+{% katex(block=true) %}
+|H(v)| \leq k_{\max}
+{% end %}
+
+where \\(k_{\max}\\) is the maximum number of concurrent write versions to retain. Values exceeding \\(k_{\max}\\) are resolved by applying LWW with \\(\prec_{\text{ext}}\\) ordering to the oldest conflicting pair, progressively reducing the conflict set.
+
+**RAVEN example**: Drone position updates are superseding writes — Drone 7's position at \\(t = 12\\) makes its position at \\(t = 9\\) irrelevant regardless of which cluster observed it. LWW-Register with \\(\prec_{\text{ext}}\\) ordering applies directly. Threat assessments from separate clusters are independent observations — Cluster A's classification of a contact as hostile and Cluster B's simultaneous classification as unknown must both reach human analysts; discarding either is a tactical intelligence loss. MV-Register applies, with \\(\beta_{\text{lose}} = \text{missed intelligence} \gg \beta_{\text{preserve}} \approx |H(v)| \cdot 64\ \text{bytes}\\).
 
 **G-Set example**: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} surveillance coverage
 
@@ -303,10 +322,10 @@ The merge operation is **automatic and deterministic** - no conflict resolution 
 
 **Limitations**: {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}s impose semantic constraints. A counter that only increments cannot represent a value that should decrease. A set that only adds cannot represent removal. Application data must be structured to fit available {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} semantics.
 
-**Choosing the right {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}**: The choice depends on application semantics. The mapping from requirements to type is a function of three inputs — the permitted operations, the desired conflict resolution policy, and the available memory budget:
+**Choosing the right {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}**: The choice depends on application semantics. The mapping from requirements to type is a function of four inputs — the permitted operations, the desired conflict resolution policy, the available memory budget, and the relative cost of discarding a concurrent write versus preserving it:
 
 {% katex(block=true) %}
-\text{CRDT\_Type} = f(\text{Operations}, \text{Conflict\_Resolution}, \text{Space\_Budget})
+\text{CRDT\_Type} = f\!\left(\text{Operations},\; \text{Conflict\_Resolution},\; \text{Space\_Budget},\; \frac{\beta_{\text{lose}}}{\beta_{\text{preserve}}}\right)
 {% end %}
 
 - **G-Set**: Simplest, lowest overhead, but no removal
@@ -688,6 +707,22 @@ Per-type instantiation of the concurrent case:
 
 The node-ID tiebreaker for concurrent LWW-Register writes gives every node a deterministic, agreed-upon total order extension — no coordination required. A clock that drifts 10 minutes fast no longer silently wins all concurrent decisions; it simply dominates the \\(l\\) field, which after Phase 2 repair (Def 42) is corrected before merging.
 
+**Formal \\(\prec_{\text{ext}}\\) extension**: The tiebreaker in the table above is the lexicographic extension of HLC ordering with node identifier as a third level:
+
+{% katex(block=true) %}
+(l_1, c_1, n_1) \prec_{\text{ext}} (l_2, c_2, n_2) \iff l_1 < l_2, \;\text{or}\; (l_1 = l_2 \text{ and } c_1 < c_2), \;\text{or}\; (l_1 = l_2 \text{ and } c_1 = c_2 \text{ and } n_1 < n_2)
+{% end %}
+
+The LWW-Register merge is then \\(s_1\\) if \\((h_2, n_2) \prec_{\text{ext}} (h_1, n_1)\\), \\(s_2\\) otherwise — a total order on \\((h, n)\\) pairs requiring no coordination. The three-level comparison subsumes the general \\(h_1 \parallel h_2\\) concurrent case from Definition 41.
+
+**Clock drift bound** (Proposition 41, Property 3): With drift rate \\(\rho\\) (fractional; \\(10^{-4}\\) for crystal oscillators, \\(10^{-3}\\) for GPS-denied tactical edge), maximum clock divergence after partition duration \\(T\\) is:
+
+{% katex(block=true) %}
+|\Delta l| \leq \varepsilon + \rho \cdot T
+{% end %}
+
+For a 2-hour GPS-denied partition (\\(T = 7200\\) s, \\(\rho = 10^{-3}\\)): \\(|\Delta l| \leq \varepsilon + 7.2\\) s. Since HLC watermarks track the maximum observed physical time rather than raw wall clocks, logical counters absorb any remaining tie-breaking load without requiring NTP.
+
 <span id="def-42"></span>
 **Definition 42** (Drift-Quarantine Re-sync Protocol). *When partitioned node \\(j\\) rejoins with signed drift \\(\Delta_j = l_j - \max_{i \in \mathrm{peers}} l_i\\) (positive: clock ran fast; negative: clock ran slow), execute the following four phases:*
 
@@ -930,6 +965,8 @@ In other words, a decision belongs to tier \\(\mathcal{Q}_j\\) based solely on h
 | \\(\mathcal{Q}_1\\) | Cluster | Local cluster | Formation adjustment |
 | \\(\mathcal{Q}_2\\) | Fleet | All nodes | Mission parameter change |
 | \\(\mathcal{Q}_3\\) | Command | Beyond fleet | Rules of engagement |
+
+*Notation: \\(Q_i \in \\{Q_0, Q_1, Q_2, Q_3\\}\\) (higher index = higher authority) denotes a tier level (a compile-time constant per node class). \\(Q_{\\text{effective}}(t)\\) is the runtime effective tier at time \\(t\\) — may be downgraded from the design tier during partition. \\(Q_{\\text{delegated}}(\\tau)\\) is the tier granted by a higher-authority node for a partition of duration \\(\\tau\\). All three share the codomain \\(\\{Q_0, \\ldots, Q_3\\}\\).*
 
 Not all decisions have the same scope. The authority tier hierarchy is defined in Definition 14 above. During partition: \\(\mathcal{Q}_0\\) and \\(\mathcal{Q}_1\\) decisions continue normally; \\(\mathcal{Q}_2\\) decisions become problematic since fleet-wide coordination is impossible; \\(\mathcal{Q}_3\\) decisions cannot be made and the system must operate within pre-authorized bounds.
 
