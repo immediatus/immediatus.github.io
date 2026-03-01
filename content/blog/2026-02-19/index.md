@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "The Edge Constraint Sequence"
-description = "Build sophisticated analytics before validating basic survival, and you'll watch your system fail in production. The constraint sequence determines success: some capabilities are prerequisites for others, and solving problems in the wrong order wastes resources on foundations that collapse. This concluding article synthesizes the series into a formal prerequisite graph, develops phase-gate validation functions for systematic verification, and addresses the meta-constraint that autonomic infrastructure itself competes for the resources it manages."
+description = "Building analytics before you've validated basic survival is a reliable way to fail in an unexpected order. This closing article derives the correct build sequence: a prerequisite graph over the five core capabilities, a constraint surface that shifts priorities based on connectivity, resources, and adversary presence, and the uncomfortable meta-constraint that your autonomic infrastructure competes for the same resources it's trying to protect."
 date = 2026-02-19
 slug = "autonomic-edge-part6-constraint-sequence"
 
@@ -13,7 +13,7 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 6
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Tactical edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures—systems that self-measure, self-heal, and self-optimize when human operators cannot intervene."""
+series_description = """Edge systems can't treat disconnection as an exceptional error — it's the default condition. This series builds the formal foundations for systems that self-measure, self-heal, and improve under stress without human intervention, grounded in control theory, Markov models, and CRDT state reconciliation. Every quantitative claim comes with an explicit assumption set."""
 +++
 
 ---
@@ -278,46 +278,68 @@ c^*(t) = \arg\max_{c \in \mathcal{C}} \text{Impact}(c, S(t))
 
 The binding constraint is the one whose relaxation would most improve throughput. Formally: \\(c^*(S) = \arg\max_c \text{Impact}(c, S)\\) where \\(\text{Impact}(c, S) = R_{\text{required}}(c, S) / R_{\text{available}}(S)\\) — the ratio of resources this constraint demands to resources available. The constraint with Impact closest to 1 is binding (it is consuming nearly all available resources and would benefit most from relaxation).
 
-<span id="prop-20"></span>
-**Proposition 20** (Connectivity-Dependent Binding). *For edge systems with connectivity state \\(C(t) \in [0, 1]\\), the binding constraint follows a piecewise-constant function over connectivity thresholds:*
+<span id="def-19b"></span>
+**Definition 19b** (Resource State). *Let \\(R(t) \in [0, 1]\\) denote the normalized resource availability at time \\(t\\):*
 
 {% katex(block=true) %}
-c^*(C) = \begin{cases}
-\text{Efficiency} & C > 0.8 \\
-\text{Reliability} & 0.3 < C \leq 0.8 \\
-\text{Autonomy} & 0 < C \leq 0.3 \\
-\text{Survival} & C = 0
-\end{cases}
+R(t) = \frac{E_{\text{battery}}(t)}{E_{\min}} \cdot w_E + \frac{M_{\text{free}}(t)}{M_{\text{total}}} \cdot w_M + \frac{\text{CPU}_{\text{idle}}(t)}{\text{CPU}_{\text{total}}} \cdot w_C
 {% end %}
 
-*Proof sketch*: Each {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %} imposes different resource scarcity. In connected state, bandwidth is abundant so efficiency dominates. As connectivity degrades, message delivery becomes scarce, shifting the binding constraint to reliability, then autonomy, then survival.
+*with weights \\(w_E + w_M + w_C = 1\\). Critical threshold: \\(R_{\text{crit}} \approx 0.2\\) — 20% resource availability triggers survival mode regardless of connectivity state.*
 
-**Calibration note:** Thresholds \\(C = 0.8\\) and \\(C = 0.3\\) are calibrated to {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s radio characteristics. For systems with lower baseline connectivity (e.g., {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} satellite links), the connected threshold may fall to \\(C = 0.5\\). The principle — that binding constraints shift with connectivity level — is universal; calibrate thresholds to the connectivity level at which real-time command becomes viable for the target system.
+<span id="def-19c"></span>
+**Definition 19c** (Adversary Presence). *Let \\(A(t) \in [0, 1]\\) denote the estimated adversary threat level at time \\(t\\):*
 
-Unlike static systems where the binding constraint is stable, edge systems experience **{% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %}**—the binding constraint changes based on connectivity state.
+{% katex(block=true) %}
+A(t) = P(\text{jamming}) \cdot w_J + P(\text{spoofing}) \cdot w_S + P(\text{physical}) \cdot w_P
+{% end %}
 
-<style>
-#tbl_migration + table th:first-of-type { width: 20%; }
-#tbl_migration + table th:nth-of-type(2) { width: 20%; }
-#tbl_migration + table th:nth-of-type(3) { width: 30%; }
-#tbl_migration + table th:nth-of-type(4) { width: 30%; }
-</style>
-<div id="tbl_migration"></div>
+*with weights summing to 1. High threat (\\(A > 0.5\\)) shifts binding priority toward trust verification and anti-fragility learning regardless of connectivity state.*
 
-| Connectivity State | \\(C(t)\\) Range | Binding Constraint | Optimization Target |
+<span id="prop-20"></span><span id="prop-20b"></span>
+**Proposition 20** (Multi-Dimensional Constraint Migration). *The binding constraint \\(c^\*\\) is determined by the utility gradient across all state dimensions \\((C, R, A)\\):*
+
+{% katex(block=true) %}
+c^*(C, R, A) = \arg\max_{c} \left| \frac{\partial U}{\partial c}(C, R, A) \right|
+{% end %}
+
+*This produces a piecewise-constant surface over the \\((C, R, A)\\) state cube. Key regions:*
+
+| Region | Conditions | Binding Constraint | Rationale |
 | :--- | :--- | :--- | :--- |
-| Connected | \\(C > 0.8\\) | Efficiency | Bandwidth, latency |
-| Degraded | \\(0.3 < C \leq 0.8\\) | Reliability | Priority queuing |
-| Denied | \\(0 < C \leq 0.3\\) | Autonomy | Local resources |
-| Emergency | \\(C = 0\\), resources critical | Survival | Power, safety |
+| Survival-Critical | \\(R < R_{\text{crit}}\\) or (\\(C = 0\\) and \\(R < 0.5\\)) | **Survival** | Resources or connectivity too low for anything else |
+| Threat-Active | \\(A > 0.5\\) | **Trust/Anti-Fragility** | Adversary presence makes verification and learning paramount |
+| Efficiency-Optimal | \\(C > 0.8\\) and \\(R > 0.5\\) and \\(A < 0.3\\) | **Efficiency** | Abundant resources enable optimization |
+| Reliability-Balanced | \\(0.3 < C \leq 0.8\\) and \\(R > 0.5\\) | **Reliability** | Scarce connectivity makes delivery the bottleneck |
+| Autonomy-Forced | \\(C \leq 0.3\\) and \\(R > 0.5\\) | **Autonomy** | Isolation requires local decision-making |
 
-**Connected state**: The binding constraint is efficiency. The system has abundant connectivity, so the question is how to use it well. Optimization focuses on latency reduction, bandwidth efficiency, and throughput.
+*Transition boundaries carry ±10% margins to prevent oscillation.*
 
-**Degraded state**: The binding constraint shifts to reliability. Connectivity is scarce, so the question is which messages must get through. Optimization focuses on priority queuing, selective retransmission, and graceful degradation of non-critical traffic.
+*Proof sketch*: Treating system utility \\(U(C, R, A)\\) as smooth over the state cube, the binding constraint at any state is whichever capability—if improved by 1%—yields the largest utility gain, i.e., the constraint with maximum impact ratio (Definition 19). Survival dominates when \\(R < R_{\text{crit}}\\) — resource exhaustion overrides communication state — or when \\(C = 0\\) and \\(R < 0.5\\), where no external path exists and the resource margin is insufficient for sustained autonomous operation. Trust/anti-fragility dominates at \\(A > 0.5\\) because adversarial interference raises \\(\partial U / \partial \text{Trust}\\) above all other partial derivatives: unverified state and corrupted learning invalidate efficiency and reliability optimizations. The efficiency/reliability/autonomy ordering of the remaining regions follows the connectivity-gradient argument: as \\(C\\) falls below 0.8, message delivery becomes scarce; below 0.3, isolation makes local decision authority the critical capability. These dominance orderings hold when \\(R > 0.5\\) and \\(A < 0.5\\) — the original single-variable model is the cross-section of this surface at favorable resource and threat levels.
 
-**Denied state**: The binding constraint is autonomy. The node is isolated, so the question is what decisions it can make alone. Optimization focuses on local resource management, autonomous decision authority, and preserving state for later reconciliation.
+Unlike static systems where the binding constraint is stable, edge systems experience **{% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %}**—the binding constraint changes based on system state—connectivity level, resource availability, and adversary presence.
 
-**Emergency state**: The binding constraint is survival. Resources are critical, so the question is how to stay alive. Optimization focuses on power conservation, safe-state defaults, and distress signaling.
+**Utility gradient intuition**: The binding constraint is whichever capability, if improved by 1%, would most increase overall system utility — exactly what \\(\partial U / \partial c\\) measures:
+
+- If \\(\partial U / \partial \text{Efficiency}\\) is largest → efficiency improvements matter most → Efficiency is binding
+- If \\(\partial U / \partial \text{Survival}\\) is largest → survival improvements matter most → Survival is binding
+
+The multi-dimensional model captures state interactions: high \\(A\\) (adversary) raises \\(\partial U / \partial \text{Trust}\\) even when \\(C\\) and \\(R\\) are individually favorable, because an adversary can corrupt an optimized-but-unverified system.
+
+**Three-way interaction**: Connectivity, resources, and threats interact non-linearly:
+
+- **High \\(C\\), low \\(R\\)**: Survival-Critical despite good connectivity — a well-connected system with depleted resources cannot sustain operations
+- **Low \\(C\\), high \\(R\\), high \\(A\\)**: Threat-Active — isolated, resourced, and under adversarial pressure; trust verification and anti-fragility learning take precedence over autonomy optimization
+- **Medium \\(C\\), medium \\(R\\), low \\(A\\)**: Reliability-Balanced — the original "degraded" case, valid when threat levels are absent
+- **High \\(C\\), high \\(R\\), high \\(A\\)**: Threat-Active overrides Efficiency-Optimal — abundant resources and connectivity provide no advantage if adversarial interference corrupts state
+
+The single-variable connectivity model holds when \\(R > 0.5\\) and \\(A < 0.5\\) — the favorable-baseline cross-section of the full state surface.
+
+**Calibration**: Thresholds should be set from operational data:
+- \\(R_{\text{crit}}\\): Resource level at which systems enter emergency mode (measure from operational logs)
+- \\(A_{\text{threshold}}\\): Threat sensitivity calibrated to deployment context (tactical edge: 0.3–0.5; commercial edge: 0.1–0.3)
+
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}: \\(R_{\text{crit}} = 0.25\\) (25% battery triggers return-to-base), \\(A_{\text{threshold}} = 0.4\\) (moderate jamming detected). For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}: \\(A_{\text{threshold}} = 0.5\\) (high-threat environment with sustained jamming baseline); the connected-state threshold may also fall to \\(C = 0.5\\) given lower baseline satellite link capacity.
 
 **Architecture implication**: The system must handle all constraint configurations. It is not sufficient to optimize for connected state if the system spends 60% of time in degraded or denied states. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} must address all states.
 
@@ -347,6 +369,8 @@ Each connectivity state has different capability targets:
 
 The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} must ensure each state's target capability is achievable before assuming higher states will be available. Design for denied, enhance for connected.
 
+The labels used here (Connected/Degraded/Denied/Emergency) are a practical operational simplification; the authoritative regime taxonomy is the four-valued \\(\Xi(t)\\) defined in Part 1 (Connected/Degraded/Intermittent/None), where "Denied" here corresponds to Intermittent (\\(0 < C \leq 0.3\\)) and "Emergency" corresponds to the None regime (\\(C = 0\\)) combined with a resource-critical condition.
+
 ### Dynamic Re-Sequencing
 
 Static {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}s are defined at design time. But operational conditions may require dynamic adjustment of priorities.
@@ -363,7 +387,7 @@ During heavy jamming, re-sequenced priorities:
 3. Surveillance (reduced bandwidth)
 4. Learning (suspended)
 
-The jamming environment elevates self-measurement because anomalies must be detected before they cascade. This is dynamic re-sequencing based on observed conditions.
+The jamming environment elevates self-measurement because anomalies must be detected before they cascade. Re-sequencing triggers when \\(A(t) > A_{\text{threshold}}\\) (Definition 19c), not just on anecdotal jamming observation — this connects the formal adversary model to operational priority shifts. This is dynamic re-sequencing based on observed conditions.
 
 **Risks of re-sequencing**:
 - **Adversarial gaming**: If the adversary knows re-sequencing rules, they can trigger priority shifts that benefit them
@@ -372,7 +396,7 @@ The jamming environment elevates self-measurement because anomalies must be dete
 
 **Mitigations**:
 - Bound re-sequencing to predefined configurations (no arbitrary priority changes)
-- Require elevated confidence before triggering re-sequence
+- Require \\(A(t) > A_{\text{threshold}}\\) sustained for \\(\geq T_{\text{confirm}}\\) before triggering re-sequence — this closes the adversarial gaming gap, as an adversary cannot drive priority shifts without sustaining detectable threat levels above the confidence threshold
 - Rate-limit priority changes to prevent oscillation
 - Test re-sequencing logic as rigorously as primary logic
 
@@ -396,6 +420,8 @@ R_{\text{autonomic}}^{\max} = R_{\text{total}} - R_{\text{mission}}^{\min}
 {% end %}
 
 *Systems where \\(R_{\text{autonomic}}^{\min} > R_{\text{autonomic}}^{\max}\\) cannot achieve both mission capability and self-management.*
+
+For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Part 3, Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 ≈ 0.1 mW through L4 ≈ 42 mW. These figures instantiate the Law 3 constraint for RAVEN and OUTPOST deployments.
 
 These resources compete with the primary mission. A drone spending 40% of its CPU on self-measurement has 40% less CPU for threat detection. This creates the **meta-constraint**:
 
@@ -549,6 +575,18 @@ The {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold 
 - **Property-Based Testing**: Tools like QuickCheck/Hypothesis generate random system states and verify {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %} predicates hold, providing confidence without exhaustive enumeration.
 
 For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, the TLA+ model is ~500 lines specifying connectivity transitions, healing actions, and {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %}s. Model checking verified the phase progression invariant holds for fleet sizes up to n=50 and partition durations up to 10,000 time steps.
+
+**TLA+ variable mapping** (formal model ↔ Part 1 Core State Variables): The following correspondence ensures TLA+ specifications are direct translations of the architectural prose — each model variable is grounded in the formally defined state space.
+
+| TLA+ Variable | Architectural Symbol | Definition |
+| :--- | :--- | :--- |
+| `Xi_t` | \\(\Xi(t)\\) | Operating regime: Connected / Degraded / Intermittent / None (Part 1, Core State Variables) |
+| `tau_transport` | \\(\tau\\) | Transport / feedback delay (Part 1 notation; see disambiguation note for subscript conventions) |
+| `R_t` | \\(R(t)\\) | Normalized resource availability — Definition 19b / Part 3 Definition 47 |
+| `C_t` | \\(C(t)\\) | Link quality \\([0,1]\\) — Part 1, Core State Variables |
+| `L_t` | \\(\mathcal{L}(t)\\) | Capability level L0–L4 — Part 1, Core State Variables |
+| `D_t` | \\(D(\Sigma_A, \Sigma_B)\\) | State divergence \\([0,1]\\) — Part 4, Definition 11 |
+| `H_t` | \\(H(t)\\) | Health vector — Part 1, Core State Variables |
 
 ### Phase 0: Foundation Layer
 

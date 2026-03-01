@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Why Edge Is Not Cloud Minus Bandwidth"
-description = "Cloud-native architecture assumes connectivity is the norm and partition is the exception. Edge systems invert this assumption entirely: disconnection is the default operating state. This fundamental difference isn't about latency or bandwidth - it's a categorical shift in design philosophy. This article establishes the theoretical foundations: Markov models for connectivity regimes, capability hierarchies for graceful degradation, and the constraint sequence that determines which problems to solve first."
+description = "At the edge, a radio transmission costs 100× more energy than a local computation, and the network may be unreachable for hours. This article builds the formal foundation: how to model contested connectivity with Markov chains, when local autonomy mathematically beats cloud control, and what keeps autonomous control loops stable when they can't phone home."
 date = 2026-01-15
 slug = "autonomic-edge-part1-contested-connectivity"
 
@@ -13,7 +13,7 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 1
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures - systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base) and commercial deployments (AUTOHAULER mining fleet, GRIDEDGE power distribution), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity."""
+series_description = """Edge systems can't treat disconnection as an exceptional error — it's the default condition. This series builds the formal foundations for systems that self-measure, self-heal, and improve under stress without human intervention, grounded in control theory, Markov models, and CRDT state reconciliation. Every quantitative claim comes with an explicit assumption set."""
 info = """This series targets engineers building systems where connectivity cannot be guaranteed: tactical military platforms, remote industrial operations, autonomous mining fleets, smart grid substations, disaster response networks, and autonomous vehicle fleets. The mathematical frameworks - optimization theory, Markov processes, queueing theory, control systems - apply wherever systems must make autonomous decisions under uncertainty. Each part builds toward a unified theory of autonomic edge architecture: self-measuring, self-healing, self-optimizing systems that improve under stress rather than merely survive it."""
 +++
 
@@ -127,6 +127,9 @@ Five quantities fully describe an edge node's operational state at any instant. 
 | \\(\mathcal{L}(t)\\) — capability level | 0 = survival-only, 4 = full optimization | Integer tier of service the node currently delivers. \\(\mathcal{L}_0\\): basic sensing and local storage only. \\(\mathcal{L}_4\\): full coordinated learning across the fleet. | Determines which functions are available; degrades gracefully as \\(C(t)\\) drops |
 | \\(\mathbf{H}(t)\\) — health vector | One score per subsystem, each in \\([0,1]\\) where 0 = failed, 1 = nominal | Per-subsystem health across \\(n\\) monitored components. For RAVEN with \\(n=6\\) subsystems, a vector like \\([0.9, 0.3, 1.0, \ldots]\\) immediately flags the second subsystem as critically degraded. | Primary input to anomaly detection; triggers self-healing actions |
 | \\(D(t)\\) — state divergence | 0 = in sync with fleet, 1 = fully isolated state | How far this node's local state has drifted from fleet consensus during a disconnection. High \\(D\\) at reconnection means expensive reconciliation — the cost the system pays for operating autonomously. | Determines reconciliation priority and cost when connectivity resumes |
+| \\(R(t)\\) — resource availability | \\([0, 1]\\) | Resource availability (normalized composite of battery SOC, free memory, and idle CPU); formal weighted definition in Part 3 Definition 47 / Part 6 Definition 19b. Critical threshold: \\(R_{\text{crit}} \approx 0.2\\). | Bounds achievable capability level; triggers graceful degradation when resources are critically low |
+
+Part 6 uses 'Denied' for \\(0 < C \leq 0.3\\) and 'Emergency' for \\(C = 0\\) as an illustrative simplification of the Intermittent/None boundary; the authoritative label for complete disconnection remains \\(\mathcal{N}\\) (None) as defined here.
 
 ### Notation Legend
 
@@ -143,16 +146,17 @@ Each symbol has exactly one meaning throughout the series. The table below cover
 | \\(E\\) | Edge-ness Score — scalar in \\([0,1]\\) classifying how strongly a deployment exhibits edge vs. cloud characteristics | Architecture selection; Section "Quantifying Edge-ness" | Italic capital E; appears in threshold comparisons \\(E < 0.3\\), \\(E \geq 0.6\\) |
 | \\(T_d\\) | Energy cost of one local compute decision (joules). Subscript d = "decide." Typical range \\(10\text{–}100\,\mu\text{J}\\) for microcontroller-class inference. | Energy-per-Decision analysis; constraint structure | Always a joule scalar with lowercase letter subscript; never a time value |
 | \\(T_s\\) | Energy cost of one radio packet transmission (joules). Subscript s = "send." Typical range \\(1\text{–}10\,\text{mJ}\\) at tactical radio power levels. | Energy-per-Decision analysis; Ingress Filter threshold | \\(T_s / T_d \approx 10^2\text{–}10^3\\) — radio dominates the energy budget by two to three orders of magnitude |
+| \\(\tau\\) | Reused symbol with four subscript-disambiguated roles across the series: \\(\tau_{\text{fb}}\\) = MAPE-K feedback/loop delay (Parts 1, 3); \\(\tau_{\text{stale}}\\) = observation staleness elapsed time (Part 2, Proposition 5); \\(\tau_{\text{partition}}\\) = partition duration (Part 4, Proposition 12); \\(\tau_{\text{burst}}\\) = burst-phase duration (Part 4, Definition 11b). Special form: \\(\tau^*\\) = Inversion Threshold (this article only). | Symbol disambiguation across series | Subscript unambiguously selects meaning; plain \\(\tau\\) in the stability constraint \\(K < 1/(1+\tau/T_{\text{tick}})\\) means \\(\tau_{\text{fb}}\\); \\(\tau^*\\) is always the Inversion Threshold |
 
 ### Constraint Structure
 
-Three constraints bound all subsequent analysis: \\(B(t)\\) is available bandwidth, \\(R(t)\\) is remaining resource budget (power, compute, memory combined), \\(K\\) is control loop gain, and \\(\tau\\) is loop delay — the third constraint is the Nyquist stability condition preventing oscillation.
+Three constraints bound all subsequent analysis: \\(B(t)\\) is available bandwidth, \\(R(t)\\) is remaining resource budget (power, compute, memory combined), \\(K\\) is control loop gain, and \\(\tau\\) is loop delay — the third constraint is the stability condition \\(K < 1/(1 + \tau/T_{\text{tick}})\\) preventing oscillation (Proposition 9, Part 3; Proposition 39 for stochastic \\(\tau\\)). Here \\(\tau\\) means \\(\tau_{\text{fb}}\\); for all four roles \\(\tau\\) plays across the series see the Notation Legend above.
 
 {% katex(block=true) %}
 \begin{aligned}
 &B(t) \leq B_{\max} \cdot C(t) && \text{(bandwidth scales with connectivity)} \\
 &\mathcal{L}(t) \leq f(C(t), R(t)) && \text{(capability bounded by connectivity + resources)} \\
-&K \cdot \tau < \pi/2 && \text{(control loop stability)}
+&K < \frac{1}{1 + \tau/T_{\text{tick}}} && \text{(control loop stability; Proposition 9, Part 3; Proposition 39 for stochastic \(\tau\))}
 \end{aligned}
 {% end %}
 
@@ -184,7 +188,7 @@ This metric reframes every architectural choice as an energy budget problem. Sen
 
 **Design consequence**: The inversion threshold \\(\tau^\*\\) from Proposition 1 has an energy analog. Even when \\(C(t) > \tau^*\\) and distributed autonomy does not strictly dominate cloud control on latency or capability grounds, it may still dominate on energy grounds if \\(n_c < 1/\rho\\). At the edge, physics — not just connectivity — mandates local compute.
 
-**Scenario calibration**:
+**Illustrative hardware parameters** (order-of-magnitude estimates consistent with representative datasheets for each platform class; not measured values — calibrate \\(T_d\\) and \\(T_s\\) for the target hardware):
 
 | System | \\(T_d\\) | \\(T_s\\) | \\(\rho\\) | Local-dominant threshold |
 | :--- | :--- | :--- | :--- | :--- |
@@ -192,7 +196,21 @@ This metric reframes every architectural choice as an energy budget problem. Sen
 | CONVOY vehicle ECU | \\(20\,\mu\text{J}\\) | \\(8\,\text{mJ}\\) | \\(2.5\times10^{-3}\\) | \\(<400\\) compute cycles |
 | OUTPOST sensor node | \\(10\,\mu\text{J}\\) | \\(10\,\text{mJ}\\) | \\(10^{-3}\\) | \\(<1000\\) compute cycles |
 
-*Values are illustrative; calibrate \\(T_d\\) and \\(T_s\\) from hardware datasheets for the target platform.*
+**Detection-value extension**: Proposition 23 assumes all local computation has equivalent value per unit energy. For decision processes that prevent high-cost downstream events — anomaly detection avoiding cascading failure, intrusion detection preventing node compromise — the effective dominance threshold extends. Let \\(U_{\text{detect}}\\) denote the energy-equivalent value of a correct detection (joules of downstream cost avoided). The extended dominance condition is:
+
+{% katex(block=true) %}
+n_c < \frac{T_s + U_{\text{detect}}}{T_d}
+{% end %}
+
+For \\(U_{\text{detect}} = k \cdot T_s\\), the local-dominant region expands by factor \\((1 + k)\\):
+
+| \\(U_{\text{detect}}\\) | RAVEN extended threshold | Design implication |
+| :--- | :--- | :--- |
+| \\(T_s\\) (one avoided spurious alert) | \\(n_c < 200\\) | Models up to 2× more complex are local-dominant |
+| \\(5\,T_s\\) (cluster-level false positive) | \\(n_c < 600\\) | Medium-complexity models (autoencoder, small TCN) justified |
+| \\(10\,T_s\\) (mission-abort cost) | \\(n_c < 1{,}100\\) | Full TCN ensemble remains energetically dominant |
+
+Quantifying \\(U_{\text{detect}}\\) requires estimating the failure cost — the energy and mission consequence of missing an anomaly — which is system-specific. The [anomaly detection framework in Part 2](@/blog/2026-01-22/index.md) applies this extended threshold when selecting between EWMA, TCN, and ensemble models on resource-constrained edge nodes.
 
 ### Prerequisite Ordering
 

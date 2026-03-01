@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Self-Healing Without Connectivity"
-description = "What happens when a component fails and there's no one to call? Edge systems must repair themselves—detecting failures, selecting remediation strategies, and executing recovery without human intervention. This article adapts IBM's MAPE-K autonomic control loop for contested environments, develops confidence-based healing triggers that balance false positives against missed failures, and establishes recovery ordering principles that prevent cascading failures when multiple components need healing simultaneously."
+description = "Detection is the easy part — acting without making things worse is harder. This article works through the MAPE-K autonomic loop adapted for edge conditions: stability conditions, confidence-gated action thresholds, dependency-ordered recovery to prevent cascades, and a self-throttling law that keeps the loop from consuming the very resources it's trying to protect."
 date = 2026-01-29
 slug = "autonomic-edge-part3-self-healing"
 
@@ -13,7 +13,7 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 3
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures—systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base) and commercial deployments (AUTOHAULER mining fleet, GRIDEDGE power distribution, HYPERSCALE data centers, SMARTBLDG building automation), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity."""
+series_description = """Edge systems can't treat disconnection as an exceptional error — it's the default condition. This series builds the formal foundations for systems that self-measure, self-heal, and improve under stress without human intervention, grounded in control theory, Markov models, and CRDT state reconciliation. Every quantitative claim comes with an explicit assumption set."""
 +++
 
 ---
@@ -38,7 +38,7 @@ Self-healing enables autonomous systems to recover from failures without human i
 
 | Concept | Formal Contribution | Design Consequence |
 | :--- | :--- | :--- |
-| **MAPE-K Control** | Stability: \\(K \cdot \tau < \pi/2\\) | Reduce controller gain when feedback delayed |
+| **MAPE-K Control** | Stability: \\(K < 1/(1 + \tau/T_{\text{tick}})\\) | Reduce controller gain when feedback delayed |
 | **Healing Triggers** | \\(\theta^*(a) = C_{FP}/(C_{FP} + C_{FN} + V_{\text{heal}})\\) | Match threshold to action severity |
 | **Recovery Ordering** | Topological sort on dependency DAG | Heal foundations before dependents |
 | **Cascade Prevention** | Resource quota \\(Q_{\text{heal}} < Q_{\text{total}} - Q_{\text{min}}\\) | Reserve capacity for mission function |
@@ -391,17 +391,41 @@ When the healing deadline cannot be met, the system must either:
 3. Accept degraded state (capability reduction)
 
 <span id="prop-9"></span>
-**Proposition 9** (Closed-Loop Healing Stability). *For an {% term(url="#def-8", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}autonomic control loop{% end %} with feedback delay \\(\tau\\) and controller gain \\(K\\), stability requires the gain-delay product to satisfy:*
+**Proposition 9** (Closed-Loop Healing Stability). *The MAPE-K loop is a discrete-time system executing on a fixed timer with period \\(T_{\text{tick}}\\). Modeling the proportional controller with gain \\(K\\) acting on a \\(d = \lceil\tau/T_{\text{tick}}\rceil\\)-sample-delayed error state:*
 
 {% katex(block=true) %}
-K \cdot \tau < \frac{\pi}{2}
+x[t+1] = x[t] - K \cdot x[t - d]
 {% end %}
 
-*This bound follows from the Nyquist stability criterion: feedback delay \\(\tau\\) introduces phase lag \\(\omega\tau\\) at frequency \\(\omega\\). At the gain crossover frequency \\(\omega_c = K\\), the phase margin becomes \\(\pi/2 - K\tau\\), which must remain positive for stability.*
+*The closed-loop system is stable if the controller gain satisfies:*
 
-*Proof*: For a proportional controller with delay, the open-loop transfer function is \\(G(s) = K e^{-s\tau} / s\\). The phase at crossover is \\(-\pi/2 - \omega_c \tau\\). Phase margin \\(\phi_m = \pi - (\pi/2 + K\tau) > 0\\) requires \\(K\tau < \pi/2\\).
+{% katex(block=true) %}
+K < \frac{1}{1 + \tau/T_{\text{tick}}}
+{% end %}
 
-**Linear approximation warning**: This derivation applies the Nyquist criterion for a continuous-time, linear, time-invariant plant with pure delay \\(\tau\\). The actual MAPE-K loop is none of these: it executes on a discrete timer (period \\(T_{\text{tick}}\\)), its actions are step functions (restart a process, reroute traffic — not proportional corrections), and multiple healing loops may run concurrently on shared hardware. \\(K \cdot \tau < \pi/2\\) is a necessary heuristic for a single, isolated healing loop — not a sufficient stability condition for the full system. For \\(N_{\text{concurrent}}\\) simultaneous healing loops sharing one CPU at \\(u\\%\\) utilization, the effective feedback delay grows to \\(\tau_{\text{eff}} \approx \tau/(1-u)\\), and the effective aggregate gain \\(K_{\text{eff}} \approx K \cdot N_{\text{concurrent}}\\); the stability condition becomes \\(K_{\text{eff}} \cdot \tau_{\text{eff}} < \pi/2\\). Verify concurrent-failure stability through discrete-event simulation before deploying multi-target healing (e.g., simultaneous motor compensation + sensor fallback + communication rerouting on RAVEN Drone 23).
+*For \\(\tau \ll T_{\text{tick}}\\) this reduces to \\(K < 1\\). For \\(\tau \gg T_{\text{tick}}\\) the stable gain decreases proportionally with the delay-to-sample ratio.*
+
+*Proof sketch (discrete-time Lyapunov):* Let \\(V(x) = x^2\\). The one-step difference under \\(d\\)-step delay is:
+
+{% katex(block=true) %}
+\Delta V = x[t+1]^2 - x[t]^2 = K^2 x[t-d]^2 - 2K\, x[t]\, x[t-d]
+{% end %}
+
+For the worst-case alignment \\(x[t] = x[t-d]\\) (current and delayed states coincide, representing maximum regenerative feedback):
+
+{% katex(block=true) %}
+\Delta V\big|_{\text{worst}} = x[t]^2 K(K - 2)
+{% end %}
+
+Requiring \\(\Delta V < 0\\) at worst case yields the *necessary* condition \\(0 < K < 2\\).
+
+For the **sufficient** condition \\(K < 1/(1+d)\\): the closed-loop characteristic polynomial is \\(z^{d+1} - z^d + K = 0\\). For \\(d=1\\), Jury's criterion applied directly yields the necessary and sufficient condition \\(K < 1 = 1/(1+1)\\). For \\(d \geq 2\\), the sufficient condition \\(K < 1/(1+d)\\) is derived by bounding the cumulative influence of the \\(d\\)-step delay chain: each additional delay sample tightens the stable-gain envelope by one additive \\(K\\) term, so the \\((d+1)\\)-term influence sum \\(K \cdot (d+1) < 1\\) gives the sufficient bound. This is conservative relative to the exact Schur–Cohn stability boundary (e.g., for \\(d=2\\) the exact boundary is \\(K < (\sqrt{5}-1)/2 \approx 0.618\\) vs. the sufficient bound \\(K < 1/3\\)), but the conservative margin is appropriate for a gain scheduler operating under stochastic delay, where using the exact boundary would risk instability on delay-distribution tails. Expressed in continuous time via \\(d = \tau/T_{\text{tick}}\\):
+
+{% katex(block=true) %}
+K < \frac{1}{1 + \tau/T_{\text{tick}}} \qquad \square
+{% end %}
+
+**Concurrent loops**: For \\(N_{\text{concurrent}}\\) simultaneous healing loops sharing one CPU at \\(u\\%\\) utilization, the effective feedback delay grows to \\(\tau_{\text{eff}} \approx \tau/(1-u)\\) and the effective aggregate gain to \\(K_{\text{eff}} \approx K \cdot N_{\text{concurrent}}\\); the stability condition becomes \\(K_{\text{eff}} < 1/(1 + \tau_{\text{eff}}/T_{\text{tick}})\\). Verify concurrent-failure stability through discrete-event simulation before deploying multi-target healing (e.g., simultaneous motor compensation + sensor fallback + communication rerouting on RAVEN Drone 23).
 
 In other words, the slower the feedback (larger \\(\tau\\)), the more gently the controller must react (smaller \\(K\\)); aggressive corrections in a slow-feedback environment cause the system to oscillate rather than converge.
 
@@ -434,7 +458,7 @@ The Pareto model is natural under adversarial conditions: an adversary who contr
 **Proposition 39** (Robust Gain Scheduling under Stochastic Delay). *Let \\(\delta \in (0,1)\\) be the acceptable per-cycle instability probability. The regime-dependent robust gain bound is:*
 
 {% katex(block=true) %}
-K_{\mathrm{robust}}(C, \delta) \leq \frac{\pi}{2 \cdot \tau_{1-\delta}(C)}
+K_{\mathrm{robust}}(C, \delta) \leq \frac{1}{1 + \tau_{1-\delta}(C)/T_{\text{tick}}}
 {% end %}
 
 *where \\(\tau_{1-\delta}(C)\\) is the \\((1-\delta)\\)-th percentile of \\(F_\tau(\cdot \mid C)\\):*
@@ -451,9 +475,9 @@ For RAVEN (\\(\tau_{\min} = 0.2\\)s, \\(\alpha = 1.6\\), \\(\delta = 0.01\\)):
 \tau_{0.99} = 0.2 \times (0.01)^{-1/1.6} = 0.2 \times 100^{0.625} \approx 3.16\text{ s}
 {% end %}
 
-This gives \\(K_{\mathrm{robust}} \leq \pi / (2 \times 3.16) \approx 0.497\\)/s. However, \\(\tau_{1-\delta}\\) scales as \\(\delta^{-0.625}\\): driving \\(\delta \to 0.001\\) pushes \\(\tau_{0.999} \approx 25.1\\)s and \\(K_{\mathrm{robust}} \leq 0.063\\)/s. For any operationally meaningful \\(\delta\\), no finite gain satisfies the stability condition for remote actions in Contested conditions — all Severity 2 and above actions must be suppressed.
+This gives \\(K_{\mathrm{robust}} \leq 1/(1 + 3.16/T_{\text{tick}})\\). For a reference tick period of \\(T_{\text{tick}} = 1\\)s: \\(K_{\mathrm{robust}} \leq 0.240\\). However, \\(\tau_{1-\delta}\\) scales as \\(\delta^{-0.625}\\): driving \\(\delta \to 0.001\\) pushes \\(\tau_{0.999} \approx 25.1\\)s and \\(K_{\mathrm{robust}} \leq 1/(1 + 25.1) \approx 0.038\\). As \\(\delta \to 0\\), \\(\tau_{1-\delta} \to \infty\\) and \\(K_{\mathrm{robust}} \to 0\\): for any operationally meaningful \\(\delta\\), no positive gain satisfies the stability condition for remote actions in Contested conditions — all Severity 2 and above actions must be suppressed.
 
-*Proof*: From Prop 9, stability requires \\(K\tau < \pi/2\\). Under stochastic \\(\tau\\): \\(P(\text{stable}) = F_\tau(\pi/(2K) \mid C)\\). Setting this to \\(1-\delta\\) inverts to \\(K \leq \pi/(2\tau_{1-\delta})\\). For \\(\alpha \leq 2\\), \\(\tau_{1-\delta} = \tau_{\min}\delta^{-1/\alpha}\\) grows without bound as \\(\delta \to 0\\), so no bounded \\(K > 0\\) achieves arbitrary confidence in the Contested regime. \\(\square\\)
+*Proof*: From Prop 9, stability requires \\(K < 1/(1 + \tau/T_{\text{tick}})\\), equivalently \\(\tau < T_{\text{tick}}(K^{-1} - 1)\\). Under stochastic \\(\tau\\): \\(P(\text{stable}) = F_\tau(T_{\text{tick}}(K^{-1} - 1) \mid C)\\). Setting this to \\(1-\delta\\) inverts to \\(K \leq 1/(1 + \tau_{1-\delta}/T_{\text{tick}})\\). For \\(\alpha \leq 2\\), \\(\tau_{1-\delta} = \tau_{\min}\delta^{-1/\alpha}\\) grows without bound as \\(\delta \to 0\\), so \\(1/(1 + \tau_{1-\delta}/T_{\text{tick}}) \to 0\\) and no positive gain achieves arbitrary confidence in the Contested regime. \\(\square\\)
 
 <span id="def-39"></span>
 **Definition 39** (MAPE-K Predictive Dead-Band). *Let \\(A\\) be a healing action recommended at \\(t_{\mathrm{sense}}\\). The Execute phase suppresses \\(A\\) if any of the following hold at \\(t_{\mathrm{exec}}\\):*
@@ -475,7 +499,7 @@ equivalently \\(t_{\mathrm{exec}} - t_{\mathrm{sense}} > -\ln(p_{\mathrm{suppres
 **(c) Gain violation** — current delay estimate violates the stability condition from Prop 39:
 
 {% katex(block=true) %}
-K_{\mathrm{current}} \cdot \hat{\tau}(t_{\mathrm{exec}}) > \pi/2
+K_{\mathrm{current}} \geq \frac{1}{1 + \hat{\tau}(t_{\mathrm{exec}})/T_{\text{tick}}}
 {% end %}
 
 All three conditions suppress action independently. Condition (b) is the MAPE-K analog of the Smith Predictor's inner model path: it estimates whether the system will have self-corrected before \\(A\\) arrives, suppressing \\(A\\) if so. In the Contested regime, the prediction error \\(\varepsilon(t) = \tau(t) - \hat{\tau}(t)\\) carries the same Pareto tail as \\(\tau(t)\\) regardless of predictor design — the Smith Predictor reduces the effective delay in the characteristic equation from \\(\tau(t)\\) to \\(\varepsilon(t)\\), but both are unbounded in variance. Condition (a) remains the primary suppressor. Condition (b) also prevents the anti-windup oscillation that Prop 29 bounds: acting on a stale recommendation after the target has already self-healed is precisely the over-correction scenario Def 28 blocks.
@@ -506,17 +530,17 @@ The feasibility window for remote healing actions in Contested RAVEN is \\([3.16
 
 ### Adaptive Gain Scheduling
 
-The stability condition \\(K \cdot \tau < \pi/2\\) suggests a key insight: as feedback delay \\(\tau\\) varies with {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, the controller gain \\(K\\) should adapt accordingly.
+The stability condition \\(K < 1/(1 + \tau/T_{\text{tick}})\\) suggests a key insight: as feedback delay \\(\tau\\) varies with {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, the controller gain \\(K\\) should adapt accordingly.
 
 **Gain scheduling by {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}**:
 
 Define regime-specific gains that maintain stability margins across all operating conditions:
 
 {% katex(block=true) %}
-K_{\text{regime}} = \frac{\phi_{\text{target}}}{\tau_{\text{regime}}}
+K_{\text{regime}} = \frac{\alpha}{1 + \tau_{\text{regime}}/T_{\text{tick}}}
 {% end %}
 
-where \\(\phi_{\text{target}} \approx \pi/4\\) provides adequate stability margin (phase margin of \\(45^\circ\\)).
+where \\(\alpha < 1\\) is the stability margin factor (\\(\alpha = 0.75\\) retains 75% of the theoretical gain limit, providing a robust safety margin against delay estimation error).
 
 The table below translates this formula into concrete gain values for each {% term(url="@/blog/2026-01-15/index.md#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, with the Healing Response column describing the behavioral consequence of operating at that gain.
 
@@ -740,6 +764,7 @@ By Rosenthal's theorem (1973), congestion games always admit a pure Nash equilib
 {% katex(block=true) %}
 \Phi(\mathbf{a}) = \sum_{r \in R} \sum_{k=1}^{n_r(\mathbf{a})} c_r(k)
 {% end %}
+
 where \\(c_r(k)\\) is the marginal cost of resource \\(r\\) at congestion level \\(k\\).
 
 **Coordination protocol**: Each {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop selects healing actions to minimize \\(\Phi\\) (best-response descent) respecting the aggregate resource constraint \\(Q_{\text{heal}} < Q_{\text{total}} - Q_{\text{min}}\\). The healing coordination game admits a pure Nash equilibrium (Rosenthal 1973). Best-response dynamics converge in potential games, but MAPE-K healing uses gradient-based updates rather than pure best-response; convergence to Nash should be verified empirically for each deployment. In practice, this means a shared resource declaration table: loops register resource requirements and receive grants only when the current allocation remains feasible.
@@ -825,7 +850,7 @@ For crash loops, "scale to 0, then up" has highest {% term(url="@/blog/2026-02-1
 4. **Threshold adjustment** (T+25s): Tighten healing thresholds by 15% (more conservative without central backup)
 5. **Operation logging** (T+continuous): All healing actions logged with causality metadata
 
-Upon reconnection, the site uploads its healing log. Central platform reconciles any conflicts (e.g., site promoted a replica to primary that central also promoted elsewhere) using timestamp-based conflict resolution with site-local decisions having priority for their own resources.
+Upon reconnection, the site uploads its healing log. Central platform reconciles any conflicts (e.g., site promoted a replica to primary that central also promoted elsewhere) using causal ordering with HLC timestamps (Definition 40, Part 4) with site-local decisions taking semantic priority (Proposition 30, Part 4). Wall-clock LWW is unreliable during partition due to clock drift; the NTP-Free Semantic Commit Order of Proposition 30 provides the correct causal resolution.
 
 **Utility analysis**:
 
@@ -1102,14 +1127,14 @@ t_{\text{next}(A)} \geq t_{\text{last}(A)} + \tau_{\text{cooldown}}(A)
 
 ### Control-Theoretic Stability: Damping, Anti-Windup, and Refractory Periods
 
-Proposition 9's stability condition \\(K \cdot \tau < \pi/2\\) governs the proportional behavior of the MAPE-K controller. But two failure modes remain outside its scope: **high-frequency chatter** (the loop triggers healing faster than the system can respond, oscillating between degraded and over-corrected states) and **integral windup** (healing demand accumulates while resources are blocked and discharges as a burst of simultaneous actions when resources free). In classical PID terms, the proportional term is bounded by Proposition 9, but the derivative and integral behaviors need their own treatment.
+Proposition 9's stability condition \\(K < 1/(1 + \tau/T_{\text{tick}})\\) governs the proportional behavior of the MAPE-K controller. But two failure modes remain outside its scope: **high-frequency chatter** (the loop triggers healing faster than the system can respond, oscillating between degraded and over-corrected states) and **integral windup** (healing demand accumulates while resources are blocked and discharges as a burst of simultaneous actions when resources free). In classical PID terms, the proportional term is bounded by Proposition 9, but the derivative and integral behaviors need their own treatment.
 
 <span id="def-28"></span>
 **Definition 28** (Healing Dead-Band and Refractory State). *The healing actuator for action \\(a\\) is governed by three parameters and occupies one of three states:*
 
 - *\\(\varepsilon_{\text{db}}\\) (dead-band threshold): healing is suppressed unless the anomaly score \\(z_t^K\\) exceeds \\(\varepsilon_{\text{db}}\\) for \\(\tau_{\text{confirm}}\\) consecutive samples — the "Wait-and-See" confirmation window. Single-sample noise spikes are ignored.*
 - *\\(\tau_{\text{ref}}(a)\\) (refractory period): after executing action \\(a\\), the healing gate for \\(a\\) closes for \\(\tau_{\text{ref}}\\) seconds. This is the mandatory observation window during which the system watches the action take effect before issuing another.*
-- *\\(Q_{\text{aw}}\\) (anti-windup cap): accumulated healing demand \\(D(t)\\) is capped at \\(Q_{\text{aw}}\\). Demand arriving when \\(D(t) = Q_{\text{aw}}\\) is discarded, preventing burst discharge after a resource-blocked period.*
+- *\\(Q_{\text{aw}}\\) (anti-windup cap): accumulated healing demand \\(Q_d(t)\\) is capped at \\(Q_{\text{aw}}\\). Demand arriving when \\(Q_d(t) = Q_{\text{aw}}\\) is discarded, preventing burst discharge after a resource-blocked period.*
 
 {% mermaid() %}
 stateDiagram-v2
@@ -1117,8 +1142,8 @@ stateDiagram-v2
     [*] --> READY
     READY --> REFRACTORY: action executed
     REFRACTORY --> READY: tau_ref elapsed
-    REFRACTORY --> ANTI_WINDUP: D(t) >= Q_aw
-    ANTI_WINDUP --> REFRACTORY: D(t) < Q_aw / 2
+    REFRACTORY --> ANTI_WINDUP: Q_d(t) >= Q_aw
+    ANTI_WINDUP --> REFRACTORY: Q_d(t) < Q_aw / 2
     ANTI_WINDUP --> READY: tau_ref elapsed, D = 0
     note right of READY
         suppressed while z_t < epsilon_db
@@ -1137,31 +1162,25 @@ stateDiagram-v2
 where \\(\tau_{\text{fb}}\\) is the current feedback delay from Proposition 9.
 
 <span id="prop-29"></span>
-**Proposition 29** (Anti-Windup Oscillation Bound). *For the proportional healing controller with gain \\(K\\) and feedback delay \\(\tau_{\text{fb}}\\) satisfying \\(K \cdot \tau_{\text{fb}} < \pi/2\\) (Proposition 9), healing oscillation is suppressed if and only if the refractory period satisfies:*
-
-{% katex(block=true) %}
-\tau_{\text{ref}} \geq \frac{\pi}{K}
-{% end %}
-
-*Substituting the Proposition 9 stability bound \\(K < \pi/(2\tau_{\text{fb}})\\), the sufficient condition in terms of feedback delay alone is:*
+**Proposition 29** (Anti-Windup Oscillation Bound). *For the proportional healing controller with gain \\(K\\) and feedback delay \\(\tau_{\text{fb}}\\) satisfying \\(K < 1/(1 + \tau_{\text{fb}}/T_{\text{tick}})\\) (Proposition 9), healing oscillation is suppressed if the refractory period satisfies:*
 
 {% katex(block=true) %}
 \tau_{\text{ref}} \geq 2\,\tau_{\text{fb}}
 {% end %}
 
-*Proof*: The healing controller with refractory period \\(\tau_{\text{ref}}\\) cannot fire at frequency higher than \\(1/\tau_{\text{ref}}\\). Sustained oscillation requires at least one half-cycle of the control loop at gain crossover frequency \\(\omega_c = K\\), which takes \\(\pi/K\\) seconds. Setting \\(\tau_{\text{ref}} \geq \pi/K\\) prevents any half-cycle from completing. Substituting \\(K < \pi/(2\tau_{\text{fb}})\\) gives \\(\pi/K > 2\tau_{\text{fb}}\\). \\(\square\\)*
+*Proof*: In the discrete-time system with delay \\(d = \lceil\tau_{\text{fb}}/T_{\text{tick}}\rceil\\) samples, the minimum period of any sustained oscillation is \\(2(d+1) \cdot T_{\text{tick}} \geq 2\tau_{\text{fb}}\\): two full delay-lengths are required for one complete feedback cycle (action propagates forward through \\(d\\) steps, effect propagates back through \\(d\\) steps). The healing controller with refractory period \\(\tau_{\text{ref}}\\) cannot fire at intervals shorter than \\(\tau_{\text{ref}}\\). Setting \\(\tau_{\text{ref}} \geq 2\tau_{\text{fb}}\\) prevents the controller from completing more than one correction per minimum oscillation period, suppressing sustained oscillation. \\(\square\\)*
 
 **Anti-windup accumulator update**:
 
 {% katex(block=true) %}
-D(t+1) = \min\!\left(D(t) + \mathbb{1}\!\left[z_t^K > \varepsilon_{\text{db}}\right],\; Q_{\text{aw}}\right)
+Q_d(t+1) = \min\!\left(Q_d(t) + \mathbb{1}\!\left[z_t^K > \varepsilon_{\text{db}}\right],\; Q_{\text{aw}}\right)
 {% end %}
 
-When \\(D(t)\\) reaches \\(Q_{\text{aw}}\\), the system enters ANTI_WINDUP state and discards new demand until \\(D(t)\\) drains below \\(Q_{\text{aw}}/2\\). This prevents "burst discharge" — where minutes of suppressed healing demand fires simultaneously the moment connectivity or resources recover.
+When \\(Q_d(t)\\) reaches \\(Q_{\text{aw}}\\), the system enters ANTI_WINDUP state and discards new demand until \\(Q_d(t)\\) drains below \\(Q_{\text{aw}}/2\\). This prevents "burst discharge" — where minutes of suppressed healing demand fires simultaneously the moment connectivity or resources recover.
 
 **Relationship to existing results**: The dead-band threshold \\(\varepsilon_{\text{db}}\\) formalizes the minimum-confidence floor \\(\theta_{\min} = 0.05\\) from Proposition 10 (constraint \\(g_1\\)): both prevent trigger-happy behavior at near-zero evidence. The refractory period \\(\tau_{\text{ref}}\\) formalizes the informal cooldown constraint \\(t_{\text{next}(A)} \geq t_{\text{last}(A)} + \tau_{\text{cooldown}}(A)\\) from the section above. Proposition 29 gives the first *derived* lower bound on that cooldown: rather than choosing \\(\tau_{\text{cooldown}}\\) heuristically, set \\(\tau_{\text{ref}} \geq 2\tau_{\text{fb}}\\) and oscillation-freedom follows from Proposition 9's stability condition.
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: Feedback delay \\(\tau_{\text{fb}} \approx 5\,\text{s}\\) (gossip convergence, 47 nodes), regime gain \\(K = 0.3\\). Minimum refractory period: \\(\tau_{\text{ref}} \geq \pi/0.3 \approx 10\,\text{s}\\), consistent with \\(2 \times 5 = 10\,\text{s}\\). Dead-band \\(\varepsilon_{\text{db}} = 2\sigma\\) for medium-severity battery actions. Without this bound, a jamming event that degrades all 47 drones simultaneously triggers 47 concurrent healing cycles — each drone restarting its communication stack causes momentary radio silence, which registers as a new anomaly to neighbors, triggering another round. This is exactly the healing loop failure mode described above, now quantified.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: Feedback delay \\(\tau_{\text{fb}} \approx 5\,\text{s}\\) (gossip convergence, 47 nodes), regime gain \\(K = 0.3\\). Minimum refractory period: \\(\tau_{\text{ref}} \geq 2\tau_{\text{fb}} = 10\,\text{s}\\). Dead-band \\(\varepsilon_{\text{db}} = 2\sigma\\) for medium-severity battery actions. Without this bound, a jamming event that degrades all 47 drones simultaneously triggers 47 concurrent healing cycles — each drone restarting its communication stack causes momentary radio silence, which registers as a new anomaly to neighbors, triggering another round. This is exactly the healing loop failure mode described above, now quantified.
 
 **Required relationship — confirmation window vs. hardware response time**: The confirmation window \\(\tau_{\text{confirm}}\\) must satisfy {% katex() %}\tau_{\text{confirm}} \geq \tau_{\text{hw\_response}}{% end %}, where {% katex() %}\tau_{\text{hw\_response}}{% end %} is the mechanical or electrical settling time of the actuated component. If {% katex() %}\tau_{\text{confirm}} < \tau_{\text{hw\_response}}{% end %}, the MAPE-K loop can issue a second actuation command while the first is still in progress, resulting in compounded commands on an actuator in an undefined intermediate state. Concrete example: a {% term(url="@/blog/2026-01-15/index.md#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} protective relay has a mechanical response time of 500 ms. If \\(\tau_{\text{confirm}} = 300\,\text{ms}\\) (3 samples at 10 Hz), the MAPE-K loop confirms "action taken" before the relay has physically moved; a second fault event can send a second trip command to a relay mid-travel. Minimum safe value: {% katex() %}\tau_{\text{confirm}} \geq \max(\tau_{\text{hw\_response}}, \text{measurement period} \times n_{\text{confirm}}){% end %}. For RAVEN motor controllers (electrical settling time \\(\approx 50\,\text{ms}\\)), \\(\tau_{\text{confirm}} = 3\,\text{samples} \times 1\,\text{s/sample} = 3\,\text{s}\\) comfortably satisfies the constraint.
 
@@ -1272,6 +1291,7 @@ Proposition 11's greedy set-cover approximation identifies a minimum feasible co
 **MVS cooperative game**: Players are the \\(n\\) nodes (or components). The characteristic function \\(v(S)\\) is the mission completion probability achievable with the components contributed by coalition \\(S\\).
 
 The **Shapley value** of node \\(i\\) measures its average marginal contribution across all possible coalition orderings:
+
 {% katex(block=true) %}
 \phi_i(v) = \sum_{S \subseteq N \setminus \{i\}} \frac{|S|!\,(|N|-|S|-1)!}{|N|!} \bigl[v(S \cup \{i\}) - v(S)\bigr]
 {% end %}
@@ -1362,6 +1382,34 @@ T_{\mathrm{survive}}^{(1)} = \frac{0.15 \times 1{,}110\;\mathrm{mWh}}{5 + 0.1\;\
 
 **Interaction with Prop 40** (Stale Data Threshold): In \\(O_1\\) (Survival), gossip is suspended entirely — no new measurements arrive, so \\(T_{\mathrm{stale}}\\) expires for all remote state. The node operates on stale world-state for the duration of \\(O_1\\). This is acceptable: in survival mode the only decision is whether to remain in \\(O_1\\) or transition to \\(O_0\\) (terminal), both of which are local decisions requiring no remote data.
 
+<span id="prop-51"></span>
+
+**Proposition 51** (Self-Throttling Law). *The MAPE-K execution frequency is a resource-adaptive function of \\(R(t)\\):*
+
+{% katex(block=true) %}
+f_{\text{MAPE-K}}(t) = \max\!\Bigl(f_{\min} \cdot \mathbb{1}[I_{\text{crit}}(t)],\; \tfrac{1}{T_{\text{tick}}} \cdot \alpha(R(t))\Bigr)
+{% end %}
+
+*where the throttle coefficient \\(\alpha : [0,1] \to (0,1]\\) is:*
+
+{% katex(block=true) %}
+\alpha(R) = \begin{cases}
+1 & R > R_{\text{crit}} \\
+\dfrac{R - R_{\text{floor}}}{R_{\text{crit}} - R_{\text{floor}}} & R_{\text{floor}} \leq R \leq R_{\text{crit}} \\
+\alpha_{\text{floor}} > 0 & R < R_{\text{floor}}
+\end{cases}
+{% end %}
+
+*and the critical-failure indicator is \\(I_{\text{crit}}(t) = \mathbb{1}[\exists\, j : H_j(t) < \eta_{\text{crit}}]\\) — active whenever any health component falls below the emergency threshold \\(\eta_{\text{crit}}\\).*
+
+*Parameters: \\(R_{\text{crit}} \approx 0.2\\) (Definition 19b), \\(R_{\text{floor}} \approx 0.05\\) (Point of No Return), \\(\alpha_{\text{floor}} = f_{\min} \cdot T_{\text{tick}} > 0\\), \\(f_{\min} = 0.5\,\text{Hz}\\) for RAVEN.*
+
+*Proof sketch*: When \\(R > R_{\text{crit}}\\), the system operates at full autonomic frequency \\(1/T_{\text{tick}}\\). Between \\(R_{\text{floor}}\\) and \\(R_{\text{crit}}\\), execution frequency scales linearly, preserving CPU and power budget for {% katex() %}\mathcal{L}_0{% end %} survival tasks. Below \\(R_{\text{floor}}\\) ("Point of No Return"), autonomic actions above {% katex() %}\mathcal{L}_0{% end %} are suspended; the MAPE-K loop drops to \\(\alpha_{\text{floor}}/T_{\text{tick}}\\) to maintain minimal liveness. The \\(\max\\) term guarantees that \\(f_{\text{MAPE-K}} \geq f_{\min} > 0\\) whenever \\(I_{\text{crit}} = 1\\) — even at \\(R \to 0\\) — preventing the healing loop from halting during an active emergency.
+
+**Liveness Guarantee**: \\(\alpha_{\text{floor}} > 0\\) and \\(f_{\min} > 0\\) by construction, so \\(f_{\text{MAPE-K}}(t) \geq f_{\min} \cdot \mathbb{1}[I_{\text{crit}}(t)] > 0\\) whenever a critical failure is active. The Self-Throttling Law cannot silence the MAPE-K loop while a failure requiring response is present.
+
+**RAVEN calibration**: \\(T_{\text{tick}} = 1\,\text{s}\\), \\(f_{\min} = 0.5\,\text{Hz}\\), \\(\alpha_{\text{floor}} = 0.5\\), \\(R_{\text{floor}} = 0.05\\). At \\(R = 0.10\\) (halfway between floor and \\(R_{\text{crit}} = 0.20\\)): \\(\alpha = 0.5\\), so \\(f_{\text{MAPE-K}} = 0.5\,\text{Hz}\\). One avoided healing action at this resource level recovers \\(\approx 4\,\text{s}\\) of MAPE-K execution budget.
+
 ---
 
 ## Terminal Safety State
@@ -1451,15 +1499,15 @@ A 1990s diesel generator does not report its internal temperature. A legacy moto
 The **Autonomic Gateway** is a software adapter that presents legacy hardware to the MAPE-K loop as if it were a fully observable, API-driven system: it synthesizes health metrics from proxy signals, maps healing actions onto physical actuation primitives, and enforces cooldown and pre-condition constraints that the underlying hardware cannot enforce itself.
 
 <span id="def-48"></span>
-**Definition 48** (Autonomic Gateway). An *Autonomic Gateway* for a legacy hardware device \\(D\\) is a tuple \\(G = (H, O, \varphi, A, \Gamma)\\) where:
+**Definition 48** (Autonomic Gateway). An *Autonomic Gateway* for a legacy hardware device \\(D\\) is a tuple \\(G = (H, O, \varphi, \mathcal{A}, \Gamma)\\) where:
 
 - \\(H = \\{h_1, \ldots, h_m\\}\\) is the set of *target health metrics* that the MAPE-K Monitor phase expects (e.g., temperature, fuel level, operational state)
 - \\(O = \\{o_1, \ldots, o_k\\}\\) is the set of *observable proxy signals* physically accessible from the gateway controller (e.g., current draw, ambient temperature, vibration amplitude, exhaust flow)
 - \\(\varphi : O \to H\\) is the *inference function* mapping observable proxies to health metric estimates; for each \\(h_i \in H\\), \\(\varphi_i(o)\\) yields a point estimate \\(\hat{h}_i\\) and uncertainty interval \\(\sigma_i\\)
-- \\(A = \\{a_1, \ldots, a_p\\}\\) is the set of *physical actuation primitives* the gateway can execute on \\(D\\) (e.g., Modbus register write, GPIO signal, relay close, power cycle)
-- \\(\Gamma : \text{HealingAction} \to 2^A\\) is the *actuation mapping* from MAPE-K healing commands to ordered sequences of physical primitives, including pre-conditions, post-conditions, and cooldown requirements
+- \\(\mathcal{A} = \\{a_1, \ldots, a_p\\}\\) is the set of *physical actuation primitives* the gateway can execute on \\(D\\) (e.g., Modbus register write, GPIO signal, relay close, power cycle) (calligraphic \\(\mathcal{A}\\) distinguishes the actuation set from scalar state variables)
+- \\(\Gamma : \text{HealingAction} \to 2^{\mathcal{A}}\\) is the *actuation mapping* from MAPE-K healing commands to ordered sequences of physical primitives, including pre-conditions, post-conditions, and cooldown requirements
 
-The gateway presents \\((H, \Gamma(\cdot))\\) to the MAPE-K loop and hides \\((O, \varphi, A)\\) as implementation details.
+The gateway presents \\((H, \Gamma(\cdot))\\) to the MAPE-K loop and hides \\((O, \varphi, \mathcal{A})\\) as implementation details.
 
 **OUTPOST generator example**: \\(H = \\{\text{coolant\\_temp}, \text{fuel\\_level}, \text{op\\_state}\\}\\). The generator has no telemetry port. The gateway observes current draw, ambient temperature, exhaust temperature, and vibration. The MAPE-K loop sees structured health reports and issues restart/shutdown commands; the gateway translates those commands into Modbus register writes and GPIO relay signals.
 
@@ -1477,7 +1525,7 @@ where \\(R_\text{th}\\) is thermal resistance, \\(\tau_\text{th}\\) is the therm
 **Model uncertainty**: \\(\varphi_i\\) carries irreducible estimation error \\(\sigma_i^2 = \sigma_\text{model}^2 + \sigma_\text{sensor}^2\\), where \\(\sigma_\text{model}^2\\) is the model residual variance and \\(\sigma_\text{sensor}^2\\) is proxy sensor measurement noise. The MAPE-K Analyze phase must treat \\(\hat{h}_i \pm k\sigma_i\\) as the health estimate, not \\(\hat{h}_i\\) as a point truth.
 
 <span id="prop-47"></span>
-**Proposition 47** (Gateway Signal Coverage Condition). *A gateway \\(G = (H, O, \varphi, A, \Gamma)\\) provides valid synthetic observability to the MAPE-K loop if and only if the following three conditions hold for every health metric \\(h_i \in H\\):*
+**Proposition 47** (Gateway Signal Coverage Condition). *A gateway \\(G = (H, O, \varphi, \mathcal{A}, \Gamma)\\) provides valid synthetic observability to the MAPE-K loop if and only if the following three conditions hold for every health metric \\(h_i \in H\\):*
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -1497,7 +1545,7 @@ where \\(R_\text{th}\\) is thermal resistance, \\(\tau_\text{th}\\) is the therm
 **Definition 50** (Legacy Recovery Cascade). A *Legacy Recovery Cascade* for hardware \\(D\\) is an ordered sequence of recovery tiers \\(\mathcal{T} = \langle T_1, T_2, T_3, T_4 \rangle\\), where each tier \\(T_k\\) is a tuple \\((\text{pre}_k, \text{act}_k, \text{post}_k, W_k, C_k)\\):
 
 - \\(\text{pre}_k\\): pre-condition predicate that must hold before \\(T_k\\) may execute
-- \\(\text{act}_k\\): the physical actuation sequence (ordered primitives from \\(A\\))
+- \\(\text{act}_k\\): the physical actuation sequence (ordered primitives from \\(\mathcal{A}\\))
 - \\(\text{post}_k\\): post-condition predicate verifying that the tier had effect
 - \\(W_k\\): recovery observation window [s] — time to wait before evaluating \\(\text{post}_k\\)
 - \\(C_k\\): cooldown period [s] — minimum time between successive invocations of tier \\(k\\)
@@ -1660,7 +1708,7 @@ Each mechanism has bounded validity. When assumptions fail, so does the mechanis
 
 **Validity Domain**:
 
-The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} stability analysis holds only when the system state \\(S\\) satisfies all three assumptions simultaneously; violations narrow or eliminate the domain within which \\(K\tau < \pi/2\\) guarantees stability.
+The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} stability analysis holds only when the system state \\(S\\) satisfies all three assumptions simultaneously; violations narrow or eliminate the domain within which \\(K < 1/(1 + \tau/T_{\text{tick}})\\) guarantees stability.
 
 {% katex(block=true) %}
 \mathcal{D}_{\text{MAPE-K}} = \{S \mid A_1 \land A_2 \land A_3\}
@@ -1671,7 +1719,7 @@ where:
 - \\(A_2\\): Feedback delay \\(\tau\\) is approximately constant
 - \\(A_3\\): No nested feedback loops (healing action does not affect its own sensing)
 
-**Stability Criterion**: \\(K \cdot \tau < \pi/2\\) ensures stability under linear approximation.
+**Stability Criterion**: \\(K < 1/(1 + \tau/T_{\text{tick}})\\) ensures stability under discrete-time proportional control.
 
 The following table maps each assumption violation to its observable symptom, how to detect it, and a concrete engineering mitigation.
 
@@ -2583,7 +2631,7 @@ The objective jointly maximizes recovery utility and stability utility while min
 
 where \\(K\\) is controller gain.
 
-**Stability constraint**: \\(K \cdot \tau < \pi/2\\)
+**Stability constraint**: \\(K < 1/(1 + \tau/T_{\text{tick}})\\)
 
 The table below traces the Pareto front for controller gain \\(K\\): moving down the rows buys faster recovery (lower recovery time) at the cost of a narrower stability margin and higher overshoot risk.
 

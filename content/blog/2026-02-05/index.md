@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Fleet Coherence Under Partition"
-description = "During partition, each cluster makes decisions independently. When connectivity returns, those decisions must be reconciled - but some conflicts have no clean resolution. This article develops practical approaches to fleet-wide consistency: CRDTs for conflict-free state merging, Merkle-based reconciliation protocols for efficient sync, and hierarchical decision authority that determines who gets the final word when clusters disagree. The goal isn't perfect consistency - it's sufficient coherence for the mission to succeed."
+description = "When two clusters reconnect after hours apart, merging their state means choosing between information loss and accepting Byzantine-injected garbage — neither is acceptable. This article covers CRDT merge with HLC timestamps, a reputation-gated admission filter for Byzantine state, and a burst-process divergence model that's more realistic than the usual Poisson assumption."
 date = 2026-02-05
 slug = "autonomic-edge-part4-fleet-coherence"
 
@@ -13,7 +13,7 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 4
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures - systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base) and commercial deployments (STOCKSYNC inventory, MULTIWRITE collaboration, distributed IoT fleets), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity."""
+series_description = """Edge systems can't treat disconnection as an exceptional error — it's the default condition. This series builds the formal foundations for systems that self-measure, self-heal, and improve under stress without human intervention, grounded in control theory, Markov models, and CRDT state reconciliation. Every quantitative claim comes with an explicit assumption set."""
 +++
 
 ---
@@ -118,6 +118,21 @@ During partition, state diverges through multiple mechanisms:
 
 **Message loss**. Before partition fully established, some {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} messages reach some nodes. The partial propagation creates uneven knowledge. Node A heard about event E before partition. Node B did not. Their histories diverge.
 
+<span id="def-11b"></span>
+**Definition 11b** (Burst Process). *State-changing events follow an alternating renewal process with two phases:*
+
+- **Burst phase**: Duration \\(\tau_{\text{burst}}\\), event rate \\(\lambda_{\text{burst}} = F \cdot \lambda_{\text{mean}}\\)
+- **Quiet phase**: Duration \\(T_{\text{quiet}}\\), event rate \\(\lambda_{\text{quiet}} \approx 0.1 \cdot \lambda_{\text{mean}}\\)
+
+*Typical parameters for tactical edge:*
+
+| System | \\(\tau_{\text{burst}}\\) | \\(T_{\text{quiet}}\\) | \\(F\\) |
+| :--- | :--- | :--- | :--- |
+| RAVEN | 5 s | 300 s | 8 |
+| CONVOY | 10 s | 600 s | 12 |
+
+*Fano factor \\(F = \mathrm{Var}[N(t)] / \mathbb{E}[N(t)]\\) measured from operational logs.*
+
 <span id="prop-12"></span>
 **Proposition 12** (Divergence Growth Rate). *If state-changing events arrive according to a Poisson process with rate \\(\lambda\\), the expected divergence after partition duration \\(\tau\\) is:*
 
@@ -127,13 +142,66 @@ E[D(\tau)] = 1 - e^{-\lambda \tau}
 
 *Proof sketch*: Model state as a binary indicator per key: identical (0) or divergent (1). Under independent Poisson arrivals with rate \\(\lambda\\), the probability a given key remains synchronized is \\(e^{-\lambda \tau}\\). The expected fraction of divergent keys follows the complementary probability. For sparse state changes, \\(E[D(\tau)] \approx 1 - e^{-\lambda \tau}\\) provides a tight upper bound.
 
-**Poisson assumption caveat**: Operational update streams are bursty, not Poisson. During a contact event, 50–100 state updates arrive in 5 seconds; during the following 10-minute lull, zero. The Fano factor \\(F = \mathrm{Var}[\text{updates}] / \mathbb{E}[\text{updates}]\\) for tactical edge systems is typically 3–15 (measured on CONVOY exercises), not \\(F = 1.0\\) as Poisson assumes. Under bursty arrivals with Fano factor \\(F\\), expected divergence during a burst of duration \\(\tau_{\text{burst}}\\) within a partition of total duration \\(\tau\\) grows as \\(E[D] \approx 1 - e^{-F \cdot \lambda \cdot \tau_{\text{burst}}}\\), which can be \\(F\\)x the Poisson estimate if \\(\tau_{\text{burst}} \ll \tau\\). Consequence: size reconciliation buffers for peak burst divergence (\\(F \cdot \lambda \cdot \tau_{\text{peak}}\\), where \\(\tau_{\text{peak}}\\) is the maximum burst window), not mean divergence (\\(\lambda \cdot \tau\\)). For CONVOY with \\(F = 8\\) and 5-minute peak burst windows, reconciliation buffer should be sized 8x the Poisson estimate.
+**Why Poisson fails for tactical edge**: Operational update streams alternate between burst and quiet phases (Definition 11b). The Fano factor \\(F = \mathrm{Var}[\text{updates}] / \mathbb{E}[\text{updates}]\\) for tactical edge systems is 3–15 (measured on CONVOY exercises), not \\(F = 1.0\\) as Poisson assumes. Burst events cluster temporally — contact events, terrain transitions, and threat detections arrive in correlated waves, followed by extended quiet periods. A uniform Poisson rate collapses this structure: it underestimates divergence at burst onset and overestimates it during quiet, making it unreliable for buffer sizing in either regime.
+
+<span id="prop-12b"></span>
+**Proposition 12b** (Burst-Averaged Divergence). *For an alternating burst/quiet process (Definition 11b), expected divergence after partition duration \\(\tau\\) is:*
+
+{% katex(block=true) %}
+E[D(\tau)] = p_{\text{burst}} \cdot E[D_{\text{burst}}(\tau)] + p_{\text{quiet}} \cdot E[D_{\text{quiet}}(\tau)]
+{% end %}
+
+*where:*
+- \\(p_{\text{burst}} = \tau_{\text{burst}} / (\tau_{\text{burst}} + T_{\text{quiet}})\\) — fraction of time in burst phase
+- \\(E[D_{\text{burst}}(\tau)] = 1 - e^{-F \cdot \lambda \cdot \min(\tau,\, \tau_{\text{burst}})}\\) — divergence during burst
+- \\(E[D_{\text{quiet}}(\tau)] = 1 - e^{-0.1 \cdot \lambda \cdot \max(0,\, \tau - \tau_{\text{burst}})}\\) — divergence during quiet phase
+
+*For worst-case buffer sizing, condition on partition onset coinciding with burst start:*
+
+{% katex(block=true) %}
+D_{\text{worst}}(\tau) = 1 - e^{-F \cdot \lambda \cdot \min(\tau,\, \tau_{\text{burst}}) \;-\; 0.1 \cdot \lambda \cdot \max(0,\, \tau - \tau_{\text{burst}})}
+{% end %}
+
+*For \\(\tau \gg \tau_{\text{burst}}\\), the burst exponent saturates and the quiet term dominates growth:*
+
+{% katex(block=true) %}
+D_{\text{worst}}(\tau) \approx 1 - e^{-F \cdot \lambda \cdot \tau_{\text{burst}}} \cdot e^{-0.1 \cdot \lambda \cdot (\tau - \tau_{\text{burst}})}
+{% end %}
+
+*Proof sketch*: Model each key as a binary indicator (synchronized / diverged). During the burst epoch of duration \\(\min(\tau, \tau_{\text{burst}})\\), events arrive at rate \\(F \cdot \lambda\\); the probability a given key survives synchronized is \\(e^{-F \cdot \lambda \cdot \min(\tau, \tau_{\text{burst}})}\\). During the subsequent quiet epoch, the surviving fraction faces event rate \\(0.1 \cdot \lambda\\); the joint survival probability is the product of the two exponentials. The worst-case analysis conditions on partition onset at burst start, removing the mixture weight \\(p_{\text{burst}}\\) and instead accumulating burst divergence first — this is the relevant bound for buffer sizing since it maximises the fraction of keys diverged per unit partition time. For \\(\tau \leq \tau_{\text{burst}}\\), the formula reduces to the Poisson model at elevated rate \\(F \cdot \lambda\\), recovering the original Proposition 12 result.*
 
 In other words, divergence grows quickly at first and then saturates: a long partition does not drive divergence much higher than a medium one, because most keys diverge within the first few event intervals.
 
 **Corollary 5**. *Reconciliation cost is linear in divergence: \\(\text{Cost}(\tau) = c \cdot D(\tau) \cdot |S_A \cup S_B|\\) where \\(c\\) is per-item sync cost.*
 
 In other words, the total work at reconnection scales with how many key-value pairs diverged multiplied by the constant cost to transfer and merge one item; sizing the reconciliation budget requires estimating both the divergence fraction and the total state size.
+
+<span id="cor-5b"></span>
+**Corollary 5b** (Reconciliation Buffer Sizing). *Buffer size should accommodate worst-case divergence over the maximum expected partition duration \\(\tau_{\text{max}}\\):*
+
+{% katex(block=true) %}
+\text{Buffer}_{\min} = |S| \cdot D_{\text{worst}}(\tau_{\text{max}}) \cdot b_{\text{item}}
+{% end %}
+
+*where \\(|S|\\) is total state items and \\(b_{\text{item}}\\) is bytes per item. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(|S| = 500\\), \\(\lambda = 2\\) events/s, \\(F = 8\\), \\(\tau_{\text{burst}} = 5\text{s}\\), \\(\tau_{\text{max}} = 1800\text{s}\\)):*
+
+{% katex(block=true) %}
+D_{\text{worst}}(1800) = 1 - e^{-F \cdot \lambda \cdot \tau_{\text{burst}} - 0.1 \cdot \lambda \cdot (\tau_{\text{max}} - \tau_{\text{burst}})} = 1 - e^{-80 - 359} \approx 1.0
+{% end %}
+
+*Both exponents are large — the burst phase alone (\\(F \cdot \lambda \cdot \tau_{\text{burst}} = 80\\)) saturates divergence near 1.0 within seconds. Buffer ≈ 500 × 32 bytes ≈ 16 KB (size for full state copy). For short partitions (\\(\tau < \tau_{\text{burst}}\\)), the formula reduces to Poisson at elevated rate:*
+
+{% katex(block=true) %}
+\text{Buffer}_{\text{short}} \approx |S| \cdot \bigl(1 - e^{-F \cdot \lambda \cdot \tau_{\text{max}}}\bigr) \cdot b_{\text{item}}
+{% end %}
+
+**Practical implications**:
+
+1. **Short partitions (\\(\tau < \tau_{\text{burst}}\\))**: Burst assumption is correct; size buffers using \\(D_{\text{worst}} = 1 - e^{-F \cdot \lambda \cdot \tau}\\).
+2. **Long partitions (\\(\tau > \tau_{\text{burst}} + T_{\text{quiet}}\\))**: Divergence saturates near 100%; buffer a full state copy.
+3. **Medium partitions (\\(\tau_{\text{burst}} < \tau < T_{\text{quiet}}\\))**: Use the full \\(D_{\text{worst}}(\tau)\\) formula from Proposition 12b.
+
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(\tau_{\text{burst}} = 5\text{s}\\)), the large \\(F \cdot \lambda = 16\\) means divergence saturates within seconds of any burst, so buffer sizing defaults to full state copy for all but the briefest partitions. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} (\\(\tau_{\text{burst}} = 10\text{s}\\), \\(T_{\text{quiet}} = 600\text{s}\\), \\(F = 12\\)), medium partitions (10–600 s) are common during terrain-induced shadows and require the full two-phase formula to avoid over-allocating buffer for the extended quiet period.
 
 ---
 
@@ -148,6 +216,27 @@ In other words, the total work at reconnection scales with how many key-value pa
 - *Idempotency: \\(m(s, s) = s\\)*
 
 *These properties make \\((S, m)\\) a join-semilattice, guaranteeing convergence regardless of merge order.*
+
+<span id="def-12b"></span>
+**Definition 12b** (Reputation-Weighted Merge). *For a fleet of \\(n\\) nodes with reputation weights \\(w_i \in [0,1]\\) (\\(\sum_i w_i = 1\\)) and a global trust threshold \\(\Theta_{\text{trust}} \in (0, 1]\\), define the reputation-weighted join \\(\sqcup_{\mathcal{W}}\\) as a two-stage operation:*
+
+*Stage 1 — Byzantine admission filter:*
+
+{% katex(block=true) %}
+\text{Admitted}(\mathcal{U}) = \bigl\{ s_i \in \mathcal{U} \;\big|\; \exists\, Q \subseteq \mathcal{U} : \textstyle\sum_{k \in Q} w_k > \Theta_{\text{trust}} \text{ and } s_i \text{ is consistent with } Q \bigr\}
+{% end %}
+
+*Stage 2 — standard semilattice merge on admitted updates:*
+
+{% katex(block=true) %}
+s' = \bigsqcup_{\mathcal{W}}(\mathcal{U}) = \bigsqcup_{s_i \in \text{Admitted}(\mathcal{U})} s_i
+{% end %}
+
+*where \\(\sqcup\\) is the standard CRDT join from Definition 12. Reputation weights are initialized to \\(w_i = 1/n\\) and updated from Phase 0 attestation results and historical accuracy. Default threshold: \\(\Theta_{\text{trust}} = 0.67\\), matching the BFT quorum of Proposition 44.*
+
+*Semilattice properties under \\(\sqcup_{\mathcal{W}}\\): the underlying \\(\sqcup\\) in Stage 2 retains commutativity, associativity, and idempotency for any fixed admitted set. \\(\sqcup_{\mathcal{W}}\\) itself is a **quorum-admission gate** rather than a classical semilattice operator — it does not satisfy commutativity over all inputs by design, because Byzantine tolerance requires distinguishing honest from dishonest contributors. When the number of Byzantine nodes satisfies \\(f < n(1 - \Theta_{\text{trust}})\\), the honest quorum dominates Stage 1 and Stage 2 convergence is guaranteed. A compromised node with attestation weight \\(w_i < \Theta_{\text{trust}} / n\\) cannot alone drive a state update — its contribution is discarded in Stage 1 regardless of the CRDT value it presents.*
+
+*Corollary (Poison Resistance): A "signed but compromised" node cannot poison swarm state unless it controls a coalition with collective weight \\(> \Theta_{\text{trust}}\\). For \\(\Theta_{\text{trust}} = 0.67\\) and uniform weights, this requires \\(f > n/3\\) Byzantine nodes — exactly the BFT threshold.*
 
 In other words, any two replicas that have received the same set of updates will reach the same final state, regardless of the order in which they applied those updates or exchanged state with each other.
 
@@ -166,8 +255,10 @@ Six standard {% term(url="#def-12", def="Conflict-free Replicated Data Type; mer
 | **PN-Counter** | Increment and decrement | Resource tracking (\\(\pm\\)) |
 | **G-Set** | Add only | Surveyed zones, detected threats |
 | **2P-Set** | Add and remove (once) | Active targets, current alerts |
-| **LWW-Register** | Last-writer-wins value | Device configuration values and node status, where the latest write is authoritative |
+| **LWW-Register** | Last-writer-wins value | Device configuration values and node status, where the latest write is authoritative<sup>†</sup> |
 | **MV-Register** | Multi-value (preserve conflicts) | Fields where concurrent updates from separate clusters must both be preserved for later review |
+
+<sup>†</sup> Requires HLC timestamps (Definition 40) for correctness under clock drift — plain wall-clock LWW-Register does not satisfy semilattice idempotency in contested environments where clocks diverge.
 
 **G-Set example**: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} surveillance coverage
 
@@ -441,11 +532,13 @@ P(\text{oversell}) \leq \epsilon_h + \epsilon_s \ll P(\text{oversell}|\text{no\_
 
 **Data integrity**: {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} merge guarantees no data loss under assumption \\(\mathcal{A}_{SS}\\). Convergence follows from semilattice properties.
 
-**Hierarchical authority for allocation conflicts**: When two warehouses simultaneously commit the last unit of inventory to different orders, the winning warehouse is the one whose commit timestamp is earlier — \\(\text{CommitTime}(w)\\) is the wall-clock time at which warehouse \\(w\\) recorded its commitment.
+**Hierarchical authority for allocation conflicts**: When two warehouses simultaneously commit the last unit of inventory to different orders, the winning warehouse is the one whose commit timestamp is earlier — \\(\text{HLC}_{\text{commit}}(w)\\) is the Hybrid Logical Clock timestamp (Definition 40) at which warehouse \\(w\\) recorded its commitment.
 
 {% katex(block=true) %}
-\text{Winner} = \arg\min_{w \in \{A, B\}} \text{CommitTime}(w)
+\text{Winner} = \arg\min_{w \in \{A, B\}} \text{HLC}_{\text{commit}}(w)
 {% end %}
+
+Commit timestamps must use HLC ordering (Definition 40) rather than wall-clock time to preserve correctness under clock drift during partition; see [Proposition 30](#prop-30) for the complete NTP-Free Split-Brain Resolution.
 
 The warehouse with the earlier commit time fulfills its order. The losing warehouse must either source from another location or backorder. This creates occasional customer friction but maintains system integrity.
 
@@ -539,18 +632,39 @@ c_m + 1            & \text{if } l' = l_m > l_j \\
 
 *Each CRDT operation carries metadata \\((n_j, h_j)\\) where \\(n_j\\) is the node identifier. The pair \\((n_j, h_j)\\) globally and uniquely identifies the operation.*
 
+<span id="def-40b"></span>
+**Definition 40b** (Message Delay Bound). *Let \\(\tau_{\max}(C)\\) be the maximum expected one-way message delivery time under normal network conditions at connectivity level \\(C\\), measured in physical time units:*
+
+{% katex(block=true) %}
+\tau_{\max}(C) = \begin{cases}
+100\,\text{ms} & C > 0.8 \quad (\text{local mesh}) \\
+5\,\text{s}    & 0.3 < C \leq 0.8 \quad (\text{degraded link}) \\
+60\,\text{s}   & C \leq 0.3 \quad (\text{intermittent or contested})
+\end{cases}
+{% end %}
+
+*\\(\tau_{\max}\\) bounds the 99th-percentile one-way delivery time under normal (non-adversarial) conditions and is calibrated from operational measurements. It does not bound adversarially injected delay. The anomaly detection threshold in Proposition 41 depends on \\(\tau_{\max}\\) at the current connectivity level.*
+
 <span id="prop-41"></span>
 **Proposition 41** (HLC Causal Ordering Properties). *For any two events \\(e\\), \\(f\\) with HLC timestamps \\(h_e\\), \\(h_f\\) on a fleet with maximum physical clock skew \\(\epsilon\\):*
 
 1. *\\(l_j \geq \lfloor \mathrm{pt}_j \rfloor\\) at all times — the HLC watermark never lags physical time.*
 2. *If \\(e \to f\\) (e causally precedes f ), then \\(h_e \prec h_f\\).*
 3. *\\(l_j - \lfloor \mathrm{pt}_j \rfloor \leq \epsilon\\) — the watermark exceeds physical time by at most the fleet-wide clock skew.*
-4. *If a received message has \\(l_m - \lfloor \mathrm{pt}_j \rfloor > \epsilon\\), the sender's clock is anomalous — the message was generated from an out-of-bound clock state.*
+4. *If a received message has {% katex() %}l_m - \lfloor \mathrm{pt}_j \rfloor > \epsilon + \tau_{\max}{% end %} (Def 40b at current connectivity), then either (a) the sender's clock is anomalous — the watermark violates property 3 — or (b) message delivery exceeded \\(\tau_{\max}\\) (a network anomaly). Single-message violations are ambiguous; if multiple consecutive messages from the same sender satisfy this condition, conclude (a).*
 
-*Proof sketch*: Properties 1–2 follow from the update rules: \\(l\\) always advances by at least the current physical timestamp, and a receive event produces \\(h_j\\) strictly greater than \\(h_m\\) (by incrementing \\(c\\) when watermarks coincide), preserving causal monotonicity. Property 3 holds when fleet clocks are bounded by a common authority (GPS PPS or NTP stratum 1) with skew \\(\leq \epsilon\\). Property 4 follows from property 3: any correctly-synchronized receiver seeing a watermark more than \\(\epsilon\\) above its physical time has received evidence of a clock anomaly. \\(\square\\)
+*Proof sketch*: Properties 1–2 follow from the update rules: \\(l\\) always advances by at least the current physical timestamp, and a receive event produces \\(h_j\\) strictly greater than \\(h_m\\) (by incrementing \\(c\\) when watermarks coincide), preserving causal monotonicity. Property 3 holds when fleet clocks are bounded by a common authority (GPS PPS or NTP stratum 1) with skew \\(\leq \epsilon\\). Property 4: let \\(t_s\\) be the physical send time and \\(\tau_{\mathrm{del}}\\) the one-way delivery delay. Property 3 at the sender gives {% katex() %}l_m \leq \lfloor \mathrm{pt}_{\mathrm{send}}(t_s) \rfloor + \epsilon{% end %}. At the receiver, {% katex() %}\lfloor \mathrm{pt}_j \rfloor{% end %} is evaluated at receive time \\(t_s + \tau_{\mathrm{del}}\\); if the receiver's clock lags the sender's by the delivery interval the watermark leads receiver physical time by up to \\(\epsilon + \tau_{\mathrm{del}}\\). Therefore under normal delivery (\\(\tau_{\mathrm{del}} \leq \tau_{\max}\\)):
+
+{% katex(block=true) %}
+l_m - \lfloor \mathrm{pt}_j \rfloor \;\leq\; \epsilon + \tau_{\mathrm{del}} \;\leq\; \epsilon + \tau_{\max}
+{% end %}
+
+If the observed difference exceeds \\(\epsilon + \tau_{\max}\\), either the sender violated property 3 (clock anomaly) or \\(\tau_{\mathrm{del}} > \tau_{\max}\\) (network anomaly). \\(\square\\)
+
+**Calibration**: Set \\(\tau_{\max}\\) to the 99th percentile of measured one-way delivery times during normal operation. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} on a local mesh with GPS-disciplined clocks (\\(\epsilon \approx 1\\)s): measured \\(\tau_{99} \approx 80\\)ms → \\(\tau_{\max} = 100\\)ms → anomaly threshold \\(\epsilon + \tau_{\max} = 1.1\\)s. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} in mountain terrain: \\(\tau_{99} \approx 3\\)s → \\(\tau_{\max} = 5\\)s → threshold 6s. Both thresholds are evaluated against the current connectivity regime (Def 40b); \\(\tau_{\max}\\) updates when regime transitions are detected.
 
 <span id="def-41"></span>
-**Definition 41** (HLC-Aware CRDT Merge Function). *Let \\(s_1, s_2\\) be CRDT states with HLC timestamps \\(h_1, h_2\\) and node identifiers \\(n_1, n_2\\). The HLC-Aware Merge function replaces the physical-timestamp LWW test `if ts1 > ts2`:*
+**Definition 41** (HLC-Aware CRDT Merge Function). *Let \\(s_1, s_2\\) be CRDT states with HLC timestamps \\(h_1, h_2\\) and node identifiers \\(n_1, n_2\\). The HLC-Aware Merge function replaces the physical-timestamp LWW comparator \\(t_{s_1} > t_{s_2}\\):*
 
 {% katex(block=true) %}
 \mathbf{Merge}(s_1, h_1;\; s_2, h_2) =
@@ -577,7 +691,11 @@ The node-ID tiebreaker for concurrent LWW-Register writes gives every node a det
 <span id="def-42"></span>
 **Definition 42** (Drift-Quarantine Re-sync Protocol). *When partitioned node \\(j\\) rejoins with signed drift \\(\Delta_j = l_j - \max_{i \in \mathrm{peers}} l_i\\) (positive: clock ran fast; negative: clock ran slow), execute the following four phases:*
 
-**Phase 0 — Detection**: Compute \\(\Delta_j\\) on first peer message exchange. If \\(|\Delta_j| \leq \epsilon\\): normal rejoin. If \\(|\Delta_j| > \epsilon\\): quarantine.
+**Phase 0 — Detection**: Compute \\(\Delta_j = l_j - \max_{i \in \mathrm{peers}} l_i\\) on first peer message exchange. Let \\(\tau_{\max}\\) be the current connectivity-regime delay bound (Def 40b).
+
+- \\(|\Delta_j| \leq \epsilon\\): normal rejoin — drift within fleet-wide clock skew.
+- \\(\epsilon < |\Delta_j| \leq \epsilon + \tau_{\max}\\): ambiguous — drift exceeds skew but within delivery-delay range. Flag for monitoring; do not quarantine. Resolve by requesting a second exchange after \\(\tau_{\max}\\): if \\(|\Delta_j|\\) persists, conclude clock drift (proceed to quarantine); if \\(|\Delta_j|\\) reduces, conclude transient delay.
+- \\(|\Delta_j| > \epsilon + \tau_{\max}\\): quarantine with high confidence — drift exceeds both clock skew and maximum delivery delay.
 
 **Phase 1 — Quarantine**: Node \\(j\\) enters read-only mode — no new local writes are accepted; only incoming gossip is processed.
 
@@ -781,6 +899,7 @@ If Cluster A authorized target T but Cluster B did not, the merged state does no
 Each {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} merge function implicitly makes a fairness decision about whose divergent state takes precedence. The game-theoretic framing makes these choices explicit.
 
 **Fair division framework**: When clusters A and B hold divergent states \\(s_A \neq s_B\\), the merge function \\(m(s_A, s_B)\\) allocates value. Under the **Nash bargaining solution**, the fair merge maximizes the product of utility gains over each cluster's fallback:
+
 {% katex(block=true) %}
 m^*_{\text{Nash}} = \arg\max_{s} \prod_{k \in \{A,B\}} \bigl(U_k(s) - U_k(s_{\text{fallback}})\bigr)
 {% end %}
@@ -955,6 +1074,7 @@ First-commit-wins and LWW-based conflict resolution create **commitment races**:
 **The commitment race**: Under LWW, if cluster A prefers decision \\(d_A\\) and knows cluster B will commit at \\(\hat{t}_B\\), cluster A commits at \\(t_A < \hat{t}_B\\) regardless of information quality. Nash equilibrium: both commit immediately, discarding all post-commitment information.
 
 **Second-price rule**: Resolve conflicts in favor of the cluster whose commitment carries the highest declared value, with the winner paying the second-highest value to the loser (as compensation for opportunity cost). This is strategy-proof - no cluster benefits from misrepresenting decision value:
+
 {% katex(block=true) %}
 d^* = \arg\max_{k \in \{A,B\}} \text{Value}_k(d_k), \quad \text{transfer} = \text{Value}_{\text{loser}}(d_{\text{loser}})
 {% end %}

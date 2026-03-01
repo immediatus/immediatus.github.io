@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Self-Measurement Without Central Observability"
-description = "When your monitoring service is unreachable, who monitors the monitors? Edge systems must detect their own anomalies, assess their own health, and maintain fleet-wide awareness through gossip protocols - all without phoning home. This article develops lightweight statistical approaches for on-device anomaly detection, Bayesian methods for distributed health inference, and the observability constraint sequence that prioritizes what to measure when resources are scarce."
+description = "When the monitoring service is unreachable, anomaly detection has to run on the node being monitored. This article covers on-device detection, gossip health propagation with bounded staleness, Byzantine-tolerant aggregation, and a proxy-observer pattern for legacy hardware — along with a frank note on what happens when you miscalibrate your priors."
 date = 2026-01-22
 slug = "autonomic-edge-part2-self-measurement"
 
@@ -13,7 +13,7 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 2
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures - systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base) and commercial deployments (AUTOHAULER mining fleet, GRIDEDGE power distribution, AUTODELIVERY logistics, PREDICTIX manufacturing), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity."""
+series_description = """Edge systems can't treat disconnection as an exceptional error — it's the default condition. This series builds the formal foundations for systems that self-measure, self-heal, and improve under stress without human intervention, grounded in control theory, Markov models, and CRDT state reconciliation. Every quantitative claim comes with an explicit assumption set."""
 +++
 
 ---
@@ -28,7 +28,7 @@ Second, the capability hierarchy (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) est
 
 Third, the inversion thesis - "design for disconnected, enhance for connected" - establishes the design constraint. The observation mechanisms developed here must function in complete isolation from day one. Reporting to a central collector, when connectivity permits, is an enhancement. It is never a dependency.
 
-The state variables \\(\Sigma(t)\\) and \\(\mathbf{H}(t)\\) defined in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md) exist formally in the model. This article addresses how they are actually estimated: from local sensor readings, from inter-node {% term(url="#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} when the mesh is intact, and from statistical inference when observations age and certainty decays.
+The state variables \\(\Sigma(t)\\) and \\(\mathbf{H}(t)\\) defined in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md) exist formally in the model. This article addresses how they are actually estimated: from local sensor readings, from inter-node {% term(url="#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} when the mesh is intact, and from statistical inference when observations age and certainty decays. These mechanisms assume \\(\mathcal{L}_0\\) survival capability (stable power, safe-state defaults, and basic mission function in complete isolation) is already in place — anomaly detection operating on a node that cannot maintain power or safe state is architecturally unsound regardless of detection accuracy.
 
 ---
 
@@ -40,7 +40,7 @@ Self-measurement enables autonomous systems to know their own state without exte
 | :--- | :--- | :--- |
 | **Anomaly Detection** | Flag anomaly when \\(P(H_1 \mid z_t) > C_{\text{FP}}/(C_{\text{FP}} + C_{\text{FN}})\\) | Set detection sensitivity from error costs |
 | **Gossip Propagation** | Convergence \\(O(\ln n / \lambda)\\) | Size fleet from acceptable propagation delay |
-| **Staleness Theory** | \\(\tau_{\max} = \frac{1}{\lambda}(z_{\alpha/2}\sigma / \Delta h)^2\\) | Bound observation age from event rate and precision |
+| **Staleness Theory** | \\(\tau_{\max} = (\Delta h / (z_{\alpha/2}\sigma))^2\\) | Bound observation age from acceptable drift and diffusion coefficient |
 | **Byzantine Tolerance** | \\(\sum_{\text{Byz}} T_i < \frac{1}{3}\sum_{\text{all}} T_i\\) | Trust-weight nodes to bound adversarial influence |
 
 This extends fault detection (Cristian, 1991) and epidemic algorithms (Demers et al., 1987) for contested edge environments.
@@ -264,6 +264,7 @@ g_3: && \theta &\in [\theta_{\min}, \theta_{\max}] && \text{(threshold bounds)}
 {% katex(block=true) %}
 (\mu_t, \sigma_t^2) = \left(\alpha x_t + (1-\alpha)\mu_{t-1}, \alpha(x_t - \mu_{t-1})^2 + (1-\alpha)\sigma_{t-1}^2\right)
 {% end %}
+
 - **Compute**: O(1) per observation (two multiply-adds)
 - **Memory**: O(1) (store \\(\mu\\), \\(\sigma^2\\))
 - **Adaptation**: Automatic through exponential decay
@@ -678,6 +679,25 @@ graph LR
 - Total footprint: **~520 bytes** (parameters + buffer)
 - Inference: **<1ms** on Cortex-M4
 
+**Energy feasibility on RAVEN**: [Definition 21](@/blog/2026-01-15/index.md#def-21) establishes local dominance when \\(n_c < T_s/T_d\\). For the RAVEN platform (\\(T_d = 50\,\mu\text{J}\\), \\(T_s = 5\,\text{mJ}\\)) the threshold is \\(n_c < 100\\) inference passes. The TCN uses \\(n_c = 1\\) — one forward pass per anomaly check — and the 9,000 internal MACs determine the *cost of that pass*, not the value of \\(n_c\\). At approximately 5 nJ per MAC on a Cortex-M4, one TCN inference costs \\(E_{\text{TCN}} \approx 9000 \times 5\,\text{nJ} = 45\,\mu\text{J}\\). The energy ratio versus a single radio transmission is:
+
+{% katex(block=true) %}
+\frac{E_{\text{TCN}}}{T_s} = \frac{9000 \cdot e_{\text{MAC}}}{T_s} \approx \frac{45\,\mu\text{J}}{5\,\text{mJ}} = 0.009 \ll 1
+{% end %}
+
+Running at 5 Hz, the continuous inference power is \\(45\,\mu\text{J} \times 5\,\text{Hz} = 225\,\mu\text{W}\\). Avoiding a single unnecessary radio transmission (5 mJ) recovers 22 seconds of continuous inference — a favorable exchange whenever detection accuracy suppresses even one spurious transmission per 22-second window.
+
+**Energy-adaptive scheduling**: For deployments where the energy margin is tighter than the RAVEN reference, scale anomaly detection frequency with the [connectivity regime](@/blog/2026-01-15/index.md#def-2). The radio-savings justification weakens as connectivity degrades; inference frequency should follow:
+
+| Regime | Detection rate | Primary method | Energy logic |
+| :--- | :--- | :--- | :--- |
+| Connected (\\(C \approx 1.0\\)) | 5 Hz | TCN ensemble | Radio available as fallback; ML precision maximizes detection quality |
+| Degraded (\\(C \approx 0.5\\)) | 1 Hz | TCN + EWMA | Reduced inference budget; EWMA fills inter-TCN intervals |
+| Intermittent (\\(C \approx 0.25\\)) | 0.2 Hz | EWMA + CUSUM | Conserve for mission-critical windows only |
+| Denied (\\(C = 0\\)) | On-demand | CUSUM only | Minimal power; inference triggers only when CUSUM threshold is crossed |
+
+This schedule keeps \\(E_{\text{TCN}}/T_s < 1\\) across all connectivity states by reducing inference frequency proportionally with the radio-savings justification.
+
 **Application**: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} motor {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %}. Individual current readings appear normal, but the temporal signature of a failing bearing shows characteristic oscillation.
 
 **Utility improvement of TCN over EWMA**: The formula expresses the gain entirely as a recall improvement — since both models produce the same value per true positive, the difference is how many additional anomalies the TCN catches by exploiting temporal context that the per-sample EWMA cannot see.
@@ -766,6 +786,24 @@ Individual nodes detect local anomalies. Fleet-wide health requires aggregation 
 
 In other words, every node keeps a score between 0 and 1 for each fleet member, periodically swaps that list with a random neighbor, and combines the two copies using a merge rule that discounts older entries via the {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} function \\(T\\).
 
+<span id="def-proxy-observer"></span>
+
+**Definition: Synthetic Observability** (Proxy-Observer). *For \\(\mathcal{L}_0\\)-incompatible hardware without native health APIs, define the proxy health signal:*
+
+{% katex(block=true) %}
+H_{\text{proxy}}(t) = w_I \cdot I_{\text{norm}}(t) + w_V \cdot V_{\text{norm}}(t) + w_H \cdot H_{\text{norm}}(t)
+{% end %}
+
+*where:*
+- {% katex() %}I_{\text{norm}}(t) = \operatorname{clamp}\!\left(\frac{\text{current\_draw}(t) - I_{\min}}{I_{\max} - I_{\min}},\, 0,\, 1\right){% end %} — normalized current draw (0 = overcurrent/short, 1 = nominal)
+- \\(V_{\text{norm}}(t) = 1 - \operatorname{clamp}\!\left(\frac{\text{vibration}(t)}{V_{\max}},\, 0,\, 1\right)\\) — inverted vibration index (0 = excessive, 1 = nominal)
+- \\(H_{\text{norm}}(t) = e^{-t_{\text{silence}} / T_{\text{heartbeat}}}\\) — heartbeat freshness (decays exponentially with silence duration \\(t_{\text{silence}}\\))
+- \\(w_I + w_V + w_H = 1\\), with defaults \\(w_I = 0.5,\, w_V = 0.3,\, w_H = 0.2\\)
+
+*The proxy confidence bound is \\(C_{\text{proxy}}(t) = 1 - \sigma_{\text{proxy}} / H_{\text{proxy}}(t)\\) where \\(\sigma_{\text{proxy}}\\) is estimated from calibration measurements. The legacy device is admitted to the autonomic fleet when \\(C_{\text{proxy}}(t) \geq C_{\text{threshold}}\\) and \\(H_{\text{proxy}}(t) \geq H_{\min}\\), establishing Phase 0 (Hardware Trust) without requiring a native self-health API.*
+
+*Typical deployments: Modbus RTU sensors, Serial/RS-485 actuators, GPIO-only embedded controllers. Current draw and heartbeat timeout are available from virtually any embedded device; vibration is optional and replaced by \\(H_{\text{norm}}\\) doubling its weight if absent.*
+
 The protocol operates in rounds:
 1. **Local update**: Node \\(i\\) updates \\(h_i\\) based on local {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %}
 2. **Peer selection**: Node \\(i\\) selects random peer \\(j\\)
@@ -841,13 +879,13 @@ The lossless fully-connected model of Proposition 4 is a lower bound. Real edge 
 \mathbb{E}[T_{\text{convergence}}] \leq \frac{2\ln n}{\lambda \cdot (1 - p_{\text{loss}}) \cdot \Phi}
 {% end %}
 
-*with probability at least \\(1 - 1/n\\). For any connected graph with diameter \\(D\\), the operational bound \\(\Phi \geq 1/D\\) gives:*
+*in expectation. For any connected graph with diameter \\(D\\), the operational bound \\(\Phi \geq 1/D\\) gives:*
 
 {% katex(block=true) %}
 \mathbb{E}[T_{\text{convergence}}] \leq \frac{2 D \ln n}{\lambda \cdot (1 - p_{\text{loss}})}
 {% end %}
 
-*Proof sketch*: Let \\(S_t\\) denote the informed set at gossip round \\(t\\), with \\(|S_t| = k\\). By definition of \\(\Phi\\), the number of boundary edges is at least \\(\Phi \cdot k(n-k)/n\\). Each boundary edge activates — an informed node contacts an uninformed neighbor and the message arrives — with probability \\((1-p_{\text{loss}})/\bar{d}\\) per round (\\(\bar{d}\\) = average degree). The expected growth satisfies \\(\mathbb{E}[|S_{t+1}| - |S_t|] \geq (1-p_{\text{loss}}) \cdot \Phi \cdot k(n-k)/n\\). This is the discrete logistic equation with rate \\(r = (1-p_{\text{loss}})\Phi\\). The logistic ODE solution \\(dI/dt = r \cdot I(1-I)\\) reaches \\(I = 1 - 1/n\\) from \\(I = 1/n\\) in \\(T = (2\ln(n-1))/r\\). Applying \\(\Phi \geq 1/D\\) gives the diameter bound. Probability bound follows from Markov's inequality on the stopping time. \\(\square\\)
+*Proof sketch*: Let \\(S_t\\) denote the informed set at gossip round \\(t\\), with \\(|S_t| = k\\). By definition of \\(\Phi\\), the number of boundary edges is at least \\(\Phi \cdot k(n-k)/n\\). Each boundary edge activates — an informed node contacts an uninformed neighbor and the message arrives — with probability \\((1-p_{\text{loss}})/\bar{d}\\) per round (\\(\bar{d}\\) = average degree). The expected growth satisfies \\(\mathbb{E}[|S_{t+1}| - |S_t|] \geq (1-p_{\text{loss}}) \cdot \Phi \cdot k(n-k)/n\\). This is the discrete logistic equation with rate \\(r = (1-p_{\text{loss}})\Phi\\). The logistic ODE solution \\(dI/dt = r \cdot I(1-I)\\) reaches \\(I = 1 - 1/n\\) from \\(I = 1/n\\) in \\(T = (2\ln(n-1))/r\\). Applying \\(\Phi \geq 1/D\\) gives the diameter bound. The bound holds in expectation; the stopping time is a non-negative random variable, so by Markov's inequality \\(P(T > c \cdot \mathbb{E}[T]) \leq 1/c\\). For operational planning, use \\(3 \times \mathbb{E}[T_{\text{convergence}}]\\) as a practical target to achieve high-probability coverage under the Markov tail bound; Chernoff-style analysis with bounded increments improves this to \\(\mathbb{E}[T] + O(\sqrt{\mathbb{E}[T] \log n})\\). \\(\square\\)
 
 **Probability tail caveat — Markov vs. Chernoff**: The statement "with probability at least \\(1 - 1/n\\)" requires careful interpretation. Markov's inequality gives \\(P(T > c \cdot \mathbb{E}[T]) \leq 1/c\\) for any non-negative random variable — so the \\(1-1/n\\) probability guarantee holds only at \\(c = n\\), meaning the convergence time must be bounded by \\(n \cdot \mathbb{E}[T]\\) rather than \\(\mathbb{E}[T]\\) itself. At the mean \\(T = \mathbb{E}[T_{\text{convergence}}]\\), Markov guarantees only \\(P(T \leq \mathbb{E}[T]) \geq 0\\) — trivially true but not useful. For a high-probability bound at the \\(O(\ln n / \lambda)\\) scale, the correct tool is a Chernoff or Azuma-Hoeffding concentration inequality applied to the martingale \\(|S_t|/n\\). Under the logistic growth model, the time to reach \\(1 - 1/n\\) coverage concentrates around the mean with sub-Gaussian tails: \\(P(T_{\text{convergence}} > (1 + \delta) \mathbb{E}[T]) \leq \exp(-\Omega(\delta^2 n))\\). **Practical implication**: when designing systems to the Proposition 4 bound, budget \\(3 \times \mathbb{E}[T_{\text{convergence}}]\\) as the \\(1-1/n\\) operational target — the factor-3 overhead covers the difference between the median convergence time and the high-probability tail. The OUTPOST calibration table below uses the correct diameter bound directly; the \\(1-1/n\\) language in the proposition statement should be read as an asymptotic characterization, not a tight guarantee at \\(\mathbb{E}[T]\\).
 
@@ -930,11 +968,13 @@ The gossip rate optimization assumes a central planner selects \\(\lambda\\). In
 {% katex(block=true) %}
 Q(\boldsymbol{\lambda}) = 1 - e^{-\bar{\lambda} t}, \quad \bar{\lambda} = \frac{1}{n}\sum_i \lambda_i
 {% end %}
+
 Node \\(i\\) captures only \\(1/n\\) of the benefit of its own gossip. The Nash equilibrium satisfies \\(\frac{\partial Q}{\partial \lambda_i}\big|_{\text{NE}} = \frac{t}{n} e^{-\bar{\lambda}^{\text{NE}} t} = c_i\'(\lambda_i)\\), while the social optimum satisfies \\(t \cdot e^{-\bar{\lambda}^{\text{OPT}} t} = c_i\'(\lambda_i)\\). Since \\(1/n < 1\\), the comparison below holds and the equilibrium rate falls short of the social optimum.
 
 {% katex(block=true) %}
 \bar{\lambda}^{\text{NE}} < \bar{\lambda}^{\text{OPT}}
 {% end %}
+
 For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(n = 47\\)), autonomous gossip equilibrium provides approximately \\(1/47\\) of the socially optimal convergence rate.
 
 **VCG mechanism**: A Groves mechanism assigns task-allocation transfers to nodes proportional to their gossip contribution: nodes that gossip more receive fewer computational tasks (reducing effective cost). Under this mechanism, truthful power-budget reporting is a dominant strategy and the social optimum is achieved.
@@ -1135,9 +1175,11 @@ Each node maintains a **partition vector** \\(\rho_i\\) that records, for every 
 {% katex(block=true) %}
 \rho_i[j] = \begin{cases}
 0 & \text{if } j \text{ reachable directly or via gossip} \\
-t_{\text{last contact}} & \text{if } j \text{ unreachable}
+\text{hlc}_{\text{last}} & \text{if } j \text{ unreachable}
 \end{cases}
 {% end %}
+
+where \\(\text{hlc}_{\text{last}}\\) is the HLC timestamp (Definition 40, Part 4) of the last confirmed contact, recorded as an HLC timestamp rather than wall-clock time, to preserve causal ordering across nodes with clock drift.
 
 When \\(\rho_i[j] > 0\\) and \\(t - \rho_i[j] > \tau_{\text{max}}\\), node \\(i\\) marks its knowledge of node \\(j\\) as **uncertain** rather than **stale**.
 
@@ -1188,19 +1230,17 @@ Different decisions have different horizons. Safety-critical decisions with narr
 3. **Escalate observation priority**: Increase gossip rate for this node
 
 <span id="prop-5"></span>
-**Proposition 5** (Maximum Useful Staleness). *For a health process with volatility \\(\sigma\\), observation rate \\(\lambda\\) (samples per second), and a decision requiring discrimination at precision \\(\Delta h\\) with confidence \\(1 - \alpha\\), the maximum useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is:*
+**Proposition 5** (Maximum Useful Staleness). *For a health process modeled as Brownian diffusion with volatility \\(\sigma\\) (as in Definition 6), and a decision requiring discrimination at precision \\(\Delta h\\) with confidence \\(1 - \alpha\\), the maximum useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is:*
 
 {% katex(block=true) %}
-\tau_{\text{max}} = \frac{1}{\lambda} \left( \frac{z_{\alpha/2}\, \sigma}{\Delta h} \right)^2
+\tau_{\text{max}} = \left( \frac{\Delta h}{z_{\alpha/2}\, \sigma} \right)^2
 {% end %}
 
-Here \\(\lambda\\) is the observation rate (samples per second); \\(\tau_{\text{max}}\\) has units of seconds. If \\(\lambda = 1\\), the formula reduces to a sample count.
+*where \\(z_{\alpha/2}\\) is the standard normal quantile and \\(\Delta h\\) is the acceptable drift. Beyond \\(\tau_{\text{max}}\\), the confidence interval spans the decision threshold and the observation cannot support the decision.*
 
-*where \\(z_{\alpha/2}\\) is the standard normal quantile. Beyond \\(\tau_{\text{max}}\\), the confidence interval spans the decision threshold and the observation cannot support the decision.*
+*Proof*: Under the diffusion model (Definition 6), health evolves as a Brownian process with variance \\(\sigma^2\\) per unit time. Given the last observation at time \\(t_0\\), the current state at time \\(t_0 + \tau\\) lies within a \\((1-\alpha)\\) confidence interval of half-width \\(z_{\alpha/2} \sigma \sqrt{\tau}\\). Setting this equal to the required decision precision \\(\Delta h\\) and solving for \\(\tau\\) gives the result. Under the diffusion model, the staleness bound is independent of observation rate \\(\lambda\\) — more frequent observations do not reduce uncertainty about the *current* state between observations, only about the state *at* each observation time.
 
-*Proof*: With \\(n = \lambda \tau\\) observations over elapsed time \\(\tau\\), the sample mean of the health process has standard error \\(\sigma / \sqrt{n} = \sigma / \sqrt{\lambda \tau}\\). The \\((1-\alpha)\\) confidence interval half-width is \\(z_{\alpha/2} \sigma / \sqrt{\lambda \tau}\\). Setting this equal to the required decision precision \\(\Delta h\\) and solving for \\(\tau\\) gives the result.
-
-**Corollary 3**. *The quadratic relationship \\(\tau_{\text{max}} \propto (\sigma / \Delta h)^2\\) implies that tightening decision margins dramatically reduces useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}. Systems with narrow operating envelopes require proportionally higher observation frequency.*
+**Corollary 3**. *The quadratic relationship \\(\tau_{\text{max}} \propto (\Delta h / \sigma)^2\\) implies that tightening decision margins dramatically reduces useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}. Systems with narrow operating envelopes must refresh observations more frequently — not because more observations narrow the diffusion uncertainty, but because each observation must occur before the health state drifts by \\(\Delta h\\).*
 
 **Time-varying \\(\sigma\\) caveat**: Prop 5 assumes constant measurement volatility \\(\sigma\\). OUTPOST thermistors exhibit \\(\sigma(T) \approx 0.05 + 0.003 \cdot |T - T_{\text{ref}}|\\) °C — three times higher at \\(-30\\)°C than at 20°C. For sensors with temperature-correlated variance: substitute \\(\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T)\\) as a conservative upper bound on \\(\tau_{\max}\\). This produces a shorter, conservative staleness limit. To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance \\(\sqrt{P_\infty + R}\\) and recompute \\(\tau_{\max}\\) at each measurement cycle. Decision systems with narrow operating envelopes (\\(\Delta h < 0.1\\)°C) will find \\(\tau_{\max}\\) below 10 seconds in cold conditions — requiring far higher gossip rates than lab calibration suggests.
 
@@ -1275,6 +1315,7 @@ w_j^{\text{trust}} = e^{-\gamma\tau} \cdot \mathbb{1}\!\left[\hat{h}_j \text{ co
 {% katex(block=true) %}
 r_j(t+1) = \alpha \cdot r_j(t) + (1-\alpha) \cdot \mathbb{1}\!\left[|\hat{h}_j(t) - \hat{h}_j^{\text{pred}}(t)| < \delta\right]
 {% end %}
+
 where \\(\hat{h}_j^{\text{pred}}(t)\\) is the prediction from neighbor models. Nodes with consistent reports (honest or genuinely healthy) maintain high \\(r_j\\); {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %}s whose inversions conflict with neighbor cross-validation see \\(r_j \to 0\\) over time.
 
 **Practical implication**: Replace {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}-only trust weights with reputation-weighted trust. For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s 127-sensor mesh, this catches both adversarial Byzantine sensors and genuinely malfunctioning sensors without false Byzantine labels - failing sensors produce noisy (not inverted) reports, which are distinguishable from strategic inversion.
@@ -1845,7 +1886,7 @@ Health vector per drone contains:
 - Critical sensor status (functional/degraded/failed)
 - Mission capability level (\\(\mathcal{L}_0\\)-\\(\mathcal{L}_4\\))
 
-Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values.
+Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values. In contested environments where clock drift is measurable, replace wall-clock LWW with HLC-aware merge (Definition 41, Fleet Coherence Under Partition, Part 4) using the Hybrid Logical Clock ordering to determine recency; node-ID tiebreakers resolve simultaneous HLC values.
 
 **Convergence guarantees**: With logarithmic propagation dynamics, fleet-wide health convergence occurs within 30-40 seconds - fast enough to track operational state changes while remaining robust to individual message losses.
 

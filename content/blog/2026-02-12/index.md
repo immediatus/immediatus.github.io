@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Anti-Fragile Decision-Making at the Edge"
-description = "Resilient systems return to baseline after stress. Anti-fragile systems get better. Every partition event, every component failure, every period of degraded operation carries information that can improve future performance. This article develops the mechanisms: online parameter tuning via multi-armed bandits, Bayesian model updates from operational stress, and the judgment horizon that separates decisions automation should make from those requiring human authority. The goal is systems that emerge from adversity stronger than they entered."
+description = """Resilience returns you to baseline; anti-fragility means coming out better than you went in. This article formalizes that distinction, shows why anti-fragile policies win under fleet-wide policy competition, and builds the bandit and Bayesian update machinery that makes improvement possible — with a caveat: the math only works if you defined success before the failure happened."""
 date = 2026-02-12
 slug = "autonomic-edge-part5-antifragile-decisions"
 draft = false
@@ -14,7 +14,7 @@ series = ["autonomic-edge-architectures"]
 toc = false
 series_order = 5
 series_title = "Autonomic Edge Architectures: Self-Healing Systems in Contested Environments"
-series_description = """Traditional distributed systems assume connectivity as the norm and partition as the exception. Edge systems invert this assumption: disconnection is the default operating state, and connectivity is the opportunity to synchronize. This series develops the engineering principles for autonomic architectures - systems that self-measure, self-heal, and self-optimize when human operators cannot intervene. Through tactical scenarios (RAVEN drone swarm, CONVOY ground vehicles, OUTPOST forward base) and commercial deployments (chaos engineering, adaptive e-commerce, autonomous fleets), we derive the mathematical foundations and design patterns for systems that thrive under contested connectivity."""
+series_description = """Edge systems can't treat disconnection as an exceptional error — it's the default condition. This series builds the formal foundations for systems that self-measure, self-heal, and improve under stress without human intervention, grounded in control theory, Markov models, and CRDT state reconciliation. Every quantitative claim comes with an explicit assumption set."""
 +++
 
 ---
@@ -87,6 +87,8 @@ where \\(\nabla_\theta U\\) is the gradient of utility with respect to parameter
 {% end %}
 
 *By Jensen's inequality, convexity implies \\(\mathbb{E}[P(\sigma)] > P(\mathbb{E}[\sigma])\\): the system gains from stress variance itself. The {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} coefficient \\(\mathbb{A} = (P_1 - P_0)/\sigma\\) measures observed improvement per unit stress, where \\(P_0\\) is pre-stress performance and \\(P_1\\) is post-recovery performance.*
+
+**Operationalizing P**: System performance is multi-dimensional, so \\(P\\) must be defined before \\(\mathbb{A}\\) can be computed. The series uses the primary metric from Part 1 as the canonical scalar: \\(P = \bar{\mathcal{L}} = \mathbb{E}[\int_0^T \mathcal{L}(t)\,dt]/T\\), the time-averaged capability level. For specific sub-problems, substitute: \\(P = \text{MTTR}^{-1}\\) (inverse mean time to recovery) for healing-speed analysis; \\(P = \text{F}_1\\) (anomaly-detection F-score) for detection accuracy; \\(P = \bar{\theta}\\) (average operational threshold) for threshold-learning tasks. The denominator \\(\sigma \in [0,1]\\) is normalized stress severity (0 = no stress, 1 = worst-case partition or hardware failure). With these substitutions, \\(\mathbb{A} > 0\\) is falsifiable: it requires that the chosen \\(P\\) metric is measurably higher after stress recovery than before the stress event.
 
 In other words, an {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} system does not just survive stress and return to baseline — it finishes in a better state than it started, and this improvement is proportional to how severe the stress was.
 
