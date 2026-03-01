@@ -583,7 +583,13 @@ where \\(\tau_0 = 72\,\text{h}\\) is the zero-backhaul duration, \\(B_b(t) = 0\\
 
 **CONVOY scenario**: Vehicle 7 enters a 3 km canyon with no line-of-sight radio propagation. The radio transceiver is powered down (zero \\(T_s\\) cost). Over 72 hours, the vehicle continues route execution, logs all autonomous decisions, maintains local health monitoring via MAPE-K, and stores diverged state in its CRDT buffers. On canyon exit, it reconnects and reconciles. Phase 0 requires demonstrating this entire sequence before any coordination protocol is integrated.
 
-**Phase 0 gate**: \\(G_0(S) = V_{\text{attest}} \land V_{\text{surv}} \land V_{\text{budget}} \land V_{\text{safe}} \land V_{\text{zero}}\\)
+**Phase 0 gate**: \\(G_0(S) = V_{\text{attest}} \land V_{\text{surv}} \land V_{\text{budget}} \land V_{\text{safe}} \land V_{\text{zero}} \land V_{\text{calib}}\\)
+
+**\\(V_{\text{calib}}\\) — sensor calibration attestation**: \\(V_{\text{attest}}\\) verifies firmware integrity (the node runs what it was programmed to run) but does not verify that its sensors report truthful physical values. A node with valid secure boot attestation but a miscalibrated temperature sensor that reads \\(+15^\circ\text{C}\\) high passes all cryptographic checks while injecting systematically false data into the fleet's shared state — it is Byzantine-equivalent in effect without being Byzantine in the fault-model sense (the firmware is correct; only the sensor hardware is wrong). \\(V_{\text{calib}}\\) adds the requirement that all physical sensors have been calibrated against a known reference within the calibration interval \\(T_{\text{cal}}\\):
+
+{% katex() %}V_{\text{calib}}(S) = \mathbb{1}[\forall s \in \mathcal{S}_{\text{sensors}}: |v_s^{\text{measured}} - v_s^{\text{reference}}| \leq \delta_s \land t_{\text{now}} - t_{\text{last\_cal}}(s) \leq T_{\text{cal}}]{% end %}
+
+where \\(\delta_s\\) is the per-sensor accuracy specification and \\(T_{\text{cal}}\\) is the manufacturer-specified or mission-specified recalibration interval. Calibration procedure at Phase 0: expose each sensor to a known reference stimulus (laboratory or field reference standard), record deviation, and cryptographically sign the calibration record with the node's device key. The signed calibration record is included in the attestation evidence package. For RAVEN: MEMS IMUs recalibrated before each flight (\\(T_{\text{cal}} = 1\\) flight); LIDAR returns factory-calibrated (\\(T_{\text{cal}} = 90\\) days). Nodes that fail \\(V_{\text{calib}}\\) are excluded from Phase 0 and may not participate in gossip or peer validation until recalibrated — an uncalibrated sensor propagates systematic error through the fleet's Byzantine-tolerance mechanism regardless of the trust weight assigned by Def 44.
 
 ### Phase 1: Local Autonomy Layer
 
