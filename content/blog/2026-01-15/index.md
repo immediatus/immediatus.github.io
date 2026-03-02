@@ -177,7 +177,7 @@ T_s / T_d \gg 1 \quad \text{(radio dominates the energy budget)}
 
 *where \\(n_c(a)\\) is the number of local compute cycles required, \\(n_s(a, C)\\) is the number of radio packets required (zero when \\(C = 0\\)), \\(T_d\\) is joules per compute operation, and \\(T_s\\) is joules per transmitted packet.*
 
-This metric reframes every architectural choice as an energy budget problem. Sending one gossip packet costs the same as running \\(T_s/T_d \approx 10^3\\) local inference cycles. The system that offloads decisions to the cloud to "save compute" actually spends orders of magnitude more energy on the radio link than it saves on silicon.
+This metric reframes every architectural choice as an energy budget problem. Sending one {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} packet costs the same as running \\(T_s/T_d \approx 10^3\\) local inference cycles. The system that offloads decisions to the cloud to "save compute" actually spends orders of magnitude more energy on the radio link than it saves on silicon.
 
 <span id="prop-23"></span>
 **Proposition 23** (Compute-Transmit Dominance Threshold). *Local computation is energetically dominant — cheaper than radio-assisted offloading — for any decision requiring fewer than \\(1/\rho\\) compute cycles, where \\(\rho = T_d/T_s\\):*
@@ -188,7 +188,7 @@ This metric reframes every architectural choice as an energy budget problem. Sen
 
 *For \\(\rho = 10^{-3}\\) (tactical radio): any decision requiring fewer than 1,000 local compute cycles is cheaper to run locally than to transmit — even when connectivity is available.*
 
-**Design consequence**: The inversion threshold \\(\tau^\*\\) from Proposition 1 has an energy analog. Even when \\(C(t) > \tau^*\\) and distributed autonomy does not strictly dominate cloud control on latency or capability grounds, it may still dominate on energy grounds if \\(n_c < 1/\rho\\). At the edge, physics — not just connectivity — mandates local compute.
+**Design consequence**: The {% term(url="#term-inversion", def="Availability threshold tau* above which partition-first architecture outperforms cloud-first; derived from the U_edge = U_cloud crossover condition") %}inversion threshold{% end %} \\(\tau^\*\\) from Proposition 1 has an energy analog. Even when \\(C(t) > \tau^*\\) and distributed autonomy does not strictly dominate cloud control on latency or capability grounds, it may still dominate on energy grounds if \\(n_c < 1/\rho\\). At the edge, physics — not just connectivity — mandates local compute.
 
 **Illustrative hardware parameters** (order-of-magnitude estimates consistent with representative datasheets for each platform class; not measured values — calibrate \\(T_d\\) and \\(T_s\\) for the target hardware):
 
@@ -222,7 +222,7 @@ Capabilities form a directed acyclic graph where \\(A \prec B\\) means "\\(A\\) 
 \text{Hardware Trust} \prec \mathcal{L}_0 \prec \text{Self-Measurement} \prec \text{Self-Healing} \prec \text{Fleet Coherence} \prec \text{Anti-Fragility}
 {% end %}
 
-**Design consequence**: Building anti-fragility before self-healing wastes effort.
+**Design consequence**: Building {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} before self-healing wastes effort.
 
 ### Objective Hierarchy
 
@@ -267,7 +267,7 @@ Edge architecture operates under \\(P(C = 0) > 0.15\\) and \\(\mathbb{E}[T_{\tex
 - \\(A_1\\): Mission continues during partition (no external abort trigger)
 - \\(A_2\\): Decisions have bounded latency requirement \\(T_d < \infty\\)
 - \\(A_3\\): Synchronization period \\(T_s\\) is finite and \\(T_s \geq T_d\\)
-- \\(A_4\\): Retry overhead \\(\rho > 0\\) on failed coordination attempts
+- \\(A_4\\): Retry overhead \\(\rho(p) \geq \rho_0 > 0\\) on failed coordination attempts; functional form underdetermined. Baseline derivation (\\(\tau^\* \approx 0.40\\)) assumes constant \\(\rho = \rho_0\\) (fixed overhead, e.g., TDMA or polling MAC); adjusted range (\\(\tau^\* \in [0.12, 0.18]\\)) additionally assumes \\(\rho(p) = \rho_0/(1-p)\\) (TCP-like congestion growth). Model-agnostic bounds are developed in "Retry Model Sensitivity" within the Proposition 1 proof.
 
 <style>
 #tbl_cloud_vs_edge + table th:first-of-type { width: 28%; }
@@ -342,7 +342,34 @@ For \\(k = 5\\): \\(\tau^* = 0.4\\). Including retry storms (\\(\rho\\) increase
 
 The retry storm correction is derived as follows. Under TCP-like congestion collapse, each retry attempt contends with active retries: \\(\rho(p) \approx \rho_0/(1-p)\\) (linear in availability pressure). Substituting into the \\(\tau^*\\) formula with \\(k=5\\), \\(\rho = \rho_0/(1-p)\\), and solving \\(U_{\text{cloud}} = U_{\text{edge}}\\) numerically for \\(p\\): at \\(\rho_0 = T_s\\) (retry cost equals one sync period), the crossover shifts from \\(p = 0.40\\) to \\(p \approx 0.17\\). At \\(\rho_0 = 2T_s\\): \\(p \approx 0.13\\). The range \\([0.12, 0.18]\\) corresponds to \\(\rho_0 \in [T_s, 2T_s]\\) — one to two sync periods of retry overhead, consistent with measured backoff behavior on contested tactical links.
 
-**\\(\tau^\*\\) uniqueness caveat**: The derivation above assumes \\(\rho(p)\\) is monotonically increasing in \\(p\\), which makes \\(U_{\text{cloud}} - U_{\text{edge}}\\) a monotone function with at most one zero crossing — guaranteeing a unique \\(\tau^\*\\). When \\(\rho(p) = \rho_0/(1-p)\\) (linear retry storm), this still holds. However, if \\(\rho_0\\) is itself correlated with \\(p\\) — for instance, because backoff duration depends on congestion level, which is a function of \\(p\\) — the effective retry cost becomes \\(\rho_{\text{eff}}(p) = \rho_0(p)/(1-p)\\), a nonlinear function that can create two crossover points: a lower \\(\tau^\*_1\\) where partition-first becomes preferable, and an upper \\(\tau^\*_2\\) where extreme availability loss makes the utility functions cross back. In such cases, solve {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically and verify only one root exists in \\([0, 1]\\) before applying the threshold. The RAVEN and CONVOY calibrations use measured constant \\(\rho_0\\), so uniqueness holds; systems with load-dependent backoff (e.g., exponential backoff with jitter correlated with congestion level) must verify this explicitly.
+**\\(\tau^\*\\) uniqueness caveat**: The derivation above assumes \\(\rho(p)\\) is monotonically increasing in \\(p\\), which makes \\(U_{\text{cloud}} - U_{\text{edge}}\\) a monotone function with at most one zero crossing — guaranteeing a unique \\(\tau^\*\\). When \\(\rho(p) = \rho_0/(1-p)\\) (linear retry storm), this still holds. However, if \\(\rho_0\\) is itself correlated with \\(p\\) — for instance, because backoff duration depends on congestion level, which is a function of \\(p\\) — the effective retry cost becomes \\(\rho_{\text{eff}}(p) = \rho_0(p)/(1-p)\\), a nonlinear function that can create two crossover points: a lower \\(\tau^\*_1\\) where partition-first becomes preferable, and an upper \\(\tau^\*_2\\) where extreme availability loss makes the utility functions cross back. In such cases, solve {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically and verify only one root exists in \\([0, 1]\\) before applying the threshold. The {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} and {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibrations use measured constant \\(\rho_0\\), so uniqueness holds; systems with load-dependent backoff (e.g., exponential backoff with jitter correlated with congestion level) must verify this explicitly.
+
+**Retry Model Sensitivity Analysis**: The threshold \\(\tau^\*\\) is sensitive to the functional form of \\(\rho(p)\\). The fixed-overhead baseline and the TCP-like storm correction represent two points on a spectrum of MAC protocol behaviors. To characterize the full range, define the **retry elasticity**:
+
+{% katex(block=true) %}
+\eta_\rho(p) = \frac{d \ln \rho}{d \ln p}
+{% end %}
+
+\\(\eta_\rho = 0\\) means retry cost does not grow with partition rate (TDMA fixed-slot allocation, no contention); \\(\eta_\rho = 1\\) means it grows proportionally to \\(p\\) (TCP-like AIMD). Four representative models bracket the practical range (all entries assume \\(k = T_s/T_d = 5\\), \\(\rho_0 = T_s\\); \\(\tau^\*\\) values are indicative ranges, not precise forecasts):
+
+| Retry Model | \\(\rho(p)\\) Form | Physical Mechanism | \\(\eta_\rho\\) | \\(\tau^\*\\) range |
+| :--- | :--- | :--- | :--- | :--- |
+| Fixed overhead | \\(\rho_0\\) | TDMA slot reservation, Link-16 fixed slot | 0 | ~0.40 |
+| Soft exponential backoff | \\(\rho_0 e^{p}\\) | CSMA/CA at low-to-moderate channel load | 0 to 1 | ~0.25–0.38 |
+| TCP-like linear congestion | \\(\rho_0/(1-p)\\) | AIMD; each retry competes with concurrent retries | 1 | ~0.12–0.18 |
+| Hard channel saturation | \\(\rho_0/(1-p/p_{\max})\\), \\(p_{\max} < 1\\) | Frequency-limited tactical net; no retry above \\(p_{\max}\\) | 1 to \\(\infty\\) near \\(p_{\max}\\) | Below 0.12 near \\(p_{\max}\\) |
+
+**Robust bound (model-agnostic)**: For any \\(\rho(p)\\) with \\(\eta_\rho \geq 0\\) — retry overhead non-decreasing in \\(p\\) — the threshold satisfies \\(\tau^\* \leq \tau^\*_{\text{fixed}} \approx 0.40\\). The fixed-overhead case is the structural upper bound: when \\(\rho\\) does not grow with \\(p\\), cloud utility degrades at the slowest possible rate, so the crossover from cloud-preferred to edge-preferred occurs at the highest possible partition probability. No physically realistic MAC protocol with non-negative congestion response can produce a \\(\tau^\*\\) above 0.40.
+
+**Model-dependent width**: The full range \\([0.12, 0.40]\\) covers all protocols with \\(\eta_\rho \leq 1\\). Hard-saturation protocols push \\(\tau^\*\\) below 0.12 near the saturation point, where the channel capacity exhaustion makes cloud coordination catastrophically expensive at modest partition rates. The width is driven primarily by \\(\eta_\rho\\), not by the synchronization ratio \\(k\\) or the reconciliation cost ratio \\(\beta/\alpha\\): systems with identical \\(k\\) values but different MAC protocols can differ in \\(\tau^\*\\) by a factor of 3 to 4. Conversely, changing \\(k\\) from 5 to 10 shifts \\(\tau^\*_{\text{fixed}}\\) from 0.40 to \\((10-1)/(2 \cdot 10) = 0.45\\) — a small effect compared to the model uncertainty.
+
+**Empirical calibration procedure**: Measure mean per-attempt retry cost at \\(p_1 = 0.10\\) (light jamming) and \\(p_2 = 0.30\\) (moderate jamming) during a controlled link stress test. Estimate retry elasticity:
+
+{% katex(block=true) %}
+\hat{\eta}_\rho = \frac{\ln\bigl(\hat{\rho}(0.30) / \hat{\rho}(0.10)\bigr)}{\ln 3}
+{% end %}
+
+If {% katex() %}\hat{\eta}_\rho < 0.3{% end %}: the radio exhibits near-fixed overhead; use \\(\tau^\* \in [0.35, 0.40]\\). If {% katex() %}0.3 \leq \hat{\eta}_\rho \leq 1.2{% end %}: use \\(\tau^\* \in [0.12, 0.30]\\) (interpolating from the table above). If {% katex() %}\hat{\eta}_\rho > 1.2{% end %}: the TCP-like range does not apply; solve \\(U_{\text{cloud}} = U_{\text{edge}}\\) numerically with the measured \\(\hat{\rho}(p)\\) curve and use \\(\tau^\* = 0.10\\) as a conservative operating threshold pending that numerical solution. {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s measured \\(\hat{\rho}\\) at two jamming intensities placed it in the \\(\hat{\eta}_\rho \in [0.9, 1.1]\\) range, justifying the TCP-like model and the \\([0.12, 0.18]\\) threshold.
 
 **Utility improvement under partition-first design**: The formula below quantifies the net utility gain from switching to partition-first design, expressed as the difference between the coordination delay saved and the reconciliation cost incurred.
 
@@ -356,7 +383,7 @@ The retry storm correction is derived as follows. Under TCP-like congestion coll
 - \\(T_s / T_d \geq 5\\) (synchronization substantially slower than local decisions)
 - \\(\rho > 0\\) (retries have non-zero cost)
 - \\(\beta < \alpha T_s\\) (reconciliation cheaper than prolonged waiting)
-- **Conflict rate bounded**: \\(|\text{conflicts}| / \tau_{\text{partition}} < \kappa\\) for some threshold \\(\kappa\\). When clusters make incompatible decisions, reconciliation cost decomposes into data and semantic components: \\(\beta_{\text{actual}} = \beta(1-p) + \beta_c^{\text{data}} \cdot N_d^2 + \beta_c^{\text{sem}} \cdot (1-\gamma)^2 |S_{\text{merged}}|^2\\), where \\(N_d\\) is the CRDT-resolvable data-conflict count and \\(\gamma\\) is the semantic convergence factor (Definition 1b). The CRDT data-conflict term is bounded; the semantic term is not.
+- **Conflict rate bounded**: \\(|\text{conflicts}| / \tau_{\text{partition}} < \kappa\\) for some threshold \\(\kappa\\). When clusters make incompatible decisions, reconciliation cost decomposes into data and semantic components: \\(\beta_{\text{actual}} = \beta(1-p) + \beta_c^{\text{data}} \cdot N_d^2 + \beta_c^{\text{sem}} \cdot (1-\gamma)^2 |S_{\text{merged}}|^2\\), where \\(N_d\\) is the {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %}-resolvable data-conflict count and \\(\gamma\\) is the semantic convergence factor (Definition 1b). The {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} data-conflict term is bounded; the semantic term is not.
 - **Semantic convergence**: \\(\gamma \geq 1 - \varepsilon\\) (policy-violation fraction below tolerance \\(\varepsilon\\); Definition 1b). When this fails, the semantic conflict term can reverse the inversion advantage regardless of how fast data syncs.
 
 <span id="def-1b"></span>
@@ -366,7 +393,7 @@ The retry storm correction is derived as follows. Under TCP-like congestion coll
 \gamma = \frac{|S_{\text{merged}}^{\text{consistent}}|}{|S_{\text{merged}}|}
 {% end %}
 
-*\\(\gamma = 1\\) means all merged state satisfies system policy. When \\(\gamma < 1 - \varepsilon\\), policy violations accumulate faster than they can be resolved — nodes must re-negotiate conflicting decisions, driving the \\(\beta_c^{\text{sem}}\\) term into the storm regime regardless of CRDT sync speed. CRDTs guarantee data convergence (\\(\gamma_{\text{data}} = 1\\)) but have no effect on \\(\gamma\\): CRDT merge is syntactic, policy compliance is semantic.*
+*\\(\gamma = 1\\) means all merged state satisfies system policy. When \\(\gamma < 1 - \varepsilon\\), policy violations accumulate faster than they can be resolved — nodes must re-negotiate conflicting decisions, driving the \\(\beta_c^{\text{sem}}\\) term into the storm regime regardless of {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} sync speed. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDTs{% end %} guarantee data convergence (\\(\gamma_{\text{data}} = 1\\)) but have no effect on \\(\gamma\\): {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} merge is syntactic, policy compliance is semantic.*
 
 **Note:** Setting \\(U_{cloud} = U_{edge}\\) yields a quadratic in the availability parameter \\(p\\): \\(\alpha T_s(1 + \rho p / T_s) = (\alpha T_d + \beta(1-p))(1-p)\\). The closed-form \\(\tau^*\\) is a first-order linear approximation valid when \\(\beta(1-p)\\) is small relative to \\(\alpha T_d\\). For large \\(\beta\\) (high penalty for remote coordination failures), the quadratic root should be solved numerically.
 
@@ -491,11 +518,11 @@ The tier architecture pre-assigns nodes to fixed clusters. When partition severs
 **Model**: Each node \\(i\\) has preferences over coalitions \\(S \ni i\\) based on:
 - Aggregate capability: \\(\sum_{j \in S} \mathcal{L}_j\\)
 - Communication overhead: \\(|S| \cdot c_{\text{msg}}\\)
-- MVS achievability: \\(P(\text{MVS achievable} \mid S)\\)
+- {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} achievability: \\(P(\text{MVS achievable} \mid S)\\)
 
 A **Nash-stable partition** is one where no node prefers to join a different coalition or operate alone: no \\(i\\) with current coalition \\(S_i\\) prefers any \\(S\' \neq S_i\\) containing \\(i\\).
 
-**Partition-duration trade-off**: For short partitions, larger coalitions are preferred - less fragmentation to reconcile at reconnection. For long partitions, smaller self-sufficient coalitions are preferred - lower communication overhead and conflict probability. The formula below selects the coalition size \\(k\\) that maximizes the difference between the probability of achieving Minimum Viable System functionality and the cumulative messaging cost \\(c_{\text{msg}}\\) scaled by expected partition duration \\(\mathbb{E}[T_{\text{partition}}]\\).
+**Partition-duration trade-off**: For short partitions, larger coalitions are preferred - less fragmentation to reconcile at reconnection. For long partitions, smaller self-sufficient coalitions are preferred - lower communication overhead and conflict probability. The formula below selects the coalition size \\(k\\) that maximizes the difference between the probability of achieving {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}Minimum Viable System{% end %} functionality and the cumulative messaging cost \\(c_{\text{msg}}\\) scaled by expected partition duration \\(\mathbb{E}[T_{\text{partition}}]\\).
 
 {% katex(block=true) %}
 |S^*| = \arg\max_{k} \left[ P(\text{MVS} \mid k) - k \cdot c_{\text{msg}} \cdot \mathbb{E}[T_{\text{partition}}] \right]
@@ -1044,7 +1071,7 @@ This 500ms budget is the survival constraint - slower response causes upstream b
 
 ### Learning Transition Rates Online
 
-Static estimates of \\(Q\\) are insufficient for systems that must adapt to changing environments. An anti-fragile system learns its connectivity dynamics online, updating estimates as new transitions are observed.
+Static estimates of \\(Q\\) are insufficient for systems that must adapt to changing environments. An {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} system learns its connectivity dynamics online, updating estimates as new transitions are observed.
 
 Define \\(N_{ij}(t)\\) as the count of observed transitions from state \\(i\\) to state \\(j\\) by time \\(t\\), and \\(T_i(t)\\) as total time spent in state \\(i\\). The maximum likelihood estimate of transition rates is:
 
@@ -1110,7 +1137,7 @@ When adversarial adaptation is detected:
 - Increase randomization in timing and routing
 - Alert operators if reachable
 
-**Structural inconsistency with the adversarial game model (Part 5)**: The CTMC formulation above treats the generator matrix \\(Q\\) as stationary — the transition rates \\(\lambda_{CN}\\), \\(\lambda_{NC}\\) are fixed properties of the environment, and the stationary distribution \\(\pi\\) is well-defined. This is incompatible with the adversarial Markov game (Definition 32 in the anti-fragile decision-making article), where the adversary's strategy \\(\sigma_A\\) controls exactly these rates. Under an adaptive adversary, \\(Q\\) is a function of both the defender's and adversary's joint policy: \\(Q(t) = Q(\pi_D(t), \sigma_A(t))\\). The stationary distribution \\(\pi_N \approx 0.17\\) derived from the CTMC is therefore invalid when an adversary is present — the system never reaches stationarity because the adversary continuously adjusts \\(Q\\) in response to observed defender behavior. **Correct interpretation**: the CTMC model applies in non-adversarial partitioned environments (physical obstacles, atmospheric conditions, hardware faults). For adversarially contested environments, the CTMC provides an optimistic baseline that bounds performance under no adversary; actual performance under an adaptive adversary requires the game-theoretic analysis of the anti-fragile decision-making article. The adversarial indicators above are the operational bridge: they signal when to switch from the CTMC regime assumption to the adversarial game regime.
+**Structural inconsistency with the adversarial game model (Part 5)**: The CTMC formulation above treats the generator matrix \\(Q\\) as stationary — the transition rates \\(\lambda_{CN}\\), \\(\lambda_{NC}\\) are fixed properties of the environment, and the stationary distribution \\(\pi\\) is well-defined. This is incompatible with the adversarial Markov game (Definition 32 in the {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} decision-making article), where the adversary's strategy \\(\sigma_A\\) controls exactly these rates. Under an adaptive adversary, \\(Q\\) is a function of both the defender's and adversary's joint policy: \\(Q(t) = Q(\pi_D(t), \sigma_A(t))\\). The stationary distribution \\(\pi_N \approx 0.17\\) derived from the CTMC is therefore invalid when an adversary is present — the system never reaches stationarity because the adversary continuously adjusts \\(Q\\) in response to observed defender behavior. **Correct interpretation**: the CTMC model applies in non-adversarial partitioned environments (physical obstacles, atmospheric conditions, hardware faults). For adversarially contested environments, the CTMC provides an optimistic baseline that bounds performance under no adversary; actual performance under an adaptive adversary requires the game-theoretic analysis of the {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} decision-making article. The adversarial indicators above are the operational bridge: they signal when to switch from the CTMC regime assumption to the adversarial game regime.
 
 ---
 
@@ -1397,7 +1424,7 @@ graph TD
 
 **State Replication Strategy**:
 
-For CRDT-based state, replication factor determines reconciliation complexity:
+For {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %}-based state, replication factor determines reconciliation complexity:
 
 | State Type | Replication | Rationale |
 | :--- | :--- | :--- |
@@ -1415,14 +1442,14 @@ State that must survive connectivity loss should be replicated *across* connecti
 
 For {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, placing one replica at each vehicle (T3), one at platoon controller (T2), and one at convoy coordinator (T1) ensures state survives any single connectivity boundary failure.
 
-**Redundancy Cost-Benefit Analysis**: The table below shows how effective availability and cost scale together as redundancy increases, using the {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} \\(a_{\text{eff}} = 0.71\\) baseline; the Break-even column gives the minimum per-hour downtime cost that justifies each additional replica.
+**Redundancy Cost-Benefit Analysis**: The table below shows how effective availability and cost scale together as redundancy increases, using the {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} \\(a_{\text{eff}} = 0.71\\) baseline; the Break-even column gives the minimum per-hour downtime cost (in normalized cost units, c.u.; calibrate to actual downtime cost for your system) that justifies each additional replica.
 
 | Redundancy Level | Compute Cost | Storage Cost | Availability | Break-even |
 | :--- | :--- | :--- | :--- | :--- |
 | R=1 | 1x | 1x | 71% | Baseline |
-| R=2 | 2x | 2x | 92% | If downtime >$50/hr |
-| R=3 | 3x | 3x | 98% | If downtime >$200/hr |
-| R=4 | 4x | 4x | 99.4% | If downtime >$800/hr |
+| R=2 | 2x | 2x | 92% | If downtime >50 c.u./hr |
+| R=3 | 3x | 3x | 98% | If downtime >200 c.u./hr |
+| R=4 | 4x | 4x | 99.4% | If downtime >800 c.u./hr |
 
 The economic break-even depends on downtime cost. Safety-critical systems (infinite downtime cost) justify maximum redundancy; informational systems may accept R=1.
 
@@ -1879,15 +1906,15 @@ The heavy tail means roughly 20% of coordination attempts will miss the 450ms de
 
 Model swarm notification as a message distribution problem. When a node detects a threat, it must propagate this detection to \\(n-1\\) peer nodes. In contested environments, not all nodes are reachable directly.
 
-Under full connectivity, epidemic (gossip) protocols achieve logarithmic propagation time \\(T_{\text{gossip}} = O(\ln n / \ln k) \cdot T_{\text{round}}\\), where \\(k\\) is fanout. This follows from the logistic dynamics of information spread: each informed node informs \\(k\\) peers per round, leading to exponential growth until saturation. For tactical parameters (\\(n = 50\\), \\(k = 6\\), \\(T_{\text{round}} = 20\text{ms}\\)), this yields \\(\approx 44\text{ms}\\) - within coordination budgets, versus \\(1000\text{ms}\\) for linear broadcast.
+Under full connectivity, epidemic ({% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}) protocols achieve logarithmic propagation time \\(T_{\text{gossip}} = O(\ln n / \ln k) \cdot T_{\text{round}}\\), where \\(k\\) is fanout. This follows from the logistic dynamics of information spread: each informed node informs \\(k\\) peers per round, leading to exponential growth until saturation. For tactical parameters (\\(n = 50\\), \\(k = 6\\), \\(T_{\text{round}} = 20\text{ms}\\)), this yields \\(\approx 44\text{ms}\\) - within coordination budgets, versus \\(1000\text{ms}\\) for linear broadcast.
 
-Under partition, the swarm fragments. If jamming divides {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} into three clusters of sizes \\(n_1 = 20\\), \\(n_2 = 18\\), \\(n_3 = 9\\), intra-cluster gossip completes quickly, but inter-cluster propagation requires relay through connectivity bridges - if any exist.
+Under partition, the swarm fragments. If jamming divides {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} into three clusters of sizes \\(n_1 = 20\\), \\(n_2 = 18\\), \\(n_3 = 9\\), intra-cluster {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} completes quickly, but inter-cluster propagation requires relay through connectivity bridges - if any exist.
 
 Define \\(p_{\text{bridge}}\\) as the probability that at least one node maintains connectivity across cluster boundaries. If \\(p_{\text{bridge}} = 0\\), clusters operate independently with no shared awareness. The coordination time becomes undefined (or infinite).
 
 **The optimization problem**: Choose swarm geometry (inter-node distances, altitude distribution, relay positioning) to maximize \\(p_{\text{bridge}}\\) while maintaining surveillance coverage.
 
-This is a multi-objective optimization with competing constraints: spread for coverage implies larger inter-node distances; clustering for relay reliability implies smaller inter-node distances; altitude variation for bridge probability increases power consumption. The Pareto frontier of this tradeoff is not analytically tractable. Numerical optimization with mission-specific parameters yields operational guidance. But once again, the model assumes a static adversary. An adaptive jammer that observes swarm geometry can target bridge nodes specifically. The anti-fragile response: vary geometry stochastically, making bridge node identity unpredictable.
+This is a multi-objective optimization with competing constraints: spread for coverage implies larger inter-node distances; clustering for relay reliability implies smaller inter-node distances; altitude variation for bridge probability increases power consumption. The Pareto frontier of this tradeoff is not analytically tractable. Numerical optimization with mission-specific parameters yields operational guidance. But once again, the model assumes a static adversary. An adaptive jammer that observes swarm geometry can target bridge nodes specifically. The {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} response: vary geometry stochastically, making bridge node identity unpredictable.
 
 ---
 
@@ -1938,7 +1965,7 @@ The **crossover condition** determines when distributed coordination becomes mor
 \frac{2n}{p_r} > n \cdot f \quad \Rightarrow \quad p_r < \frac{2}{f}
 {% end %}
 
-The crossover is independent of fleet size \\(n\\) - it depends only on reachability and fault tolerance. For Byzantine fault tolerance requiring \\(f = 3\\) replicas (to tolerate 1 Byzantine failure per the \\(3f+1\\) bound), the threshold is \\(p_{r} < 2/3 \approx 67\\%\\). Derivation: Byzantine agreement requires \\(n \geq 3f + 1\\), so with \\(f = 1\\) tolerated failure, we need \\(n \geq 4\\) replicas and \\(f = 3\\) in our cost formula. Thus distributed coordination dominates when coordinator reachability falls below \\(2/3\\).
+The crossover is independent of fleet size \\(n\\) - it depends only on reachability and fault tolerance. For {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} fault tolerance requiring \\(f = 3\\) replicas (to tolerate 1 {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} failure per the \\(3f+1\\) bound), the threshold is \\(p_{r} < 2/3 \approx 67\\%\\). Derivation:  P99  agreement requires \\(n \geq 3f + 1\\), so with \\(f = 1\\) tolerated failure, we need \\(n \geq 4\\) replicas and \\(f = 3\\) in our cost formula. Thus distributed coordination dominates when coordinator reachability falls below \\(2/3\\).
 
 In contested environments where \\(p_r\\) typically ranges 0.3-0.5, you're well below crossover. **Design for distributed coordination as primary mode, with centralized coordination as optimization when connectivity permits**.
 
@@ -2013,7 +2040,7 @@ Define {% term(url="#term-capability-level", def="Five-tier hierarchy from parti
 | L3 | Fleet Coordination | Cross-cluster task allocation | 0.8 | 6.0 |
 | L4 | Full Integration | Real-time coordination, full sensor streaming | 0.9 | 8.0 |
 
-*Unit definition*: \\(\Delta V_i\\) values are dimensionless mission utility scores, normalized so that maximum full-integration performance = 21.5 points. For RAVEN, each level's \\(\Delta V_i\\) was calibrated as: \\(P(\text{mission success} \mid \text{level achieved}) \times \text{expected coverage fraction} \times 10\\), measured over 200 simulation runs. The span from \\(\Delta V_4 = 8.0\\) to \\(\Delta V_0 = 0\\) (coverage contribution) reflects the RAVEN mission structure: L0 alone provides no operational coverage, while L4 enables real-time cross-cluster coordination that saturates the coverage function (the table assigns \\(\Delta V_0 = 1.0\\) as a survival-credit baseline, not a coverage score). AUTOHAULER weights L3 at 9.0 (vs. RAVEN's 6.0) because hauling throughput is dominated by fleet-level task allocation. These values are scenario-specific inputs, not universal constants.
+*Unit definition*: \\(\Delta V_i\\) values are dimensionless mission utility scores, normalized so that maximum full-integration performance = 21.5 points. For {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, each level's \\(\Delta V_i\\) was calibrated as: \\(P(\text{mission success} \mid \text{level achieved}) \times \text{expected coverage fraction} \times 10\\), measured over 200 simulation runs. The span from \\(\Delta V_4 = 8.0\\) to \\(\Delta V_0 = 0\\) (coverage contribution) reflects the {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} mission structure: L0 alone provides no operational coverage, while L4 enables real-time cross-cluster coordination that saturates the coverage function (the table assigns \\(\Delta V_0 = 1.0\\) as a survival-credit baseline, not a coverage score). {% term(url="#scenario-autohauler", def="34 autonomous haul trucks in an open-pit copper mine; RF shadows and tunnel blackouts of 2-15 min require edge-local collision avoidance") %}AUTOHAULER{% end %} weights L3 at 9.0 (vs. {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s 6.0) because hauling throughput is dominated by fleet-level task allocation. These values are scenario-specific inputs, not universal constants.
 
 Each level requires minimum connectivity \\(\theta_i\\) and contributes marginal value \\(\Delta V_i\\). Total capability is the sum of achieved levels: a system at L3 achieves \\(\Delta V_0 + \Delta V_1 + \Delta V_2 + \Delta V_3 = 13.5\\) out of maximum 21.5.
 
@@ -2021,7 +2048,7 @@ Each level requires minimum connectivity \\(\theta_i\\) and contributes marginal
 
 1. **Measure**: Estimate \\(C(t)\\) via EWMA: \\(\hat{C}(t) = 0.3 \cdot C_{\text{observed}} + 0.7 \cdot \hat{C}(t-1)\\)
 
-   (The gain \\(\alpha = 0.3\\) is not a universal constant. The optimal \\(\alpha = 1 - e^{-\lambda_{\min} \cdot \Delta t}\\), where \\(\lambda_{\min}\\) is the fastest connectivity transition rate worth tracking and \\(\Delta t\\) is the measurement interval. At \\(\Delta t = 1\\)s and RAVEN's observed transition rate of ~0.35 transitions/min \\(\approx 0.006\\)/s: \\(\alpha = 1 - e^{-0.006} \approx 0.006\\) — very slow adaptation. At 0.35 transitions/s: \\(\alpha \approx 0.30\\). The value 0.3 is calibrated to a system that transitions regimes roughly once every 3 seconds; slower-changing environments should use smaller \\(\alpha\\).)
+   (The gain \\(\alpha = 0.3\\) is not a universal constant. The optimal \\(\alpha = 1 - e^{-\lambda_{\min} \cdot \Delta t}\\), where \\(\lambda_{\min}\\) is the fastest connectivity transition rate worth tracking and \\(\Delta t\\) is the measurement interval. At \\(\Delta t = 1\\)s and {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s observed transition rate of ~0.35 transitions/min \\(\approx 0.006\\)/s: \\(\alpha = 1 - e^{-0.006} \approx 0.006\\) — very slow adaptation. At 0.35 transitions/s: \\(\alpha \approx 0.30\\). The value 0.3 is calibrated to a system that transitions regimes roughly once every 3 seconds; slower-changing environments should use smaller \\(\alpha\\).)
 
 2. **Determine level**: Find highest \\(L_i\\) where \\(\hat{C}(t) \geq \theta_i\\)
 3. **Check peer consensus**: For L2+, verify peers report same capability; downgrade if mismatch
@@ -2070,7 +2097,7 @@ then failure of level \\(L_i\\) cannot cause failure of any level \\(L_j\\) with
 dependency in \\(L_j\\). By induction over all \\(j < i\\), the entire stack below \\(L_i\\)
 remains operational. \\(\square\\)
 
-**Corollary**: The CONVOY failure case in the [constraint sequence article](@/blog/2026-02-19/index.md)
+**Corollary**: The {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} failure case in the [constraint sequence article](@/blog/2026-02-19/index.md)
 — L3 fleet analytics built before L0 survival was validated — violates Definition 35. The
 analytics service imported the health-monitoring framework (L1+), which in turn depended on
 dynamic memory allocation not present in the bare-metal boot environment. When the stack
@@ -2134,7 +2161,7 @@ The cost function \\(c_i\\) is typically convex and increasing as \\(\theta_i \r
 
 Optimal threshold placement depends on the connectivity CDF derivative. Place thresholds where \\(dF_C/d\theta\\) is small - in the distribution tails where small threshold changes cause small probability changes.
 
-**Anti-fragility through threshold learning**: A system that learns to lower its thresholds under degraded connectivity becomes *more capable* under stress. Adapting \\(\theta_i\\) based on operational experience yields measurable capability gains - a manifestation of positive anti-fragility where \\(\mathbb{A} = (P_{\text{post-stress}} - P_{\text{pre-stress}})/\sigma > 0\\).
+**{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} through threshold learning**: A system that learns to lower its thresholds under degraded connectivity becomes *more capable* under stress. Adapting \\(\theta_i\\) based on operational experience yields measurable capability gains - a manifestation of positive {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} where \\(\mathbb{A} = (P_{\text{post-stress}} - P_{\text{pre-stress}})/\sigma > 0\\).
 
 ---
 
@@ -2289,7 +2316,7 @@ If \\(H_{\text{coverage}} < 0.4\\), rare states are under-observed - confidence 
 
 1. *{% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} model failure*: Transition rates estimated during summer operations proved wrong in winter. Ice-induced link failures occurred \\(4\times\\) more frequently than modeled, and the healing time constants doubled. The fleet operated in L1 (basic survival) for 6 hours instead of the designed 45 minutes before parameters could be retuned.
 
-2. *{% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} coordination collapse*: A firmware bug caused gossip messages to include stale timestamps. The staleness-confidence model interpreted all peer data as unreliable, causing each drone to operate in isolation. Fleet coherence dropped to zero despite 80% actual connectivity.
+2. *{% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} coordination collapse*: A firmware bug caused {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} messages to include stale timestamps. The staleness-confidence model interpreted all peer data as unreliable, causing each drone to operate in isolation. Fleet coherence dropped to zero despite 80% actual connectivity.
 
 3. *{% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} cascade*: Solar panel degradation followed an exponential (not linear) curve after year 2. The power-aware scheduling model underestimated nighttime power deficit by 40%, causing sensor brownouts that corrupted the anomaly detection baseline, which then flagged normal readings as anomalies, which triggered unnecessary alerts, which depleted batteries further.
 
@@ -2307,7 +2334,7 @@ When models reach their limits, the edge architect falls back to first principle
 
 4. **What is the recovery path?** When the model fails - not if - how does the system recover? Fallback behaviors, degradation paths, human intervention triggers.
 
-5. **What did we learn?** Every model failure is data for the next model. The anti-fragile system improves its models from operational stress.
+5. **What did we learn?** Every model failure is data for the next model. The {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} system improves its models from operational stress.
 
 ---
 
@@ -2364,9 +2391,9 @@ Before applying edge architecture patterns, verify that your system actually fac
 
 **Decision Rule**: If your system passes \\(\geq 3\\) of these tests, edge architecture patterns apply. If you pass \\(\leq 2\\), standard distributed systems patterns may suffice.
 
-The distinction matters because edge patterns carry costs: increased local storage and compute for autonomous operation, complex reconciliation logic for partition recovery, Byzantine fault tolerance for adversarial resilience, and reduced optimization efficiency from distributed coordination.
+The distinction matters because edge patterns carry costs: increased local storage and compute for autonomous operation, complex reconciliation logic for partition recovery, {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} fault tolerance for adversarial resilience, and reduced optimization efficiency from distributed coordination.
 
-These costs are justified only when the operating environment demands them. A retail IoT deployment with reliable cellular connectivity does not need Byzantine fault tolerance. A tactical drone swarm operating under jamming does.
+These costs are justified only when the operating environment demands them. A retail IoT deployment with reliable cellular connectivity does not need {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} fault tolerance. A tactical drone swarm operating under jamming does.
 
 ---
 
@@ -2473,7 +2500,7 @@ The threshold \\(\tau^* = 0.15\\) is derived from tactical deployments with spec
 where:
 - \\(D_1\\): Scenarios are anticipatable (delegation rules cover expected cases)
 - \\(D_2\\): Delegation bounds are sufficient (autonomous authority matches required decisions)
-- \\(D_3\\): Cluster leads are not Byzantine (trusted to execute delegation correctly)
+- \\(D_3\\): Cluster leads are not {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} (trusted to execute delegation correctly)
 
 **Failure Envelope**: The table below lists each condition's failure mode and mitigation.
 
@@ -2519,7 +2546,7 @@ Constraint surface: \\(U_{\text{coordination}} \leq f(1 - U_{\text{autonomy}}) -
 
 ### Trade-off 2: Responsiveness vs. Consistency (CAP)
 
-Under partition: choose availability over consistency. CRDTs provide eventual consistency without coordination. As \\(C(t) \rightarrow 0\\), consistency approaches zero while responsiveness remains high.
+Under partition: choose availability over consistency. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDTs{% end %} provide eventual consistency without coordination. As \\(C(t) \rightarrow 0\\), consistency approaches zero while responsiveness remains high.
 
 ### Trade-off 3: Capability Level vs. Resource Consumption
 
@@ -2541,12 +2568,14 @@ Under partition: choose availability over consistency. CRDTs provide eventual co
 
 The shadow price \\(\lambda_i = \partial \mathcal{L} / \partial g_i\\) quantifies the marginal value of relaxing constraint \\(g_i\\):
 
-| Resource | RAVEN \\(\lambda\\) | CONVOY \\(\lambda\\) | GRIDEDGE \\(\lambda\\) | Interpretation |
+| Resource | RAVEN \\(\lambda\\) (c.u.) | CONVOY \\(\lambda\\) (c.u.) | GRIDEDGE \\(\lambda\\) (c.u.) | Interpretation |
 | :--- | ---: | ---: | ---: | :--- |
-| Bandwidth | \$3.20/Mbps-hr | \$2.40/Mbps-hr | \$0.30/Mbps-hr | Sync capacity value |
-| Compute | \$0.08/GFLOP | \$0.12/GFLOP | \$0.05/GFLOP | Local decision value |
-| Battery/Power | \$12.00/kWh | \$4.50/kWh | N/A | Extended operation |
-| Latency | \$0.50/ms | \$0.30/ms | \$25.00/ms | Response speed |
+| Bandwidth | 3.20/Mbps-hr | 2.40/Mbps-hr | 0.30/Mbps-hr | Sync capacity value |
+| Compute | 0.08/GFLOP | 0.12/GFLOP | 0.05/GFLOP | Local decision value |
+| Battery/Power | 12.00/kWh | 4.50/kWh | N/A | Extended operation |
+| Latency | 0.50/ms | 0.30/ms | 25.00/ms | Response speed |
+
+*(Shadow prices in normalized cost units (c.u.) — illustrative relative values; ratios between rows convey resource scarcity ordering. GRIDEDGE compute (0.05 c.u./GFLOP) is the smallest unit; all others express how many times more valuable that resource is per unit. Calibrate to platform-specific costs.)*
 
 **Investment implication**: High shadow price indicates binding constraint where investment yields highest returns. {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s high bandwidth shadow price justifies compression and priority queuing investment. {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %}'s extreme latency shadow price justifies sub-cycle response hardware.
 
@@ -2632,7 +2661,7 @@ The **edge-cloud continuum** (HORIZON Europe, GAIA-X, Linux Foundation Edge) tre
 | **Optimization target** | Resource efficiency, cost, latency | Mission completion, survival, coherence |
 | **Failure recovery** | Restart elsewhere, stateless preferred | Local healing, stateful by necessity |
 
-The continuum's recognition that "edge is not a location but a capability profile" aligns with the Edge-ness Score. The structural gap: continuum orchestrators (KubeEdge, Azure IoT Edge, AWS Greengrass) require connectivity to a control plane and favor stateless workloads — neither assumption holds for tactical or industrial edge systems where physical deployment is fixed and state is mission-critical. This architecture layers partition protocols and CRDT coherence atop continuum stacks rather than replacing them.
+The continuum's recognition that "edge is not a location but a capability profile" aligns with the Edge-ness Score. The structural gap: continuum orchestrators (KubeEdge, Azure IoT Edge, AWS Greengrass) require connectivity to a control plane and favor stateless workloads — neither assumption holds for tactical or industrial edge systems where physical deployment is fixed and state is mission-critical. This architecture layers partition protocols and {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} coherence atop continuum stacks rather than replacing them.
 
 ### Distributed Intelligence Frameworks: Complementary Perspectives
 
@@ -2640,7 +2669,7 @@ The continuum's recognition that "edge is not a location but a capability profil
 
 #### Multi-Agent Systems (MAS)
 
-MAS theory provides formal models for autonomous agents with local perception, communication, and action. Contract net protocols and BDI architectures are directly applicable to MAPE-K knowledge base design and task allocation during partition.
+MAS theory provides formal models for autonomous agents with local perception, communication, and action. Contract net protocols and BDI architectures are directly applicable to {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} knowledge base design and task allocation during partition.
 
 <style>
 #tbl_mas_comparison + table th:first-of-type { width: 25%; }
@@ -2657,11 +2686,11 @@ MAS theory provides formal models for autonomous agents with local perception, c
 | **Learning** | Reinforcement learning, imitation | Anti-fragile adaptation, bandit algorithms |
 | **Failure model** | Agent crash/recovery | Byzantine tolerance, adversarial |
 
-The gap: MAS assumes reliable message delivery and focuses on agent-level reasoning without system-level convergence guarantees. CRDT-based state reconciliation adds those guarantees for contested environments where MAS coordination mechanisms would otherwise produce divergent state.
+The gap: MAS assumes reliable message delivery and focuses on agent-level reasoning without system-level convergence guarantees. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %}-based state reconciliation adds those guarantees for contested environments where MAS coordination mechanisms would otherwise produce divergent state.
 
 #### Related Paradigms
 
-**Federated learning** extends to contested environments through staleness-weighted aggregation and Byzantine-tolerant aggregation. **Swarm intelligence** inspires gossip protocols and formation maintenance, but lacks the formal convergence bounds, authority hierarchies, and reconciliation protocols that constrained-connectivity systems require.
+**Federated learning** extends to contested environments through staleness-weighted aggregation and {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %}-tolerant aggregation. **Swarm intelligence** inspires {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} protocols and formation maintenance, but lacks the formal convergence bounds, authority hierarchies, and reconciliation protocols that constrained-connectivity systems require.
 
 ### Reference Architecture Comparison
 
@@ -2729,16 +2758,16 @@ graph TD
     style CA4 fill:#ffcdd2,stroke:#c62828
 {% end %}
 
-The frameworks are complementary. KubeEdge or fog patterns handle orchestration and latency optimization when connected; autonomic edge protocols layer partition tolerance and CRDT coherence on top. The unique contribution here is formal treatment of contested connectivity — the {% term(url="#def-3", def="Continuous-time stochastic model of how a node transitions between connectivity regimes; steady-state probabilities derived from operational telemetry predict partition exposure and architecture requirements") %}Markov model{% end %}s, authority hierarchies, convergence guarantees, and anti-fragile adaptation that other paradigms assume away or delegate to application developers.
+The frameworks are complementary. KubeEdge or fog patterns handle orchestration and latency optimization when connected; autonomic edge protocols layer partition tolerance and {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} coherence on top. The unique contribution here is formal treatment of contested connectivity — the {% term(url="#def-3", def="Continuous-time stochastic model of how a node transitions between connectivity regimes; steady-state probabilities derived from operational telemetry predict partition exposure and architecture requirements") %}Markov model{% end %}s, authority hierarchies, convergence guarantees, and {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} adaptation that other paradigms assume away or delegate to application developers.
 
 ---
 
 ## Closing
 
-This article established three interlocking results. The **inversion thesis** (Proposition 1) showed that when partition probability exceeds \\(\tau^* \approx 0.15\\), designing for disconnection as baseline outperforms designing for connectivity — not marginally, but categorically. The **Markov connectivity model** (Definition 3) provides a tractable quantitative framework: estimate transition rates from telemetry, compute the stationary distribution, derive architectural choices from that distribution. The **capability hierarchy** (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) translates the stochastic connectivity picture into a graceful degradation contract: every capability level has an explicit connectivity threshold and resource requirement, and transitions between levels are governed by well-defined rules.
+This article established three interlocking results. The **inversion thesis** (Proposition 1) showed that when partition probability exceeds \\(\tau^* \approx 0.15\\), designing for disconnection as baseline outperforms designing for connectivity — not marginally, but categorically. The **Markov connectivity model** (Definition 3) provides a tractable quantitative framework: estimate transition rates from telemetry, compute the stationary distribution, derive architectural choices from that distribution. The **capability hierarchy** (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) translates the stochastic connectivity picture into a graceful degradation contract: every {% term(url="#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %} has an explicit connectivity threshold and resource requirement, and transitions between levels are governed by well-defined rules.
 
 Applied to {% term(url="#scenario-autohauler", def="34 autonomous haul trucks in an open-pit copper mine; RF shadows and tunnel blackouts of 2–15 min require edge-local collision avoidance") %}AUTOHAULER{% end %}, the framework explains why ore-pass blackouts are non-events: the tier architecture places safety-critical decisions at the fog layer, which never requires upward connectivity. Applied to {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %}, it explains why fault isolation must complete within 500 ms with zero cloud dependency: the stationary distribution \\(\pi_{\mathcal{N}} = 0.19\\) means the highest-consequence decisions correlate with lost connectivity.
 
-The framework specifies *what properties emerge under what assumptions*. Every model has a validity domain — the Markov assumptions, the capability separability conditions, the inversion threshold's bounded-latency requirement — and the Model Scope section mapped each claim to its failure envelope. Operational deployment requires verifying that those assumptions hold before trusting the framework's prescriptions.
+The framework specifies *what properties emerge under what assumptions*. Every model has a validity domain — the Markov assumptions, the capability separability conditions, the {% term(url="#term-inversion", def="Availability threshold tau* above which partition-first architecture outperforms cloud-first; derived from the U_edge = U_cloud crossover condition") %}inversion threshold{% end %}'s bounded-latency requirement — and the Model Scope section mapped each claim to its failure envelope. Operational deployment requires verifying that those assumptions hold before trusting the framework's prescriptions.
 
-The architecture so far addresses the structural question: *how should an edge system be organized?* But a correctly structured system can still fail silently if it cannot tell whether it is healthy. A {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone operating autonomously has no external reference point — it cannot call home to check whether its sensor readings are anomalous, its battery model is drifting, or its peers' state has diverged beyond safe bounds. The next problem in the constraint sequence is therefore measurement: how does an edge node assess its own health and the health of its cluster without central observability infrastructure? That question, and the gossip protocols, anomaly detection formulations, and Byzantine fault tolerance that answer it, is the subject of [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md).
+The architecture so far addresses the structural question: *how should an edge system be organized?* But a correctly structured system can still fail silently if it cannot tell whether it is healthy. A {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone operating autonomously has no external reference point — it cannot call home to check whether its sensor readings are anomalous, its battery model is drifting, or its peers' state has diverged beyond safe bounds. The next problem in the constraint sequence is therefore measurement: how does an edge node assess its own health and the health of its cluster without central observability infrastructure? That question, and the {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} protocols, anomaly detection formulations, and {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} fault tolerance that answer it, is the subject of [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md).

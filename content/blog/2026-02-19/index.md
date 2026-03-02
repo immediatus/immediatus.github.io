@@ -23,10 +23,10 @@ series_description = """Edge systems can't treat disconnection as an exceptional
 This final article synthesizes the complete series:
 
 - **[Contested Connectivity](@/blog/2026-01-15/index.md)**: The connectivity probability model \\(C(t)\\), capability hierarchy (L0-L4), and the fundamental inversion that defines edge
-- **[Self-Measurement](@/blog/2026-01-22/index.md)**: Distributed health monitoring, the observability {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}, and gossip-based awareness
+- **[Self-Measurement](@/blog/2026-01-22/index.md)**: Distributed health monitoring, the observability {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}, and {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}-based awareness
 - **[Self-Healing](@/blog/2026-01-29/index.md)**: {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} autonomous healing, recovery ordering, and cascade prevention under partition
 - **[Fleet Coherence](@/blog/2026-02-05/index.md)**: State reconciliation, {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}s, decision authority hierarchies, and the coherence protocol
-- **[Anti-Fragile Decision-Making](@/blog/2026-02-12/index.md)**: Systems that improve under stress, the judgment horizon, and the limits of automation
+- **[Anti-Fragile Decision-Making](@/blog/2026-02-12/index.md)**: Systems that improve under stress, the {% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}, and the limits of automation
 
 The preceding articles developed the *what*: the capabilities required for autonomic edge architecture. This article addresses the *when*: in what order should these capabilities be built? The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} determines success or failure. Build in the wrong order, and you waste resources on sophisticated capabilities that collapse because their foundations are missing.
 
@@ -46,7 +46,7 @@ This article develops the theoretical foundations for capability sequencing in a
 
 5. **Phase Progression Invariants**: We prove that valid system evolution requires maintaining all prior gate conditions, establishing the regression testing requirement as a theorem.
 
-6. **Human-Machine Teaming Protocols**: We formalize five constructs at the automation boundary — predictive handover triggering (Proposition 52), asymmetric trust dynamics (Definition 51), the causal barrier for stale commands (Definition 52), semantic compression against alert fatigue (Definition 53), and the L0 Physical Safety Interlock that bypasses the entire MAPE-K stack (Definition 54).
+6. **Human-Machine Teaming Protocols**: We formalize five constructs at the automation boundary — predictive handover triggering (Proposition 52), asymmetric trust dynamics (Definition 51), the causal barrier for stale commands (Definition 52), semantic compression against alert fatigue (Definition 53), and the L0 Physical Safety Interlock that bypasses the entire {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} stack (Definition 54).
 
 These contributions connect to and extend prior work on Theory of Constraints (Goldratt, 1984), formal verification (Clarke et al., 1999), and systems engineering (INCOSE, 2015), adapting these frameworks for contested edge deployments.
 
@@ -54,7 +54,7 @@ These contributions connect to and extend prior work on Theory of Constraints (G
 
 ## Opening Narrative: The Wrong Order
 
-Edge Platform Team: PhD ML expertise, cloud deployment veterans, $2.4M funding. Mission: intelligent monitoring for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} vehicles. Six months produced 94% detection accuracy in lab.
+Edge Platform Team: PhD ML expertise, cloud deployment veterans, project allocation of 2,400 p.u. (project baseline units). Mission: intelligent monitoring for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} vehicles. Six months produced 94% detection accuracy in lab.
 
 Within 72 hours of deployment: offline on 8 of 12 vehicles.
 
@@ -68,7 +68,7 @@ The failure was **wrong sequencing**, not bad engineering:
 - Self-measurement: **Assumed** (no independent local health)
 - Self-healing: **Absent**
 - Fleet coherence: **Built on unstable foundation**
-- Sophisticated analytics ($2M): **Collapsed without foundations**
+- Sophisticated analytics (2,000 p.u.): **Collapsed without foundations**
 
 They built L3 capability before validating L0. The roof before the foundation.
 
@@ -251,7 +251,7 @@ A node that cannot survive alone cannot contribute to a fleet. The hierarchy of 
 **The sequence**:
 
 1. **Individual node**: L0 survival, basic self-measurement, local healing
-2. **Local cluster**: Gossip-based health, local coordination, cluster authority
+2. **Local cluster**: {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health, local coordination, cluster authority
 3. **Fleet-wide**: State reconciliation, hierarchical authority, {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} learning
 
 Testing protocol:
@@ -296,7 +296,7 @@ R(t) = \frac{E_{\text{battery}}(t)}{E_{\min}} \cdot w_E + \frac{M_{\text{free}}(
 A_{\text{adv}}(t) = P(\text{jamming}) \cdot w_J + P(\text{spoofing}) \cdot w_S + P(\text{physical}) \cdot w_P
 {% end %}
 
-*with weights summing to 1. High threat (\\(A_{\text{adv}} > 0.5\\)) shifts binding priority toward trust verification and anti-fragility learning regardless of connectivity state.*
+*with weights summing to 1. High threat (\\(A_{\text{adv}} > 0.5\\)) shifts binding priority toward trust verification and {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} learning regardless of connectivity state.*
 
 *(renamed \\(A_{\text{adv}}(t)\\) to avoid collision with the defender action set \\(A\\) used in [Part 5, Definition 32](@/blog/2026-02-12/index.md#def-32))*
 
@@ -317,23 +317,23 @@ c^*(C, R, A) = \arg\max_{c} \left| \frac{\partial U}{\partial c}(C, R, A) \right
 | Reliability-Balanced | \\(0.3 < C \leq 0.8\\) and \\(R > 0.5\\) | **Reliability** | Scarce connectivity makes delivery the bottleneck |
 | Autonomy-Forced | \\(C \leq 0.3\\) and \\(R > 0.5\\) | **Autonomy** | Isolation requires local decision-making |
 
-*Transition boundaries carry \\(\pm 10\%\\) margins to prevent oscillation.*
+*Transition boundaries carry \\(\pm 10\\%\\) margins to prevent oscillation.*
 
-*Proof sketch*: Treating system utility \\(U(C, R, A)\\) as smooth over the state cube, the binding constraint at any state is whichever capability—if improved by 1%—yields the largest utility gain, i.e., the constraint with maximum impact ratio (Definition 19). Survival dominates when \\(R < R_{\text{crit}}\\) — resource exhaustion overrides communication state — or when \\(C = 0\\) and \\(R < 0.5\\), where no external path exists and the resource margin is insufficient for sustained autonomous operation. Trust/anti-fragility dominates at \\(A > 0.5\\) because adversarial interference raises \\(\partial U / \partial \text{Trust}\\) above all other partial derivatives: unverified state and corrupted learning invalidate efficiency and reliability optimizations. The efficiency/reliability/autonomy ordering of the remaining regions follows the connectivity-gradient argument: as \\(C\\) falls below 0.8, message delivery becomes scarce; below 0.3, isolation makes local decision authority the critical capability. These dominance orderings hold when \\(R > 0.5\\) and \\(A < 0.5\\) — the original single-variable model is the cross-section of this surface at favorable resource and threat levels.
+*Proof sketch*: Treating system utility \\(U(C, R, A)\\) as smooth over the state cube, the binding constraint at any state is whichever capability—if improved by 1%—yields the largest utility gain, i.e., the constraint with maximum impact ratio (Definition 19). Survival dominates when \\(R < R_{\text{crit}}\\) — resource exhaustion overrides communication state — or when \\(C = 0\\) and \\(R < 0.5\\), where no external path exists and the resource margin is insufficient for sustained autonomous operation. Trust/{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} dominates at \\(A > 0.5\\) because adversarial interference raises \\(\partial U / \partial \text{Trust}\\) above all other partial derivatives: unverified state and corrupted learning invalidate efficiency and reliability optimizations. The efficiency/reliability/autonomy ordering of the remaining regions follows the connectivity-gradient argument: as \\(C\\) falls below 0.8, message delivery becomes scarce; below 0.3, isolation makes local decision authority the critical capability. These dominance orderings hold when \\(R > 0.5\\) and \\(A < 0.5\\) — the original single-variable model is the cross-section of this surface at favorable resource and threat levels.
 
 Unlike static systems where the binding constraint is stable, edge systems experience **{% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %}**—the binding constraint changes based on system state—connectivity level, resource availability, and adversary presence.
 
 **Utility gradient intuition**: The binding constraint is whichever capability, if improved by 1%, would most increase overall system utility — exactly what \\(\partial U / \partial c\\) measures:
 
-- If \\(\partial U / \partial \text{Efficiency}\\) is largest → efficiency improvements matter most → Efficiency is binding
-- If \\(\partial U / \partial \text{Survival}\\) is largest → survival improvements matter most → Survival is binding
+- If \\(\partial U / \partial \text{Efficiency}\\) is largest, efficiency improvements yield the highest return — Efficiency is the binding constraint
+- If \\(\partial U / \partial \text{Survival}\\) is largest, survival improvements yield the highest return — Survival is the binding constraint
 
 The multi-dimensional model captures state interactions: high \\(A\\) (adversary) raises \\(\partial U / \partial \text{Trust}\\) even when \\(C\\) and \\(R\\) are individually favorable, because an adversary can corrupt an optimized-but-unverified system.
 
 **Three-way interaction**: Connectivity, resources, and threats interact non-linearly:
 
 - **High \\(C\\), low \\(R\\)**: Survival-Critical despite good connectivity — a well-connected system with depleted resources cannot sustain operations
-- **Low \\(C\\), high \\(R\\), high \\(A\\)**: Threat-Active — isolated, resourced, and under adversarial pressure; trust verification and anti-fragility learning take precedence over autonomy optimization
+- **Low \\(C\\), high \\(R\\), high \\(A\\)**: Threat-Active — isolated, resourced, and under adversarial pressure; trust verification and {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} learning take precedence over autonomy optimization
 - **Medium \\(C\\), medium \\(R\\), low \\(A\\)**: Reliability-Balanced — the original "degraded" case, valid when threat levels are absent
 - **High \\(C\\), high \\(R\\), high \\(A\\)**: Threat-Active overrides Efficiency-Optimal — abundant resources and connectivity provide no advantage if adversarial interference corrupts state
 
@@ -411,7 +411,7 @@ The jamming environment elevates self-measurement because anomalies must be dete
 ### Optimization Competes for Resources
 
 Every autonomic capability consumes resources:
-- **[Self-measurement](@/blog/2026-01-22/index.md)**: CPU for health checks, memory for baselines, bandwidth for gossip
+- **[Self-measurement](@/blog/2026-01-22/index.md)**: CPU for health checks, memory for baselines, bandwidth for {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}
 - **[Self-healing](@/blog/2026-01-29/index.md)**: CPU for healing logic, power for recovery actions, bandwidth for coordination
 - **[Fleet coherence](@/blog/2026-02-05/index.md)**: Bandwidth for state sync, memory for conflict buffers, CPU for merge operations
 - **[{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} learning](@/blog/2026-02-12/index.md)**: CPU for model updates, memory for learning history, bandwidth for parameter distribution
@@ -425,7 +425,7 @@ R_{\text{autonomic}}^{\max} = R_{\text{total}} - R_{\text{mission}}^{\min}
 
 *Systems where \\(R_{\text{autonomic}}^{\min} > R_{\text{autonomic}}^{\max}\\) cannot achieve both mission capability and self-management.*
 
-For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Part 3, Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 \\(\approx\\) 0.1 mW through L4 \\(\approx\\) 42 mW. These figures instantiate the Law 3 constraint for RAVEN and OUTPOST deployments.
+For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Part 3, Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 \\(\approx\\) 0.1 mW through L4 \\(\approx\\) 42 mW. These figures instantiate the Law 3 constraint for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} and {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} deployments.
 
 These resources compete with the primary mission. A drone spending 40% of its CPU on self-measurement has 40% less CPU for threat detection. This creates the **meta-constraint**:
 
@@ -618,20 +618,20 @@ where \\(\tau_0 = 72\,\text{h}\\) is the zero-backhaul duration, \\(B_b(t) = 0\\
 **Why \\(\tau_0 = 72\,\text{h}\\)**: This matches {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s worst-case terrain crossing window (72 hours per the foundational constraint analysis). {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} uses 24 hours; {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} uses 30 days. The predicate threshold scales with the target system but 72 hours is the standard tactical stress duration.
 
 **What the zero-backhaul test validates**:
-1. **Energy budget**: The node's baseline draw (compute, sensors, MAPE-K loop) does not exhaust the battery before \\(\tau_0\\). Because \\(T_s = 0\\) (no radio energy spent), this isolates the pure compute-plus-sensors energy envelope.
-2. **Local MAPE-K loop**: All healing decisions execute using only local state — no coordination messages, no remote health reports, no gossiped vectors.
+1. **Energy budget**: The node's baseline draw (compute, sensors, {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop) does not exhaust the battery before \\(\tau_0\\). Because \\(T_s = 0\\) (no radio energy spent), this isolates the pure compute-plus-sensors energy envelope.
+2. **Local {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop**: All healing decisions execute using only local state — no coordination messages, no remote health reports, no gossiped vectors.
 3. **State preservation**: The node accumulates divergence \\(D(t)\\) over \\(\tau_0\\) but does not corrupt its local state; reconciliation remains possible when \\(B_b\\) recovers.
-4. **Ingress filter correctness**: The \\(\Pi\\) filter (Definition 22) operates at \\(\beta = 0\\) — all non-critical telemetry is suppressed, confirming the filter does not deadlock the MAPE-K loop by starving it of P0 metrics.
+4. **Ingress filter correctness**: The \\(\Pi\\) filter (Definition 22) operates at \\(\beta = 0\\) — all non-critical telemetry is suppressed, confirming the filter does not deadlock the {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop by starving it of P0 metrics.
 
-**CONVOY scenario**: Vehicle 7 enters a 3 km canyon with no line-of-sight radio propagation. The radio transceiver is powered down (zero \\(T_s\\) cost). Over 72 hours, the vehicle continues route execution, logs all autonomous decisions, maintains local health monitoring via MAPE-K, and stores diverged state in its CRDT buffers. On canyon exit, it reconnects and reconciles. Phase 0 requires demonstrating this entire sequence before any coordination protocol is integrated.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} scenario**: Vehicle 7 enters a 3 km canyon with no line-of-sight radio propagation. The radio transceiver is powered down (zero \\(T_s\\) cost). Over 72 hours, the vehicle continues route execution, logs all autonomous decisions, maintains local health monitoring via {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %}, and stores diverged state in its {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} buffers. On canyon exit, it reconnects and reconciles. Phase 0 requires demonstrating this entire sequence before any coordination protocol is integrated.
 
 **Phase 0 gate**: \\(G_0(S) = V_{\text{attest}} \land V_{\text{surv}} \land V_{\text{budget}} \land V_{\text{safe}} \land V_{\text{zero}} \land V_{\text{calib}}\\)
 
-**\\(V_{\text{calib}}\\) — sensor calibration attestation**: \\(V_{\text{attest}}\\) verifies firmware integrity (the node runs what it was programmed to run) but does not verify that its sensors report truthful physical values. A node with valid secure boot attestation but a miscalibrated temperature sensor that reads \\(+15^\circ\text{C}\\) high passes all cryptographic checks while injecting systematically false data into the fleet's shared state — it is Byzantine-equivalent in effect without being Byzantine in the fault-model sense (the firmware is correct; only the sensor hardware is wrong). \\(V_{\text{calib}}\\) adds the requirement that all physical sensors have been calibrated against a known reference within the calibration interval \\(T_{\text{cal}}\\):
+**\\(V_{\text{calib}}\\) — sensor calibration attestation**: \\(V_{\text{attest}}\\) verifies firmware integrity (the node runs what it was programmed to run) but does not verify that its sensors report truthful physical values. A node with valid secure boot attestation but a miscalibrated temperature sensor that reads \\(+15^\circ\text{C}\\) high passes all cryptographic checks while injecting systematically false data into the fleet's shared state — it is {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %}-equivalent in effect without being {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} in the fault-model sense (the firmware is correct; only the sensor hardware is wrong). \\(V_{\text{calib}}\\) adds the requirement that all physical sensors have been calibrated against a known reference within the calibration interval \\(T_{\text{cal}}\\):
 
 {% katex() %}V_{\text{calib}}(S) = \mathbb{1}[\forall s \in \mathcal{S}_{\text{sensors}}: |v_s^{\text{measured}} - v_s^{\text{reference}}| \leq \delta_s \land t_{\text{now}} - t_{\text{last\_cal}}(s) \leq T_{\text{cal}}]{% end %}
 
-where \\(\delta_s\\) is the per-sensor accuracy specification and \\(T_{\text{cal}}\\) is the manufacturer-specified or mission-specified recalibration interval. Calibration procedure at Phase 0: expose each sensor to a known reference stimulus (laboratory or field reference standard), record deviation, and cryptographically sign the calibration record with the node's device key. The signed calibration record is included in the attestation evidence package. For RAVEN: MEMS IMUs recalibrated before each flight (\\(T_{\text{cal}} = 1\\) flight); LIDAR returns factory-calibrated (\\(T_{\text{cal}} = 90\\) days). Nodes that fail \\(V_{\text{calib}}\\) are excluded from Phase 0 and may not participate in gossip or peer validation until recalibrated — an uncalibrated sensor propagates systematic error through the fleet's Byzantine-tolerance mechanism regardless of the trust weight assigned by Def 44.
+where \\(\delta_s\\) is the per-sensor accuracy specification and \\(T_{\text{cal}}\\) is the manufacturer-specified or mission-specified recalibration interval. Calibration procedure at Phase 0: expose each sensor to a known reference stimulus (laboratory or field reference standard), record deviation, and cryptographically sign the calibration record with the node's device key. The signed calibration record is included in the attestation evidence package. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}: MEMS IMUs recalibrated before each flight (\\(T_{\text{cal}} = 1\\) flight); LIDAR returns factory-calibrated (\\(T_{\text{cal}} = 90\\) days). Nodes that fail \\(V_{\text{calib}}\\) are excluded from Phase 0 and may not participate in {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} or peer validation until recalibrated — an uncalibrated sensor propagates systematic error through the fleet's {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %}-tolerance mechanism regardless of the trust weight assigned by Def 44.
 
 ### Phase 1: Local Autonomy Layer
 
@@ -680,13 +680,13 @@ V_{\text{conflict}}(S) &= \mathbb{1}[\forall (s_1, s_2): s_1 \neq s_2 \Rightarro
 \end{aligned}
 {% end %}
 
-Extended partition recovery predicate validates fleet reconvergence after 24-hour partition: \\(V_{\text{reconverge}}(S) = \mathbb{1}[\text{PartitionDuration} \geq 24\text{h} \Rightarrow \text{StateConverged}(\mathcal{F}, \tau_{\text{reconcile}})]\\) where \\(\text{StateConverged}\\) means all nodes agree on shared CRDT state within reconciliation window \\(\tau_{\text{reconcile}}\\).
+Extended partition recovery predicate validates fleet reconvergence after 24-hour partition: \\(V_{\text{reconverge}}(S) = \mathbb{1}[\text{PartitionDuration} \geq 24\text{h} \Rightarrow \text{StateConverged}(\mathcal{F}, \tau_{\text{reconcile}})]\\) where \\(\text{StateConverged}\\) means all nodes agree on shared {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state within reconciliation window \\(\tau_{\text{reconcile}}\\).
 
 **Phase 3 gate**: \\(G_3(S) = G_2(S) \land V_{\text{reconcile}} \land V_{\text{crdt}} \land V_{\text{hier}} \land V_{\text{conflict}}\\)
 
 ### Phase 4: Optimization Layer
 
-Phase 4 validates adaptive learning and the judgment horizon boundary.
+Phase 4 validates adaptive learning and the {% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %} boundary.
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -722,7 +722,7 @@ V_{\text{antifragile}}(S) &= \mathbb{1}[\text{PostStress}(P) > \text{PreStress}(
 
 where \\(V_{\text{SOE}}(S)\\) is the Safe Operating Envelope validity predicate: parameter vector \\(\theta \in [\theta_{\min}, \theta_{\max}]\\) and basin occupancy \\(\geq 0.95\\) over the most recent learning window — see [Part 5 Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe). \\(V_{\text{causal}}(S) = \mathbb{1}[\text{CausalBarrier active: all human commands gated by Merkle root validation}]\\) — see [Definition 52](#def-52). \\(V_{\text{L0phys}}(S) = \mathbb{1}[\text{L0 Physical Interlock wired, tested, unreachable from software}]\\) — see [Definition 54](#def-54).
 
-**Red team gate integration**: A failed red team exercise (\\(V_{\text{adv}} = 0\\)) triggers re-evaluation of the preceding gate: if jamming breaks gossip coherence, the Phase 2 gate (\\(V_{\text{gossip}}\\)) is re-validated before re-attempting Phase 5.
+**Red team gate integration**: A failed red team exercise (\\(V_{\text{adv}} = 0\\)) triggers re-evaluation of the preceding gate: if jamming breaks {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} coherence, the Phase 2 gate (\\(V_{\text{gossip}}\\)) is re-validated before re-attempting Phase 5.
 
 ### Validation Methodology
 
@@ -808,9 +808,9 @@ a system with Field Autonomic Certification satisfies all phase gates through Ph
 
 *Proof sketch*: \\(\mathrm{FAC}\\) includes \\(G_0\\) directly. \\(V_{\mathrm{depiso}}\\) implies [Proposition 36 (Hardened Hierarchy Fail-Down)](@/blog/2026-01-15/index.md#prop-36), satisfying the structural requirement for \\(G_1\\)–\\(G_3\\). The remaining question is whether 10 partition-rejoin cycles provide sufficient statistical evidence for \\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\).
 
-Let \\(p_{\text{conflict}}\\) denote the per-cycle probability that a genuine CRDT merge conflict occurs and is incorrectly resolved. The minimum cycle count \\(N\\) to detect systematic reconciliation failures with confidence \\(1 - \alpha\\) satisfies \\(N \geq \log(\alpha)/\log(1 - p_{\text{conflict}})\\). For \\(p_{\text{conflict}} = 0.01\\): \\(N = \log(0.05)/\log(0.99) \approx 299\\) cycles. For \\(p_{\text{conflict}} = 0.26\\): \\(N = 10\\) cycles. The checklist value \\(C5 = 10\\) cycles is sufficient only if \\(p_{\text{conflict}} \geq 0.26\\) — i.e., the system fails 1-in-4 merges, a failure mode that would be immediately observable without formal testing. The correct interpretation: 10 cycles is a smoke test, not a certification bound.
+Let \\(p_{\text{conflict}}\\) denote the per-cycle probability that a genuine {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} merge conflict occurs and is incorrectly resolved. The minimum cycle count \\(N\\) to detect systematic reconciliation failures with confidence \\(1 - \alpha\\) satisfies \\(N \geq \log(\alpha)/\log(1 - p_{\text{conflict}})\\). For \\(p_{\text{conflict}} = 0.01\\): \\(N = \log(0.05)/\log(0.99) \approx 299\\) cycles. For \\(p_{\text{conflict}} = 0.26\\): \\(N = 10\\) cycles. The checklist value \\(C5 = 10\\) cycles is sufficient only if \\(p_{\text{conflict}} \geq 0.26\\) — i.e., the system fails 1-in-4 merges, a failure mode that would be immediately observable without formal testing. The correct interpretation: 10 cycles is a smoke test, not a certification bound.
 
-\\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\) are certified by one of two methods: (a) static verification via Alloy model checking that confirms correct merge for all conflict types in the state schema (the RAVEN TLA+ model handles this at \\(\leq 50\\) nodes); or (b) \\(N \geq \log(0.05)/\log(1 - p_{\text{estimated}})\\) hardware cycles where \\(p_{\text{estimated}}\\) is derived from the measured state update rate and concurrent edit probability during the 24-hour run. Random process kills imply \\(V_{\mathrm{heal}}\\) (Phase 1); 30\% garbage injection implies \\(V_{\mathrm{detect}}\\) (Phase 1). Phases 4–5 require additional adversarial testing (\\(V_{\mathrm{adv}}\\)) beyond \\(\mathrm{FAC}\\) scope. \\(\square\\)
+\\(V_{\mathrm{merge}}\\) and \\(V_{\mathrm{reconcile}}\\) are certified by one of two methods: (a) static verification via Alloy model checking that confirms correct merge for all conflict types in the state schema (the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} TLA+ model handles this at \\(\leq 50\\) nodes); or (b) \\(N \geq \log(0.05)/\log(1 - p_{\text{estimated}})\\) hardware cycles where \\(p_{\text{estimated}}\\) is derived from the measured state update rate and concurrent edit probability during the 24-hour run. Random process kills imply \\(V_{\mathrm{heal}}\\) (Phase 1); 30\% garbage injection implies \\(V_{\mathrm{detect}}\\) (Phase 1). Phases 4–5 require additional adversarial testing (\\(V_{\mathrm{adv}}\\)) beyond \\(\mathrm{FAC}\\) scope. \\(\square\\)
 
 **The 24-Hour Isolation and Chaos Checklist**
 
@@ -861,12 +861,12 @@ The following checklist formalizes \\(V_{\mathrm{isolchaos}}\\). A system cannot
 \mathrm{FAC}(S) = \bigwedge_{i \in \{H1..H4,\, I1..I4,\, C1..C7\}} \mathrm{Passed}(i)
 {% end %}
 
-**RAVEN certification example**: Phase 0 gate passed in month 2 of development
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} certification example**: Phase 0 gate passed in month 2 of development
 (\\(V_{\mathrm{attest}}, V_{\mathrm{surv}}, V_{\mathrm{budget}}, V_{\mathrm{safe}}, V_{\mathrm{zero}}\\) all green).
 FAC required an additional 3 weeks: I3 revealed that Drone 23's L0 binary had an implicit
 dependency on a shared allocator (caught by I4's symbol check). After fixing, the 24-hour chaos
 run (C1–C7) passed with one failure on C6 — the HSS recovery path had an off-by-one on the
-energy threshold register. Both defects were caught before field deployment. The CONVOY team's
+energy threshold register. Both defects were caught before field deployment. The {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} team's
 failure would have been caught at I1: the ML inference service's allocator was statically linked
 into the L0 boot image.
 
@@ -894,7 +894,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone s
 
 **Phase 2: Cluster Coordination**
 - Formation protocol: drones form local clusters (typically 9-20 units based on connectivity)
-- Gossip-based health: cluster health state converges within 30s
+- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health: cluster health state converges within 30s
 - Local decision authority: cluster lead makes L1 decisions for cluster
 - Recovery ordering: mesh connectivity before surveillance
 - Cluster partition handling: sub-clusters form and operate independently
@@ -908,7 +908,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone s
 
 **Phase 4: Swarm Optimization**
 - Adaptive formation spacing based on terrain and threat
-- Gossip interval tuning based on connectivity quality
+- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} interval tuning based on connectivity quality
 - Learning from partition events: updated connectivity model
 - Override mechanisms: operator can reassign cluster leads
 - Judgment horizon: engagement decisions require human authorization
@@ -918,7 +918,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone s
 - Real-time command integration
 - Degradation ladder validated: L4 to L3 to L2 to L1 to L0
 - Red team exercises: simulated adversarial jamming and spoofing
-- Anti-fragility demonstrated: swarm improves after each stress event
+- {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} demonstrated: swarm improves after each stress event
 - SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
 
 **Key insight**: Sophisticated swarm behavior (Phase 4-5) comes LAST. The impressive ML analytics and coordinated surveillance are only valuable if built on stable individual drones (Phase 0-1) and reliable coordination (Phase 2-3).
@@ -943,7 +943,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicl
 
 **Phase 2: Platoon Coordination**
 - Formation protocol: vehicles form local platoons (typically 4-7 vehicles based on terrain)
-- Gossip-based health: platoon health state converges within 60s
+- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health: platoon health state converges within 60s
 - Local decision authority: platoon lead makes L1 route decisions
 - Recovery ordering: communication before navigation before surveillance
 - Platoon partition handling: sub-platoons form and continue mission
@@ -967,7 +967,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicl
 - Multi-convoy coordination
 - Degradation ladder validated: L4 to L3 to L2 to L1 to L0
 - Red team exercises: simulated disruption and equipment failure scenarios
-- Anti-fragility demonstrated: convoy improves threat detection after each event
+- {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} demonstrated: convoy improves threat detection after each event
 - SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
 
 **Key insight**: Autonomy foundations (Phase 0-2) enable later integration (Phase 4-5). The convoy can only coordinate effectively if each vehicle is independently reliable.
@@ -992,7 +992,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sens
 
 **Phase 2: Mesh Coherence**
 - Mesh protocol: sensors form multi-hop mesh to fusion nodes
-- Gossip-based health: mesh health state propagates within 5 min
+- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health: mesh health state propagates within 5 min
 - Local decision authority: fusion node makes L1 alert decisions
 - Recovery ordering: mesh connectivity before data fusion before uplink
 - Mesh partition handling: sub-meshes operate independently
@@ -1016,7 +1016,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sens
 - Multi-site coordination and correlation
 - Degradation ladder validated: L4 to L3 to L2 to L1 to L0
 - Red team exercises: simulated intrusion and sensor tampering
-- Anti-fragility demonstrated: mesh improves detection after each incident
+- {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} demonstrated: mesh improves detection after each incident
 - SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
 
 **Key insight**: Mesh reliability (Phase 2) must precede sensor sophistication (Phase 4). Advanced analytics are worthless if the mesh cannot reliably deliver the data.
@@ -1027,7 +1027,7 @@ How the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sens
 
 The preceding framework treats human operators as external authorities at the top of the decision hierarchy. This is necessary but insufficient. The five formal constructs in this section address a harder problem: *how should the system manage the handover boundary when humans are not interchangeable with fast CPUs?*
 
-Cognitive science establishes that human situational awareness (SA) takes time to reconstruct after disengagement. The system must predict operator readiness, not just detect system failure. Trust in automation is asymmetric — easy to lose, slow to rebuild. Human commands can be causally stale if issued against an out-of-date mental model. And beyond all MAPE-K logic sits a hard physical limit that cannot be overridden in software.
+Cognitive science establishes that human situational awareness (SA) takes time to reconstruct after disengagement. The system must predict operator readiness, not just detect system failure. Trust in automation is asymmetric — easy to lose, slow to rebuild. Human commands can be causally stale if issued against an out-of-date mental model. And beyond all {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} logic sits a hard physical limit that cannot be overridden in software.
 
 ### Cognitive Inertia and Predictive Triggering
 
@@ -1040,7 +1040,7 @@ Cognitive science establishes that human situational awareness (SA) takes time t
 
 *where \\(\Psi_{\text{fail}}\\) is the minimum confidence at which automation fails safely. Handover must be initiated when \\(\Psi(t) \leq \Psi_{\text{trigger}}\\), not when \\(\Psi(t) \leq \Psi_{\text{fail}}\\).*
 
-The key insight is that \\(\tau_{SA}\\) is measured in minutes, not milliseconds. For RAVEN missions with dense multi-threat environments, empirical SA reconstruction times are 90–180 seconds — comparable to the [judgment horizon](@/blog/2026-02-12/index.md#def-16) window from Part 5. During this interval \\(\Psi(t)\\) continues to decay. A handover initiated at \\(\Psi_{\text{fail}}\\) delivers an operator who is not yet situationally aware, into a system that has already passed the point of safe autonomous recovery.
+The key insight is that \\(\tau_{SA}\\) is measured in minutes, not milliseconds. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} missions with dense multi-threat environments, empirical SA reconstruction times are 90–180 seconds — comparable to the [{% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}](@/blog/2026-02-12/index.md#def-16) window from Part 5. During this interval \\(\Psi(t)\\) continues to decay. A handover initiated at \\(\Psi_{\text{fail}}\\) delivers an operator who is not yet situationally aware, into a system that has already passed the point of safe autonomous recovery.
 
 **Consequence**: The \\(V_{\text{SA}}\\) predicate in Phase 4 gate requires demonstrating that handover triggers are set conservatively enough to provide full SA recovery time before the predicted failure boundary.
 
@@ -1064,12 +1064,12 @@ A single automation failure can erase trust accumulated over many successes. For
 k \geq \frac{\ln(0.80 / 0.48)}{\ln\!\left(1/(1 - 0.05)\right)} \approx 10
 {% end %}
 
-**System implication**: Automation confidence thresholds must be calibrated to the current trust state \\(\mathcal{T}_t\\). When \\(\mathcal{T}_t < \mathcal{T}_{\text{threshold}}\\), the [judgment horizon](@/blog/2026-02-12/index.md#def-16) contracts — more decisions require human authorization even if system-measured confidence \\(\Psi(t)\\) is high. Trust dynamics are a function of the entire operational history, not a moving average.
+**System implication**: Automation confidence thresholds must be calibrated to the current trust state \\(\mathcal{T}_t\\). When {% katex() %}\mathcal{T}_t < \mathcal{T}_{\text{threshold}}{% end %}, the [{% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}](@/blog/2026-02-12/index.md#def-16) contracts — more decisions require human authorization even if system-measured confidence \\(\Psi(t)\\) is high. Trust dynamics are a function of the entire operational history, not a moving average.
 
 ### Causal Barrier
 
 <span id="def-52"></span>
-**Definition 52** (Causal Barrier). *Let \\(\mathcal{H}_{\text{op}}(t)\\) denote the operator's state snapshot at time \\(t\\), characterized by its Merkle root \\(M_{\text{op}}\\) ([Part 4, state reconciliation](@/blog/2026-02-05/index.md#def-12)). Let \\(M_{\text{edge}}(t)\\) denote the current Merkle root of the edge fleet state. A human command \\(c\\) issued at time \\(t\\) is **causally valid** if and only if:*
+**Definition 52** (Causal Barrier). *Let {% katex() %}\mathcal{H}_{\text{op}}(t){% end %} denote the operator's state snapshot at time \\(t\\), characterized by its Merkle root \\(M_{\text{op}}\\) ([Part 4, state reconciliation](@/blog/2026-02-05/index.md#def-12)). Let \\(M_{\text{edge}}(t)\\) denote the current Merkle root of the edge fleet state. A human command \\(c\\) issued at time \\(t\\) is **causally valid** if and only if:*
 
 {% katex(block=true) %}
 \text{Valid}(c,\, t) = \mathbb{1}\!\left[M_{\text{op}} = M_{\text{edge}}(t - \Delta_{\text{prop}})\right]
@@ -1079,7 +1079,7 @@ k \geq \frac{\ln(0.80 / 0.48)}{\ln\!\left(1/(1 - 0.05)\right)} \approx 10
 
 The Causal Barrier addresses a failure mode orthogonal to trust: the operator may be fully trusted, fully engaged, and still issue a harmful command because their mental model of fleet state is out of date. This is particularly acute in contested environments where \\(\Delta_{\text{prop}}\\) can exceed 30 seconds and state can diverge significantly during that window.
 
-**Connection to Fleet Coherence**: The Causal Barrier extends Part 4's Merkle reconciliation protocol from fleet-to-fleet state synchronization to human-to-fleet command validation. The same \\(\Delta_{\text{state}}\\) that drives CRDT merge frequency also determines the maximum safe command lag.
+**Connection to Fleet Coherence**: The Causal Barrier extends Part 4's Merkle reconciliation protocol from fleet-to-fleet state synchronization to human-to-fleet command validation. The same \\(\Delta_{\text{state}}\\) that drives {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} merge frequency also determines the maximum safe command lag.
 
 ### Semantic Compression
 
@@ -1098,7 +1098,7 @@ f(\sigma) = \begin{cases}
 
 The 3-state compression maps directly to operator-actionable states: **Aligned** requires no intervention; **Drifted** warrants monitoring (healing protocols are active, [Part 3](@/blog/2026-01-29/index.md)); **Diverged** requires immediate escalation (\\(\gamma < 1 - \varepsilon\\) means consensus has failed, [Part 1, Definition 1b](@/blog/2026-01-15/index.md#def-1b)). The compression eliminates alert fatigue by suppressing the high-dimensional telemetry stream that operators cannot process at the rate of generation.
 
-**Connection to health monitoring**: The Intent Health Indicator is the operator-facing projection of the fleet health state from [Part 2's gossip protocol](@/blog/2026-01-22/index.md). The gossip layer provides \\(\gamma(\sigma)\\); the compression layer translates it into human-actionable signal.
+**Connection to health monitoring**: The Intent Health Indicator is the operator-facing projection of the fleet health state from [Part 2's {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} protocol](@/blog/2026-01-22/index.md). The {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} layer provides \\(\gamma(\sigma)\\); the compression layer translates it into human-actionable signal.
 
 ### L0 Physical Safety Interlock
 
@@ -1106,7 +1106,7 @@ The 3-state compression maps directly to operator-actionable states: **Aligned**
 **Definition 54** (L0 Physical Safety Interlock). *An L0 Physical Safety Interlock is a hardware-level circuit that enforces a safe-state transition independent of and prior to any software layer. It is characterized by:*
 
 - *Non-programmability: the safe-state condition is wired, not configured*
-- *MAPE-K bypass: the circuit fires regardless of MAPE-K state or software health*
+- *{% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} bypass: the circuit fires regardless of {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} state or software health*
 - *Determinism: transition time \\(T_{\text{L0}} < T_{\text{WD}}\\) (watchdog period) with no software path*
 - *Non-resettability from software: recovery from the L0 Physical Interlock requires physical human action*
 
@@ -1114,9 +1114,9 @@ The 3-state compression maps directly to operator-actionable states: **Aligned**
 \text{L0Physical}(t) = \mathbb{1}\!\left[\exists\, p \in \mathcal{P}_{\text{phys}}:\ \text{HardCondition}(p,\, t)\right]
 {% end %}
 
-*where \\(\mathcal{P}_{\text{phys}}\\) is the set of monitored physical parameters (voltage, temperature, acceleration, arming signal). When \\(\text{L0Physical}(t) = 1\\), the system enters \\(\mathcal{S}_{\text{phys}}\\) — a state that cannot be exited by any software command.*
+*where {% katex() %}\mathcal{P}_{\text{phys}}{% end %} is the set of monitored physical parameters (voltage, temperature, acceleration, arming signal). When \\(\text{L0Physical}(t) = 1\\), the system enters \\(\mathcal{S}_{\text{phys}}\\) — a state that cannot be exited by any software command.*
 
-**Distinction from software watchdogs**: Definition 43 is distinct from the Software Watchdog ([Part 3, Definition 26](@/blog/2026-01-29/index.md#def-26)) and Terminal Safety State ([Part 3, Definition 36](@/blog/2026-01-29/index.md#def-36)). The Software Watchdog detects software failure and triggers a software response. The Terminal Safety State is a MAPE-K outcome. The L0 Physical Interlock bypasses the entire software stack — it fires because a physical condition was met, regardless of whether the software is functioning. The MAPE-K loop cannot override it; neither can a remote command.
+**Distinction from software watchdogs**: Definition 43 is distinct from the Software Watchdog ([Part 3, Definition 26](@/blog/2026-01-29/index.md#def-26)) and Terminal Safety State ([Part 3, Definition 36](@/blog/2026-01-29/index.md#def-36)). The Software Watchdog detects software failure and triggers a software response. The Terminal Safety State is a {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} outcome. The L0 Physical Interlock bypasses the entire software stack — it fires because a physical condition was met, regardless of whether the software is functioning. The {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop cannot override it; neither can a remote command.
 
 **Implementation examples**: Dead Man's Switch (DMS) circuits, hardware-enforced power cutoff, physically irreversible actuation (pyrotechnic separation, thermal runaway inhibitor). The interlock is not part of the autonomic control plane — it is the boundary condition that the autonomic control plane must never violate.
 
@@ -1151,7 +1151,7 @@ Mitigation: Document the shortcuts. Know what risks you're accepting. Plan to re
 
 Example: An emerging threat requires rapid deployment. The system passes Phase 2 but Phase 3 is incomplete.
 
-Mitigation: Deploy with documented limitations. Restrict operations to validated capability levels. Continue validation in parallel with operations.
+Mitigation: Deploy with documented limitations. Restrict operations to validated {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability levels{% end %}. Continue validation in parallel with operations.
 
 ### Engineering Judgment
 
@@ -1177,13 +1177,13 @@ This series has developed what that difference means in practice:
 
 **[Contested connectivity](@/blog/2026-01-15/index.md)** established the fundamental inversion: disconnection is the default; connectivity is the opportunity. The connectivity probability model \\(C(t)\\) quantifies this inversion. The capability hierarchy (L0-L4) shows how systems must degrade gracefully across connectivity states.
 
-**[Self-measurement](@/blog/2026-01-22/index.md)** showed how to measure health without central observability. The observability {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} (P0-P4) prioritizes what to measure first. Gossip-based health propagation maintains awareness across the fleet. Staleness bounds quantify confidence decay.
+**[Self-measurement](@/blog/2026-01-22/index.md)** showed how to measure health without central observability. The observability {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} (P0-P4) prioritizes what to measure first. {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health propagation maintains awareness across the fleet. Staleness bounds quantify confidence decay.
 
 **[Self-healing](@/blog/2026-01-29/index.md)** showed how to heal without human escalation. {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} adapted for edge autonomy. Recovery ordering prevents cascade failures. Healing severity matches detection confidence.
 
 **[Fleet coherence](@/blog/2026-02-05/index.md)** showed how to maintain coherence under partition. {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}s and merge functions for state reconciliation. Hierarchical decision authority for autonomous decisions. Conflict resolution for irreconcilable differences.
 
-**[Anti-fragility](@/blog/2026-02-12/index.md)** showed how to improve from stress rather than merely survive it. Anti-fragility metrics quantify improvement. Stress as information source. The judgment horizon separates automated from human decisions.
+**[{% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %}](@/blog/2026-02-12/index.md)** showed how to improve from stress rather than merely survive it. {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} metrics quantify improvement. Stress as information source. The {% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %} separates automated from human decisions.
 
 **The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %}** integrates these capabilities into a buildable sequence. The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %}. Constraint migration. The meta-constraint of optimization overhead. The formal validation framework for systematic verification.
 
@@ -1254,7 +1254,7 @@ Partition events are not consistency violations. They are information events. {%
 A system that merely recovers returns to baseline. {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} — \\(d^2P/d\sigma^2 > 0\\) — is a testable engineering property: the performance-stress curve is convex. {% term(url="@/blog/2026-02-12/index.md#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} bandit algorithms update operational parameters from each partition event; stress events calibrate the system's model of its own environment. The {% term(url="@/blog/2026-02-12/index.md#def-16", def="Boundary above which irreversibility, information content, or catastrophe probability exceeds the system's autonomy limit; the system halts and waits for human authorization rather than acting") %}judgment horizon{% end %} \\(\mathcal{J}\\) bounds what is automated: decisions irreversible at fleet scale, legally consequential, or outside the training distribution route to human authority. That boundary is not timidity — it is what makes the automation deployable in environments where wrong decisions have consequences.
 
 **6. In what order must this be built?**
-The five answers above form a strict dependency chain that cannot be reordered. Self-measurement precedes self-healing — you cannot repair what you cannot observe. Self-healing precedes fleet coherence — unreliable nodes cannot sustain distributed consensus. Fleet coherence precedes anti-fragile learning — you cannot learn from partition events that corrupt your state. The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} encodes this formally; the {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is any topological ordering of that graph. The {% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %} result adds that the binding constraint shifts with \\(C(t)\\) — what limits the system at \\(C(t) = 0.8\\) differs from what limits it at \\(C(t) = 0.1\\). {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}Phase gates{% end %} enforce formal validation at each transition. Skipping a layer is not a schedule decision. It is a correctness error.
+The five answers above form a strict dependency chain that cannot be reordered. Self-measurement precedes self-healing — you cannot repair what you cannot observe. Self-healing precedes fleet coherence — unreliable nodes cannot sustain distributed consensus. Fleet coherence precedes {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} learning — you cannot learn from partition events that corrupt your state. The {% term(url="#def-18", def="Dependency graph where an edge A→B means capability A must be substantially solved before B can become binding; valid implementation sequences follow topological order through this graph") %}prerequisite graph{% end %} encodes this formally; the {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is any topological ordering of that graph. The {% term(url="#def-19", def="When the connectivity regime changes, the binding capability shifts — what was optional becomes critical, and what was critical becomes achievable; the engineering priority order re-ranks accordingly") %}constraint migration{% end %} result adds that the binding constraint shifts with \\(C(t)\\) — what limits the system at \\(C(t) = 0.8\\) differs from what limits it at \\(C(t) = 0.1\\). {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}Phase gates{% end %} enforce formal validation at each transition. Skipping a layer is not a schedule decision. It is a correctness error.
 
 ### What Changes in the Next Design
 

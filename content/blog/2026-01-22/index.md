@@ -24,7 +24,7 @@ The measurement problem addressed here doesn't exist in a vacuum - it emerges di
 
 Three results from that foundation shape everything in this article. First, the Markov connectivity model (Definition 3) establishes *when* measurement becomes the system's only source of truth. During the Denied regime (\\(\mathcal{N}\\)), there is no external observability infrastructure - no central monitoring, no cloud metrics, no human operator in the loop. Every judgment the system makes about its own health must be drawn from local evidence alone. Self-measurement is not about building better dashboards; it is about survival during partition.
 
-Second, the capability hierarchy (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) establishes *what* measurement must protect. A system that cannot assess its own capability level cannot make sound decisions about which recovery actions to attempt, how aggressively to heal, or when to shed load. Accurate health knowledge is the prerequisite for any subsequent autonomous action.
+Second, the capability hierarchy (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) establishes *what* measurement must protect. A system that cannot assess its own {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %} cannot make sound decisions about which recovery actions to attempt, how aggressively to heal, or when to shed load. Accurate health knowledge is the prerequisite for any subsequent autonomous action.
 
 Third, the inversion thesis - "design for disconnected, enhance for connected" - establishes the design constraint. The observation mechanisms developed here must function in complete isolation from day one. Reporting to a central collector, when connectivity permits, is an enhancement. It is never a dependency.
 
@@ -369,7 +369,7 @@ With threshold \\(\theta = z_\alpha \sigma\\) where \\(z_\alpha = 2.5\\) and ano
 
 ### Adaptive Change-Point Detection: From Static to Kalman-Optimal Baseline
 
-The CUSUM statistic above uses a fixed nominal mean \\(\mu_0\\). In practice, sensor baselines drift: OUTPOST thermal sensors track diurnal temperature cycles, CONVOY engine metrics shift with load and altitude, RAVEN RF interference patterns change with formation geometry. When \\(\mu_0\\) is stale, every observation accumulates evidence of a "change" that is simply baseline drift — generating false alarms continuously. The fix is to replace the static \\(\mu_0\\) with a Kalman-optimal adaptive estimator that tracks "normal" as it evolves.
+The CUSUM statistic above uses a fixed nominal mean \\(\mu_0\\). In practice, sensor baselines drift: {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} thermal sensors track diurnal temperature cycles, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} engine metrics shift with load and altitude, {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} RF interference patterns change with formation geometry. When \\(\mu_0\\) is stale, every observation accumulates evidence of a "change" that is simply baseline drift — generating false alarms continuously. The fix is to replace the static \\(\mu_0\\) with a Kalman-optimal adaptive estimator that tracks "normal" as it evolves.
 
 <span id="def-23"></span>
 **Definition 23** (Adaptive Baseline Estimator). *Given a sensor time series \\(\\{x_t\\}\\), the adaptive baseline is the Kalman-optimal estimate of the true instantaneous mean \\(\mu_t\\) under the first-order drift model:*
@@ -421,7 +421,7 @@ P_\infty = \frac{-Q + \sqrt{Q^2 + 4QR}}{2}, \qquad K_\infty = \frac{P_\infty + Q
 
 **Validity condition — white noise assumption**: The Kalman gain convergence (Prop 24) and the \\(H_0\\) distribution \\(z_t^K \sim N(0,1)\\) both require measurement noise \\(v_t\\) to be approximately i.i.d. Gaussian with stationary variance \\(R\\). Real MEMS sensors violate this: \\(1/f\\) noise dominates below ~1 Hz; variance is temperature-correlated (\\(R(T) \approx R_0(1 + \beta \cdot \Delta T)\\) for thermistors); aging causes slow \\(R\\) drift. Practical remediation: (1) estimate \\(R\\) from a stationary calibration sequence at deployment temperature before each mission; (2) run a chi-squared test on the rolling innovation variance — if the ratio \\(\mathrm{Var}[z_t^K]/1.0\\) exceeds 1.5 over a 5-minute window, \\(R\\) is miscalibrated and must be re-estimated; (3) if temperature correlation is strong (\\(\beta \cdot \Delta T_{\max} > 0.3\\)), use an adaptive-\\(R\\) Kalman (Sage-Husa estimator). The false-alarm guarantee is void if \\(R\\) is off by more than 50\% — the actual false-alarm rate scales as \\(P(|N(0,1)| > \theta \cdot \sqrt{R_{\text{assumed}}/R_{\text{actual}}})\\).
 
-**OUTPOST calibration**: Temperature sensors drift at \\(\approx 1\,^\circ\text{C}\,\text{day}^{-1}\\) with sensor noise \\(\sigma_{\text{sens}} = 0.1\,^\circ\text{C}\\). At \\(\lambda = 1\,\text{Hz}\\): \\(Q = (1/86400)^2 \approx 1.3 \times 10^{-10}\,\text{K}^2/\text{sample}\\), \\(R = 0.01\,\text{K}^2\\), giving \\(\rho \approx 1.3 \times 10^{-8}\\) and \\(K_\infty \approx 1.1 \times 10^{-4}\\). Baseline adapts on a timescale of \\(1/K_\infty \approx 9000\,\text{s} \approx 2.5\,\text{h}\\) — slow enough to track seasonal drift without following measurement noise.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Temperature sensors drift at \\(\approx 1\,^\circ\text{C}\,\text{day}^{-1}\\) with sensor noise \\(\sigma_{\text{sens}} = 0.1\,^\circ\text{C}\\). At \\(\lambda = 1\,\text{Hz}\\): \\(Q = (1/86400)^2 \approx 1.3 \times 10^{-10}\,\text{K}^2/\text{sample}\\), \\(R = 0.01\,\text{K}^2\\), giving \\(\rho \approx 1.3 \times 10^{-8}\\) and \\(K_\infty \approx 1.1 \times 10^{-4}\\). Baseline adapts on a timescale of \\(1/K_\infty \approx 9000\,\text{s} \approx 2.5\,\text{h}\\) — slow enough to track seasonal drift without following measurement noise.
 
 <span id="def-24"></span>
 **Definition 24** (Bayesian Surprise Metric). *The Bayesian Surprise statistic \\(S_t^K\\) is the adaptive-baseline generalization of CUSUM, accumulating Kalman log-likelihood ratios:*
@@ -483,7 +483,7 @@ At the Nash equilibrium \\((\pi^\*, a^\*)\\), the inspector is indifferent over 
 
 **Cross-sensor defense**: For the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} mesh, cross-sensor consistency - checking whether sensor \\(i\\)'s report is consistent with what \\(i\\)'s neighbors' models predict - defeats the threshold-calibration attack, since exploiting it requires simultaneous compromise of multiple sensors.
 
-**Practical implication**: In adversarial settings, draw \\(\theta_t \sim \pi^\*\\) fresh each detection round rather than using a fixed \\(\theta^\*\\). For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s 127-sensor mesh, cross-sensor consistency checks are the primary Byzantine detection layer; randomized thresholds are a secondary defense for individual sensor evaluation.
+**Practical implication**: In adversarial settings, draw \\(\theta_t \sim \pi^\*\\) fresh each detection round rather than using a fixed \\(\theta^\*\\). For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s 127-sensor mesh, cross-sensor consistency checks are the primary {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} detection layer; randomized thresholds are a secondary defense for individual sensor evaluation.
 
 ### Distinguishing Failure Modes
 
@@ -646,13 +646,13 @@ This 5-dimensional feature space captures statistical summaries, enabling effici
 
 where \\(\lambda_{\text{drift}} = \alpha \cdot \|x_t - x_{t-1}\|^2\\) scales with local input variation as an edge-practical proxy for distributional shift. (This is a point-to-point heuristic; a sliding-window variance estimate is more robust when compute permits.)
 
-**Jacobian stability check**: Define the weight update map \\(\Phi: w_{t-1} \mapsto w_t = w_{t-1} - \eta \nabla_w \mathcal{L}_\lambda(w_{t-1})\\). Its Jacobian is \\(\mathbf{J}_w = I - \eta H_\lambda\\), where \\(H_\lambda = \partial^2\mathcal{L}/\partial w^2 + \lambda_{\text{drift}} I\\) is the regularized Hessian. The autonomic layer becomes a noise generator when the spectral radius exceeds 1:
+**Jacobian stability check**: Define the weight update map {% katex() %}\Phi: w_{t-1} \mapsto w_t = w_{t-1} - \eta \nabla_w \mathcal{L}_\lambda(w_{t-1}){% end %}. Its Jacobian is {% katex() %}\mathbf{J}_w = I - \eta H_\lambda{% end %}, where \\(H_\lambda = \partial^2\mathcal{L}/\partial w^2 + \lambda_{\text{drift}} I\\) is the regularized Hessian. The autonomic layer becomes a noise generator when the spectral radius exceeds 1:
 
 {% katex(block=true) %}
 \rho(\mathbf{J}_w) = \max_i \lvert\lambda_i(\mathbf{J}_w)\rvert = \max_i \lvert 1 - \eta\,\lambda_i(H_\lambda)\rvert < 1
 {% end %}
 
-*(Notation: \\(\\rho(\\cdot)\\) here denotes spectral radius. This is distinct from the SVM margin hyperparameter \\(\\rho\\) in the one-class SVM objective and from the gossip observation-age tracker \\(\\rho_i[j]\\) used in the staleness model. Subscripts and function notation differentiate the three in all occurrences.)*
+*(Notation: \\(\\rho(\\cdot)\\) here denotes spectral radius. This is distinct from the SVM margin hyperparameter \\(\\rho\\) in the one-class SVM objective and from the {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} observation-age tracker \\(\\rho_i[j]\\) used in the staleness model. Subscripts and function notation differentiate the three in all occurrences.)*
 
 If \\(\rho(\mathbf{J}_w) > 1 + \varepsilon\\), weights are diverging and the SVM must be recalibrated or reverted to \\(w_0\\). For edge deployment with limited compute, estimate the dominant eigenvalue via power iteration:
 
@@ -715,7 +715,7 @@ graph LR
 - Total footprint: **~520 bytes** (parameters + buffer)
 - Inference: **<1ms** on Cortex-M4
 
-**Energy feasibility on RAVEN**: [Definition 21](@/blog/2026-01-15/index.md#def-21) establishes local dominance when \\(n_c < T_s/T_d\\). For the RAVEN platform (\\(T_d = 50\,\mu\text{J}\\), \\(T_s = 5\,\text{mJ}\\)) the threshold is \\(n_c < 100\\) inference passes. The TCN uses \\(n_c = 1\\) — one forward pass per anomaly check — and the 9,000 internal MACs determine the *cost of that pass*, not the value of \\(n_c\\). At approximately 5 nJ per MAC on a Cortex-M4, one TCN inference costs \\(E_{\text{TCN}} \approx 9000 \times 5\,\text{nJ} = 45\,\mu\text{J}\\). The energy ratio versus a single radio transmission is:
+**Energy feasibility on {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}**: [Definition 21](@/blog/2026-01-15/index.md#def-21) establishes local dominance when \\(n_c < T_s/T_d\\). For the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} platform (\\(T_d = 50\,\mu\text{J}\\), \\(T_s = 5\,\text{mJ}\\)) the threshold is \\(n_c < 100\\) inference passes. The TCN uses \\(n_c = 1\\) — one forward pass per anomaly check — and the 9,000 internal MACs determine the *cost of that pass*, not the value of \\(n_c\\). At approximately 5 nJ per MAC on a Cortex-M4, one TCN inference costs \\(E_{\text{TCN}} \approx 9000 \times 5\,\text{nJ} = 45\,\mu\text{J}\\). The energy ratio versus a single radio transmission is:
 
 {% katex(block=true) %}
 \frac{E_{\text{TCN}}}{T_s} = \frac{9000 \cdot e_{\text{MAC}}}{T_s} \approx \frac{45\,\mu\text{J}}{5\,\text{mJ}} = 0.009 \ll 1
@@ -723,7 +723,7 @@ graph LR
 
 Running at 5 Hz, the continuous inference power is \\(45\,\mu\text{J} \times 5\,\text{Hz} = 225\,\mu\text{W}\\). Avoiding a single unnecessary radio transmission (5 mJ) recovers 22 seconds of continuous inference — a favorable exchange whenever detection accuracy suppresses even one spurious transmission per 22-second window.
 
-**Energy-adaptive scheduling**: For deployments where the energy margin is tighter than the RAVEN reference, scale anomaly detection frequency with the [connectivity regime](@/blog/2026-01-15/index.md#def-2). The radio-savings justification weakens as connectivity degrades; inference frequency should follow:
+**Energy-adaptive scheduling**: For deployments where the energy margin is tighter than the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} reference, scale anomaly detection frequency with the [connectivity regime](@/blog/2026-01-15/index.md#def-2). The radio-savings justification weakens as connectivity degrades; inference frequency should follow:
 
 | Regime | Detection rate | Primary method | Energy logic |
 | :--- | :--- | :--- | :--- |
@@ -814,9 +814,9 @@ Local threshold adjustment (recomputing \\(\theta\\) from recent \\(X\\)) restor
 Individual nodes detect local anomalies. Fleet-wide health requires aggregation without a central coordinator.
 
 <span id="def-5"></span>
-**Definition 5** (Gossip Health Protocol). *A gossip health protocol is a tuple \\((\mathbf{H}, \lambda, M, T)\\) where:*
+**Definition 5** ({% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} Health Protocol). *A {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} health protocol is a tuple \\((\mathbf{H}, \lambda, M, T)\\) where:*
 - *\\(\mathbf{H} = [h_1, \ldots, h_n] \in [0,1]^n\\) is the health vector over \\(n\\) nodes*
-- *\\(\lambda > 0\\) is the gossip rate (exchanges per second per node)*
+- *\\(\lambda > 0\\) is the {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate (exchanges per second per node)*
 - *\\(M: [0,1]^n \times [0,1]^n \rightarrow [0,1]^n\\) is the merge function*
 - *\\(T: \mathbb{R}^+ \rightarrow \mathbb{R}^+\\) is the {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} decay function*
 
@@ -884,10 +884,10 @@ The weight assigned to each observation decays exponentially with its age \\(\ta
 w = e^{-\gamma \tau}
 {% end %}
 
-With \\(\tau\\) as time since observation and \\(\gamma\\) as decay rate (distinct from the gossip rate \\(\lambda\\)).
+With \\(\tau\\) as time since observation and \\(\gamma\\) as decay rate (distinct from the {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate \\(\lambda\\)).
 
 <span id="prop-4"></span>
-**Proposition 4** (Gossip Convergence). *For a {% term(url="#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip protocol{% end %} with rate \\(\lambda\\) and \\(n\\) nodes in a fully-connected network (any node can reach any other), the expected time for information originating at one node to reach all nodes is:*
+**Proposition 4** ({% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} Convergence). *For a {% term(url="#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip protocol{% end %} with rate \\(\lambda\\) and \\(n\\) nodes in a fully-connected network (any node can reach any other), the expected time for information originating at one node to reach all nodes is:*
 
 {% katex(block=true) %}
 T_{\text{convergence}} = O\left(\frac{\ln n}{\lambda}\right)
@@ -900,16 +900,16 @@ In other words, fleet-wide awareness scales only logarithmically with fleet size
 *Proof sketch*: The information spread follows logistic dynamics \\(dI/dt = \lambda I(1 - I)\\) where \\(I\\) is the fraction of informed nodes. Solving with initial condition \\(I(0) = 1/n\\) and computing time to reach \\(I = 1 - 1/n\\) yields \\(T = (2 \ln(n-1))/\lambda\\).
 **Corollary 2**. *Doubling swarm size adds only \\(O(\ln 2 / \lambda) \approx 0.69/\lambda\\) seconds to convergence time, making {% term(url="#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip protocol{% end %}s inherently scalable for edge fleets.*
 
-The lossless fully-connected model of Proposition 4 is a lower bound. Real edge meshes are sparse and contested: OUTPOST operates on a 127-sensor mesh with diameter \\(D \approx 8\\) hops under sustained jamming at \\(p_{\text{loss}} = 0.35\\). The actual convergence time is not \\(O(\ln n / \lambda)\\) but a function of both topology and loss rate.
+The lossless fully-connected model of Proposition 4 is a lower bound. Real edge meshes are sparse and contested: {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} operates on a 127-sensor mesh with diameter \\(D \approx 8\\) hops under sustained jamming at \\(p_{\text{loss}} = 0.35\\). The actual convergence time is not \\(O(\ln n / \lambda)\\) but a function of both topology and loss rate.
 
 <span id="prop-26"></span>
-**Proposition 26** (Gossip Convergence on Lossy Sparse Mesh). *Let \\(G = (V, E)\\) be a connected graph with \\(n\\) nodes and edge conductance:*
+**Proposition 26** ({% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} Convergence on Lossy Sparse Mesh). *Let \\(G = (V, E)\\) be a connected graph with \\(n\\) nodes and edge conductance:*
 
 {% katex(block=true) %}
 \Phi = \min_{\substack{S \subseteq V \\ 0 < |S| \leq n/2}} \frac{|E(S,\, V \setminus S)|}{|S| \cdot (n - |S|)/n}
 {% end %}
 
-*Under push-pull gossip with rate \\(\lambda\\) and independent per-message loss probability \\(p_{\text{loss}} \in [0, 1)\\), the expected convergence time satisfies:*
+*Under push-pull {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} with rate \\(\lambda\\) and independent per-message loss probability \\(p_{\text{loss}} \in [0, 1)\\), the expected convergence time satisfies:*
 
 {% katex(block=true) %}
 \mathbb{E}[T_{\text{convergence}}] \leq \frac{2\ln n}{\lambda \cdot (1 - p_{\text{loss}}) \cdot \Phi}
@@ -921,9 +921,9 @@ The lossless fully-connected model of Proposition 4 is a lower bound. Real edge 
 \mathbb{E}[T_{\text{convergence}}] \leq \frac{2 D \ln n}{\lambda \cdot (1 - p_{\text{loss}})}
 {% end %}
 
-*Proof sketch*: Let \\(S_t\\) denote the informed set at gossip round \\(t\\), with \\(|S_t| = k\\). By definition of \\(\Phi\\), the number of boundary edges is at least \\(\Phi \cdot k(n-k)/n\\). Each boundary edge activates — an informed node contacts an uninformed neighbor and the message arrives — with probability \\((1-p_{\text{loss}})/\bar{d}\\) per round (\\(\bar{d}\\) = average degree). The expected growth satisfies \\(\mathbb{E}[|S_{t+1}| - |S_t|] \geq (1-p_{\text{loss}}) \cdot \Phi \cdot k(n-k)/n\\). This is the discrete logistic equation with rate \\(r = (1-p_{\text{loss}})\Phi\\). The logistic ODE solution \\(dI/dt = r \cdot I(1-I)\\) reaches \\(I = 1 - 1/n\\) from \\(I = 1/n\\) in \\(T = (2\ln(n-1))/r\\). Applying \\(\Phi \geq 1/D\\) gives the diameter bound. The bound holds in expectation; the stopping time is a non-negative random variable, so by Markov's inequality \\(P(T > c \cdot \mathbb{E}[T]) \leq 1/c\\). For operational planning, use \\(3 \times \mathbb{E}[T_{\text{convergence}}]\\) as a practical target to achieve high-probability coverage under the Markov tail bound; Chernoff-style analysis with bounded increments improves this to \\(\mathbb{E}[T] + O(\sqrt{\mathbb{E}[T] \log n})\\). \\(\square\\)
+*Proof sketch*: Let \\(S_t\\) denote the informed set at {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} round \\(t\\), with \\(|S_t| = k\\). By definition of \\(\Phi\\), the number of boundary edges is at least \\(\Phi \cdot k(n-k)/n\\). Each boundary edge activates — an informed node contacts an uninformed neighbor and the message arrives — with probability \\((1-p_{\text{loss}})/\bar{d}\\) per round (\\(\bar{d}\\) = average degree). The expected growth satisfies \\(\mathbb{E}[|S_{t+1}| - |S_t|] \geq (1-p_{\text{loss}}) \cdot \Phi \cdot k(n-k)/n\\). This is the discrete logistic equation with rate \\(r = (1-p_{\text{loss}})\Phi\\). The logistic ODE solution \\(dI/dt = r \cdot I(1-I)\\) reaches \\(I = 1 - 1/n\\) from \\(I = 1/n\\) in \\(T = (2\ln(n-1))/r\\). Applying \\(\Phi \geq 1/D\\) gives the diameter bound. The bound holds in expectation; the stopping time is a non-negative random variable, so by Markov's inequality \\(P(T > c \cdot \mathbb{E}[T]) \leq 1/c\\). For operational planning, use \\(3 \times \mathbb{E}[T_{\text{convergence}}]\\) as a practical target to achieve high-probability coverage under the Markov tail bound; Chernoff-style analysis with bounded increments improves this to \\(\mathbb{E}[T] + O(\sqrt{\mathbb{E}[T] \log n})\\). \\(\square\\)
 
-**Probability tail caveat — Markov vs. Chernoff**: The statement "with probability at least \\(1 - 1/n\\)" requires careful interpretation. Markov's inequality gives \\(P(T > c \cdot \mathbb{E}[T]) \leq 1/c\\) for any non-negative random variable — so the \\(1-1/n\\) probability guarantee holds only at \\(c = n\\), meaning the convergence time must be bounded by \\(n \cdot \mathbb{E}[T]\\) rather than \\(\mathbb{E}[T]\\) itself. At the mean \\(T = \mathbb{E}[T_{\text{convergence}}]\\), Markov guarantees only \\(P(T \leq \mathbb{E}[T]) \geq 0\\) — trivially true but not useful. For a high-probability bound at the \\(O(\ln n / \lambda)\\) scale, the correct tool is a Chernoff or Azuma-Hoeffding concentration inequality applied to the martingale \\(|S_t|/n\\). Under the logistic growth model, the time to reach \\(1 - 1/n\\) coverage concentrates around the mean with sub-Gaussian tails: \\(P(T_{\text{convergence}} > (1 + \delta) \mathbb{E}[T]) \leq \exp(-\Omega(\delta^2 n))\\). **Practical implication**: when designing systems to the Proposition 4 bound, budget \\(3 \times \mathbb{E}[T_{\text{convergence}}]\\) as the \\(1-1/n\\) operational target — the factor-3 overhead covers the difference between the median convergence time and the high-probability tail. The OUTPOST calibration table below uses the correct diameter bound directly; the \\(1-1/n\\) language in the proposition statement should be read as an asymptotic characterization, not a tight guarantee at \\(\mathbb{E}[T]\\).
+**Probability tail caveat — Markov vs. Chernoff**: The statement "with probability at least \\(1 - 1/n\\)" requires careful interpretation. Markov's inequality gives \\(P(T > c \cdot \mathbb{E}[T]) \leq 1/c\\) for any non-negative random variable — so the \\(1-1/n\\) probability guarantee holds only at \\(c = n\\), meaning the convergence time must be bounded by \\(n \cdot \mathbb{E}[T]\\) rather than \\(\mathbb{E}[T]\\) itself. At the mean \\(T = \mathbb{E}[T_{\text{convergence}}]\\), Markov guarantees only \\(P(T \leq \mathbb{E}[T]) \geq 0\\) — trivially true but not useful. For a high-probability bound at the \\(O(\ln n / \lambda)\\) scale, the correct tool is a Chernoff or Azuma-Hoeffding concentration inequality applied to the martingale \\(|S_t|/n\\). Under the logistic growth model, the time to reach \\(1 - 1/n\\) coverage concentrates around the mean with sub-Gaussian tails: \\(P(T_{\text{convergence}} > (1 + \delta) \mathbb{E}[T]) \leq \exp(-\Omega(\delta^2 n))\\). **Practical implication**: when designing systems to the Proposition 4 bound, budget \\(3 \times \mathbb{E}[T_{\text{convergence}}]\\) as the \\(1-1/n\\) operational target — the factor-3 overhead covers the difference between the median convergence time and the high-probability tail. The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration table below uses the correct diameter bound directly; the \\(1-1/n\\) language in the proposition statement should be read as an asymptotic characterization, not a tight guarantee at \\(\mathbb{E}[T]\\).
 
 **Specializations**:
 
@@ -934,17 +934,17 @@ The lossless fully-connected model of Proposition 4 is a lower bound. Real edge 
 | Grid (\\(\sqrt{n} \times \sqrt{n}\\)), lossless | \\(\Omega(1/\sqrt{n})\\) | \\(O(\sqrt{n}\ln n / \lambda)\\) |
 | OUTPOST mesh (\\(D=8\\), \\(p_{\text{loss}}=0.35\\)) | \\(\geq 1/8\\) | \\(\leq 2 \cdot 8 \cdot \ln(127)/(\lambda \cdot 0.65) \approx 119/\lambda\,\text{s}\\) |
 
-**OUTPOST calibration gap**: At \\(\lambda = 0.5\,\text{Hz}\\), Proposition 4 predicts \\(T \approx 9.7\,\text{s}\\); Proposition 26 predicts \\(T \leq 238\,\text{s} \approx 4\,\text{min}\\) under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap. The correct design response is to either increase \\(\lambda\\) (higher energy cost from Definition 21), decrease \\(D\\) by adding mesh relay nodes, or build decision logic that tolerates 4-minute-stale health data (increasing \\(\tau_{\max}\\) from Proposition 5 accordingly).
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration gap**: At \\(\lambda = 0.5\,\text{Hz}\\), Proposition 4 predicts \\(T \approx 9.7\,\text{s}\\); Proposition 26 predicts \\(T \leq 238\,\text{s} \approx 4\,\text{min}\\) under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap. The correct design response is to either increase \\(\lambda\\) (higher energy cost from Definition 21), decrease \\(D\\) by adding mesh relay nodes, or build decision logic that tolerates 4-minute-stale health data (increasing \\(\tau_{\max}\\) from Proposition 5 accordingly).
 
-**Corollary 3** (Loss-Rate Gossip Budget). *To maintain convergence within target time \\(T^\*\\) under loss probability \\(p_{\text{loss}}\\) on a diameter-\\(D\\) mesh, the minimum gossip rate is:*
+**Corollary 3** (Loss-Rate {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} Budget). *To maintain convergence within target time \\(T^\*\\) under loss probability \\(p_{\text{loss}}\\) on a diameter-\\(D\\) mesh, the minimum {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate is:*
 
 {% katex(block=true) %}
 \lambda^* \geq \frac{2 D \ln n}{T^* \cdot (1 - p_{\text{loss}})}
 {% end %}
 
-**Gossip Rate Selection: Formal Optimization**
+**{% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} Rate Selection: Formal Optimization**
 
-**Objective Function**: The formula finds the gossip rate \\(\lambda^*\\) that best balances convergence speed (which benefits from higher \\(\lambda\\)) against communication power cost (which scales linearly with \\(\lambda\\)).
+**Objective Function**: The formula finds the {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate \\(\lambda^*\\) that best balances convergence speed (which benefits from higher \\(\lambda\\)) against communication power cost (which scales linearly with \\(\lambda\\)).
 
 {% katex(block=true) %}
 \lambda^* = \arg\max_{\lambda \in [\lambda_{\min}, \lambda_{\max}]} \left[ -w_1 \cdot T_{\text{converge}}(\lambda) - w_2 \cdot P_{\text{comm}}(\lambda) \right]
@@ -968,7 +968,7 @@ g_3: && \frac{2\ln n}{\lambda} &\leq \tau_{\text{staleness}}^{\max} && \text{(fr
 \lambda^* = \min\left(\frac{P_{\text{budget}}}{E_{\text{msg}}}, \frac{B_{\text{available}}}{B_{\text{msg}}}, \frac{2\ln n}{\tau_{\text{staleness}}^{\max}}\right)
 {% end %}
 
-**State Transition Model**: The rule below describes how a node's {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} either resets to zero (when a fresh gossip exchange occurs, with probability proportional to rate \\(\lambda\\)) or grows by \\(\Delta t\\) when no exchange happens in the current interval.
+**State Transition Model**: The rule below describes how a node's {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} either resets to zero (when a fresh {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} exchange occurs, with probability proportional to rate \\(\lambda\\)) or grows by \\(\Delta t\\) when no exchange happens in the current interval.
 
 {% katex(block=true) %}
 \tau_{\text{staleness}}(t+1) = \begin{cases}
@@ -977,7 +977,7 @@ g_3: && \frac{2\ln n}{\lambda} &\leq \tau_{\text{staleness}}^{\max} && \text{(fr
 \end{cases}
 {% end %}
 
-For tactical parameters (\\(n \sim 50\\), \\(\lambda \sim 0.2\\) Hz), Proposition 4 gives \\(T = 2\ln(49)/0.2 \approx 39\\) seconds - convergence within 30-40 seconds, fast enough to establish fleet-wide health awareness within a single mission phase. Broadcast approaches scale linearly with \\(n\\), which is why gossip wins at scale.
+For tactical parameters (\\(n \sim 50\\), \\(\lambda \sim 0.2\\) Hz), Proposition 4 gives \\(T = 2\ln(49)/0.2 \approx 39\\) seconds - convergence within 30-40 seconds, fast enough to establish fleet-wide health awareness within a single mission phase. Broadcast approaches scale linearly with \\(n\\), which is why {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} wins at scale.
 
 For strategic health reporting scenarios where nodes have incentives to misreport, see below.
 
@@ -997,25 +997,25 @@ The {% term(url="#def-5", def="Peer-to-peer protocol where each node periodicall
 
 #### Gossip as a Public Goods Game
 
-The gossip rate optimization assumes a central planner selects \\(\lambda\\). In an autonomous fleet, each node independently selects its gossip rate - and gossip is a **public good**: each message costs the sender (power, bandwidth) but benefits all nodes' health awareness.
+The {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate optimization assumes a central planner selects \\(\lambda\\). In an autonomous fleet, each node independently selects its {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate - and {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} is a **public good**: each message costs the sender (power, bandwidth) but benefits all nodes' health awareness.
 
-**Public goods game**: Node \\(i\\) selects rate \\(\lambda_i \geq 0\\). The formula below expresses aggregate health quality \\(Q\\) as a function of the mean gossip rate \\(\bar{\lambda}\\) across all \\(n\\) nodes, where \\(t\\) is elapsed time; quality rises toward 1 as \\(\bar{\lambda}\\) increases but each individual node bears the full cost of its own transmissions while sharing the benefit equally with all peers.
+**Public goods game**: Node \\(i\\) selects rate \\(\lambda_i \geq 0\\). The formula below expresses aggregate health quality \\(Q\\) as a function of the mean {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate \\(\bar{\lambda}\\) across all \\(n\\) nodes, where \\(t\\) is elapsed time; quality rises toward 1 as \\(\bar{\lambda}\\) increases but each individual node bears the full cost of its own transmissions while sharing the benefit equally with all peers.
 
 {% katex(block=true) %}
 Q(\boldsymbol{\lambda}) = 1 - e^{-\bar{\lambda} t}, \quad \bar{\lambda} = \frac{1}{n}\sum_i \lambda_i
 {% end %}
 
-Node \\(i\\) captures only \\(1/n\\) of the benefit of its own gossip. The Nash equilibrium satisfies \\(\frac{\partial Q}{\partial \lambda_i}\big|_{\text{NE}} = \frac{t}{n} e^{-\bar{\lambda}^{\text{NE}} t} = c_i\'(\lambda_i)\\), while the social optimum satisfies \\(t \cdot e^{-\bar{\lambda}^{\text{OPT}} t} = c_i\'(\lambda_i)\\). Since \\(1/n < 1\\), the comparison below holds and the equilibrium rate falls short of the social optimum.
+Node \\(i\\) captures only \\(1/n\\) of the benefit of its own {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}. The Nash equilibrium satisfies \\(\frac{\partial Q}{\partial \lambda_i}\big|_{\text{NE}} = \frac{t}{n} e^{-\bar{\lambda}^{\text{NE}} t} = c_i\'(\lambda_i)\\), while the social optimum satisfies \\(t \cdot e^{-\bar{\lambda}^{\text{OPT}} t} = c_i\'(\lambda_i)\\). Since \\(1/n < 1\\), the comparison below holds and the equilibrium rate falls short of the social optimum.
 
 {% katex(block=true) %}
 \bar{\lambda}^{\text{NE}} < \bar{\lambda}^{\text{OPT}}
 {% end %}
 
-For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(n = 47\\)), autonomous gossip equilibrium provides approximately \\(1/47\\) of the socially optimal convergence rate.
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(n = 47\\)), autonomous {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} equilibrium provides approximately \\(1/47\\) of the socially optimal convergence rate.
 
-**VCG mechanism**: A Groves mechanism assigns task-allocation transfers to nodes proportional to their gossip contribution: nodes that gossip more receive fewer computational tasks (reducing effective cost). Under this mechanism, truthful power-budget reporting is a dominant strategy and the social optimum is achieved.
+**VCG mechanism**: A Groves mechanism assigns task-allocation transfers to nodes proportional to their {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} contribution: nodes that {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} more receive fewer computational tasks (reducing effective cost). Under this mechanism, truthful power-budget reporting is a dominant strategy and the social optimum is achieved.
 
-**Practical implication**: During connected intervals, compute gossip rate assignments centrally and distribute them as target rates. The VCG transfer - differential task assignment - incentivizes nodes to maintain their assigned rates during partition. Priority gossip multipliers should be set to cover the \\(1/n\\) free-rider discount, not arbitrary priority levels.
+**Practical implication**: During connected intervals, compute {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate assignments centrally and distribute them as target rates. The VCG transfer - differential task assignment - incentivizes nodes to maintain their assigned rates during partition. Priority {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} multipliers should be set to cover the \\(1/n\\) free-rider discount, not arbitrary priority levels.
 
 <span id="scenario-autodelivery"></span>
 
@@ -1023,9 +1023,9 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surve
 
 {% term(url="#scenario-autodelivery", def="Autonomous last-mile delivery fleet in an urban metro area; urban connectivity gaps and GPS spoofing risk require local fleet-health management") %}AUTODELIVERY{% end %} operates autonomous delivery vehicles across a metropolitan area. Vehicles navigate urban canyons, parking structures, and dense commercial districts with intermittent cellular connectivity. Each vehicle must maintain fleet health awareness - vehicle availability, road conditions, charging status - without continuous cloud connectivity.
 
-The gossip architecture implements hierarchical health propagation: local gossip between nearby vehicles, zone aggregation at hub gateways, and fleet-wide propagation when connected.
+The {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} architecture implements hierarchical health propagation: local {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} between nearby vehicles, zone aggregation at hub gateways, and fleet-wide propagation when connected.
 
-**Local gossip** (vehicle-to-vehicle): Vehicles within DSRC range (approximately 300 meters in urban environments) exchange health vectors at 0.5 Hz. Each vehicle maintains the fields below; the Staleness Threshold column gives the maximum age at which each field still supports useful decisions — longer-lived fields like charging station status remain valid for 10 minutes because infrastructure changes slowly.
+**Local {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}** (vehicle-to-vehicle): Vehicles within DSRC range (approximately 300 meters in urban environments) exchange health vectors at 0.5 Hz. Each vehicle maintains the fields below; the Staleness Threshold column gives the maximum age at which each field still supports useful decisions — longer-lived fields like charging station status remain valid for 10 minutes because infrastructure changes slowly.
 
 | Health Field | Size | Update Frequency | Staleness Threshold |
 | :--- | ---: | :--- | ---: |
@@ -1035,8 +1035,8 @@ The gossip architecture implements hierarchical health propagation: local gossip
 | Road Hazard Reports | 16 bytes | On detection | 300s |
 | Charging Station Status | 8 bytes | On visit | 600s |
 
-**Zone-level aggregation**: Hub gateways (vehicles stationed at distribution centers) aggregate zone health and gossip between zones via longer-range V2X communication. Zone summaries include:
-- Available vehicles by capability level
+**Zone-level aggregation**: Hub gateways (vehicles stationed at distribution centers) aggregate zone health and {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} between zones via longer-range V2X communication. Zone summaries include:
+- Available vehicles by {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %}
 - Coverage gaps (areas with no vehicle within 10 minutes)
 - Charging infrastructure status
 - Road condition summaries
@@ -1058,35 +1058,35 @@ where \\(\epsilon = 50m\\) is the validation tolerance and \\(d_{\text{impossibl
 Vehicles with sustained position validation failures are flagged for operational review and excluded from sensitive tasks (high-value deliveries, access to secure facilities).
 
 **Delivery coordination under partition**: When a vehicle enters an underground parking garage (complete cellular blackout), it continues operating with cached task assignments. Upon emergence:
-1. Gossip exchange with first encountered peer
+1. {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} exchange with first encountered peer
 2. Receive updates accumulated during blackout
 3. Reconcile any conflicting task assignments (first-commit-wins semantics)
-4. Resume normal gossip participation
+4. Resume normal {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} participation
 
 Average underground dwell time: 4.2 minutes. With 60-second {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} threshold, vehicles emerge with stale but still-useful health data - well within the maximum useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} for task rebalancing decisions.
 
 ### Priority-Weighted Gossip Extension
 
-Standard gossip treats all health updates equally. In tactical environments, critical health changes (node failure, resource exhaustion, adversarial detection) should propagate faster than routine updates.
+Standard {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} treats all health updates equally. In tactical environments, critical health changes (node failure, resource exhaustion, adversarial detection) should propagate faster than routine updates.
 
 **Priority classification**:
-- \\(P_{CRITICAL}\\) (priority 3): Node failure, Byzantine detection, adversarial alert
+- \\(P_{CRITICAL}\\) (priority 3): Node failure, {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} detection, adversarial alert
 - \\(P_{URGENT}\\) (priority 2): Resource exhaustion (<10%), capability downgrade
 - \\(P_{NORMAL}\\) (priority 1): Routine health updates, minor degradation
 
 **Accelerated propagation protocol**:
 
-The gossip rate \\(\lambda_p\\) for priority-\\(p\\) messages scales the base rate by a factor proportional to priority level, where \\(\eta\\) is the acceleration coefficient and \\(p = 1, 2, 3\\) for normal, urgent, and critical messages respectively.
+The {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate \\(\lambda_p\\) for priority-\\(p\\) messages scales the base rate by a factor proportional to priority level, where \\(\eta\\) is the acceleration coefficient and \\(p = 1, 2, 3\\) for normal, urgent, and critical messages respectively.
 
 {% katex(block=true) %}
 \lambda_p = \lambda_{\text{base}} \cdot (1 + \eta \cdot (p - 1))
 {% end %}
 
-where \\(\eta\\) is the acceleration factor (typically 2-3). Critical messages gossip at \\(3\times\\) normal rate.
+where \\(\eta\\) is the acceleration factor (typically 2-3). Critical messages {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} at \\(3\times\\) normal rate.
 
 **Message prioritization in constrained bandwidth**:
 
-When bandwidth is limited, each gossip exchange prioritizes by urgency. The protocol proceeds as follows:
+When bandwidth is limited, each {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} exchange prioritizes by urgency. The protocol proceeds as follows:
 
 **Step 1**: Merge local and peer health vectors into a unified update set.
 
@@ -1106,13 +1106,13 @@ When bandwidth is limited, each gossip exchange prioritizes by urgency. The prot
 
 This ensures safety-critical information propagates regardless of bandwidth constraints, accepting temporary budget overrun.
 
-**Convergence improvement**: For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} with \\(\eta = 2\\), priority-weighted gossip triples the effective critical gossip rate, as the formula below shows by substituting \\(P_{\text{CRITICAL}} = 3\\) into the general rate equation.
+**Convergence improvement**: For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} with \\(\eta = 2\\), priority-weighted {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} triples the effective critical {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate, as the formula below shows by substituting \\(P_{\text{CRITICAL}} = 3\\) into the general rate equation.
 
 {% katex(block=true) %}
 \lambda_{\text{crit}} = \lambda_{\text{base}} \cdot (1 + \eta \cdot (P_{\text{CRITICAL}} - 1)) = \lambda_{\text{base}} \cdot 3
 {% end %}
 
-Since convergence time scales inversely with effective rate, the ratio of normal to critical convergence times equals the ratio of critical to normal gossip rates, giving a theoretical 3x speedup for \\(n = 47\\) drones.
+Since convergence time scales inversely with effective rate, the ratio of normal to critical convergence times equals the ratio of critical to normal {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rates, giving a theoretical 3x speedup for \\(n = 47\\) drones.
 
 {% katex(block=true) %}
 \frac{T_{\text{norm}}}{T_{\text{crit}}} = \frac{\lambda_{\text{crit}}}{\lambda_{\text{norm}}} = 3.0 \text{ (theoretical)}
@@ -1130,7 +1130,7 @@ where \\(\rho_{\text{max}} \approx 0.01\\) messages/second. Exceeding this rate 
 
 ### Bandwidth Asymmetry and Ingress Filtering
 
-The gossip prioritization above assumes backhaul bandwidth is scarce but nonzero. At the extreme — when the radio link is a tiny fraction of the local sensor bus — prioritization alone is insufficient. The node must also decide which metrics are worth transmitting at all.
+The {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} prioritization above assumes backhaul bandwidth is scarce but nonzero. At the extreme — when the radio link is a tiny fraction of the local sensor bus — prioritization alone is insufficient. The node must also decide which metrics are worth transmitting at all.
 
 Define the **bandwidth asymmetry ratio**:
 
@@ -1156,10 +1156,10 @@ where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus 
 
 **Interpretation**: Three conditions trigger transmission (any one suffices):
 1. **Critical override**: P_CRITICAL metrics bypass the filter entirely — safety-critical information always transmits.
-2. **Staleness override**: Even if a metric is slowly changing, it transmits at least once per \\(\tau_{\max}\\) — the MAPE-K loop never starves on stale P2/P3 inputs. This ties directly to Proposition 5: a metric silent beyond \\(\tau_{\max}\\) carries zero confidence, so it must refresh.
+2. **Staleness override**: Even if a metric is slowly changing, it transmits at least once per \\(\tau_{\max}\\) — the {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop never starves on stale P2/P3 inputs. This ties directly to Proposition 5: a metric silent beyond \\(\tau_{\max}\\) carries zero confidence, so it must refresh.
 3. **Magnitude threshold**: As \\(\beta \to 0\\), the normalized-change threshold \\(\theta_\Pi/\beta \to \infty\\), so only extreme deviations transmit in normal operation.
 
-**Calibration example for OUTPOST** (\\(\beta = 10^{-4}\\), \\(\theta_\Pi = 0.001\\)):
+**Calibration example for {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}** (\\(\beta = 10^{-4}\\), \\(\theta_\Pi = 0.001\\)):
 
 | Metric | Normal threshold | Filtered threshold (\\(\theta_\Pi/\beta\\)) | Interpretation |
 | :--- | :--- | :--- | :--- |
@@ -1174,7 +1174,7 @@ The filter preserves the P0–P2 observability hierarchy: availability (P0) and 
 
 ### Gossip Under Partition
 
-Fleet partition creates isolated gossip domains. Within each cluster, convergence continues at rate \\(O(\ln n_{\text{cluster}})\\). Between clusters, state diverges until reconnection.
+Fleet partition creates isolated {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} domains. Within each cluster, convergence continues at rate \\(O(\ln n_{\text{cluster}})\\). Between clusters, state diverges until reconnection.
 
 **Remark** (Partition Staleness). *For node \\(i\\) in cluster \\(C_1\\) observing node \\(j\\) in cluster \\(C_2\\), {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} - the elapsed time since observation - accumulates from partition time \\(t_p\\):*
 
@@ -1184,7 +1184,7 @@ Fleet partition creates isolated gossip domains. Within each cluster, convergenc
 
 *The {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} grows unboundedly during partition, eventually exceeding any useful threshold.*
 
-The diagram below shows two gossip clusters separated by a hard partition: gossip continues normally within each cluster (solid edges), but the severed link (crossed dashed edge) blocks all cross-cluster exchanges.
+The diagram below shows two {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} clusters separated by a hard partition: {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} continues normally within each cluster (solid edges), but the severed link (crossed dashed edge) blocks all cross-cluster exchanges.
 
 {% mermaid() %}
 graph LR
@@ -1215,7 +1215,7 @@ Each node maintains a **partition vector** \\(\rho_i\\) that records, for every 
 \end{cases}
 {% end %}
 
-where \\(\text{hlc}_{\text{last}}\\) is the HLC timestamp (Definition 40, Part 4) of the last confirmed contact, recorded as an HLC timestamp rather than wall-clock time, to preserve causal ordering across nodes with clock drift.
+where \\(\text{hlc}_{\text{last}}\\) is the {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp (Definition 40, Part 4) of the last confirmed contact, recorded as an {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp rather than wall-clock time, to preserve causal ordering across nodes with clock drift.
 
 When \\(\rho_i[j] > 0\\) and \\(t - \rho_i[j] > \tau_{\text{max}}\\), node \\(i\\) marks its knowledge of node \\(j\\) as **uncertain** rather than **stale**.
 
@@ -1256,14 +1256,14 @@ Where:
 
 The CI width grows as \\(\sqrt{\tau}\\) - a consequence of the Brownian motion model. This square-root scaling means confidence degrades slowly at first but accelerates with {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}.
 
-When the CI spans a decision threshold (like the \\(\mathcal{L}_2\\) capability boundary), you can't reliably commit to that capability level. The {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} has exceeded the **decision horizon** for that threshold - the maximum time at which stale data can support the decision.
+When the CI spans a decision threshold (like the \\(\mathcal{L}_2\\) capability boundary), you can't reliably commit to that {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %}. The {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} has exceeded the **decision horizon** for that threshold - the maximum time at which stale data can support the decision.
 
 Different decisions have different horizons. Safety-critical decisions with narrow margins have short horizons. Advisory decisions with wide margins have longer horizons. The system tracks {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} against the relevant horizon for each decision type.
 
 **Response strategies** when confidence is insufficient:
 1. **Active probe**: Attempt direct communication to get fresh observation
 2. **Conservative fallback**: Assume health at lower bound of CI
-3. **Escalate observation priority**: Increase gossip rate for this node
+3. **Escalate observation priority**: Increase {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate for this node
 
 <span id="prop-5"></span>
 **Proposition 5** (Maximum Useful Staleness). *For a health process modeled as Brownian diffusion with volatility \\(\sigma\\) (as in Definition 6), and a decision requiring discrimination at precision \\(\Delta h\\) with confidence \\(1 - \alpha\\), the maximum useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is:*
@@ -1278,7 +1278,7 @@ Different decisions have different horizons. Safety-critical decisions with narr
 
 **Corollary 3**. *The quadratic relationship \\(\tau_{\text{max}} \propto (\Delta h / \sigma)^2\\) implies that tightening decision margins dramatically reduces useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}. Systems with narrow operating envelopes must refresh observations more frequently — not because more observations narrow the diffusion uncertainty, but because each observation must occur before the health state drifts by \\(\Delta h\\).*
 
-**Time-varying \\(\sigma\\) caveat**: Prop 5 assumes constant measurement volatility \\(\sigma\\). OUTPOST thermistors exhibit \\(\sigma(T) \approx 0.05 + 0.003 \cdot |T - T_{\text{ref}}|\\) °C — three times higher at \\(-30\\)°C than at 20°C. For sensors with temperature-correlated variance: substitute \\(\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T)\\) as a conservative upper bound on \\(\tau_{\max}\\). This produces a shorter, conservative staleness limit. To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance \\(\sqrt{P_\infty + R}\\) and recompute \\(\tau_{\max}\\) at each measurement cycle. Decision systems with narrow operating envelopes (\\(\Delta h < 0.1\\)°C) will find \\(\tau_{\max}\\) below 10 seconds in cold conditions — requiring far higher gossip rates than lab calibration suggests.
+**Time-varying \\(\sigma\\) caveat**: Prop 5 assumes constant measurement volatility \\(\sigma\\). {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} thermistors exhibit \\(\sigma(T) \approx 0.05 + 0.003 \cdot |T - T_{\text{ref}}|\,{^\circ}\text{C}\\) — three times higher at \\(-30\,{^\circ}\text{C}\\) than at \\(20\,{^\circ}\text{C}\\). For sensors with temperature-correlated variance: substitute \\(\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T)\\) as a conservative upper bound on \\(\tau_{\max}\\). This produces a shorter, conservative staleness limit. To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance \\(\sqrt{P_\infty + R}\\) and recompute \\(\tau_{\max}\\) at each measurement cycle. Decision systems with narrow operating envelopes (\\(\Delta h < 0.1\,{^\circ}\text{C}\\)) will find \\(\tau_{\max}\\) below 10 seconds in cold conditions — requiring far higher {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rates than lab calibration suggests.
 
 ### Byzantine-Tolerant Health Aggregation
 
@@ -1288,11 +1288,11 @@ In contested environments, some nodes may be compromised. They may inject false 
 - Destabilize fleet-wide health estimates (denial of service)
 
 <span id="def-7"></span>
-**Definition 7** (Byzantine Node). *A node is Byzantine if it may deviate arbitrarily from the protocol specification, including sending different values to different peers, reporting false observations, or selectively participating in gossip rounds.*
+**Definition 7** ({% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} Node). *A node is {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} if it may deviate arbitrarily from the protocol specification, including sending different values to different peers, reporting false observations, or selectively participating in {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds.*
 
 In other words, a {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %} is one that cannot be assumed to behave honestly in any predictable way — unlike a crashed node, it may actively lie, and it may lie differently to different neighbors simultaneously.
 
-The aggregation function uses a trust-weighted trimmed mean: the bottom and top \\(f/n\\) weight fractions are excluded before computing the weighted average. This makes the aggregate robust to up to \\(f\\) Byzantine contributors.
+The aggregation function uses a trust-weighted trimmed mean: the bottom and top \\(f/n\\) weight fractions are excluded before computing the weighted average. This makes the aggregate robust to up to \\(f\\) {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} contributors.
 
 **Weighted voting** based on trust scores. The formula below computes a trust-weighted average of each node's reported health for member \\(k\\), where \\(T_i\\) is the accumulated trust score of reporting node \\(i\\); nodes with low or decayed trust contribute proportionally less to the aggregate.
 
@@ -1320,23 +1320,23 @@ Repeated suspicious reports decrease trust score for node \\(i\\).
 *Memory bound*: For \\(n = 50\\) nodes and \\(W = 100\\) rounds, history storage requires \\(50 \times 100 / 8 = 625\\) bytes using 1-bit flags per observation.
 
 <span id="prop-6"></span>
-**Proposition 6** (Byzantine Tolerance Bound). *With trust-weighted aggregation, correct health estimation is maintained if the total Byzantine trust weight is bounded:*
+**Proposition 6** ({% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} Tolerance Bound). *With trust-weighted aggregation, correct health estimation is maintained if the total {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} trust weight is bounded:*
 
 {% katex(block=true) %}
 \sum_{\text{Byzantine}} T_i < \frac{1}{3} \sum_{\text{all}} T_i
 {% end %}
 
-*This generalizes the classical \\(f < n/3\\) bound: with uniform trust weights \\(T_i = 1\\), this reduces to \\(f < n/3\\) (fewer than one third of nodes are Byzantine). With trust decay on suspicious nodes, Byzantine influence decreases over time, allowing tolerance of more compromised nodes provided their accumulated trust is low.*
+*This generalizes the classical \\(f < n/3\\) bound: with uniform trust weights \\(T_i = 1\\), this reduces to \\(f < n/3\\) (fewer than one third of nodes are {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %}). With trust decay on suspicious nodes, {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} influence decreases over time, allowing tolerance of more compromised nodes provided their accumulated trust is low.*
 
-This is not foolproof - a sophisticated adversary who understands the aggregation mechanism can craft attacks that pass consistency checks. Byzantine tolerance provides defense in depth, not absolute security.
+This is not foolproof - a sophisticated adversary who understands the aggregation mechanism can craft attacks that pass consistency checks. {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} tolerance provides defense in depth, not absolute security.
 
-**Bootstrap dependency**: Trust weights \\(w_i\\) require an initialization source. Without a functional PKI at deployment time, the only option is uniform \\(w_i = 1\\), which reduces Prop 6 to the classical \\(f < n/3\\) bound. A Byzantine node that corrupts its weight record before the reputation system accumulates any observations inflates its influence above the \\(1/3\\) threshold from the first gossip round. The operational implication: trust weight initialization requires a hardware root of trust — secure boot attestation or a pre-deployment enrollment step that cryptographically binds \\(w_i\\) to a device identity. Systems without enrollment have no Byzantine tolerance guarantee at startup; Prop 6 applies only after each node has accumulated sufficient legitimate observations to build a meaningful trust differential (in practice: \\(\geq 20\\) gossip exchanges with a given peer).
+**Bootstrap dependency**: Trust weights \\(w_i\\) require an initialization source. Without a functional PKI at deployment time, the only option is uniform \\(w_i = 1\\), which reduces Prop 6 to the classical \\(f < n/3\\) bound. A {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} node that corrupts its weight record before the reputation system accumulates any observations inflates its influence above the \\(1/3\\) threshold from the first {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} round. The operational implication: trust weight initialization requires a hardware root of trust — secure boot attestation or a pre-deployment enrollment step that cryptographically binds \\(w_i\\) to a device identity. Systems without enrollment have no {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} tolerance guarantee at startup; Prop 6 applies only after each node has accumulated sufficient legitimate observations to build a meaningful trust differential (in practice: \\(\geq 20\\) {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} exchanges with a given peer).
 
-**Trust accumulation attack**: The f<n/3 bound is *instantaneous*. An adversary can compromise nodes gradually, with each behaving honestly until sufficient trust accumulates. When \\(\sum_{\text{compromised}} T_i\\) approaches \\(\frac{1}{3} \sum_{\text{all}} T_i\\), coordinated Byzantine behavior can dominate aggregation before detection triggers trust decay. **Countermeasure**: Implement trust budget decay - total system trust \\(\sum_i T_i\\) should decrease over time unless re-earned through verified behavior: \\(T_{\text{budget}}(t+1) = T_{\text{budget}}(t) \cdot (1 - \epsilon) + T_{\text{earned}}(t)\\) where \\(\epsilon \ll \gamma_{\text{recover}}\\). This bounds the maximum trust any coalition can accumulate.
+**Trust accumulation attack**: The f<n/3 bound is *instantaneous*. An adversary can compromise nodes gradually, with each behaving honestly until sufficient trust accumulates. When \\(\sum_{\text{compromised}} T_i\\) approaches \\(\frac{1}{3} \sum_{\text{all}} T_i\\), coordinated {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} behavior can dominate aggregation before detection triggers trust decay. **Countermeasure**: Implement trust budget decay - total system trust \\(\sum_i T_i\\) should decrease over time unless re-earned through verified behavior: \\(T_{\text{budget}}(t+1) = T_{\text{budget}}(t) \cdot (1 - \epsilon) + T_{\text{earned}}(t)\\) where \\(\epsilon \ll \gamma_{\text{recover}}\\). This bounds the maximum trust any coalition can accumulate.
 
 ### Optional: Game-Theoretic Extension — Byzantine Reporting as a Signaling Game
 
-Proposition 6's fraction bound \\(\sum_{\text{Byz}} T_i < \frac{1}{3}\sum_{\text{all}} T_i\\) assumes Byzantine behavior is a fixed fraction, not a strategic choice. A strategic {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %} maximizes its trust weight to amplify its influence.
+Proposition 6's fraction bound \\(\sum_{\text{Byz}} T_i < \frac{1}{3}\sum_{\text{all}} T_i\\) assumes {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} behavior is a fixed fraction, not a strategic choice. A strategic {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %} maximizes its trust weight to amplify its influence.
 
 **Signaling game**: Each node \\(i\\) has true health \\(h_i^{\text{true}}\\). A {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %} selects reported health \\(\hat{h}_i\\) to maximize detection error. The trust weight \\(w = e^{-\gamma\tau}\\) rewards freshness - a {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %} maintaining \\(\tau \approx 0\\) (frequent fresh reports) achieves maximum trust weight while reporting inverted health values \\(\hat{h}_i = 1 - h_i^{\text{true}}\\).
 
@@ -1354,7 +1354,7 @@ r_j(t+1) = \alpha \cdot r_j(t) + (1-\alpha) \cdot \mathbb{1}\!\left[|\hat{h}_j(t
 
 where \\(\hat{h}_j^{\text{pred}}(t)\\) is the prediction from neighbor models. Nodes with consistent reports (honest or genuinely healthy) maintain high \\(r_j\\); {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine node{% end %}s whose inversions conflict with neighbor cross-validation see \\(r_j \to 0\\) over time.
 
-**Practical implication**: Replace {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}-only trust weights with reputation-weighted trust. For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s 127-sensor mesh, this catches both adversarial Byzantine sensors and genuinely malfunctioning sensors without false Byzantine labels - failing sensors produce noisy (not inverted) reports, which are distinguishable from strategic inversion.
+**Practical implication**: Replace {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}-only trust weights with reputation-weighted trust. For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s 127-sensor mesh, this catches both adversarial {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} sensors and genuinely malfunctioning sensors without false {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} labels - failing sensors produce noisy (not inverted) reports, which are distinguishable from strategic inversion.
 
 ### Trust Recovery Mechanisms
 
@@ -1381,7 +1381,7 @@ Trust recovery does not begin immediately after one good report; a node becomes 
 \text{Recovery eligible iff } \frac{\text{consistent reports in window } W}{\text{total reports in } W} > \theta_{\text{recovery}}
 {% end %}
 
-where \\(W\\) is typically 50-100 gossip rounds and \\(\theta_{\text{recovery}} \approx 0.95\\). A node with even 5% inconsistent reports continues decaying.
+where \\(W\\) is typically 50-100 {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds and \\(\theta_{\text{recovery}} \approx 0.95\\). A node with even 5% inconsistent reports continues decaying.
 
 **Sybil attack resistance**:
 
@@ -1448,9 +1448,9 @@ D_w = \sup_{x \in \mathbb{R}} \left|\hat{F}_i(x) - \Phi(x)\right| \leq c_{\alpha
 1. Run a genuinely calibrated detector on actual sensor data — which is the useful work we require, or
 2. Learn the full spatial correlation structure \\(\\{\\rho_{ij}\\}\\) for all neighbors and generate synthetic correlated noise — which requires communicating with all neighbors continuously, making the adversary detectable via traffic analysis and increasing their energy expenditure above Definition 21's threshold.
 
-**Connection to Definition 7** (Byzantine Node): Def 7 identifies Byzantine nodes as those that may deviate arbitrarily from the protocol. Prop 6's trust bound stops them from dominating aggregation. Definition 25 adds a third line of defense that complements both: it is triggered not by *what* a node reports but by *whether the reporting process itself is consistent with genuine sensor-coupled inference*. A Byzantine node that understands and avoids Prop 6's trust threshold can still be caught by the fingerprint's spatial correlation test, provided the physical environment is not under the adversary's full control.
+**Connection to Definition 7** ({% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} Node): Def 7 identifies {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} nodes as those that may deviate arbitrarily from the protocol. Prop 6's trust bound stops them from dominating aggregation. Definition 25 adds a third line of defense that complements both: it is triggered not by *what* a node reports but by *whether the reporting process itself is consistent with genuine sensor-coupled inference*. A {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} node that understands and avoids Prop 6's trust threshold can still be caught by the fingerprint's spatial correlation test, provided the physical environment is not under the adversary's full control.
 
-**OUTPOST calibration**: Window \\(w = 1800\\) samples (30 minutes at \\(\lambda = 1\,\text{Hz}\\)), \\(\alpha = 0.01\\) — giving \\(c_{0.01,\, 1800} \approx 0.038\\). For a dead detector: \\(D_w = 0.5 \gg 0.038\\) — detected in 30 minutes. For a fake-\\(\mathcal{N}(0,1)\\) generator: {% katex() %}\mathcal{F}_i{% end %} passes, but \\(\rho_{ij} = 0\\) vs. expected \\(\rho_{ij} \approx 0.3\\) (thermal correlation between adjacent sensors) — detected by Fisher z-test on the correlation difference within the same window.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Window \\(w = 1800\\) samples (30 minutes at \\(\lambda = 1\,\text{Hz}\\)), \\(\alpha = 0.01\\) — giving \\(c_{0.01,\, 1800} \approx 0.038\\). For a dead detector: \\(D_w = 0.5 \gg 0.038\\) — detected in 30 minutes. For a fake-\\(\mathcal{N}(0,1)\\) generator: {% katex() %}\mathcal{F}_i{% end %} passes, but \\(\rho_{ij} = 0\\) vs. expected \\(\rho_{ij} \approx 0.3\\) (thermal correlation between adjacent sensors) — detected by Fisher z-test on the correlation difference within the same window.
 
 ### Federated Learning for Distributed Health Models
 
@@ -1740,7 +1740,7 @@ The optimal allocation gives sufficient resources to observability for reliable 
 Allocation:
 - P0-P1 monitoring: 50 MIPS (5%), 5 Kbps (5%) - heartbeats and resource counters
 - P2-P3 monitoring: 100 MIPS (10%), 15 Kbps (15%) - performance aggregates, {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %}
-- Gossip overhead: 0 MIPS local, 20 Kbps (20%) - health propagation
+- {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} overhead: 0 MIPS local, 20 Kbps (20%) - health propagation
 - Mission (sensor processing): 850 MIPS (85%), 60 Kbps (60%) - primary function
 
 This 15% observability overhead enables reliable self-measurement while preserving 85% of resources for mission function.
@@ -1837,7 +1837,7 @@ Isolation Forest receives highest weight because multivariate detection (joint a
 
 At 30+ minutes disconnection, the edge controller tightens anomaly thresholds by 20% (more false positives, fewer missed failures) because the cost of a missed failure without cloud backup is higher than during connected operation.
 
-**Cross-machine gossip**: Machines on the same production line exchange health summaries via local Ethernet every 30 seconds. Each machine's summary is a three-field tuple capturing current anomaly level, estimated time to next maintenance, and parts produced since last inspection.
+**Cross-machine {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}**: Machines on the same production line exchange health summaries via local Ethernet every 30 seconds. Each machine's summary is a three-field tuple capturing current anomaly level, estimated time to next maintenance, and parts produced since last inspection.
 
 {% katex(block=true) %}
 H_{\text{machine}} = (\text{anomaly\_score}, \text{time\_to\_maintenance}, \text{parts\_since\_inspection})
@@ -1871,7 +1871,7 @@ U = V_{\text{production}} - C_{\text{downtime}} - C_{\text{scrap}} - C_{\text{in
 R > \frac{\text{FPR} \cdot C_{\text{inspection}}}{C_{\text{downtime}} + C_{\text{scrap}}}
 {% end %}
 
-For manufacturing where \\(C_{\text{scrap}} \gg C_{\text{inspection}}\\) (\$50K component vs. \$100 inspection), even moderate recall (\\(R > 0.8\\)) with high FPR (\\(< 0.1\\)) yields \\(\Delta U > 0\\). The observability constraint sequence delivers economic value when detection value exceeds false alarm cost.
+For manufacturing where \\(C_{\text{scrap}} \gg C_{\text{inspection}}\\) (\\(C_{\\text{scrap}} / C_{\\text{inspection}} \\approx 500\\) for high-value components), even moderate recall (\\(R > 0.8\\)) with high FPR (\\(< 0.1\\)) yields \\(\Delta U > 0\\). The observability constraint sequence delivers economic value when detection value exceeds false alarm cost.
 
 ---
 
@@ -1908,7 +1908,7 @@ EWMA tracking on each metric with \\(\alpha = 0.1\\) (10-second effective memory
 
 ### Swarm-Wide Health Inference
 
-Gossip protocol parameters:
+{% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} protocol parameters:
 - Exchange rate: 0.2 Hz (once per 5 seconds)
 - Staleness threshold: 30 seconds (confidence drops below 90%)
 - Trust decay: \\(\gamma = 0.05\\) per second
@@ -1920,9 +1920,9 @@ Health vector per drone contains:
 - Binary availability (alive/silent)
 - Power state (percentage)
 - Critical sensor status (functional/degraded/failed)
-- Mission capability level (\\(\mathcal{L}_0\\)-\\(\mathcal{L}_4\\))
+- Mission {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %} (\\(\mathcal{L}_0\\)-\\(\mathcal{L}_4\\))
 
-Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values. In contested environments where clock drift is measurable, replace wall-clock LWW with HLC-aware merge (Definition 41, Fleet Coherence Under Partition, Part 4) using the Hybrid Logical Clock ordering to determine recency; node-ID tiebreakers resolve simultaneous HLC values.
+Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values. In contested environments where clock drift is measurable, replace wall-clock LWW with {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}-aware merge (Definition 41, Fleet Coherence Under Partition, Part 4) using the {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}Hybrid Logical Clock{% end %} ordering to determine recency; node-ID tiebreakers resolve simultaneous {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} values.
 
 **Convergence guarantees**: With logarithmic propagation dynamics, fleet-wide health convergence occurs within 30-40 seconds - fast enough to track operational state changes while remaining robust to individual message losses.
 
@@ -1962,14 +1962,14 @@ The {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle au
 
 Hierarchical aggregation:
 1. **Primary mode**: Lead vehicle collects health from all vehicles, computes aggregate, distributes summary
-2. **Fallback mode**: If lead unreachable, peer-to-peer gossip among reachable vehicles
+2. **Fallback mode**: If lead unreachable, peer-to-peer {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} among reachable vehicles
 
 Lead vehicle aggregation:
-- Computes minimum capability level across convoy: \\(L_{\text{convoy}} = \min_i L_i\\)
+- Computes minimum {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %} across convoy: \\(L_{\text{convoy}} = \min_i L_i\\)
 - Identifies vehicles with critical anomalies
 - Determines convoy-wide constraints (e.g., maximum safe speed based on worst vehicle)
 
-Fallback gossip parameters:
+Fallback {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} parameters:
 - Exchange rate: 0.1 Hz (once per 10 seconds) - lower than {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} due to vehicle stability
 - Staleness threshold: 60 seconds
 - Trust decay: \\(\gamma = 0.02\\) per second
@@ -1986,7 +1986,7 @@ Each vehicle tracks its own position via GPS, INS, and dead reckoning, and also 
 
 If \\(\Delta_{ij}\\) exceeds threshold for vehicle \\(i\\) as observed by multiple neighbors \\(j\\), vehicle \\(i\\) is flagged for position anomaly.
 
-Vehicle \\(i\\) is flagged as potentially spoofed if \\(\geq k\\) neighbors (\\(k = \lceil n/3 \rceil\\)) each independently report \\(\Delta_{ij} > \theta\\). A suitable threshold is \\(\theta = d_{\max}/2\\) where \\(d_{\max}\\) is the maximum distance a vehicle can travel during one gossip period — any discrepancy larger than this cannot be explained by legitimate movement.
+Vehicle \\(i\\) is flagged as potentially spoofed if \\(\geq k\\) neighbors (\\(k = \lceil n/3 \rceil\\)) each independently report \\(\Delta_{ij} > \theta\\). A suitable threshold is \\(\theta = d_{\max}/2\\) where \\(d_{\max}\\) is the maximum distance a vehicle can travel during one {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} period — any discrepancy larger than this cannot be explained by legitimate movement.
 
 **Communication anomaly classification**:
 
@@ -2088,7 +2088,7 @@ graph TD
 
 *(Simplified illustration; {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} operates 127 sensors in practice)*
 
-Gossip parameters for {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} (power-optimized for extended deployment):
+{% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} parameters for {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} (power-optimized for extended deployment):
 - Exchange rate: 0.017 Hz (once per minute) - optimized for power
 - Staleness threshold: 300 seconds (5 minutes)
 - Trust decay: \\(\gamma = 0.002\\) per second
@@ -2160,7 +2160,7 @@ If the adversary knows we use EWMA with \\(\alpha = 0.1\\), they can introduce g
 
 Self-measurement assumes the measurement infrastructure is functional. But the measurement infrastructure can fail too.
 
-If the power management system fails, {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %} may lose power before it can detect the power anomaly. If the communication subsystem fails, gossip cannot propagate health. The failure cascades faster than measurement can track.
+If the power management system fails, {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %} may lose power before it can detect the power anomaly. If the communication subsystem fails, {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cannot propagate health. The failure cascades faster than measurement can track.
 
 **Mitigation**: P0/P1 monitoring on dedicated, ultra-low-power subsystem. Watchdog timers that trigger even if main processor fails. Hardware-level health indicators independent of software.
 
@@ -2173,7 +2173,7 @@ When should the system distrust its own measurements?
 - When the system is operating outside its training distribution
 - When measurement infrastructure itself is compromised
 
-At the judgment horizon, self-measurement must acknowledge its limits. The system should:
+At the {% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}, self-measurement must acknowledge its limits. The system should:
 1. Log that it has reached measurement uncertainty limits
 2. Fall back to conservative assumptions
 3. Request human input when connectivity allows
@@ -2235,7 +2235,7 @@ Each mechanism is valid only within a domain \\(\mathcal{D}\\) defined by its as
 | **Byzantine** (Prop 6) | Byzantine minority (\\(f < n/3\\)); honest nodes truthful; attacker cannot predict trimming | \\(f \geq n/3\\); coordinated alignment past trimming; compromised honest node | Hierarchical trust; random trimming; continuous trust reassessment |
 | **Staleness** (Prop 5) | Brownian diffusion model with accurate \\(\sigma\\); reliable timestamps | Volatility misestimate; clock spoofing; strongly mean-reverting metrics | Adaptive volatility estimation; authenticated time; relative ordering |
 
-**Counter-scenarios**: Adversary who selectively jams inter-cluster gossip creates divergent health views undetectable within each cluster — detection requires cross-cluster comparison on reconnection. Adversary who compromises exactly \\(n/3\\) sensors gradually stays below instantaneous detection thresholds — detection requires trend analysis of trust scores, not just instantaneous counts.
+**Counter-scenarios**: Adversary who selectively jams inter-cluster {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} creates divergent health views undetectable within each cluster — detection requires cross-cluster comparison on reconnection. Adversary who compromises exactly \\(n/3\\) sensors gradually stays below instantaneous detection thresholds — detection requires trend analysis of trust scores, not just instantaneous counts.
 
 ### Summary: Claim-Assumption-Failure Table
 
@@ -2298,17 +2298,17 @@ For tactical edge where \\(C_{FN} \gg C_{FP}\\): the cost-optimal threshold is t
 
 ### Trade-off 2: Staleness vs. Bandwidth Cost
 
-**Multi-objective formulation**: Increasing gossip rate \\(\lambda\\) improves data freshness but consumes proportionally more bandwidth — the formula sets up the optimization that finds the rate balancing both.
+**Multi-objective formulation**: Increasing {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate \\(\lambda\\) improves data freshness but consumes proportionally more bandwidth — the formula sets up the optimization that finds the rate balancing both.
 
 {% katex(block=true) %}
 \max_{\lambda} \left( U_{\text{freshness}}(\lambda), -C_{\text{bandwidth}}(\lambda) \right)
 {% end %}
 
-where \\(\lambda\\) is gossip rate.
+where \\(\lambda\\) is {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate.
 
-**Confidence-bandwidth surface derivation**: The table below samples the Pareto front at four gossip rates, showing bandwidth in units of \\(\lambda \cdot m\\) (message-rate times message-size) and confidence as \\(e^{-\gamma/\lambda}\\) where \\(\gamma\\) is the {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} decay rate.
+**Confidence-bandwidth surface derivation**: The table below samples the Pareto front at four {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rates, showing bandwidth in units of \\(\lambda \cdot m\\) (message-rate times message-size) and confidence as \\(e^{-\gamma/\lambda}\\) where \\(\gamma\\) is the {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} decay rate.
 
-With gossip rate \\(\lambda\\), mean {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is \\(\tau = 1/\lambda\\) and confidence is \\(\kappa(\tau) = e^{-\gamma \tau}\\); the two expressions below make the linear bandwidth cost and exponential confidence gain explicit as functions of the single design parameter \\(\lambda\\).
+With {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate \\(\lambda\\), mean {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is \\(\tau = 1/\lambda\\) and confidence is \\(\kappa(\tau) = e^{-\gamma \tau}\\); the two expressions below make the linear bandwidth cost and exponential confidence gain explicit as functions of the single design parameter \\(\lambda\\).
 
 {% katex(block=true) %}
 \text{Bandwidth} = \lambda \cdot m_{\text{msg}}, \quad \text{Confidence} = e^{-\gamma/\lambda}
@@ -2365,7 +2365,7 @@ where \\(f\\) is the number of {% term(url="#def-7", def="Node that may deviate 
 | \\(f = 2\\) | \\(n \geq 7\\) | 3 | High |
 | \\(f = k\\) | \\(n \geq 3k+1\\) | \\(k+1\\) | \\(O(k)\\) |
 
-Higher Byzantine tolerance requires more nodes and more communication rounds, increasing latency. Cannot achieve high tolerance with low latency and few nodes.
+Higher {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} tolerance requires more nodes and more communication rounds, increasing latency. Cannot achieve high tolerance with low latency and few nodes.
 
 ### Cost Surface: Measurement Under Resource Constraints
 
@@ -2381,12 +2381,14 @@ The first term represents sampling cost (higher rate and fidelity cost more). Th
 
 The shadow price \\(\lambda_i = \partial U / \partial g_i\\) quantifies how much additional utility one more unit of each resource delivers at the current operating point; a high shadow price identifies the binding constraint where investment yields the largest return.
 
-| Resource | Shadow Price \\(\lambda\\) | Interpretation |
+| Resource | Shadow Price \\(\lambda\\) (c.u.) | Interpretation |
 | :--- | ---: | :--- |
-| Gossip bandwidth | \$2.10/KB-hr | Value of an additional kilobyte per hour of health-synchronization capacity |
-| Detection compute | \$0.05/inference | Value of one additional detection inference pass at current anomaly rate |
-| Sensor power | \$0.80/mW-hr | Value of one additional milliwatt-hour sustaining continuous sensing |
-| Memory | \$0.01/KB | Value of one additional kilobyte enabling longer observation history |
+| Gossip bandwidth | 2.10/KB-hr | Value of an additional kilobyte per hour of health-synchronization capacity |
+| Detection compute | 0.05/inference | Value of one additional detection inference pass at current anomaly rate |
+| Sensor power | 0.80/mW-hr | Value of one additional milliwatt-hour sustaining continuous sensing |
+| Memory | 0.01/KB | Value of one additional kilobyte enabling longer observation history |
+
+*(Shadow prices in normalized cost units (c.u.) — illustrative relative values; ratios convey resource scarcity ordering. Detection compute (0.05 c.u./inference) is the reference unit. Calibrate to actual platform resource costs.)*
 
 ### Irreducible Trade-off Summary
 
@@ -2403,9 +2405,9 @@ The four trade-offs developed in this section are irreducible: no design choice 
 
 ## Closing: The Measurement-Action Loop
 
-Measurement feeds action; without action, measurement is logging. {% term(url="#scenario-autodelivery", def="Autonomous last-mile delivery fleet in an urban metro area; urban connectivity gaps and GPS spoofing risk require local fleet-health management") %}AUTODELIVERY{% end %}'s gossip propagation feeds task assignment; {% term(url="#scenario-predictix", def="Aerospace CNC machine monitoring platform; predicts spindle, thermal, and power failures 2–8 hours ahead using local edge algorithms — preventing costly component scrap during plant-floor network outages") %}PREDICTIX{% end %}'s {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %} feeds workload rebalancing.
+Measurement feeds action; without action, measurement is logging. {% term(url="#scenario-autodelivery", def="Autonomous last-mile delivery fleet in an urban metro area; urban connectivity gaps and GPS spoofing risk require local fleet-health management") %}AUTODELIVERY{% end %}'s {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} propagation feeds task assignment; {% term(url="#scenario-predictix", def="Aerospace CNC machine monitoring platform; predicts spindle, thermal, and power failures 2–8 hours ahead using local edge algorithms — preventing costly component scrap during plant-floor network outages") %}PREDICTIX{% end %}'s {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %} feeds workload rebalancing.
 
-The diagram below shows the measurement-action loop (the MAPE-K cycle); notice that Execute feeds back into Monitor, meaning the system continuously validates whether its own healing actions had the intended effect rather than assuming success.
+The diagram below shows the measurement-action loop (the {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} cycle); notice that Execute feeds back into Monitor, meaning the system continuously validates whether its own healing actions had the intended effect rather than assuming success.
 
 {% mermaid() %}
 graph LR
@@ -2420,7 +2422,7 @@ graph LR
     style E fill:#ffab91
 {% end %}
 
-This is the MAPE-K loop (Monitor, Analyze, Plan, Execute, Knowledge) that IBM formalized for autonomic computing.
+This is the {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop (Monitor, Analyze, Plan, Execute, Knowledge) that IBM formalized for autonomic computing.
 
 Return to {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} BRAVO.
 
@@ -2430,6 +2432,6 @@ But measurement alone doesn't execute this plan. Self-healing must decide: Is 78
 
 These are the questions that precise measurement makes it possible to ask. Without a calibrated anomaly score and a {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}-bounded observation, there is no meaningful basis for any healing decision at all.
 
-Three results carry forward from this article. First, the cost-optimal detection threshold (Proposition 3) places the decision boundary where the ratio of anomaly likelihoods equals the ratio of error costs — a concrete, tunable criterion that replaces the ad hoc \\(2\sigma\\) or \\(3\sigma\\) thresholds common in practice. Second, gossip convergence in \\(O(\ln n / \lambda)\\) time (Proposition 4) means that fleet-wide health awareness scales gracefully: doubling a 47-drone swarm adds roughly 0.7 seconds to convergence at 1 Hz gossip rate, not a proportional delay. Third, the maximum useful staleness bound (Proposition 5) gives designers a principled way to size observation frequency: the tighter the decision margin \\(\Delta h\\), the higher the sampling rate must be, in a quadratic relationship that makes aggressive margin requirements expensive.
+Three results carry forward from this article. First, the cost-optimal detection threshold (Proposition 3) places the decision boundary where the ratio of anomaly likelihoods equals the ratio of error costs — a concrete, tunable criterion that replaces the ad hoc \\(2\sigma\\) or \\(3\sigma\\) thresholds common in practice. Second, {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} convergence in \\(O(\ln n / \lambda)\\) time (Proposition 4) means that fleet-wide health awareness scales gracefully: doubling a 47-drone swarm adds roughly 0.7 seconds to convergence at 1 Hz {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate, not a proportional delay. Third, the maximum useful staleness bound (Proposition 5) gives designers a principled way to size observation frequency: the tighter the decision margin \\(\Delta h\\), the higher the sampling rate must be, in a quadratic relationship that makes aggressive margin requirements expensive.
 
 But measurement is only half the loop. A system that can diagnose a failure with 78% confidence still faces the question of what to do about it: which recovery actions are safe to attempt, in what order, under what resource constraints, and with what guarantees of stability. Those are the questions addressed in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md), which develops the formal autonomic control loop, defines healing action severity, and derives the stability conditions under which closed-loop recovery converges rather than oscillates.
