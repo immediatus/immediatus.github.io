@@ -1502,6 +1502,124 @@ Post-mission review uses audit trail to:
 
 ---
 
+## Conflict-Aware Arbitration Layer
+
+The action-classification table above identifies redundant outcomes but does not prevent them. Prevention requires a coordination mechanism that operates *during* partition — before both clusters commit the same finite resource. The constraint is severe: no leader exists (leadership is an emergent property of connectivity that may be absent), and available bandwidth may be zero. The solution must be leaderless, local, and probabilistic.
+
+### The Double-Spend Problem
+
+<span id="scenario-double-spend"></span>
+
+Return to {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} at the mountain pass. Before the two clusters lost contact, both knew that Sector 7 needed EOD clearance and that the convoy has exactly one EOD-capable platform (Vehicle 4). During the 47-minute partition:
+
+- **Cluster Alpha** (Vehicles 1–6): assessed Sector 7 as the primary threat. Dispatched Vehicle 4 north. Vehicle 4 expended its full kit — 8 controlled detonations. Kit cannot be restocked until the base resupply depot is reached.
+- **Cluster Bravo** (Vehicles 7–12): independently reached the same threat assessment. Attempted to dispatch Vehicle 4 — found it absent from local mesh. Concluded it had self-tasked and proceeded to Sector 7 via alternate route, deploying their own improvised countermeasures at \\(3\times\\) the time cost.
+
+At reconnection, the {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} merge completes correctly: both clusters' observations are reconciled, Vehicle 4's kit-expended state is propagated, and the sector-cleared event is logged. State is *consistent*. But the resource is gone, and the improvised countermeasures cost 47 additional minutes.
+
+This is the double-spend problem. {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}s guarantee convergence of *what happened* — they cannot prevent *what was done* from being wasteful. A coordination layer is needed that operates before commitment.
+
+### Quantifying the Risk: Redundant-Omission Loss Function
+
+<span id="def-55"></span>
+
+**Definition 55** (Redundant-Omission Loss Function). *Let task \\(\tau_k\\) have mission value \\(v_k > 0\\) and finite resource cost \\(c_k > 0\\). Define the per-task loss:*
+
+{% katex(block=true) %}
+J(\text{redundant}) = \alpha \cdot c_k \qquad J(\text{omission}) = \beta \cdot v_k
+{% end %}
+
+*where \\(\alpha > 0\\) is the waste coefficient (marginal cost of expending a resource unnecessarily) and \\(\beta > 0\\) is the opportunity coefficient (marginal cost of failing to complete the task). The* **coordination target** *\\(p^\* \in (0, 1)\\) minimises expected fleet-wide loss per task:*
+
+{% katex(block=true) %}
+p^* = \frac{\beta \cdot v_k}{\alpha \cdot c_k + \beta \cdot v_k}
+{% end %}
+
+**Interpretation.** When \\(\beta v_k \gg \alpha c_k\\) — high-value task, cheap or abundant resource — \\(p^* \to 1\\): both clusters should attempt the task and accept the possibility of redundancy. When \\(\alpha c_k \gg \beta v_k\\) — expensive or irreplaceable resource, low-value task — \\(p^* \to 0\\): be conservative and risk omission rather than waste. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s EOD platform, \\(\alpha c_k \gg \beta v_k\\): the kit is irreplaceable mid-mission, and Sector 7 can be partially mitigated by other means. The correct \\(p^*\\) is low — closer to 0.3 than 0.9.
+
+The coefficients \\(\alpha\\) and \\(\beta\\) are fleet-wide policy parameters calibrated from post-partition audit history (Definition 57). During partition, each node uses its cached \\((\hat{\alpha}, \hat{\beta})\\) pair — stale estimates are safe to use because \\(p^*\\) is bounded in \\((0, 1)\\) regardless of coefficient drift.
+
+### Probabilistic Reservation: Conflict-Aware Claim Probability
+
+<span id="def-56"></span>
+
+**Definition 56** (Conflict-Aware Claim Probability). *Let node \\(i\\) have health score \\(H_i(t) \in [0,1]\\) (from the {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} health vector of Definition 5) and local divergence estimate \\(D_i(t) \in [0,1]\\) (a per-node scalar approximation of Definition 11's pairwise metric, computed against the node's last-known fleet consensus snapshot). The* **claim probability** *for task \\(\tau_k\\) is:*
+
+{% katex(block=true) %}
+P(a_i \mid \tau_k) = p^* \cdot H_i(t) \cdot \bigl(1 - D_i(t)\bigr)
+{% end %}
+
+**Claim mechanics.** Before committing resource \\(c_k\\) to task \\(\tau_k\\), node \\(i\\):
+
+1. Computes \\(P(a_i \mid \tau_k)\\) from local state.
+2. Samples \\(u \sim \mathrm{Uniform}(0, 1)\\).
+3. If \\(u > P(a_i \mid \tau_k)\\): abstains. Task may be claimed by a healthier or lower-divergence node.
+4. If \\(u \leq P(a_i \mid \tau_k)\\): emits an **intent token** \\(\langle \tau_k,\, i,\, t \rangle\\) via the {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} protocol.
+5. Any node receiving a prior intent token for \\(\tau_k\\) *before* committing resource \\(c_k\\) cancels its pending claim and does not commit. Under connected conditions, this window corresponds to \\(T_{\mathrm{gossip}}\\) (Proposition 4); under Denied regime the token may never arrive, in which case the node proceeds at its own \\(P(a_i \mid \tau_k)\\) risk.
+6. Node \\(i\\) commits resource \\(c_k\\) only after \\(T_{\mathrm{gossip}}\\) expires without receiving a counter-token.
+
+**No-leader guarantee.** Each node decides independently using only local state \\((H_i(t),\, D_i(t))\\) and the broadcast gossip record. No coordinator is required: the probability function itself is the coordination mechanism. During Denied connectivity (Definition 2), \\(T_{\mathrm{gossip}} \to \infty\\) and the intent token cannot propagate — the protocol degrades gracefully to the uncoordinated baseline, which the loss function already accounts for.
+
+**Byzantine resistance.** Intent tokens are gossip-propagated and subject to the reputation-weighted admission filter of Definition 12b (Stage 1). A compromised node cannot reliably suppress a legitimate intent token: doing so requires controlling a quorum of the claimant's \\(k\\) nearest gossip neighbors — the same threshold as Proposition 43.
+
+**Self-suppression under degradation.** As \\(H_i(t) \to 0\\) (node is failing) or \\(D_i(t) \to 1\\) (node has severely divergent state), \\(P(a_i \mid \tau_k) \to 0\\). Degraded nodes automatically yield resource commitments to healthier peers — the same gradient that governs healing action gating in Part 3 (Proposition 10) now governs resource stewardship.
+
+<span id="prop-53"></span>
+
+**Proposition 53** (Claim Collision Bound). *For \\(n\\) independent nodes each claiming task \\(\tau_k\\) with probability \\(P(a)\\), the probability of omission (no node claims) and the expected number of redundant claims (claims beyond the first) are:*
+
+{% katex(block=true) %}
+P(\text{omission}) = (1 - P(a))^n
+{% end %}
+
+{% katex(block=true) %}
+\mathbb{E}[\text{redundant claims}] = n \cdot P(a) - 1 + (1 - P(a))^n
+{% end %}
+
+*The fleet-optimal claim probability — distributing \\(p^\*\\) across \\(n\\) peers — sets \\(P(a) = 1 - (1 - p^\*)^{1/n}\\), which for small \\(p^\*\\) approximates \\(P(a) \approx p^\* / n\\). At this threshold, the probability that at least one node claims \\(\tau_k\\) equals \\(p^\*\\), achieving the inter-cluster coordination target under the independent-node assumption.*
+
+*Proof sketch.* Model claims as independent Bernoulli trials. \\(P(\text{omission}) = (1-P(a))^n\\) by independence. Expected claims above 1 \\(= n \cdot P(a) - (1 - (1-P(a))^n)\\) by substitution. The fleet-optimal \\(P(a)\\) follows from a target-probability argument: setting \\(P(\text{at least one of } n \text{ nodes claims } \tau_k) = p^\*\\) gives \\((1-P(a))^n = 1-p^\*\\), hence \\(P(a) = 1-(1-p^\*)^{1/n}\\). This distributes the inter-cluster action target \\(p^\*\\) across \\(n\\) symmetric peers. The small-\\(p^\*\\) approximation \\(P(a) \approx p^\*/n\\) follows from the first-order Taylor expansion of \\((1-p^\*)^{1/n}\\). \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration.** With \\(n = 6\\) peers in each cluster and \\(p^* = 0.30\\) for the EOD platform, the fleet-optimal per-node claim probability is \\(P(a) \approx 0.30 / 6 = 0.05\\). Expected redundant claims: \\(6 \times 0.05 - 1 + 0.95^6 \approx 0.035\\). Expected omission probability: \\(0.95^6 \approx 0.74\\). At \\(p^* = 0.30\\), omission is the intended outcome \\(74\\%\\) of the time — only one vehicle in the cluster should claim the EOD platform, not both clusters simultaneously.
+
+### Post-Partition Auditing and Fleet Policy Update
+
+<span id="def-57"></span>
+
+**Definition 57** (Post-Partition Audit Record). *Upon reconnection, each cluster emits an audit record:*
+
+{% katex(block=true) %}
+\mathcal{R}_i = \bigl\{ (\tau_k,\; a_i^{(k)},\; c_k^{\mathrm{actual}},\; t_k) \bigr\}
+{% end %}
+
+*where \\(\tau_k\\) is the task identifier, \\(a_i^{(k)} \in \\{0, 1\\}\\) indicates whether cluster \\(i\\) committed the resource, \\(c_k^{\mathrm{actual}}\\) is the resource consumed, and \\(t_k\\) is the HLC-stamped commitment time (Definition 40). Audit records from all reconnecting clusters are merged via a {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} G-Set (grow-only set — commutative, associative, idempotent), converging at the first reconnection regardless of merge order.*
+
+**Outcome classification.** The merged audit identifies, for each task, three mutually exclusive outcomes:
+
+| Outcome | Condition | \\(\hat{\alpha}\\) update | \\(\hat{\beta}\\) update |
+| :--- | :--- | :--- | :--- |
+| **Clean** | Exactly one cluster acted | None | None |
+| **Redundant** | Both clusters acted (\\(a_A^{(k)} = a_B^{(k)} = 1\\)) | Increment | None |
+| **Omission** | Neither cluster acted (\\(a_A^{(k)} = a_B^{(k)} = 0\\)) | None | Increment |
+
+**Coefficient update.** After each audit cycle the fleet updates its \\((\hat{\alpha}, \hat{\beta})\\) policy pair using exponential smoothing with learning rate \\(\eta \in (0, 1)\\):
+
+{% katex(block=true) %}
+\hat{\alpha}_{t+1} = (1 - \eta)\,\hat{\alpha}_t + \eta \cdot \frac{\sum_k c_k^{\mathrm{actual}} \cdot \mathbf{1}[\text{redundant}_k]}{\text{total resource budget}_t}
+{% end %}
+
+{% katex(block=true) %}
+\hat{\beta}_{t+1} = (1 - \eta)\,\hat{\beta}_t + \eta \cdot \frac{\sum_k v_k \cdot \mathbf{1}[\text{omission}_k]}{\text{total task value}_t}
+{% end %}
+
+The updated \\((\hat{\alpha}, \hat{\beta})\\) pair is propagated to all nodes as an LWW-Register {% term(url="#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}, arbitrated by HLC timestamp (Definition 41, Proposition 41). This write requires L4 capability (full fleet integration): the policy update is a fleet-wide commitment that should not be issued by a single disconnected cluster. Clusters reconnecting below L4 (Degraded or Intermittent regime) queue the pending policy write locally; it executes when \\(C \geq C_{\min}(L4)\\) is re-established.
+
+**No-leader guarantee.** The G-Set audit merge is commutative, associative, and idempotent — any node with reconnection can initiate it, in any order, with any subset of peers. The LWW-Register policy update is arbitrated by HLC, not by a designated writer. Simultaneous policy updates from two reconnecting clusters resolve deterministically via Proposition 41 without a coordinator. Neither the audit merge nor the policy update requires a leader at any step.
+
+**Connection to the CONVOY protocol.** The CONVOY Coherence Protocol in the next section demonstrates the overall reconciliation sequence. The arbitration layer operates *before* that sequence: it governs which resources were committed during partition. The audit record \\(\mathcal{R}_i\\) is an input to post-partition reconciliation — it feeds the "Handling Actions Taken During Partition" classification table above, replacing the informal "note inefficiency" entry for redundant actions with a structured feedback loop that updates \\(p^*\\) for the next partition.
+
+---
+
 ## CONVOY Coherence Protocol
 
 Return to the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} partition at the mountain pass.

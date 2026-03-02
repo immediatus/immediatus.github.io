@@ -1518,10 +1518,10 @@ by L0 firmware as a function of remaining energy \\(E\\) alone:*
 
 | Threshold | Requirement | Computation | RAVEN value |
 | :--- | :--- | :--- | :--- |
-| \\(E_{\mathrm{HSS}}\\) | Energy for one secure flash zeroization | 180 mJ measured at 3.7V; 5000 mAh battery: 5\% = 925 mJ; 5x margin | 5\% |
-| \\(E_{\mathrm{PLM}}\\) | PLM endurance until recovery team (72h) at 2 mA draw | 72h x 2 mA = 144 mAh (~3\%) + \\(E_{\mathrm{HSS}}\\) + 2x cold-battery margin | 20\% |
+| \\(E_{\mathrm{HSS}}\\) | Energy for one secure flash zeroization | 180 mJ measured at 3.7V; 5000 mAh battery: 5\% = 925 mJ; \\(5\times\\) margin | 5\% |
+| \\(E_{\mathrm{PLM}}\\) | PLM endurance until recovery team (72h) at 2 mA draw | 72h \\(\times\\) 2 mA = 144 mAh (~3\%) + \\(E_{\mathrm{HSS}}\\) + \\(2\times\\) cold-battery margin | 20\% |
 
-Calibration procedure for any platform: (1) measure secure shutdown energy at minimum operating temperature (worst case); (2) compute minimum PLM endurance from recovery SLA at maximum PLM draw; (3) add 2x margin for battery capacity reduction at minimum operating temperature (Li-Ion loses 30–40\% at \\(-20^\circ\mathrm{C}\\)); (4) verify \\(E_{\mathrm{PLM}} > E_{\mathrm{HSS}}\\) by at least 10 percentage points to avoid threshold ambiguity near the boundary.
+Calibration procedure for any platform: (1) measure secure shutdown energy at minimum operating temperature (worst case); (2) compute minimum PLM endurance from recovery SLA at maximum PLM draw; (3) add \\(2\times\\) margin for battery capacity reduction at minimum operating temperature (Li-Ion loses 30–40\% at \\(-20^\circ\mathrm{C}\\)); (4) verify \\(E_{\mathrm{PLM}} > E_{\mathrm{HSS}}\\) by at least 10 percentage points to avoid threshold ambiguity near the boundary.
 
 *Critically, \\(\mathcal{S}_\mathrm{term}\\) selection must be implemented entirely within
 L0 firmware — the transition logic must satisfy the {% term(url="@/blog/2026-01-15/index.md#def-35",
@@ -1625,7 +1625,7 @@ The cascade executes tiers in order, advancing to \\(T_{k+1}\\) only if \\(\text
 | Tier | Action | Pre-condition | Post-condition | Window | Cooldown |
 | :--- | :--- | :--- | :--- | ---: | ---: |
 | \\(T_1\\) | Modbus soft reset | Link up; engine below \\(90^\circ\text{C}\\) | Op state = RUNNING within 30s | 30s | 60s |
-| \\(T_2\\) | Controlled stop then start (GPIO) | Engine below \\(70^\circ\text{C}\\); at least 60s since \\(T_1\\) | Current resumes baseline +/-10 A | 45s | 300s |
+| \\(T_2\\) | Controlled stop then start (GPIO) | Engine below \\(70^\circ\text{C}\\); at least 60s since \\(T_1\\) | Current resumes baseline \\(\pm 10\\) A | 45s | 300s |
 | \\(T_3\\) | Full power cycle via relay | At least 5 min since \\(T_2\\); fuel above 20% | Op state = RUNNING and current above 0 | 60s | 900s |
 | \\(T_4\\) | Human escalation | All prior tiers failed; mission at or below BOM threshold | Operator acknowledged | — | — |
 

@@ -1806,7 +1806,7 @@ Gate \\(G_i\\) passes iff all predicates \\(p\\) in phase \\(i\\) meet their thr
 | P1: Local Autonomy | Healing success rate | 70% | Fault injection | Weekly |
 | P2: Coordination | Gossip convergence | 30 seconds | Partition test | Weekly |
 | P3: Fleet Coherence | State reconciliation | 95% consistency | Multi-partition test | Bi-weekly |
-| P4: Optimization | Learning improvement | Positive Δ | A/B test | Monthly |
+| P4: Optimization | Learning improvement | Positive \\(\Delta\\) | A/B test | Monthly |
 
 *Threshold note*: The 70% healing success rate represents the empirically observed lower bound for acceptable healing reliability. Adjust this threshold based on your system's mission-criticality requirements - safety-critical systems should target 90%+, while lower-stakes systems may accept 60-70%.
 

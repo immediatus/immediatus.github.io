@@ -491,7 +491,7 @@ The mathematical framework ensures that adversarial intuition can be systematica
 
 **Human-Automation Trust Literature:**
 
-2. **Lee, J. D., & See, K. A.** (2004). Trust in Automation: Designing for Appropriate Reliance. *Human Factors*, 46(1), 50–80. ([link](https://user.engineering.uiowa.edu/~csl/publications/pdf/leesee04.pdf))  
+2. **Lee, J. D., & See, K. A.** (2004). Trust in Automation: Designing for Appropriate Reliance. *Human Factors*, 46(1), 50–80. ([link](https://doi.org/10.1518/hfes.46.1.50_30392))  
    *Seminal work on trust calibration in human-automation interaction, establishing framework for appropriate reliance*
 
 3. **Parasuraman, R., & Riley, V.** (1997). Humans and Automation: Use, Misuse, Disuse, Abuse. *Human Factors*, 39(2), 230–253. ([link](https://doi.org/10.1518/001872097778543886))  

@@ -342,7 +342,7 @@ The engineers who thrive in this new era will be those who embrace this meta-cog
 
 [1] Stanford Human-Centered AI Institute. (2024). "Human-AI Collaboration Research: Current State and Future Directions." *AI Index Report 2024* ([link](https://hai.stanford.edu/assets/files/hai_ai-index-report-2024-smaller2.pdf)).
 
-[2] Lee, J. D., & See, K. A. (2004). Trust in Automation: Designing for Appropriate Reliance. *Human Factors*, 46(1), 50–80 ([link](https://user.engineering.uiowa.edu/~csl/publications/pdf/leesee04.pdf)).
+[2] Lee, J. D., & See, K. A. (2004). Trust in Automation: Designing for Appropriate Reliance. *Human Factors*, 46(1), 50–80 ([link](https://doi.org/10.1518/hfes.46.1.50_30392)).
 
 [3] Parasuraman, R., & Manzey, D. H. (2010). Complacency and Bias in Human Use of Automation: An Attentional-Information-Processing Framework. *Human Factors*, 52(3), 381–410 ([link](https://api-depositonce.tu-berlin.de/server/api/core/bitstreams/cafd2873-814b-4c59-bab1-addd42e249d2/content)).
 
