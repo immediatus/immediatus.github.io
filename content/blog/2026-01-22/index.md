@@ -2403,6 +2403,73 @@ The four trade-offs developed in this section are irreducible: no design choice 
 
 ---
 
+## Reputation-Based Consensus at the Measurement Layer
+
+The {% term(url="#def-7", def="Node that may deviate arbitrarily from protocol, including sending conflicting values") %}Byzantine{% end %} framework established in Definitions 7 and 22 and Proposition 6 handles fault tolerance at the aggregation layer: trust-weighted trimmed means guard against nodes whose reports fall outside the statistical envelope. What it does not handle is a slower attack surface: a node whose divergence \\(D_j(t)\\) drifts systematically but stays within the trimming threshold, corrupting the {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} health vector (Definition 5) and the adaptive baseline (Definition 23) over many observation cycles before the damage becomes detectable.
+
+Three mechanisms close this gap. A per-peer running estimator flags anomalous divergence history (Definition 58). A local ejection rule removes the offending node from trust-weighted merges without requiring a fleet-wide vote (Definition 59). A Phase-0-anchored trust-root maintains calibrated weights during the Denied regime (Definition 60) — the connectivity state where {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cannot propagate reputation updates at all.
+
+<span id="def-58"></span>
+**Definition 58** (Divergence Sanity Bound). Node \\(i\\) maintains a *Welford running estimator* over divergence observations from peer \\(j\\): sample count \\(n_j\\), running mean \\(\mu_j\\), and second moment \\(M_{2,j}\\). On each new divergence observation \\(d = D_j(t)\\) the estimator updates as:
+
+{% katex(block=true) %}
+\begin{aligned}
+n_j &\leftarrow n_j + 1 \\
+\delta_1 &= d - \mu_j \\
+\mu_j &\leftarrow \mu_j + \delta_1 / n_j \\
+\delta_2 &= d - \mu_j \\
+M_{2,j} &\leftarrow M_{2,j} + \delta_1 \cdot \delta_2 \\
+\sigma^2_j &\leftarrow M_{2,j} / (n_j - 1), \quad n_j \geq 2
+\end{aligned}
+{% end %}
+
+Observation \\(d\\) is *flagged anomalous* if \\(d > \mu_j + k \cdot \sigma_j\\), where \\(k\\) is a fleet-wide policy parameter (\\(k = 3\\) for standard operation; \\(k = 4\\) for high-safety contexts). The estimator is seeded from the Phase-0 attestation window (Definition 60), not from cold-start zeros. \\(D_j(t)\\) is the per-node scalar approximation of Definition 11's pairwise divergence metric, computed against the last-known fleet consensus snapshot received via {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} (Definition 5). ∎
+
+<span id="def-59"></span>
+**Definition 59** (Soft-Quorum Ejection). Node \\(i\\) maintains a per-peer violation streak counter \\(v_j\\) and reputation weight \\(w_j \in [0, w_0]\\), where \\(w_0\\) is the Phase-0 calibrated baseline. The update rules are: a flagged observation sets \\(v_j \leftarrow v_j + 1\\); a clean observation resets \\(v_j \leftarrow 0\\). When \\(v_j \geq m\\), node \\(i\\) sets \\(w_j \leftarrow 0\\) (*soft-eject*). After \\(r\\) consecutive post-eject clean observations, \\(w_j \leftarrow w_0\\) (*reinstatement*). No broadcast is emitted; the decision is purely local. A soft-ejected peer \\(j\\) is excluded from Definition 12b's Reputation-Weighted Merge and from Definition 44's Reputation-Weighted Fleet Coherence Vote. Peer \\(j\\) remains in the *denominator* of Definition 45's Logical Quorum — a cascade of ejections cannot erode the quorum threshold. ∎
+
+<span id="prop-54"></span>
+**Proposition 54** (False-Positive Ejection Bound). Under Gaussian divergence residuals and independent peers, the probability that an honest peer \\(j\\) is wrongly soft-ejected by node \\(i\\) within \\(T\\) observation steps satisfies:
+
+{% katex(block=true) %}
+P(\text{false eject}) \leq \bigl(1 - \Phi(k)\bigr)^m \cdot T
+{% end %}
+
+where \\(\Phi\\) is the standard normal CDF. At \\(k = 3, m = 5\\): \\(P \approx 4.5 \times 10^{-15} \cdot T\\), negligible for any realistic operating window. ∎
+
+*Proof sketch.* A false ejection requires \\(m\\) consecutive anomalous flags on an honest peer. Under Gaussian residuals, each flag occurs independently with probability \\(1 - \Phi(k)\\). The \\(m\\)-consecutive-flag probability is \\((1 - \Phi(k))^m\\); a union bound over \\(T\\) possible streak-ending positions gives the stated result. ∎
+
+<span id="def-60"></span>
+**Definition 60** (Trust-Root Anchor). At Phase-0, each node \\(i\\) generates an attestation record signed by hardware TPM:
+
+{% katex(block=true) %}
+A_i = \bigl(id_i,\; H(\mathrm{config}_i),\; \mathrm{PKI\_root}\bigr)
+{% end %}
+
+The *fleet trust-root* for node \\(i\\) is {% katex() %}\mathcal{T}_{\text{root},i} = \{A_j : j \in \text{fleet, Phase-0 attested}\}{% end %}. During the Denied connectivity regime (Definition 2, \\(\mathcal{N}\\)), {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cannot propagate reputation updates. Node \\(i\\) applies the following defaults: peer {% katex() %}j \in \mathcal{T}_{\text{root},i}{% end %} receives weight \\(w_j = w_0\\); peer {% katex() %}j \notin \mathcal{T}_{\text{root},i}{% end %} (introduced post-Phase-0 without re-attestation) receives weight \\(w_j = w_{\text{low}} < w_0\\). ∎
+
+<span id="prop-55"></span>
+**Proposition 55** (Isolated-Node Trust Guarantee). A node operating in the Denied regime for duration \\(\tau\\) maintains calibration error bounded by:
+
+{% katex(block=true) %}
+\lvert \hat{w}_j(\tau) - w_j(0) \rvert \leq \varepsilon_{\text{drift}} \cdot \tau
+{% end %}
+
+where \\(\varepsilon_{\text{drift}} \leq w_0 / L_{\text{P0}}\\) for Phase-0 calibration window length \\(L_{\text{P0}}\\), under the assumption that fleet divergence statistics are approximately stationary over the partition duration. Trust degrades gracefully rather than catastrophically; the Phase-0 anchor prevents unbounded weight drift regardless of partition duration. ∎
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} illustration.** Day 44 of operation. Sensor 88 begins reporting threat coordinates 340 m east of the consensus estimate. Its \\(D_{88}(t)\\) climbs from a historical \\(\mu \approx 0.04\\) to 0.31 over six reporting cycles, exceeding \\(\mu + 3\sigma \approx 0.09\\). Node 12 flags Sensor 88 on the fifth observation (streak \\(v_{88} = 5 \geq m = 5\\)) and sets \\(w_{88} = 0\\). Nodes 11, 13, and 14 reach the same conclusion independently over the next two {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cycles. The 126 remaining sensors continue operating; no coordinator is contacted; no fleet-wide vote is called.
+
+At hour 72, sustained jamming drives {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} into the Denied regime. {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} halts. Node 12's Welford estimators freeze at their current values. For the 126 Phase-0-attested peers, \\(w_j = w_0\\) is applied from {% katex() %}\mathcal{T}_{\text{root},12}{% end %}; for a sensor added at day 40 without re-attestation, \\(w_j = w_{\text{low}}\\). Proposition 55 bounds the trust drift over the 18-hour partition at \\(\varepsilon_{\text{drift}} \cdot 18\\) — a calculable, bounded degradation.
+
+| Parameter | Standard OUTPOST | High-Safety OUTPOST |
+| :--- | :---: | :---: |
+| \\(k\\) (sigma threshold) | 3 | 4 |
+| \\(m\\) (violations to eject) | 5 | 5 |
+| \\(r\\) (clean to reinstate) | 10 | 20 |
+| \\(P(\text{false eject})\\) per \\(10^6\\) steps | \\(4.5 \times 10^{-9}\\) | \\(< 10^{-16}\\) |
+
+---
+
 ## Closing: The Measurement-Action Loop
 
 Measurement feeds action; without action, measurement is logging. {% term(url="#scenario-autodelivery", def="Autonomous last-mile delivery fleet in an urban metro area; urban connectivity gaps and GPS spoofing risk require local fleet-health management") %}AUTODELIVERY{% end %}'s {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} propagation feeds task assignment; {% term(url="#scenario-predictix", def="Aerospace CNC machine monitoring platform; predicts spindle, thermal, and power failures 2–8 hours ahead using local edge algorithms — preventing costly component scrap during plant-floor network outages") %}PREDICTIX{% end %}'s {% term(url="#def-4", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}anomaly detection{% end %} feeds workload rebalancing.

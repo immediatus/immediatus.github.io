@@ -1328,6 +1328,77 @@ The system becomes {% term(url="#def-15", def="System property where performance
 
 ---
 
+## Defensive Learning Under Adversarial Rewards
+
+At day 11 of the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} deployment, signals intelligence identifies a pattern: EW intensity on corridor C-7 drops for 10–14 minutes every six hours, consistent with adversary equipment rotation. RAVEN's online learner accumulates positive reward for C-7 during three consecutive low-intensity windows and shifts its exploitation preference toward that corridor. Day 14, hour 06:00: the EW rotation does not happen. Maximum jamming activates on C-7 as RAVEN commits 31 of 47 drones to the corridor.
+
+This is not a failure of the bandit algorithm. {% term(url="#def-33", def="Exponential-weight algorithm for exploration with implicit exploration; maintains a mixed policy over K arms with minimum arm probability guaranteeing sublinear regret against adaptive adversaries") %}EXP3-IX{% end %} (Definition 33) defends against adversaries who control which arm is best *in hindsight* — it cannot defend against an adversary who has learned that the system uses online learning and exploits the *exploration phase itself*. The threat is adversarial manipulation of the reward signal during exploration: a honeypot that looks like a learning opportunity.
+
+Three mechanisms close this gap. A reward clipping function (Definition 61) removes adversarial reward spikes before they bias Q-value estimates. A safe action filter (Definition 62) enforces the Nyquist stability condition on the feasible set regardless of what Q-values say. A CUSUM trap detector (Definition 63, Step 7) treats suspiciously favorable reward trends as a threat signal rather than an exploitation opportunity.
+
+<span id="def-61"></span>
+
+**Definition 61** (Clipped Reward Function). Let \\(r_{\text{raw}}(t)\\) be the observed reward at time \\(t\\), and let \\(r_{L_0}\\) be the expected reward under the deterministic \\(L_0\\) policy — the survival baseline measured during the Phase-0 attestation window (Definition 60, Part 2 extension) before any learning begins. Let \\(\sigma_r(t)\\) be the running standard deviation of observed rewards maintained via Welford update (Definition 23, Part 2). The **clipped reward** is:
+
+{% katex(block=true) %}
+r_{\text{clip}}(t) = \mathrm{clip}\!\left(r_{\text{raw}}(t),\; r_{L_0} - k_{\text{clip}}\,\sigma_r(t),\; r_{L_0} + k_{\text{clip}}\,\sigma_r(t)\right)
+{% end %}
+
+where \\(k_{\text{clip}}\\) is a fleet-wide policy parameter. The Welford estimator \\(\sigma_r\\) is updated from \\(r_{\text{clip}}(t)\\), not \\(r_{\text{raw}}(t)\\), to prevent adversarial perturbations from inflating the clip window and defeating their own filtering. The anchor \\(r_{L_0}\\) is frozen at Phase-0 — it cannot be poisoned by adversarial rewards during operation. \\(\square\\)
+
+<span id="def-62"></span>
+
+**Definition 62** (Safe Action Filter). Let \\(K(a)\\) be the gain associated with action \\(a\\) and \\(\tau(a)\\) be the corresponding stochastic transport delay (Definition 38, Part 3). The **safe feasible set** at time \\(t\\) is:
+
+{% katex(block=true) %}
+\mathcal{U}_{\text{safe}}(t) = \bigl\{a \in \mathcal{A} : K(a)\cdot\tau(a) < \pi/2\bigr\}
+{% end %}
+
+This is a sufficient gain-delay stability condition — bounding the product \\(K(a)\cdot\tau(a)\\) prevents phase crossover in the autonomic control loop — applied as a hard pre-filter on the action space before any Q-value comparison is made. Proposition 9 (Part 3) establishes the discrete-time analogue; the condition \\(K(a)\cdot\tau(a) < \pi/2\\) is the continuous-time sufficient criterion for phase margin. Any action that would push the autonomic control loop past the stability boundary is inadmissible regardless of its estimated reward. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %} — all actions currently violate the stability condition — the agent executes the deterministic \\(L_0\\) policy \\(\pi_{L_0}\\), covered by Proposition 36 (Hardened Hierarchy Fail-Down, Part 1). \\(\square\\)
+
+<span id="def-63"></span>
+
+**Definition 63** (Safe-\\(\varepsilon\\)-Greedy Algorithm). The agent maintains per-action Q-value estimates \\(Q[a]\\) and visit counts \\(N[a]\\), Welford reward statistics \\((\mu_r, \sigma_r)\\), exploration rate \\(\varepsilon\\), and a CUSUM positive accumulator \\(S_+\\) (Definition 34). Parameters are: exploration floor \\(\varepsilon_0\\), entropy ceiling \\(\varepsilon_{\max}\\), inflation factor \\(\gamma > 1\\), clipping threshold \\(k_{\text{clip}}\\), CUSUM sensitivity \\(\delta_{\text{cusum}}\\), trap trigger \\(\vartheta\\), exponential decay rate \\(\alpha_{\text{dec}} \in (0, 1)\\), and Phase-0 baseline \\(r_{L_0}\\). At each time step \\(t\\):
+
+{% katex(block=true) %}
+\begin{aligned}
+&\textbf{Step 1}\;(\text{safe filter}):\quad \mathcal{U}_{\text{safe}} \leftarrow \{a \in \mathcal{A} : K(a)\cdot\tau(a) < \pi/2\} \\[2pt]
+&\textbf{Step 2}\;(L_0\;\text{check}):\quad \text{if}\;\mathcal{U}_{\text{safe}} = \emptyset:\;\text{execute}\;\pi_{L_0};\;\text{goto Step}\;10 \\[2pt]
+&\textbf{Step 3}\;(\text{action}):\quad a_t \leftarrow \begin{cases} \mathrm{Uniform}(\mathcal{U}_{\text{safe}}) & u \sim \mathrm{Unif}(0,1) < \varepsilon \\ \arg\max_{a \in \mathcal{U}_{\text{safe}}} Q[a] & \text{otherwise} \end{cases} \\[2pt]
+&\textbf{Step 4}\;(\text{clip}):\quad r_t \leftarrow \mathrm{clip}\!\left(r_{\mathrm{raw}},\;r_{L_0} - k_{\text{clip}}\sigma_r,\;r_{L_0} + k_{\text{clip}}\sigma_r\right) \\[2pt]
+&\textbf{Step 5}\;(\text{Welford}):\quad (\mu_r,\;\sigma_r) \leftarrow \mathrm{WelfordUpdate}(\mu_r,\;\sigma_r,\;r_t) \\[2pt]
+&\textbf{Step 6}\;(Q\text{-update}):\quad N[a_t] \mathrel{+}= 1;\quad Q[a_t] \leftarrow Q[a_t] + \tfrac{r_t - Q[a_t]}{N[a_t]} \\[2pt]
+&\textbf{Step 7}\;(\text{CUSUM}):\quad \xi \leftarrow r_t - \mu_r;\quad S_+ \leftarrow \max\!\left(0,\; S_+ + \xi - \delta_{\text{cusum}}\right) \\[2pt]
+&\textbf{Step 8}\;(\text{trap check}):\quad \text{if}\;S_+ > \vartheta:\;\varepsilon \leftarrow \min(\varepsilon_{\max},\;\gamma\cdot\varepsilon);\;S_+ \leftarrow 0 \\[2pt]
+&\textbf{Step 9}\;(\text{decay}):\quad \text{else:}\;\varepsilon \leftarrow \max(\varepsilon_0,\;\alpha_{\text{dec}}\cdot\varepsilon) \\[2pt]
+&\textbf{Step 10}\;(\text{output}):\quad \text{return}\;a_t
+\end{aligned}
+{% end %}
+
+The CUSUM accumulator \\(S_+\\) adopts the same one-sided Page-CUSUM structure as the Adversarial Non-Stationarity Detector (Definition 34), applied to the reward innovation \\(\xi(t) = r_t - \mu_r\\). The response pivots: where Definition 34 flags a regime change and triggers a policy switch, Step 8 responds to a *favorable* shift by increasing exploration — the inverse of the normal exploitation instinct. A reward trend that looks like an opportunity is treated as a threat hypothesis until diverse exploration cycles distinguish genuine improvement from adversarial bait. \\(\square\\)
+
+<span id="prop-56"></span>
+
+**Proposition 56** (Survival Invariant). Under Safe-\\(\varepsilon\\)-Greedy (Definition 63), the selected action satisfies {% katex() %}K(a_t)\cdot\tau(a_t) < \pi/2{% end %} whenever {% katex() %}\mathcal{U}_{\text{safe}}(t) \neq \emptyset{% end %}. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %}, the deterministic \\(L_0\\) policy is executed, which satisfies the survival constraint by Proposition 36.
+
+*Proof.* Step 1 constructs {% katex() %}\mathcal{U}_{\text{safe}}{% end %} by excluding all actions with {% katex() %}K(a)\cdot\tau(a) \geq \pi/2{% end %}. Both branches of Step 3 — exploration (uniform over {% katex() %}\mathcal{U}_{\text{safe}}{% end %}) and exploitation ({% katex() %}\arg\max{% end %} over {% katex() %}\mathcal{U}_{\text{safe}}{% end %}) — select exclusively from this set. The goto-Step-10 branch in Step 2 executes \\(\pi_{L_0}\\), whose gains are pre-validated during Phase-0 attestation to satisfy \\(K\cdot\tau(a) < \pi/2\\); Proposition 36 (Hardened Hierarchy Fail-Down, Part 1) ensures the \\(L_0\\) tier remains reachable when all autonomic actions are infeasible. \\(\square\\)
+
+<span id="prop-57"></span>
+
+**Proposition 57** (Adversarial Rejection Bound). Decompose the observed reward as \\(r_{\text{raw}}(t) = r_{\text{true}}(t) + \eta_{\text{adv}}(t)\\), where \\(r_{\text{true}}(t) \in [r_{L_0} - \delta_{\text{leg}}, r_{L_0} + \delta_{\text{leg}}]\\) is the legitimate reward deviation and \\(\eta_{\text{adv}}(t)\\) is adversarial perturbation. If \\(k_{\text{clip}}\,\sigma_r > \delta_{\text{leg}}\\), then no legitimate reward is clipped. The Q-value estimation bias satisfies:
+
+{% katex(block=true) %}
+\bigl|\mathbb{E}[Q_{\text{clip}}[a]] - Q_{\text{true}}[a]\bigr| \leq \bigl(k_{\text{clip}}\,\sigma_r + \delta_{\text{leg}}\bigr)\cdot P\!\left(|\eta_{\text{adv}}| > k_{\text{clip}}\,\sigma_r - \delta_{\text{leg}}\right)
+{% end %}
+
+Under Gaussian adversarial perturbations \\(\eta_{\text{adv}} \sim \mathcal{N}(0, \sigma_{\text{adv}}^2)\\), the right-hand side decays as \\(1 - \Phi\!\left(\tfrac{k_{\text{clip}}\,\sigma_r - \delta_{\text{leg}}}{\sigma_{\text{adv}}}\right)\\) — the same Gaussian tail form as Proposition 54 (False-Positive Ejection Bound, Part 2 extension). \\(\square\\)
+
+*Proof sketch.* Q-values are incremental averages of clipped rewards. Clipping truncates observations outside \\([r_{L_0} - k_{\text{clip}}\sigma_r,\; r_{L_0} + k_{\text{clip}}\sigma_r]\\); when \\(k_{\text{clip}}\sigma_r > \delta_{\text{leg}}\\), legitimate rewards lie within this interval and are never truncated. The bias from clipping a single adversarial observation is bounded by the clip radius; the expected bias over \\(N[a]\\) visits is \\(\text{clip\\_radius} \cdot P(\text{adversarial})\\), giving the stated bound. \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration.** With \\(r_{L_0}\\) measured over 48 hours of pre-deployment operation, \\(\sigma_r\\) converges within the first 200 observations by Proposition 24 (Kalman Baseline Convergence Rate, Part 2). Setting \\(k_{\text{clip}} = 3\\): the adversary's 10-minute EW reduction — yielding reward spike \\(|\eta_{\text{adv}}| \approx 2.8\,\sigma_r\\) — is admitted; a coordinated attack delivering \\(|\eta_{\text{adv}}| > 3\sigma_r\\) is clipped before reaching the Q-update. The CUSUM trap detector fires after approximately \\(\vartheta / \delta_{\text{cusum}}\\) steps of sustained positive innovation, tripling \\(\varepsilon\\) (\\(\gamma = 3\\)) — forcing {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} to re-explore rather than commit to the apparently optimal corridor. At day 15, the adversary's trap sequence fails: the swarm is too uncertain about C-7 to exploit it.
+
+---
+
 ## Anti-Fragile Design Patterns Catalog
 
 Reusable patterns with applicability conditions, trade-offs, and implementation guidance.
