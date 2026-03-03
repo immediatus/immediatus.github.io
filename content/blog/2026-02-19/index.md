@@ -874,152 +874,38 @@ into the L0 boot image.
 
 ## Synthesis: The Three Scenarios
 
-### RAVEN Constraint Sequence
+### Shared Phase Structure
 
-How the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone swarm should be built:
+The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} (Definition 17) is domain-invariant at the structural level. {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, and {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} all follow the same six-phase prerequisite graph (Definition 18): Phase N cannot begin until Phase N-1 has passed its gate (Definition 20). What varies across domains is survival timescale, coordination topology, and CRDT merge semantics — not the ordering.
 
-**Phase 0: Drone Hardware Trust**
-- Secure boot chain from flight controller to sensors
-- Per-drone attestation to swarm coordinator
-- Flight survival: stable hover, return-to-base under any condition
-- Power management: graceful degradation under low battery
-- Distress beacon: satellite-based, independent of mesh
+{% mermaid() %}
+graph TD
+    P0["Phase 0: Hardware Trust"] --> P1["Phase 1: Node Autonomy"]
+    P1 --> P2["Phase 2: Local Coordination"]
+    P2 --> P3["Phase 3: Fleet Coherence"]
+    P3 --> P4["Phase 4: Adaptive Optimization"]
+    P4 --> P5["Phase 5: Full Integration"]
+{% end %}
 
-**Phase 1: Per-Drone Autonomy**
-- Local flight health monitoring (IMU, motors, battery, sensors)
-- Anomaly detection calibrated for flight envelope violations
-- Self-healing: automatic motor compensation, sensor fallback
-- Partition survival: individual drone maintains stable flight for 24hr
-- Decision logging: all autonomous flight decisions recorded
+<style>
+#tbl_constraint_sequence + table th:first-of-type  { width: 18%; }
+#tbl_constraint_sequence + table th:nth-of-type(2) { width: 12%; }
+#tbl_constraint_sequence + table th:nth-of-type(3) { width: 23%; }
+#tbl_constraint_sequence + table th:nth-of-type(4) { width: 23%; }
+#tbl_constraint_sequence + table th:nth-of-type(5) { width: 24%; }
+</style>
+<div id="tbl_constraint_sequence"></div>
 
-**Phase 2: Cluster Coordination**
-- Formation protocol: drones form local clusters (typically 9-20 units based on connectivity)
-- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health: cluster health state converges within 30s
-- Local decision authority: cluster lead makes L1 decisions for cluster
-- Recovery ordering: mesh connectivity before surveillance
-- Cluster partition handling: sub-clusters form and operate independently
+| Phase | Formal Basis | RAVEN — 47 drones | CONVOY — 12 vehicles | OUTPOST — 127 sensors |
+|-------|-------------|-------------------|----------------------|----------------------|
+| 0: Hardware Trust | Def 35<br>Prop 36 | Secure boot<br>Flight survival 24 hr | Secure boot<br>Safe stop under any condition | Secure boot + tamper detection<br>30-day autonomous storage |
+| 1: Node Autonomy | Def 8<br>Prop 8–9 | Flight envelope anomaly<br>Motor compensation | Mechanical/electrical fault<br>Subsystem rerouting | Calibration drift<br>Automatic recalibration |
+| 2: Local Coordination | Def 5, Prop 4<br>Def 14 | Cluster gossip<br>9–20 drones, 30 s convergence | Platoon gossip<br>4–7 vehicles, 60 s convergence | Sensor-to-fusion mesh<br>Multi-hop, 5 min convergence |
+| 3: Fleet Coherence | Def 11, Def 12<br>Prop 13 | CRDT: threat DB, coverage map<br>Decision log | CRDT: route decisions (LWW)<br>Threat DB (union) | CRDT: alert DB (union)<br>Detection log (append-only) |
+| 4: Adaptive Optimization | Def 15<br>Def 16 | Formation spacing by terrain/threat<br>Judgment horizon: engagement authority | Speed and spacing by terrain/threat<br>Judgment horizon: mission abort | Adaptive detection sensitivity<br>Judgment horizon: response escalation |
+| 5: Full Integration | Def 37, Def 20<br>Prop 22 | Full L4 capability (streaming video, ML analytics)<br>Graceful degradation L4-L3-L2-L1-L0<br>Red team exercises; anti-fragility certification | L4 command integration<br>Multi-convoy coordination<br>Degradation ladder: all authority tiers | L4 regional awareness<br>Multi-site correlation<br>Degradation ladder: all authority tiers |
 
-**Phase 3: Swarm Coherence**
-- State reconciliation: threat data, position data, survey data merge
-- {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} definitions: threat database, coverage map, decision log
-- Hierarchical authority: cluster to swarm to command
-- Reconnection protocol: swarm reconverges after multi-cluster partition
-- Conflict resolution: latest threat data wins; position data averages
-
-**Phase 4: Swarm Optimization**
-- Adaptive formation spacing based on terrain and threat
-- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} interval tuning based on connectivity quality
-- Learning from partition events: updated connectivity model
-- Override mechanisms: operator can reassign cluster leads
-- Judgment horizon: engagement decisions require human authorization
-
-**Phase 5: Full Sensing Integration**
-- L4 streaming video and ML analytics
-- Real-time command integration
-- Degradation ladder validated: L4 to L3 to L2 to L1 to L0
-- Red team exercises: simulated adversarial jamming and spoofing
-- {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} demonstrated: swarm improves after each stress event
-- SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
-
-**Key insight**: Sophisticated swarm behavior (Phase 4-5) comes LAST. The impressive ML analytics and coordinated surveillance are only valuable if built on stable individual drones (Phase 0-1) and reliable coordination (Phase 2-3).
-
-### CONVOY Constraint Sequence
-
-How the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} ground vehicle network should be built:
-
-**Phase 0: Vehicle Hardware Trust**
-- Secure boot from ECU to communication systems
-- Vehicle attestation to convoy coordinator
-- Driving survival: stable operation, safe stop under any condition
-- Power management: priority load shedding under battery stress
-- Distress beacon: HF-based, independent of mesh
-
-**Phase 1: Per-Vehicle Autonomy**
-- Local vehicle diagnostics (engine, transmission, sensors, communication)
-- Anomaly detection calibrated for mechanical and electrical faults
-- Self-healing: automatic rerouting of failed subsystems
-- Partition survival: individual vehicle continues safe operation for 72hr
-- Decision logging: all autonomous driving decisions recorded
-
-**Phase 2: Platoon Coordination**
-- Formation protocol: vehicles form local platoons (typically 4-7 vehicles based on terrain)
-- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health: platoon health state converges within 60s
-- Local decision authority: platoon lead makes L1 route decisions
-- Recovery ordering: communication before navigation before surveillance
-- Platoon partition handling: sub-platoons form and continue mission
-
-**Phase 3: Convoy Coherence**
-- State reconciliation: route data, threat data, logistics data merge
-- {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} definitions: route decisions (last-write-wins), threat database (union)
-- Hierarchical authority: vehicle to platoon to convoy to command
-- Reconnection protocol: convoy reconverges after platoon separation
-- Conflict resolution: route conflicts resolved by convoy lead decision
-
-**Phase 4: Convoy Optimization**
-- Adaptive speed and spacing based on terrain and threat
-- Route learning from operational experience
-- Threat pattern recognition improving with exposure
-- Override mechanisms: operator can override any automated route
-- Judgment horizon: mission abort requires command authorization
-
-**Phase 5: Full Coordination Integration**
-- L4 integrated command and control
-- Multi-convoy coordination
-- Degradation ladder validated: L4 to L3 to L2 to L1 to L0
-- Red team exercises: simulated disruption and equipment failure scenarios
-- {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} demonstrated: convoy improves threat detection after each event
-- SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
-
-**Key insight**: Autonomy foundations (Phase 0-2) enable later integration (Phase 4-5). The convoy can only coordinate effectively if each vehicle is independently reliable.
-
-### OUTPOST Constraint Sequence
-
-How the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor mesh should be built:
-
-**Phase 0: Sensor/Node Hardware Trust**
-- Secure boot for each sensor node and fusion node
-- Physical tamper detection for exposed sensors
-- Basic operation survival: sensor functions without network for 30 days
-- Power management: solar/battery with graceful degradation
-- Distress beacon: satellite uplink for critical alerts
-
-**Phase 1: Per-Sensor Autonomy**
-- Local sensor health monitoring (calibration, drift, failure)
-- Anomaly detection for sensor readings and environmental conditions
-- Self-healing: automatic recalibration, fallback to degraded mode
-- Partition survival: sensor continues collection and local storage for 30 days
-- Decision logging: all local detection decisions recorded
-
-**Phase 2: Mesh Coherence**
-- Mesh protocol: sensors form multi-hop mesh to fusion nodes
-- {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %}-based health: mesh health state propagates within 5 min
-- Local decision authority: fusion node makes L1 alert decisions
-- Recovery ordering: mesh connectivity before data fusion before uplink
-- Mesh partition handling: sub-meshes operate independently
-
-**Phase 3: Multi-Site Coordination**
-- State reconciliation: detection data, mesh topology, alert state merge
-- {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} definitions: alert database (union), detection log (append-only)
-- Hierarchical authority: sensor to fusion to site to regional to central
-- Reconnection protocol: sites reconverge after communication outage
-- Conflict resolution: alert priorities based on threat severity
-
-**Phase 4: Adaptive Defense**
-- Threat learning from operational detections
-- Adaptive sensitivity based on threat environment
-- Sensor placement recommendations from detection patterns
-- Override mechanisms: operator can adjust detection thresholds
-- Judgment horizon: response escalation requires human authorization
-
-**Phase 5: Theater Integration**
-- L4 integrated regional command awareness
-- Multi-site coordination and correlation
-- Degradation ladder validated: L4 to L3 to L2 to L1 to L0
-- Red team exercises: simulated intrusion and sensor tampering
-- {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} demonstrated: mesh improves detection after each incident
-- SOE bounds verified: parameter vector \\(\theta\\) remains within \\([\theta_{\min}, \theta_{\max}]\\) and Lyapunov basin occupancy \\(\geq 0.95\\) ([Part 5, Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe)).
-
-**Key insight**: Mesh reliability (Phase 2) must precede sensor sophistication (Phase 4). Advanced analytics are worthless if the mesh cannot reliably deliver the data.
+The phase structure is identical across all three scenarios — that identity is the point. Survival timescale varies (24 hr for individual drones, 72 hr for ground vehicles, 30 days for sensor nodes) because deployment contexts differ. Coordination topology varies (clusters vs. platoons vs. meshes) because physical mobility and node density differ. CRDT merge semantics vary because conflict resolution requirements differ — coverage maps, route decisions, and alert databases have distinct consistency needs. The phase ordering does not vary, because the objective hierarchy — survival before autonomy, autonomy before coherence, coherence before anti-fragility — is a logical constraint, not a domain preference.
 
 ---
 
