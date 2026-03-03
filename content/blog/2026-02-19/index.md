@@ -1122,6 +1122,81 @@ The 3-state compression maps directly to operator-actionable states: **Aligned**
 
 ---
 
+## State-Delta Briefing and the Slow-Sync Handover
+
+Proposition 52 (Predictive Handover Criterion) establishes *when* the system should initiate \\(Q_{\text{delegated}} \to Q_{\text{command}}\\) transfer — conservatively, before \\(\Psi(t)\\) reaches \\(\Psi_{\text{fail}}\\), accounting for SA reconstruction time \\(\tau_{SA}\\). It does not specify *how* to execute the transfer safely. The gap is the [{% term(url="@/blog/2026-02-12/index.md#def-16", def="Decision boundary above which irreversibility, precedent impact, model uncertainty, or ethical weight exceeds the autonomic system's authorization limit — requiring human intervention rather than autonomous action") %}judgment horizon{% end %}](@/blog/2026-02-12/index.md#def-16) (Definition 16): at reconnection, the delta between the operator's mental model and actual system state is at its maximum. Presenting raw telemetry at this moment causes Mode Confusion (operator applies stale assumptions to live data) and Automation Surprise (unexpected system state triggers snap commands before SA is reconstructed).
+
+After a 47-minute {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} blackout, the swarm has autonomously re-planned routes, consumed fuel non-uniformly, rerouted through alternate corridors, and reassigned formation roles. The operator rejoining \\(Q_{\text{command}}\\) encounters a fleet that is functionally different from the one delegated. Without a structured transition, the operator either under-reacts (trusting the stale mental model) or over-reacts (issuing conflicting commands mid-maneuver). Both failure modes appear in aviation Mode Confusion incidents (Air France 447, 2009; Asiana 214, 2013) where automation-to-manual handover caused loss of situational control.
+
+The State-Delta Briefing protocol closes this gap in three steps: rank divergence, impose a calibrated observation window, then gate write-access on briefing acknowledgment.
+
+<span id="def-64"></span>
+
+**Definition 64** (State-Delta Briefing Protocol). Given pre-partition state \\(\Sigma(t_0)\\), post-partition state \\(\Sigma(t_{\text{reconnect}})\\), and partition duration \\(\tau_{\text{partition}}\\), the handover proceeds as follows.
+
+**Step 1** (delta): For each state variable \\(i \in \\{1,\ldots,N\\}\\), compute the normalized divergence score:
+
+{% katex(block=true) %}
+d_i = \left|\frac{\Sigma_i(t_{\text{reconnect}}) - \Sigma_i(t_0)}{\sigma_i}\right|
+{% end %}
+
+where \\(\sigma_i\\) is the operational range of variable \\(i\\). The divergence score \\(d_i\\) is dimensionless and comparable across heterogeneous state variables (fuel fraction, route deviation, formation index).
+
+**Step 2** (rank): Sort variables by \\(d_i\\) descending to produce ranking \\(R = (d_{(1)} \geq d_{(2)} \geq \cdots \geq d_{(N)})\\).
+
+**Step 3** (norm): Compute the fleet divergence norm: \\(D_{\text{norm}}(t) = d_{(1)} = \max_i d_i\\).
+
+**Step 4** (shadow duration): Compute Shadow Mode duration:
+
+{% katex(block=true) %}
+T = \min\!\left(T_{\max},\; k \cdot \tau_{\text{partition}} \cdot D_{\text{norm}}(t)\right)
+{% end %}
+
+where \\(k\\) is a fleet-wide calibration constant and \\(T_{\max}\\) is a hard ceiling (nominally 120 s). When \\(\tau_{\text{partition}} \to 0\\) or \\(D_{\text{norm}} \to 0\\), \\(T \to 0\\) and the briefing collapses to a direct handover.
+
+**Step 5** (Shadow Mode): For duration \\(T\\), write-access to \\(Q_{\text{command}}\\) is disabled. The operator observes \\(Q_{\text{delegated}}\\)'s intended next actions in real time — the system narrates its reasoning via the Intent Health Indicator (Definition 53). No intervention is possible. This pre-loads Level 1 situational awareness (perception of current system behavior) before the Difference Map is shown.
+
+**Step 6** (Difference Map): At \\(T\\) seconds, present \\(\Delta\Sigma(t)\\) (Definition 65) to the operator: the top \\(N_{\max}\\) diverged variables, ranked by \\(d_i\\), severity-tagged, with pre- and post-partition values side by side.
+
+**Step 7** (gate): \\(Q_{\text{command}}\\) activation requires explicit operator acknowledgment of the Difference Map. If CRITICAL-tier items remain unresolved, \\(T\\) extends by \\(T_{\text{ext}} = \min(T_{\max},\; k \cdot 30\,\text{s} \cdot |\text{CRITICAL}|)\\), where 30 s is the per-CRITICAL-item baseline extension, entering a second Shadow Mode cycle. This loop continues until all CRITICAL items are resolved or the operator accepts residual risk explicitly. \\(\square\\)
+
+<span id="def-65"></span>
+
+**Definition 65** (Difference Map). The **Difference Map** \\(\Delta\Sigma(t)\\) is the ranked, severity-tagged representation of state divergence at reconnection:
+
+{% katex(block=true) %}
+\Delta\Sigma(t) = \left\{\, \bigl(\text{var}_i,\; v^{\text{pre}}_i,\; v^{\text{post}}_i,\; \delta_i,\; r_i,\; s_i\bigr) : d_i > 0,\; r_i \leq N_{\max} \,\right\}
+{% end %}
+
+where {% katex() %}\text{var}_i{% end %} is the variable identifier, {% katex() %}v^{\text{pre}}_i = \Sigma_i(t_0){% end %}, {% katex() %}v^{\text{post}}_i = \Sigma_i(t_{\text{reconnect}}){% end %}, {% katex() %}\delta_i = v^{\text{post}}_i - v^{\text{pre}}_i{% end %}, \\(r_i\\) is divergence rank, and \\(s_i \in \\{\text{CRITICAL},\, \text{WARN},\, \text{INFO}\\}\\) is the severity tier. Variables ranked beyond \\(N_{\max} = 7\\) are collapsed to an "\\(N - 7\\) additional changes" summary line. Severity tiers follow the same k-sigma structure as Definition 58 (Divergence Sanity Bound, [Part 2 extension](@/blog/2026-01-22/index.md#def-58)): CRITICAL for \\(d_i > 3\\), WARN for \\(d_i \in (1, 3]\\), INFO for \\(d_i \leq 1\\).
+
+The \\(N_{\max} = 7\\) cap reflects Miller's Law (working memory capacity \\(7 \pm 2\\) chunks, Miller 1956). Presenting more than 7 diverged variables simultaneously does not increase operator SA — it fragments attention and delays comprehension of the highest-priority items. The cap is a cognitive capacity constraint enforced by the protocol, not a data limitation.
+
+The handover state machine:
+
+{% mermaid() %}
+stateDiagram-v2
+    [*] --> PARTITION
+    PARTITION --> RECONNECT_DETECTED : connectivity restored
+    RECONNECT_DETECTED --> SHADOW_MODE : compute delta-Sigma,</br>start timer T
+    SHADOW_MODE --> BRIEFING_PRESENTED : T elapsed
+    BRIEFING_PRESENTED --> Q_COMMAND_ACTIVE : ack + no unresolved CRITICAL
+    BRIEFING_PRESENTED --> SHADOW_MODE : CRITICAL unresolved,</br>T extended
+    Q_COMMAND_ACTIVE --> PARTITION : connectivity lost
+    Q_COMMAND_ACTIVE --> [*]
+{% end %}
+
+
+<span id="prop-58"></span>
+
+**Proposition 58** (Situation Awareness Bound). *Under the State-Delta Briefing Protocol (Definition 64) with Difference Map (Definition 65), if \\(|\Delta\Sigma(t)| \leq N_{\max} = 7\\) and variables are sorted CRITICAL-first, then a trained operator achieves Level 2 Situational Awareness (comprehension of current situation, Endsley 1995) within \\(T_{\text{brief}} \leq 15\\) seconds, independently of partition duration \\(\tau_{\text{partition}}\\).*
+
+*Proof sketch.* Information-theoretic bound: \\(15\,\text{s} / 7\,\text{items} \approx 2.1\,\text{s}\\) per item. Trained-operator HMI alert-processing rates for ranked alert summaries are 1.5–3.0 s per item (Endsley 1995; NTSB accident data). Severity-first ordering ensures CRITICAL items are processed in the first 4–6 seconds, exceeding Level 2 SA threshold for highest-priority variables before the 15-second mark. Shadow Mode (Step 5) pre-loads Level 1 SA during the observation window, so Difference Map comprehension begins with perceptual context already established. Partition duration \\(\tau_{\text{partition}}\\) affects \\(T\\) (Definition 64 Step 4) but not \\(T_{\text{brief}}\\) — longer partitions produce longer Shadow Mode intervals that absorb divergence perception incrementally, not longer Difference Map reading times. \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration.** Partition duration \\(\tau_{\text{partition}} = 47\\) minutes. Post-reconnection: \\(D_{\text{norm}} = d_{(1)} = 2.1\\) (fuel consumption 40% above plan, \\(d_{(1)} = 2.1\\); route sector deviation \\(d_{(2)} = 1.4\\); formation lead reassigned \\(d_{(3)} = 0.9\\) — all WARN, no CRITICAL). With \\(k = 0.5\\), Shadow Mode duration \\(T = \min(120,\; 0.5 \times 47 \times 2.1) \approx 49\\) seconds. The operator observes 49 seconds of autonomous operation, receives a 3-item Difference Map (WARN only), acknowledges, and gains \\(Q_{\text{command}}\\). Total reconnect-to-active-command time: under 65 seconds — the 15-second SA target applies to the Difference Map reading step alone; Shadow Mode absorbs the divergence perception load during the preceding observation window.
+
+---
+
 ## The Limits of Constraint Sequence
 
 Every framework has boundaries. The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} is powerful but not universal. Recognizing its limits is essential for correct application.
