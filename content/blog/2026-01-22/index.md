@@ -192,6 +192,10 @@ The simplest effective approach. The two equations below update the running mean
 \end{aligned}
 {% end %}
 
+- **Use**: Computes an exponentially weighted moving average baseline for metric {% katex() %}x{% end %}; apply at every MAPE-K monitor tick to maintain an adaptive baseline and prevent stale-mean drift from flooding false anomaly alerts during normal load ramp-up.
+- **Parameters**: {% katex() %}\alpha = 0.05\text{--}0.3{% end %}; {% katex() %}\alpha = 0.1{% end %} gives {% katex() %}\approx 10{% end %}-sample effective window; larger {% katex() %}\alpha{% end %} reacts faster but produces noisier baselines.
+- **Field note**: Match {% katex() %}\alpha{% end %} to your metric's ramp-up time constant — the window should cover 2–3 full ramp cycles.
+
 Where \\(\alpha \in (0, 1)\\) controls the decay rate. Smaller \\(\alpha\\) means longer memory. Note: variance uses \\(\mu_{t-1}\\) to keep the estimate independent of \\(x_t\\), consistent with the anomaly score calculation.
 
 The anomaly score \\(z_t\\) normalizes the current observation's deviation from the running mean by the running standard deviation, yielding a dimensionless measure of surprise that can be compared against a fixed threshold regardless of the signal's units or scale.
@@ -199,6 +203,10 @@ The anomaly score \\(z_t\\) normalizes the current observation's deviation from 
 {% katex(block=true) %}
 z_t = \frac{|x_t - \mu_{t-1}|}{\sigma_{t-1}}
 {% end %}
+
+- **Use**: Computes the Z-score of each reading against the adaptive EWMA baseline in standard deviations; compare against threshold from Proposition 3 at every monitor tick to catch anomalies while preventing absolute-threshold brittleness when metric scale shifts after reconfiguration.
+- **Parameters**: Uses EWMA variance; enforce {% katex() %}\sigma_{\min} \approx 0.01 \cdot \bar{x}{% end %} to prevent divide-by-zero on constant-output sensors.
+- **Field note**: Always set {% katex() %}\sigma_{\min}{% end %} — a constant-reading sensor causes silent division-by-zero that disables the entire anomaly detector.
 
 **Anomaly Classification Decision Problem**:
 
@@ -217,6 +225,10 @@ The system flags an observation as anomalous when \\(z_t > \theta^\*\\). The opt
 {% katex(block=true) %}
 \theta^* = \Phi^{-1}\left(1 - \frac{C_{\text{FN}} \cdot P(H_1)}{C_{\text{FP}} \cdot P(H_0) + C_{\text{FN}} \cdot P(H_1)}\right)
 {% end %}
+
+- **Use**: Computes the Gaussian-optimal detection threshold balancing FP and FN costs; use during integration testing with labeled fault-injection data to prevent symmetric-cost miscalibration that underweights the mission cost of missed faults.
+- **Parameters**: {% katex() %}C_{\text{FN}}/C_{\text{FP}}{% end %} ratio = 3–10 for critical systems; larger ratio lowers the threshold (act sooner on weaker signals).
+- **Field note**: Most mission systems need {% katex() %}C_{\text{FN}}/C_{\text{FP}} \geq 5{% end %} — operators consistently underestimate missed-fault cost until a real incident occurs.
 
 <span id="prop-3"></span>
 **Proposition 3** (Optimal Anomaly Threshold). *Given asymmetric error costs \\(C_{\text{FP}}\\) for false positives and \\(C_{\text{FN}}\\) for false negatives, the optimal detection threshold \\(\theta^\*\\) satisfies the likelihood ratio condition:*
@@ -248,6 +260,30 @@ P(H_1 \mid z_t) > \frac{C_{\text{FP}}}{C_{\text{FP}} + C_{\text{FN}}}
 {% end %}
 
 Both formulations select the same decision boundary; the z-score form is computationally convenient while the posterior form makes the cost trade-off explicit. For tactical edge systems where \\(C_{\text{FN}} \gg C_{\text{FP}}\\), both shift toward sensitive detection.
+
+**Partition-Duration-Aware Threshold (Definition 66 extension)**: Under the Weibull partition model, the relative cost of false negatives rises as partition duration grows — missed anomalies cannot be externally remediated. Let \\(T_{\mathrm{acc}}(t)\\) be the partition duration accumulator (Definition 68) and \\(Q_{0.95}\\) the P95 planning threshold (Definition 66). The cost ratio evolves as:
+
+{% katex(block=true) %}
+\frac{C_{\mathrm{FN}}(t)}{C_{\mathrm{FP}}(t)} = \frac{C_{\mathrm{FN}}}{C_{\mathrm{FP}}} \cdot \left(1 + \gamma_{\mathrm{FN}} \cdot \frac{T_{\mathrm{acc}}(t)}{Q_{0.95}}\right)
+{% end %}
+
+where \\(\gamma_{\mathrm{FN}} \geq 0\\) is the false-negative cost escalation rate (deployment parameter; \\(\gamma_{\mathrm{FN}} = 0\\) recovers the static threshold). Substituting into the Neyman-Pearson condition yields the **time-varying optimal threshold**:
+
+{% katex(block=true) %}
+\theta^*(t) = \frac{\theta^*_0}{1 + \gamma_{\mathrm{FN}} \cdot T_{\mathrm{acc}}(t)/Q_{0.95}}
+{% end %}
+
+- **Use**: Tightens the anomaly detection threshold as {% katex() %}T_{\text{acc}}{% end %} approaches {% katex() %}Q_{0.95}{% end %} during sustained partition; replaces the static threshold at each MAPE-K tick to prevent the miss surge that occurs when the system normalizes to a degraded state.
+- **Parameters**: Initial threshold {% katex() %}\theta^*_0 = 2\text{--}3\sigma{% end %}; {% katex() %}\gamma_{\mathrm{FN}}{% end %} tunes tightening rate; calibrate so {% katex() %}\theta^*(Q_{0.95}) \approx 0.5 \cdot \theta^*_0{% end %}.
+- **Field note**: Inject faults at {% katex() %}T_{\text{acc}} > Q_{0.95}{% end %} in integration testing — this corner case is routinely skipped and routinely fails in field deployments.
+
+where \\(\theta^\*_0\\) is the static baseline threshold from the likelihood ratio condition above.
+
+*Interpretation*: As {% katex() %}T_{\mathrm{acc}} \to 0{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0{% end %} (partition just started, baseline sensitivity). As \\(T_{\mathrm{acc}} \to Q_{0.95}\\), {% katex() %}\theta^*(t) \to \theta^*_0 / (1 + \gamma_{\mathrm{FN}}){% end %} — the detector becomes \\((1 + \gamma_{\mathrm{FN}})\\) times more sensitive. For \\(T_{\mathrm{acc}} > Q_{0.95}\\): the circuit breaker (Proposition 59) fires, the system enters L0, and \\(\theta^\*(t)\\) is frozen at its current value — further threshold drift is irrelevant since healing actions are suspended.
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: With \\(\gamma_{\mathrm{FN}} = 2.0\\) (anomalies during long denied periods cost \\(3\times\\) baseline due to inability to request sensor replacement), the threshold drops from \\(\theta^\*_0 = 2.5\\,\sigma\\) at partition start to \\(\theta^\*_0 / 3 \approx 0.83\\,\sigma\\) at the P95 boundary. This triggers more sensitive detection of health anomalies precisely when external recovery is least available.
+
+**Local Observability During Partition**: The threshold behavior above is only verifiable after the fact — central telemetry is unavailable while \\(\Xi = \mathcal{N}\\). Each node must maintain a compact ring buffer (depth \\(\geq 1{,}024\\) ticks) of five scalar metrics per {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} tick: (i) \\(T_{\mathrm{acc}}\\); (ii) \\(\theta^\*(t)\\); (iii) outbound queue depth; (iv) 60-second rolling battery drain rate; (v) MAPE-K execution count since partition start. These five scalars are the minimum evidence required to validate chaos scenario pass/fail criteria after connectivity resumes.
 
 **Constraint Set**: Any algorithm implementing the optimal decision rule must satisfy these three resource limits; they rule out batch-processing and unbounded-memory approaches that would otherwise be valid statistical choices.
 
@@ -334,6 +370,10 @@ When the goal is detecting *when* a change occurred (not just that it occurred),
 S_t = \max(0, S_{t-1} + x_t - \mu_0 - k)
 {% end %}
 
+- **Use**: Accumulates evidence of a sustained mean shift above allowable drift {% katex() %}k{% end %}; run in parallel with EWMA z-score and alarm when {% katex() %}S_t > h{% end %} to catch slow drift that {% katex() %}z_t{% end %} misses because EWMA adapts to gradual changes.
+- **Parameters**: {% katex() %}k{% end %} = allowable slack ({% katex() %}0.5\text{--}1\sigma{% end %}); {% katex() %}h{% end %} = alarm threshold ({% katex() %}4\text{--}5\sigma \cdot n{% end %}); reset {% katex() %}S_t{% end %} to 0 after each alarm.
+- **Field note**: CUSUM and EWMA together cover both spike and slow-drift fault modes — alarm on either, not both.
+
 where \\(\mu_0\\) is the nominal mean and \\(k\\) is the allowable slack. Alarm when \\(S_t > h\\).
 
 *Detection speed comparison*: For a shift of magnitude \\(\delta\\), the formula below gives the expected number of samples CUSUM needs before triggering, as a function of alarm threshold \\(h\\), slack \\(k\\), and shift \\(\delta\\).
@@ -413,6 +453,10 @@ z_t^K = \frac{x_t - \hat{\mu}_{t-1}}{\sqrt{\hat{P}_{t|t-1} + R}}
 P_\infty = \frac{-Q + \sqrt{Q^2 + 4QR}}{2}, \qquad K_\infty = \frac{P_\infty + Q}{P_\infty + Q + R}
 {% end %}
 
+- **Use**: Computes the steady-state Kalman gain that minimizes MSE between noisy sensor readings and the true baseline; replace EWMA on high-noise sensors (vibration probes, IMUs) where {% katex() %}Q_{\text{proc}}/R_{\text{obs}}{% end %} can be estimated, preventing noise-dominated baselines that EWMA cannot correct.
+- **Parameters**: {% katex() %}Q_{\text{proc}}{% end %} = process noise variance; {% katex() %}R_{\text{obs}}{% end %} = sensor noise variance; larger {% katex() %}Q_{\text{proc}}/R_{\text{obs}}{% end %} gives gain closer to 1 (fast tracking).
+- **Field note**: {% katex() %}Q/R{% end %} is the only tuning knob — calibrate it from 5–10 minutes of stationary field data before first deployment.
+
 *For small drift \\(\rho = Q/R \ll 1\\): \\(K_\infty \approx \sqrt{\rho}\\) — the steady-state gain scales as the square root of the process-to-noise ratio. Convergence to \\(K_\infty\\) is geometric with rate \\((1 - K_\infty)^t\\) from any initial \\(P_0\\), reaching steady state in approximately \\(1/K_\infty\\) samples.*
 
 *Proof*: Substitute \\(P_t = P_{t-1}\\) into the Riccati recursion \\(P_t = R(P_{t-1}+Q)/(P_{t-1}+Q+R)\\) and solve the resulting quadratic \\(P_\infty^2 + QP_\infty - QR = 0\\). Convergence rate follows from linearization of the recursion near \\(P_\infty\\). \\(\square\\)
@@ -421,7 +465,7 @@ P_\infty = \frac{-Q + \sqrt{Q^2 + 4QR}}{2}, \qquad K_\infty = \frac{P_\infty + Q
 
 **Validity condition — white noise assumption**: The Kalman gain convergence (Prop 24) and the \\(H_0\\) distribution \\(z_t^K \sim N(0,1)\\) both require measurement noise \\(v_t\\) to be approximately i.i.d. Gaussian with stationary variance \\(R\\). Real MEMS sensors violate this: \\(1/f\\) noise dominates below ~1 Hz; variance is temperature-correlated (\\(R(T) \approx R_0(1 + \beta \cdot \Delta T)\\) for thermistors); aging causes slow \\(R\\) drift. Practical remediation: (1) estimate \\(R\\) from a stationary calibration sequence at deployment temperature before each mission; (2) run a chi-squared test on the rolling innovation variance — if the ratio \\(\mathrm{Var}[z_t^K]/1.0\\) exceeds 1.5 over a 5-minute window, \\(R\\) is miscalibrated and must be re-estimated; (3) if temperature correlation is strong (\\(\beta \cdot \Delta T_{\max} > 0.3\\)), use an adaptive-\\(R\\) Kalman (Sage-Husa estimator). The false-alarm guarantee is void if \\(R\\) is off by more than 50\% — the actual false-alarm rate scales as \\(P(|N(0,1)| > \theta \cdot \sqrt{R_{\text{assumed}}/R_{\text{actual}}})\\).
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Temperature sensors drift at \\(\approx 1\,^\circ\text{C}\,\text{day}^{-1}\\) with sensor noise \\(\sigma_{\text{sens}} = 0.1\,^\circ\text{C}\\). At \\(\lambda = 1\,\text{Hz}\\): \\(Q = (1/86400)^2 \approx 1.3 \times 10^{-10}\,\text{K}^2/\text{sample}\\), \\(R = 0.01\,\text{K}^2\\), giving \\(\rho \approx 1.3 \times 10^{-8}\\) and \\(K_\infty \approx 1.1 \times 10^{-4}\\). Baseline adapts on a timescale of \\(1/K_\infty \approx 9000\,\text{s} \approx 2.5\,\text{h}\\) — slow enough to track seasonal drift without following measurement noise.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Temperature sensors drift at \\(\approx 1\\,^\circ\text{C}\\,\text{day}^{-1}\\) with sensor noise \\(\sigma_{\text{sens}} = 0.1\\,^\circ\text{C}\\). At \\(\lambda = 1\\,\text{Hz}\\): \\(Q = (1/86400)^2 \approx 1.3 \times 10^{-10}\\,\text{K}^2/\text{sample}\\), \\(R = 0.01\\,\text{K}^2\\), giving \\(\rho \approx 1.3 \times 10^{-8}\\) and \\(K_\infty \approx 1.1 \times 10^{-4}\\). Baseline adapts on a timescale of \\(1/K_\infty \approx 9000\\,\text{s} \approx 2.5\\,\text{h}\\) — slow enough to track seasonal drift without following measurement noise.
 
 <span id="def-24"></span>
 **Definition 24** (Bayesian Surprise Metric). *The Bayesian Surprise statistic \\(S_t^K\\) is the adaptive-baseline generalization of CUSUM, accumulating Kalman log-likelihood ratios:*
@@ -436,9 +480,13 @@ S_t^K = \max\!\left(0,\; S_{t-1}^K + \Lambda_t^K - \kappa\right)
 \Lambda_t^K = \delta \cdot z_t^K - \frac{\delta^2}{2}
 {% end %}
 
+- **Use**: Scores each Kalman innovation as a log-likelihood ratio against the baseline model; use as a complementary anomaly signal to catch distribution-shape changes (bimodal fault signatures) that EWMA and CUSUM miss because they only track the mean.
+- **Parameters**: {% katex() %}\delta{% end %} = effect size from historical fault events; scores above 3 nats consistently warrant investigation.
+- **Field note**: Bimodal sensor signatures (normal vs. failed state) produce large surprise scores even when the mean appears unchanged.
+
 *and \\(\kappa > 0\\) is the allowance that prevents indefinite accumulation. Alert condition: \\(S_t^K > h\\) for threshold \\(h\\).*
 
-**Difference from static CUSUM**: The static form \\(S_t = \max(0, S_{t-1} + x_t - \mu_0 - k)\\) uses a fixed \\(\mu_0\\). Definition 24 replaces \\(x_t - \mu_0\\) with \\(\Lambda_t^K\\), computed from the Kalman innovation \\(z_t^K\\) normalized by the current innovation variance \\(\hat{P}_{t|t-1} + R\\). When the baseline drifts by \\(5\,^\circ\text{C}\\) over a season, \\(\Lambda_t^K \approx 0\\) throughout (the Kalman filter tracks the drift), while the static form accumulates \\(S_t \propto 5/\sigma\\) — triggering continuous false alarms.
+**Difference from static CUSUM**: The static form \\(S_t = \max(0, S_{t-1} + x_t - \mu_0 - k)\\) uses a fixed \\(\mu_0\\). Definition 24 replaces \\(x_t - \mu_0\\) with \\(\Lambda_t^K\\), computed from the Kalman innovation \\(z_t^K\\) normalized by the current innovation variance \\(\hat{P}_{t|t-1} + R\\). When the baseline drifts by \\(5\\,^\circ\text{C}\\) over a season, \\(\Lambda_t^K \approx 0\\) throughout (the Kalman filter tracks the drift), while the static form accumulates \\(S_t \propto 5/\sigma\\) — triggering continuous false alarms.
 
 **Bayesian interpretation**: \\(S_t^K\\) is a discounted accumulation of log Bayes factors. An alarm at \\(S_t^K > h\\) corresponds to posterior odds \\(P(\text{change} \mid x_{1:t})/P(\text{no change}) > e^h\\) — the detector declares a change when the Bayesian evidence ratio exceeds \\(e^h\\).
 
@@ -663,7 +711,7 @@ v_{k+1} &= \mathbf{J}_w v_k \;/\; \|\mathbf{J}_w v_k\| \\
 \end{aligned}
 {% end %}
 
-Convergence rate is \\(O(\log(1/\varepsilon)\,/\,\log(\lambda_1/\lambda_2))\\), where \\(\lambda_1/\lambda_2\\) is the dominant spectral gap. For \\(d = 5\\) features with well-separated eigenvalues, typically fewer than 10 iterations.
+Convergence rate is \\(O(\log(1/\varepsilon)\\,/\\,\log(\lambda_1/\lambda_2))\\), where \\(\lambda_1/\lambda_2\\) is the dominant spectral gap. For \\(d = 5\\) features with well-separated eigenvalues, typically fewer than 10 iterations.
 
 **Detection rate derivation for {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}**:
 
@@ -715,13 +763,13 @@ graph LR
 - Total footprint: **~520 bytes** (parameters + buffer)
 - Inference: **<1ms** on Cortex-M4
 
-**Energy feasibility on {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}**: [Definition 21](@/blog/2026-01-15/index.md#def-21) establishes local dominance when \\(n_c < T_s/T_d\\). For the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} platform (\\(T_d = 50\,\mu\text{J}\\), \\(T_s = 5\,\text{mJ}\\)) the threshold is \\(n_c < 100\\) inference passes. The TCN uses \\(n_c = 1\\) — one forward pass per anomaly check — and the 9,000 internal MACs determine the *cost of that pass*, not the value of \\(n_c\\). At approximately 5 nJ per MAC on a Cortex-M4, one TCN inference costs \\(E_{\text{TCN}} \approx 9000 \times 5\,\text{nJ} = 45\,\mu\text{J}\\). The energy ratio versus a single radio transmission is:
+**Energy feasibility on {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}**: [Definition 21](@/blog/2026-01-15/index.md#def-21) establishes local dominance when \\(n_c < T_s/T_d\\). For the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} platform (\\(T_d = 50\\,\mu\text{J}\\), \\(T_s = 5\\,\text{mJ}\\)) the threshold is \\(n_c < 100\\) inference passes. The TCN uses \\(n_c = 1\\) — one forward pass per anomaly check — and the 9,000 internal MACs determine the *cost of that pass*, not the value of \\(n_c\\). At approximately 5 nJ per MAC on a Cortex-M4, one TCN inference costs \\(E_{\text{TCN}} \approx 9000 \times 5\\,\text{nJ} = 45\\,\mu\text{J}\\). The energy ratio versus a single radio transmission is:
 
 {% katex(block=true) %}
 \frac{E_{\text{TCN}}}{T_s} = \frac{9000 \cdot e_{\text{MAC}}}{T_s} \approx \frac{45\,\mu\text{J}}{5\,\text{mJ}} = 0.009 \ll 1
 {% end %}
 
-Running at 5 Hz, the continuous inference power is \\(45\,\mu\text{J} \times 5\,\text{Hz} = 225\,\mu\text{W}\\). Avoiding a single unnecessary radio transmission (5 mJ) recovers 22 seconds of continuous inference — a favorable exchange whenever detection accuracy suppresses even one spurious transmission per 22-second window.
+Running at 5 Hz, the continuous inference power is \\(45\\,\mu\text{J} \times 5\\,\text{Hz} = 225\\,\mu\text{W}\\). Avoiding a single unnecessary radio transmission (5 mJ) recovers 22 seconds of continuous inference — a favorable exchange whenever detection accuracy suppresses even one spurious transmission per 22-second window.
 
 **Energy-adaptive scheduling**: For deployments where the energy margin is tighter than the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} reference, scale anomaly detection frequency with the [connectivity regime](@/blog/2026-01-15/index.md#def-2). The radio-savings justification weakens as connectivity degrades; inference frequency should follow:
 
@@ -832,9 +880,9 @@ H_{\text{proxy}}(t) = w_I \cdot I_{\text{norm}}(t) + w_V \cdot V_{\text{norm}}(t
 
 *where:*
 - {% katex() %}I_{\text{norm}}(t) = \operatorname{clamp}\!\left(\frac{\text{current\_draw}(t) - I_{\min}}{I_{\max} - I_{\min}},\, 0,\, 1\right){% end %} — normalized current draw (0 = overcurrent/short, 1 = nominal)
-- \\(V_{\text{norm}}(t) = 1 - \operatorname{clamp}\!\left(\frac{\text{vibration}(t)}{V_{\max}},\, 0,\, 1\right)\\) — inverted vibration index (0 = excessive, 1 = nominal)
+- \\(V_{\text{norm}}(t) = 1 - \operatorname{clamp}\!\left(\frac{\text{vibration}(t)}{V_{\max}},\\, 0,\\, 1\right)\\) — inverted vibration index (0 = excessive, 1 = nominal)
 - \\(H_{\text{norm}}(t) = e^{-t_{\text{silence}} / T_{\text{heartbeat}}}\\) — heartbeat freshness (decays exponentially with silence duration \\(t_{\text{silence}}\\))
-- \\(w_I + w_V + w_H = 1\\), with defaults \\(w_I = 0.5,\, w_V = 0.3,\, w_H = 0.2\\)
+- \\(w_I + w_V + w_H = 1\\), with defaults \\(w_I = 0.5,\\, w_V = 0.3,\\, w_H = 0.2\\)
 
 *The proxy confidence bound is \\(C_{\text{proxy}}(t) = 1 - \sigma_{\text{proxy}} / H_{\text{proxy}}(t)\\) where \\(\sigma_{\text{proxy}}\\) is estimated from calibration measurements. The legacy device is admitted to the autonomic fleet when \\(C_{\text{proxy}}(t) \geq C_{\text{threshold}}\\) and \\(H_{\text{proxy}}(t) \geq H_{\min}\\), establishing Phase 0 (Hardware Trust) without requiring a native self-health API.*
 
@@ -932,9 +980,9 @@ The lossless fully-connected model of Proposition 4 is a lower bound. Real edge 
 | Fully connected, lossless | \\(1\\) | \\(O(\ln n / \lambda)\\) — recovers Prop 4 |
 | \\(k\\)-regular expander, lossless | \\(\Omega(1)\\) | \\(O(\ln n / \lambda)\\) |
 | Grid (\\(\sqrt{n} \times \sqrt{n}\\)), lossless | \\(\Omega(1/\sqrt{n})\\) | \\(O(\sqrt{n}\ln n / \lambda)\\) |
-| OUTPOST mesh (\\(D=8\\), \\(p_{\text{loss}}=0.35\\)) | \\(\geq 1/8\\) | \\(\leq 2 \cdot 8 \cdot \ln(127)/(\lambda \cdot 0.65) \approx 119/\lambda\,\text{s}\\) |
+| OUTPOST mesh (\\(D=8\\), \\(p_{\text{loss}}=0.35\\)) | \\(\geq 1/8\\) | \\(\leq 2 \cdot 8 \cdot \ln(127)/(\lambda \cdot 0.65) \approx 119/\lambda\\,\text{s}\\) |
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration gap**: At \\(\lambda = 0.5\,\text{Hz}\\), Proposition 4 predicts \\(T \approx 9.7\,\text{s}\\); Proposition 26 predicts \\(T \leq 238\,\text{s} \approx 4\,\text{min}\\) under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap. The correct design response is to either increase \\(\lambda\\) (higher energy cost from Definition 21), decrease \\(D\\) by adding mesh relay nodes, or build decision logic that tolerates 4-minute-stale health data (increasing \\(\tau_{\max}\\) from Proposition 5 accordingly).
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration gap**: At \\(\lambda = 0.5\\,\text{Hz}\\), Proposition 4 predicts \\(T \approx 9.7\\,\text{s}\\); Proposition 26 predicts \\(T \leq 238\\,\text{s} \approx 4\\,\text{min}\\) under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap. The correct design response is to either increase \\(\lambda\\) (higher energy cost from Definition 21), decrease \\(D\\) by adding mesh relay nodes, or build decision logic that tolerates 4-minute-stale health data (increasing \\(\tau_{\max}\\) from Proposition 5 accordingly).
 
 **Corollary 3** (Loss-Rate {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} Budget). *To maintain convergence within target time \\(T^\*\\) under loss probability \\(p_{\text{loss}}\\) on a diameter-\\(D\\) mesh, the minimum {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate is:*
 
@@ -1138,7 +1186,7 @@ Define the **bandwidth asymmetry ratio**:
 \beta = \frac{B_b}{B_l}
 {% end %}
 
-where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus bandwidth (intra-node sensor bus). Typical edge values: \\(B_b \approx 9.6\,\text{kbps}\\) (tactical HF radio), \\(B_l \approx 100\,\text{Mbps}\\) (sensor bus), giving \\(\beta \approx 10^{-4}\\). At \\(\beta < 0.01\\), the backhaul is less than 1% of local capacity. Sending everything the node observes locally is physically impossible.
+where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus bandwidth (intra-node sensor bus). Typical edge values: \\(B_b \approx 9.6\\,\text{kbps}\\) (tactical HF radio), \\(B_l \approx 100\\,\text{Mbps}\\) (sensor bus), giving \\(\beta \approx 10^{-4}\\). At \\(\beta < 0.01\\), the backhaul is less than 1% of local capacity. Sending everything the node observes locally is physically impossible.
 
 <span id="def-22"></span>
 **Definition 22** (Bandwidth-Asymmetry Ingress Filter). *The ingress filter \\(\Pi: \mathcal{T} \times \mathbb{R}_{\geq 0} \to \{0,1\}\\) determines whether metric \\(m \in \mathcal{T}\\) observed at time \\(t\\) is transmitted:*
@@ -1152,6 +1200,10 @@ where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus 
 \end{cases}
 {% end %}
 
+- **Use**: Caps the ingress data rate at the maximum a node can process within one MAPE-K tick; apply before the Monitor phase on high-rate sensor nodes to prevent monitor-phase overload from sensor bursts that stale the entire MAPE-K cycle.
+- **Parameters**: {% katex() %}C_{\text{proc}}{% end %} = local processing capacity (bytes/s); filter drops input beyond {% katex() %}C_{\text{proc}} \cdot T_{\text{tick}}{% end %} bytes per window.
+- **Field note**: OUTPOST meshes produce 10–100x burst spikes over sustained rate — size the filter for peak burst, not average throughput.
+
 *where \\(m(t_{\text{last}})\\) is the last transmitted value of \\(m\\), \\(m_{\text{range}}\\) is the metric's operational dynamic range, \\(\theta_\Pi\\) is a baseline sensitivity parameter, \\(\beta = B_b/B_l\\) is the bandwidth asymmetry ratio, and \\(\tau_{\max}\\) is the maximum useful staleness bound from Proposition 5.*
 
 **Interpretation**: Three conditions trigger transmission (any one suffices):
@@ -1163,7 +1215,7 @@ where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus 
 
 | Metric | Normal threshold | Filtered threshold (\\(\theta_\Pi/\beta\\)) | Interpretation |
 | :--- | :--- | :--- | :--- |
-| Temperature drift | \\(0.1\,^\circ\text{C}\\) (0.1% of \\(100\,^\circ\text{C}\\) range) | \\(10\,^\circ\text{C}\\) (10% of range) | Only transmit on significant excursion |
+| Temperature drift | \\(0.1\\,^\circ\text{C}\\) (0.1% of \\(100\\,^\circ\text{C}\\) range) | \\(10\\,^\circ\text{C}\\) (10% of range) | Only transmit on significant excursion |
 | Battery state-of-charge | 1% change | 10% change | Coarse reporting only |
 | Seismic amplitude | any spike | always (P_CRITICAL) | Bypasses filter |
 | Mesh link quality | 5% drop | 50% drop | Catastrophic degradation only |
@@ -1215,7 +1267,7 @@ Each node maintains a **partition vector** \\(\rho_i\\) that records, for every 
 \end{cases}
 {% end %}
 
-where \\(\text{hlc}_{\text{last}}\\) is the {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp (Definition 40, Part 4) of the last confirmed contact, recorded as an {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp rather than wall-clock time, to preserve causal ordering across nodes with clock drift.
+where \\(\text{hlc}_{\text{last}}\\) is the {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp (Definition 40) of the last confirmed contact, recorded as an {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp rather than wall-clock time, to preserve causal ordering across nodes with clock drift.
 
 When \\(\rho_i[j] > 0\\) and \\(t - \rho_i[j] > \tau_{\text{max}}\\), node \\(i\\) marks its knowledge of node \\(j\\) as **uncertain** rather than **stale**.
 
@@ -1276,9 +1328,9 @@ Different decisions have different horizons. Safety-critical decisions with narr
 
 *Proof*: Under the diffusion model (Definition 6), health evolves as a Brownian process with variance \\(\sigma^2\\) per unit time. Given the last observation at time \\(t_0\\), the current state at time \\(t_0 + \tau\\) lies within a \\((1-\alpha)\\) confidence interval of half-width \\(z_{\alpha/2} \sigma \sqrt{\tau}\\). Setting this equal to the required decision precision \\(\Delta h\\) and solving for \\(\tau\\) gives the result. Under the diffusion model, the staleness bound is independent of observation rate \\(\lambda\\) — more frequent observations do not reduce uncertainty about the *current* state between observations, only about the state *at* each observation time.
 
-**Corollary 3**. *The quadratic relationship \\(\tau_{\text{max}} \propto (\Delta h / \sigma)^2\\) implies that tightening decision margins dramatically reduces useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}. Systems with narrow operating envelopes must refresh observations more frequently — not because more observations narrow the diffusion uncertainty, but because each observation must occur before the health state drifts by \\(\Delta h\\).*
+**Corollary 4**. *The quadratic relationship \\(\tau_{\text{max}} \propto (\Delta h / \sigma)^2\\) implies that tightening decision margins dramatically reduces useful {% term(url="#def-6", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}. Systems with narrow operating envelopes must refresh observations more frequently — not because more observations narrow the diffusion uncertainty, but because each observation must occur before the health state drifts by \\(\Delta h\\).*
 
-**Time-varying \\(\sigma\\) caveat**: Prop 5 assumes constant measurement volatility \\(\sigma\\). {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} thermistors exhibit \\(\sigma(T) \approx 0.05 + 0.003 \cdot |T - T_{\text{ref}}|\,{^\circ}\text{C}\\) — three times higher at \\(-30\,{^\circ}\text{C}\\) than at \\(20\,{^\circ}\text{C}\\). For sensors with temperature-correlated variance: substitute \\(\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T)\\) as a conservative upper bound on \\(\tau_{\max}\\). This produces a shorter, conservative staleness limit. To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance \\(\sqrt{P_\infty + R}\\) and recompute \\(\tau_{\max}\\) at each measurement cycle. Decision systems with narrow operating envelopes (\\(\Delta h < 0.1\,{^\circ}\text{C}\\)) will find \\(\tau_{\max}\\) below 10 seconds in cold conditions — requiring far higher {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rates than lab calibration suggests.
+**Time-varying \\(\sigma\\) caveat**: Prop 5 assumes constant measurement volatility \\(\sigma\\). {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} thermistors exhibit \\(\sigma(T) \approx 0.05 + 0.003 \cdot |T - T_{\text{ref}}|\\,{^\circ}\text{C}\\) — three times higher at \\(-30\\,{^\circ}\text{C}\\) than at \\(20\\,{^\circ}\text{C}\\). For sensors with temperature-correlated variance: substitute \\(\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T)\\) as a conservative upper bound on \\(\tau_{\max}\\). This produces a shorter, conservative staleness limit. To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance \\(\sqrt{P_\infty + R}\\) and recompute \\(\tau_{\max}\\) at each measurement cycle. Decision systems with narrow operating envelopes (\\(\Delta h < 0.1\\,{^\circ}\text{C}\\)) will find \\(\tau_{\max}\\) below 10 seconds in cold conditions — requiring far higher {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rates than lab calibration suggests.
 
 ### Byzantine-Tolerant Health Aggregation
 
@@ -1420,7 +1472,7 @@ The slow recovery prevents adversaries from rapidly cycling between attack and "
 Trust decay and cross-validation (above) detect nodes that report inconsistent health values. They do not detect a more sophisticated adversary: a node that reports *plausible* health values — passing every consistency check — while its anomaly detector has been disabled, replaced with a random-number generator, or is producing outputs uncalibrated to actual sensor data. A heartbeat proves the node is alive; cross-validation proves the node is reporting plausibly; neither proves the node is doing *useful work*.
 
 <span id="def-25"></span>
-**Definition 25** (Behavioral Fingerprint). *The behavioral fingerprint of node \\(i\\) over observation window \\([t - w, t]\\) is the tuple \\(\varphi_i(t) = (\mathcal{F}_i,\, \mathcal{K}_i,\, \mathcal{R}_i)\\):*
+**Definition 25** (Behavioral Fingerprint). *The behavioral fingerprint of node \\(i\\) over observation window \\([t - w, t]\\) is the tuple \\(\varphi_i(t) = (\mathcal{F}_i,\\, \mathcal{K}_i,\\, \mathcal{R}_i)\\):*
 
 - *{% katex() %}\mathcal{F}_i{% end %}: the empirical CDF of Kalman anomaly scores \\(\\{z_s^K\\}_{s \in [t-w,t]}\\). Under a calibrated detector running on real data, \\(\mathcal{F}_i \approx \Phi\\) (standard normal CDF).*
 - *{% katex() %}\mathcal{K}_i{% end %}: the cross-correlation matrix \\(\rho_{ij} = \operatorname{Corr}(z_i^K(s), z_j^K(s))\\) for each neighbor \\(j \in N(i)\\) over \\([t-w,t]\\). Under genuine sensor readings, \\(\rho_{ij}\\) matches the known physical correlation from the deployment calibration.*
@@ -1450,7 +1502,7 @@ D_w = \sup_{x \in \mathbb{R}} \left|\hat{F}_i(x) - \Phi(x)\right| \leq c_{\alpha
 
 **Connection to Definition 7** ({% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} Node): Def 7 identifies {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} nodes as those that may deviate arbitrarily from the protocol. Prop 6's trust bound stops them from dominating aggregation. Definition 25 adds a third line of defense that complements both: it is triggered not by *what* a node reports but by *whether the reporting process itself is consistent with genuine sensor-coupled inference*. A {% term(url="#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} node that understands and avoids Prop 6's trust threshold can still be caught by the fingerprint's spatial correlation test, provided the physical environment is not under the adversary's full control.
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Window \\(w = 1800\\) samples (30 minutes at \\(\lambda = 1\,\text{Hz}\\)), \\(\alpha = 0.01\\) — giving \\(c_{0.01,\, 1800} \approx 0.038\\). For a dead detector: \\(D_w = 0.5 \gg 0.038\\) — detected in 30 minutes. For a fake-\\(\mathcal{N}(0,1)\\) generator: {% katex() %}\mathcal{F}_i{% end %} passes, but \\(\rho_{ij} = 0\\) vs. expected \\(\rho_{ij} \approx 0.3\\) (thermal correlation between adjacent sensors) — detected by Fisher z-test on the correlation difference within the same window.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Window \\(w = 1800\\) samples (30 minutes at \\(\lambda = 1\\,\text{Hz}\\)), \\(\alpha = 0.01\\) — giving \\(c_{0.01,\\, 1800} \approx 0.038\\). For a dead detector: \\(D_w = 0.5 \gg 0.038\\) — detected in 30 minutes. For a fake-\\(\mathcal{N}(0,1)\\) generator: {% katex() %}\mathcal{F}_i{% end %} passes, but \\(\rho_{ij} = 0\\) vs. expected \\(\rho_{ij} \approx 0.3\\) (thermal correlation between adjacent sensors) — detected by Fisher z-test on the correlation difference within the same window.
 
 ### Federated Learning for Distributed Health Models
 
@@ -1922,7 +1974,7 @@ Health vector per drone contains:
 - Critical sensor status (functional/degraded/failed)
 - Mission {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %} (\\(\mathcal{L}_0\\)-\\(\mathcal{L}_4\\))
 
-Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values. In contested environments where clock drift is measurable, replace wall-clock LWW with {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}-aware merge (Definition 41, Fleet Coherence Under Partition, Part 4) using the {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}Hybrid Logical Clock{% end %} ordering to determine recency; node-ID tiebreakers resolve simultaneous {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} values.
+Merge function uses timestamp-weighted average for numeric values, latest-timestamp-wins for categorical values. In contested environments where clock drift is measurable, replace wall-clock LWW with {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}-aware merge (Definition 41, Fleet Coherence Under Partition) using the {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}Hybrid Logical Clock{% end %} ordering to determine recency; node-ID tiebreakers resolve simultaneous {% term(url="@/blog/2026-02-05/index.md#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} values.
 
 **Convergence guarantees**: With logarithmic propagation dynamics, fleet-wide health convergence occurs within 30-40 seconds - fast enough to track operational state changes while remaining robust to individual message losses.
 
@@ -2423,10 +2475,10 @@ M_{2,j} &\leftarrow M_{2,j} + \delta_1 \cdot \delta_2 \\
 \end{aligned}
 {% end %}
 
-Observation \\(d\\) is *flagged anomalous* if \\(d > \mu_j + k \cdot \sigma_j\\), where \\(k\\) is a fleet-wide policy parameter (\\(k = 3\\) for standard operation; \\(k = 4\\) for high-safety contexts). The estimator is seeded from the Phase-0 attestation window (Definition 60), not from cold-start zeros. \\(D_j(t)\\) is the per-node scalar approximation of Definition 11's pairwise divergence metric, computed against the last-known fleet consensus snapshot received via {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} (Definition 5). ∎
+Observation \\(d\\) is *flagged anomalous* if \\(d > \mu_j + k \cdot \sigma_j\\), where \\(k\\) is a fleet-wide policy parameter (\\(k = 3\\) for standard operation; \\(k = 4\\) for high-safety contexts). The estimator is seeded from the Phase-0 attestation window (Definition 60), not from cold-start zeros. \\(D_j(t)\\) is the per-node scalar approximation of Definition 11's pairwise divergence metric, computed against the last-known fleet consensus snapshot received via {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} (Definition 5). \\(\square\\)
 
 <span id="def-59"></span>
-**Definition 59** (Soft-Quorum Ejection). Node \\(i\\) maintains a per-peer violation streak counter \\(v_j\\) and reputation weight \\(w_j \in [0, w_0]\\), where \\(w_0\\) is the Phase-0 calibrated baseline. The update rules are: a flagged observation sets \\(v_j \leftarrow v_j + 1\\); a clean observation resets \\(v_j \leftarrow 0\\). When \\(v_j \geq m\\), node \\(i\\) sets \\(w_j \leftarrow 0\\) (*soft-eject*). After \\(r\\) consecutive post-eject clean observations, \\(w_j \leftarrow w_0\\) (*reinstatement*). No broadcast is emitted; the decision is purely local. A soft-ejected peer \\(j\\) is excluded from Definition 12b's Reputation-Weighted Merge and from Definition 44's Reputation-Weighted Fleet Coherence Vote. Peer \\(j\\) remains in the *denominator* of Definition 45's Logical Quorum — a cascade of ejections cannot erode the quorum threshold. ∎
+**Definition 59** (Soft-Quorum Ejection). Node \\(i\\) maintains a per-peer violation streak counter \\(v_j\\) and reputation weight \\(w_j \in [0, w_0]\\), where \\(w_0\\) is the Phase-0 calibrated baseline. The update rules are: a flagged observation sets \\(v_j \leftarrow v_j + 1\\); a clean observation resets \\(v_j \leftarrow 0\\). When \\(v_j \geq m\\), node \\(i\\) sets \\(w_j \leftarrow 0\\) (*soft-eject*). After \\(r\\) consecutive post-eject clean observations, \\(w_j \leftarrow w_0\\) (*reinstatement*). No broadcast is emitted; the decision is purely local. A soft-ejected peer \\(j\\) is excluded from Definition 12b's Reputation-Weighted Merge and from Definition 44's Reputation-Weighted Fleet Coherence Vote. Peer \\(j\\) remains in the *denominator* of Definition 45's Logical Quorum — a cascade of ejections cannot erode the quorum threshold. \\(\square\\)
 
 <span id="prop-54"></span>
 **Proposition 54** (False-Positive Ejection Bound). Under Gaussian divergence residuals and independent peers, the probability that an honest peer \\(j\\) is wrongly soft-ejected by node \\(i\\) within \\(T\\) observation steps satisfies:
@@ -2435,9 +2487,9 @@ Observation \\(d\\) is *flagged anomalous* if \\(d > \mu_j + k \cdot \sigma_j\\)
 P(\text{false eject}) \leq \bigl(1 - \Phi(k)\bigr)^m \cdot T
 {% end %}
 
-where \\(\Phi\\) is the standard normal CDF. At \\(k = 3, m = 5\\): \\(P \approx 4.5 \times 10^{-15} \cdot T\\), negligible for any realistic operating window. ∎
+where \\(\Phi\\) is the standard normal CDF. At \\(k = 3, m = 5\\): \\(P \approx 4.5 \times 10^{-15} \cdot T\\), negligible for any realistic operating window. \\(\square\\)
 
-*Proof sketch.* A false ejection requires \\(m\\) consecutive anomalous flags on an honest peer. Under Gaussian residuals, each flag occurs independently with probability \\(1 - \Phi(k)\\). The \\(m\\)-consecutive-flag probability is \\((1 - \Phi(k))^m\\); a union bound over \\(T\\) possible streak-ending positions gives the stated result. ∎
+*Proof sketch.* A false ejection requires \\(m\\) consecutive anomalous flags on an honest peer. Under Gaussian residuals, each flag occurs independently with probability \\(1 - \Phi(k)\\). The \\(m\\)-consecutive-flag probability is \\((1 - \Phi(k))^m\\); a union bound over \\(T\\) possible streak-ending positions gives the stated result. \\(\square\\)
 
 <span id="def-60"></span>
 **Definition 60** (Trust-Root Anchor). At Phase-0, each node \\(i\\) generates an attestation record signed by hardware TPM:
@@ -2446,7 +2498,7 @@ where \\(\Phi\\) is the standard normal CDF. At \\(k = 3, m = 5\\): \\(P \approx
 A_i = \bigl(id_i,\; H(\mathrm{config}_i),\; \mathrm{PKI\_root}\bigr)
 {% end %}
 
-The *fleet trust-root* for node \\(i\\) is {% katex() %}\mathcal{T}_{\text{root},i} = \{A_j : j \in \text{fleet, Phase-0 attested}\}{% end %}. During the Denied connectivity regime (Definition 2, \\(\mathcal{N}\\)), {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cannot propagate reputation updates. Node \\(i\\) applies the following defaults: peer {% katex() %}j \in \mathcal{T}_{\text{root},i}{% end %} receives weight \\(w_j = w_0\\); peer {% katex() %}j \notin \mathcal{T}_{\text{root},i}{% end %} (introduced post-Phase-0 without re-attestation) receives weight \\(w_j = w_{\text{low}} < w_0\\). ∎
+The *fleet trust-root* for node \\(i\\) is {% katex() %}\mathcal{T}_{\text{root},i} = \{A_j : j \in \text{fleet, Phase-0 attested}\}{% end %}. During the Denied connectivity regime (Definition 2, \\(\mathcal{N}\\)), {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cannot propagate reputation updates. Node \\(i\\) applies the following defaults: peer {% katex() %}j \in \mathcal{T}_{\text{root},i}{% end %} receives weight \\(w_j = w_0\\); peer {% katex() %}j \notin \mathcal{T}_{\text{root},i}{% end %} (introduced post-Phase-0 without re-attestation) receives weight \\(w_j = w_{\text{low}} < w_0\\). \\(\square\\)
 
 <span id="prop-55"></span>
 **Proposition 55** (Isolated-Node Trust Guarantee). A node operating in the Denied regime for duration \\(\tau\\) maintains calibration error bounded by:
@@ -2455,7 +2507,7 @@ The *fleet trust-root* for node \\(i\\) is {% katex() %}\mathcal{T}_{\text{root}
 \lvert \hat{w}_j(\tau) - w_j(0) \rvert \leq \varepsilon_{\text{drift}} \cdot \tau
 {% end %}
 
-where \\(\varepsilon_{\text{drift}} \leq w_0 / L_{\text{P0}}\\) for Phase-0 calibration window length \\(L_{\text{P0}}\\), under the assumption that fleet divergence statistics are approximately stationary over the partition duration. Trust degrades gracefully rather than catastrophically; the Phase-0 anchor prevents unbounded weight drift regardless of partition duration. ∎
+where \\(\varepsilon_{\text{drift}} \leq w_0 / L_{\text{P0}}\\) for Phase-0 calibration window length \\(L_{\text{P0}}\\), under the assumption that fleet divergence statistics are approximately stationary over the partition duration. Trust degrades gracefully rather than catastrophically; the Phase-0 anchor prevents unbounded weight drift regardless of partition duration. \\(\square\\)
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} illustration.** Day 44 of operation. Sensor 88 begins reporting threat coordinates 340 m east of the consensus estimate. Its \\(D_{88}(t)\\) climbs from a historical \\(\mu \approx 0.04\\) to 0.31 over six reporting cycles, exceeding \\(\mu + 3\sigma \approx 0.09\\). Node 12 flags Sensor 88 on the fifth observation (streak \\(v_{88} = 5 \geq m = 5\\)) and sets \\(w_{88} = 0\\). Nodes 11, 13, and 14 reach the same conclusion independently over the next two {% term(url="#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cycles. The 126 remaining sensors continue operating; no coordinator is contacted; no fleet-wide vote is called.
 

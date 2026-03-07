@@ -287,6 +287,10 @@ The binding constraint is the one whose relaxation would most improve throughput
 R(t) = \frac{E_{\text{battery}}(t)}{E_{\min}} \cdot w_E + \frac{M_{\text{free}}(t)}{M_{\text{total}}} \cdot w_M + \frac{\text{CPU}_{\text{idle}}(t)}{\text{CPU}_{\text{total}}} \cdot w_C
 {% end %}
 
+- **Use**: Computes composite resource availability {% katex() %}[0,1]{% end %} weighting battery, free memory, and idle CPU fraction; compare {% katex() %}R(t) < R_{\text{crit}} \approx 0.2{% end %} at each MAPE-K tick to trigger survival mode and prevent single-dimension blindness from missing a full-battery node that is crashing due to memory exhaustion.
+- **Parameters**: {% katex() %}w_E + w_M + w_C = 1{% end %}; RAVEN: {% katex() %}w_E=0.5,\, w_M=0.25,\, w_C=0.25{% end %}; OUTPOST: {% katex() %}w_E=0.7{% end %} (battery-dominated site).
+- **Field note**: Memory is the most-overlooked resource dimension — in OUTPOST, OOM kills caused 40% of node failures that appeared as power events in energy-only monitoring.
+
 *with weights \\(w_E + w_M + w_C = 1\\). Critical threshold: \\(R_{\text{crit}} \approx 0.2\\) — 20% resource availability triggers survival mode regardless of connectivity state.*
 
 <span id="def-19c"></span>
@@ -298,7 +302,7 @@ A_{\text{adv}}(t) = P(\text{jamming}) \cdot w_J + P(\text{spoofing}) \cdot w_S +
 
 *with weights summing to 1. High threat (\\(A_{\text{adv}} > 0.5\\)) shifts binding priority toward trust verification and {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} learning regardless of connectivity state.*
 
-*(renamed \\(A_{\text{adv}}(t)\\) to avoid collision with the defender action set \\(A\\) used in [Part 5, Definition 32](@/blog/2026-02-12/index.md#def-32))*
+*(renamed \\(A_{\text{adv}}(t)\\) to avoid collision with the defender action set \\(A\\) used in [Definition 32](@/blog/2026-02-12/index.md#def-32))*
 
 <span id="prop-20"></span><span id="prop-20b"></span>
 **Proposition 20** (Multi-Dimensional Constraint Migration). *The binding constraint \\(c^\*\\) is determined by the utility gradient across all state dimensions \\((C, R, A)\\):*
@@ -306,6 +310,10 @@ A_{\text{adv}}(t) = P(\text{jamming}) \cdot w_J + P(\text{spoofing}) \cdot w_S +
 {% katex(block=true) %}
 c^*(C, R, A) = \arg\max_{c} \left| \frac{\partial U}{\partial c}(C, R, A) \right|
 {% end %}
+
+- **Use**: Identifies the binding constraint as the capability dimension with the largest marginal utility gradient across connectivity, resource, and adversary axes simultaneously; apply when all three axes shift at once to prevent single-axis drift that optimizes efficiency while a threat corrupts the system undetected.
+- **Parameters**: {% katex() %}\partial U/\partial c{% end %} evaluated numerically from telemetry; apply {% katex() %}\pm 10\%{% end %} hysteresis to boundary transitions to prevent oscillation.
+- **Field note**: The adversary axis is routinely omitted in commercial deployments — add it explicitly or the gradient always points toward connectivity and resource optimization while ignoring threats.
 
 *This produces a piecewise-constant surface over the \\((C, R, A)\\) state cube. Key regions:*
 
@@ -373,7 +381,7 @@ Each connectivity state has different capability targets:
 
 The {% term(url="#def-17", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} must ensure each state's target capability is achievable before assuming higher states will be available. Design for denied, enhance for connected.
 
-The labels used here (Connected/Degraded/Denied/Emergency) are a practical operational simplification; the authoritative regime taxonomy is the four-valued \\(\Xi(t)\\) defined in Part 1 (Connected/Degraded/Intermittent/None), where "Denied" here corresponds to Intermittent (\\(0 < C \leq 0.3\\)) and "Emergency" corresponds to the None regime (\\(C = 0\\)) combined with a resource-critical condition.
+The labels used here (Connected/Degraded/Denied/Emergency) are a practical operational simplification; the authoritative regime taxonomy is the four-valued \\(\Xi(t)\\) from Definition 2 (Connected/Degraded/Intermittent/None), where "Denied" here corresponds to Intermittent (\\(0 < C \leq 0.3\\)) and "Emergency" corresponds to the None regime (\\(C = 0\\)) combined with a resource-critical condition.
 
 ### Dynamic Re-Sequencing
 
@@ -423,9 +431,13 @@ Every autonomic capability consumes resources:
 R_{\text{autonomic}}^{\max} = R_{\text{total}} - R_{\text{mission}}^{\min}
 {% end %}
 
+- **Use**: Computes the maximum resource ceiling available for all autonomic functions before mission capability is impaired; use this ceiling at integration time to allocate across self-measurement, healing, coherence, and learning and prevent mission starvation from heavy autonomic overhead.
+- **Parameters**: {% katex() %}R_{\text{mission}}^{\min} = 70\text{--}80\%{% end %} of {% katex() %}R_{\text{total}}{% end %} for most deployments; autonomic ceiling {% katex() %}= 20\text{--}30\%{% end %} total.
+- **Field note**: Measure autonomic overhead in isolation first — it routinely consumes \\(2{-}3\\times\\) the designed budget in production environments.
+
 *Systems where \\(R_{\text{autonomic}}^{\min} > R_{\text{autonomic}}^{\max}\\) cannot achieve both mission capability and self-management.*
 
-For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Part 3, Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 \\(\approx\\) 0.1 mW through L4 \\(\approx\\) 42 mW. These figures instantiate the Law 3 constraint for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} and {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} deployments.
+For concrete autonomic overhead figures (\\(R_{\text{autonomic}}\\) in mW by capability tier), see Definition 46 (Self-Healing Without Connectivity), which provides L0–L4 power consumption bounds: L0 \\(\approx\\) 0.1 mW through L4 \\(\approx\\) 42 mW. These figures instantiate the Law 3 constraint for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} and {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} deployments.
 
 These resources compete with the primary mission. A drone spending 40% of its CPU on self-measurement has 40% less CPU for threat detection. This creates the **meta-constraint**:
 
@@ -555,6 +567,10 @@ Edge architecture development follows a phase-gated structure where each phase m
 G_i(S) = \bigwedge_{p \in P_i} \mathbb{1}[V_p(S) \geq \theta_p]
 {% end %}
 
+- **Use**: Computes a binary gate that is 1 only when every validation predicate in phase {% katex() %}i{% end %} simultaneously meets its threshold; apply at the end of each development phase — {% katex() %}G_i = 0{% end %} blocks all advancement to prevent partial-pass advancement that hides a critical capability gap behind a 4-of-5 passing score.
+- **Parameters**: Each threshold is mission-specific (e.g., detection accuracy {% katex() %}\geq 0.80{% end %}); all predicates must pass simultaneously, not in aggregate.
+- **Field note**: Define predicates quantitatively before writing any code — teams that define gates post-hoc systematically lower thresholds to pass on schedule.
+
 Where \\(P_i\\) is the set of validation predicates for phase \\(i\\), \\(V_p(S)\\) is the validation score for predicate \\(p\\) given state \\(S\\), and \\(\theta_p\\) is the threshold for predicate \\(p\\).
 
 **Statistical note**: Each predicate \\(V_p(S) \geq \theta_p\\) is evaluated against observed test runs. A single pass provides one data point, not a distribution. For pass/fail predicates (\\(V_{\mathrm{surv}}\\), \\(V_{\mathrm{zero}}\\), \\(V_{\mathrm{heal}}\\)), the 95\% Clopper-Pearson lower confidence bound on the true pass probability after \\(k\\) successes in \\(N\\) trials is \\(p_L(k, N, 0.05)\\). Achieving \\(p_L(N, N, 0.05) \geq 0.95\\) requires \\(N \geq 28\\) trials — not 1. In practice: hardware-layer tests (H1–H4) can be run on production samples; system-level gates (C1–C7) satisfy the statistical requirement via combined simulation and hardware runs, with the trial count tracked in the certification evidence package. A single 24-hour chaos run satisfies C1–C7 as an integration check; it does not constitute a statistically valid certification until replicated \\(N \geq 28\\) times or complemented by model checking for the correctness predicates (\\(V_{\mathrm{merge}}\\), \\(V_{\mathrm{reconcile}}\\)).
@@ -565,6 +581,10 @@ Where \\(P_i\\) is the set of validation predicates for phase \\(i\\), \\(V_p(S)
 {% katex(block=true) %}
 \text{enter}(i+1) \Rightarrow \bigwedge_{j=0}^{i} G_j(S) = 1
 {% end %}
+
+- **Use**: Requires all prior phase gates {% katex() %}G_0{% end %} through {% katex() %}G_i{% end %} to remain satisfied on entry to each new phase; re-run all prior gate predicates after every code change to prevent silent gate regression where a current-phase change breaks an earlier hardware trust or isolation requirement.
+- **Parameters**: Any {% katex() %}G_j = 0{% end %} for {% katex() %}j \leq i{% end %} requires regression to phase {% katex() %}j{% end %} before proceeding — there is no exception path.
+- **Field note**: Automate all prior gate checks in CI — manual re-verification of previous phases is never done consistently under schedule pressure.
 
 This creates a regression invariant: any change that invalidates an earlier gate \\(G_j\\) for \\(j < i\\) requires regression to phase \\(j\\) before proceeding.
 
@@ -580,17 +600,17 @@ The {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold 
 
 For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, the TLA+ model is ~500 lines specifying connectivity transitions, healing actions, and {% term(url="#def-20", def="Checkpoint where three conditions must ALL hold before advancing to the next capability: ROI on the current constraint below 3x, 95% of its theoretical ceiling reached, and the next constraint measurably binding") %}phase gate{% end %}s. Model checking verified the phase progression invariant holds for fleet sizes up to n=50 and partition durations up to 10,000 time steps.
 
-**TLA+ variable mapping** (formal model ↔ Part 1 Core State Variables): The following correspondence ensures TLA+ specifications are direct translations of the architectural prose — each model variable is grounded in the formally defined state space.
+**TLA+ variable mapping** (formal model ↔ Core State Variables): The following correspondence ensures TLA+ specifications are direct translations of the architectural prose — each model variable is grounded in the formally defined state space.
 
 | TLA+ Variable | Architectural Symbol | Definition |
 | :--- | :--- | :--- |
-| `Xi_t` | \\(\Xi(t)\\) | Operating regime: Connected / Degraded / Intermittent / None (Part 1, Core State Variables) |
-| `tau_transport` | \\(\tau\\) | Transport / feedback delay (Part 1 notation; see disambiguation note for subscript conventions) |
-| `R_t` | \\(R(t)\\) | Normalized resource availability — Definition 19b / Part 3 Definition 47 |
-| `C_t` | \\(C(t)\\) | Link quality \\([0,1]\\) — Part 1, Core State Variables |
-| `L_t` | \\(\mathcal{L}(t)\\) | Capability level L0–L4 — Part 1, Core State Variables |
-| `D_t` | \\(D(\Sigma_A, \Sigma_B)\\) | State divergence \\([0,1]\\) — Part 4, Definition 11 |
-| `H_t` | \\(H(t)\\) | Health vector — Part 1, Core State Variables |
+| `Xi_t` | \\(\Xi(t)\\) | Operating regime: Connected / Degraded / Intermittent / None (Definition 2) |
+| `tau_transport` | \\(\tau\\) | Transport / feedback delay (see notation disambiguation for subscript conventions) |
+| `R_t` | \\(R(t)\\) | Normalized resource availability — Definition 19b / Definition 47 |
+| `C_t` | \\(C(t)\\) | Link quality \\([0,1]\\) — Core State Variables |
+| `L_t` | \\(\mathcal{L}(t)\\) | Capability level L0–L4 — Core State Variables |
+| `D_t` | \\(D(\Sigma_A, \Sigma_B)\\) | State divergence \\([0,1]\\) — Definition 11 |
+| `H_t` | \\(H(t)\\) | Health vector — Core State Variables |
 
 ### Phase 0: Foundation Layer
 
@@ -613,9 +633,9 @@ The survival duration test (\\(V_{\text{surv}}\\)) confirms the node stays alive
 V_{\text{zero}}(S) = \mathbb{1}\!\left[B_b(t) = 0,\; \forall t \in [0,\,\tau_0] \;\Rightarrow\; \text{Alive}(n,\,\tau_0) \;\land\; U_E(S) \leq B_E\right]
 {% end %}
 
-where \\(\tau_0 = 72\,\text{h}\\) is the zero-backhaul duration, \\(B_b(t) = 0\\) enforces no radio transmission, \\(U_E(S)\\) is energy consumed over \\([0, \tau_0]\\), and \\(B_E = E_{\text{battery}} - E_{\text{reserve}}\\) is the usable energy budget.
+where \\(\tau_0 = 72\\,\text{h}\\) is the zero-backhaul duration, \\(B_b(t) = 0\\) enforces no radio transmission, \\(U_E(S)\\) is energy consumed over \\([0, \tau_0]\\), and \\(B_E = E_{\text{battery}} - E_{\text{reserve}}\\) is the usable energy budget.
 
-**Why \\(\tau_0 = 72\,\text{h}\\)**: This matches {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s worst-case terrain crossing window (72 hours per the foundational constraint analysis). {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} uses 24 hours; {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} uses 30 days. The predicate threshold scales with the target system but 72 hours is the standard tactical stress duration.
+**Why \\(\tau_0 = 72\\,\text{h}\\)**: This matches {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s worst-case terrain crossing window (72 hours per the foundational constraint analysis). {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} uses 24 hours; {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} uses 30 days. The predicate threshold scales with the target system but 72 hours is the standard tactical stress duration.
 
 **What the zero-backhaul test validates**:
 1. **Energy budget**: The node's baseline draw (compute, sensors, {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop) does not exhaust the battery before \\(\tau_0\\). Because \\(T_s = 0\\) (no radio energy spent), this isolates the pure compute-plus-sensors energy envelope.
@@ -720,7 +740,7 @@ V_{\text{antifragile}}(S) &= \mathbb{1}[\text{PostStress}(P) > \text{PreStress}(
 
 **Phase 5 gate**: \\(G_5(S) = G_4(S) \land V_{L4} \land V_{\text{degrade}} \land V_{\text{cycle}} \land V_{\text{adv}} \land V_{\text{antifragile}} \land V_{\text{SOE}} \land V_{\text{causal}} \land V_{\text{L0phys}}\\)
 
-where \\(V_{\text{SOE}}(S)\\) is the Safe Operating Envelope validity predicate: parameter vector \\(\theta \in [\theta_{\min}, \theta_{\max}]\\) and basin occupancy \\(\geq 0.95\\) over the most recent learning window — see [Part 5 Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe). \\(V_{\text{causal}}(S) = \mathbb{1}[\text{CausalBarrier active: all human commands gated by Merkle root validation}]\\) — see [Definition 52](#def-52). \\(V_{\text{L0phys}}(S) = \mathbb{1}[\text{L0 Physical Interlock wired, tested, unreachable from software}]\\) — see [Definition 54](#def-54).
+where \\(V_{\text{SOE}}(S)\\) is the Safe Operating Envelope validity predicate: parameter vector \\(\theta \in [\theta_{\min}, \theta_{\max}]\\) and basin occupancy \\(\geq 0.95\\) over the most recent learning window — see [Safe Operating Envelope](@/blog/2026-02-12/index.md#def-soe). \\(V_{\text{causal}}(S) = \mathbb{1}[\text{CausalBarrier active: all human commands gated by Merkle root validation}]\\) — see [Definition 52](#def-52). \\(V_{\text{L0phys}}(S) = \mathbb{1}[\text{L0 Physical Interlock wired, tested, unreachable from software}]\\) — see [Definition 54](#def-54).
 
 **Red team gate integration**: A failed red team exercise (\\(V_{\text{adv}} = 0\\)) triggers re-evaluation of the preceding gate: if jamming breaks {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} coherence, the Phase 2 gate (\\(V_{\text{gossip}}\\)) is re-validated before re-attempting Phase 5.
 
@@ -855,11 +875,23 @@ The following checklist formalizes \\(V_{\mathrm{isolchaos}}\\). A system cannot
 | C6 | Energy floor reached | Push \\(E\\) to \\(E_{\mathrm{HSS}}\\); node enters HSS; recovers when \\(E\\) rises | \\(V_{\mathrm{term}}\\) |
 | C7 | Performance at T+24h vs T+0 | \\(\mathbb{E}[\mathrm{Performance}(T{+}24)] \geq \mathbb{E}[\mathrm{Performance}(T{+}0)]\\) | \\(V_{\mathrm{antifragile}}\\) |
 
+**Weibull partition extension (required when \\(k_\mathcal{N} < 1\\)):** For systems using the Weibull semi-Markov connectivity model (Definition 3) with a fitted shape parameter below 1, three additional scenarios must pass. These exercise the circuit breaker (Proposition 59) and the time-varying anomaly threshold (Proposition 3) at the tail of the partition duration distribution.
+
+| # | Test | Pass Criterion | Linked Predicate |
+| :--- | :--- | :--- | :--- |
+| C8 | Micro-burst cycle \\(\geq 20\\) partitions (\\(\text{Weibull}(k{=}1.2,\\,\lambda{=}2\\,\text{s})\\)) | \\(T_{\mathrm{acc}}\\) resets after every recovery; circuit breaker never fires; \\(k_\mathcal{N}\\) bandit arm stable | \\(V_{\mathrm{isolchaos}}\\) |
+| C9 | Long Dark: 72 h sustained partition (\\(\text{Weibull}(k{=}0.62,\\,\lambda{=}10\\,\text{hr})\\)) | Circuit breaker fires at \\(T_{\mathrm{acc}} \geq Q_{0.95} \approx 59\\,\text{hr}\\); {% katex() %}\mathcal{L}_0{% end %} maintained continuously; outbound queue bounded; {% katex() %}T_{\mathrm{acc}}{% end %} resets on reconnection | \\(V_{\mathrm{isolchaos}}\\) |
+| C10 | Asymmetric link: uplink loss \\(\geq 95\\%\\), downlink intact | Regime classified \\(\mathcal{I}\\) within two gossip periods; \\(\theta^\*(t)\\) drifts; outbound queue memory-bounded | \\(V_{\mathrm{isolchaos}}\\) |
+
 **Final gate — FAC issued only when all pass:**
 
 {% katex(block=true) %}
-\mathrm{FAC}(S) = \bigwedge_{i \in \{H1..H4,\, I1..I4,\, C1..C7\}} \mathrm{Passed}(i)
+\mathrm{FAC}(S) = \bigwedge_{i \in \{H1..H4,\, I1..I4,\, C1..C7\}} \mathrm{Passed}(i) \;\land\; \bigl(k_\mathcal{N} \geq 1 \;\lor\; \bigwedge_{i \in \{C8..C10\}} \mathrm{Passed}(i)\bigr)
 {% end %}
+
+- **Use**: Conjuncts all hardware, isolation, and chaos-test checklist items into a single binary certification; require {% katex() %}\mathrm{FAC} = 1{% end %} before labeling any system L3+ Autonomic for unattended field deployment to prevent premature labeling based on passing only the hardware trust gate.
+- **Parameters**: H1–H4 hardware tests; I1–I4 isolation tests; C1–C7 chaos tests; C8–C10 additionally required when Weibull {% katex() %}k_N < 1{% end %}.
+- **Field note**: C8–C10 heavy-tail chaos tests are routinely skipped for schedule reasons — skipping them invalidates FAC for any {% katex() %}k_N < 1{% end %} system.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} certification example**: Phase 0 gate passed in month 2 of development
 (\\(V_{\mathrm{attest}}, V_{\mathrm{surv}}, V_{\mathrm{budget}}, V_{\mathrm{safe}}, V_{\mathrm{zero}}\\) all green).
@@ -924,9 +956,13 @@ Cognitive science establishes that human situational awareness (SA) takes time t
 \Psi_{\text{trigger}} = \Psi_{\text{fail}} + \int_{t}^{t + \tau_{SA}} \frac{d\Psi}{dt}\, dt
 {% end %}
 
+- **Use**: Computes the confidence threshold at which handover must begin, accounting for the operator SA reconstruction window {% katex() %}\tau_{SA}{% end %}; embed as the {% katex() %}V_{SA}{% end %} predicate in the Phase 4 gate to prevent late handover that delivers a situationally unaware operator into a deteriorating system.
+- **Parameters**: {% katex() %}\tau_{SA} = 90\text{--}180\text{ s}{% end %} for dense multi-threat environments; {% katex() %}\Psi_{\text{fail}}{% end %} = mission-specific safety confidence floor.
+- **Field note**: {% katex() %}\tau_{SA}{% end %} is consistently longer than teams expect — validate with real operators under realistic cognitive load, not empty-desk lab conditions.
+
 *where \\(\Psi_{\text{fail}}\\) is the minimum confidence at which automation fails safely. Handover must be initiated when \\(\Psi(t) \leq \Psi_{\text{trigger}}\\), not when \\(\Psi(t) \leq \Psi_{\text{fail}}\\).*
 
-The key insight is that \\(\tau_{SA}\\) is measured in minutes, not milliseconds. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} missions with dense multi-threat environments, empirical SA reconstruction times are 90–180 seconds — comparable to the [{% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}](@/blog/2026-02-12/index.md#def-16) window from Part 5. During this interval \\(\Psi(t)\\) continues to decay. A handover initiated at \\(\Psi_{\text{fail}}\\) delivers an operator who is not yet situationally aware, into a system that has already passed the point of safe autonomous recovery.
+The key insight is that \\(\tau_{SA}\\) is measured in minutes, not milliseconds. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} missions with dense multi-threat environments, empirical SA reconstruction times are 90–180 seconds — comparable to the [{% term(url="@/blog/2026-02-12/index.md#def-16", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}](@/blog/2026-02-12/index.md#def-16) window. During this interval \\(\Psi(t)\\) continues to decay. A handover initiated at \\(\Psi_{\text{fail}}\\) delivers an operator who is not yet situationally aware, into a system that has already passed the point of safe autonomous recovery.
 
 **Consequence**: The \\(V_{\text{SA}}\\) predicate in Phase 4 gate requires demonstrating that handover triggers are set conservatively enough to provide full SA recovery time before the predicted failure boundary.
 
@@ -942,6 +978,10 @@ The key insight is that \\(\tau_{SA}\\) is measured in minutes, not milliseconds
 \end{cases}
 {% end %}
 
+- **Use**: Models operator trust with additive success recovery ({% katex() %}\eta_{\text{gain}} \approx 0.05{% end %}) and multiplicative failure decay ({% katex() %}\eta_{\text{loss}} \approx 0.40{% end %}); update after each observable automation outcome to prevent symmetric-recovery settings that allow a serious failure to be erased by one subsequent success.
+- **Parameters**: {% katex() %}\eta_{\text{gain}} \approx 0.05{% end %}; {% katex() %}\eta_{\text{loss}} \approx 0.40{% end %}; failure at {% katex() %}\mathcal{T}=0.80{% end %} requires ~10 successes to recover — asymmetry by design.
+- **Field note**: The {% katex() %}\approx 8:1{% end %} asymmetry ratio matches human trust psychology — equal gain/loss rates cause teams to lose operator acceptance within weeks.
+
 *with \\(\eta_{\text{loss}} \gg \eta_{\text{gain}}\\). The success branch saturates as trust approaches 1; the failure branch decays multiplicatively toward \\(\mathcal{T}_{\min} > 0\\).*
 
 A single automation failure can erase trust accumulated over many successes. For \\(\eta_{\text{gain}} = 0.05\\) and \\(\eta_{\text{loss}} = 0.40\\), a failure at \\(\mathcal{T} = 0.80\\) reduces trust to \\(\mathcal{T} = 0.48\\), requiring approximately \\(k\\) successes to recover:
@@ -955,7 +995,7 @@ k \geq \frac{\ln(0.80 / 0.48)}{\ln\!\left(1/(1 - 0.05)\right)} \approx 10
 ### Causal Barrier
 
 <span id="def-52"></span>
-**Definition 52** (Causal Barrier). *Let {% katex() %}\mathcal{H}_{\text{op}}(t){% end %} denote the operator's state snapshot at time \\(t\\), characterized by its Merkle root \\(M_{\text{op}}\\) ([Part 4, state reconciliation](@/blog/2026-02-05/index.md#def-12)). Let \\(M_{\text{edge}}(t)\\) denote the current Merkle root of the edge fleet state. A human command \\(c\\) issued at time \\(t\\) is **causally valid** if and only if:*
+**Definition 52** (Causal Barrier). *Let {% katex() %}\mathcal{H}_{\text{op}}(t){% end %} denote the operator's state snapshot at time \\(t\\), characterized by its Merkle root \\(M_{\text{op}}\\) ([state reconciliation](@/blog/2026-02-05/index.md#def-12)). Let \\(M_{\text{edge}}(t)\\) denote the current Merkle root of the edge fleet state. A human command \\(c\\) issued at time \\(t\\) is **causally valid** if and only if:*
 
 {% katex(block=true) %}
 \text{Valid}(c,\, t) = \mathbb{1}\!\left[M_{\text{op}} = M_{\text{edge}}(t - \Delta_{\text{prop}})\right]
@@ -965,12 +1005,12 @@ k \geq \frac{\ln(0.80 / 0.48)}{\ln\!\left(1/(1 - 0.05)\right)} \approx 10
 
 The Causal Barrier addresses a failure mode orthogonal to trust: the operator may be fully trusted, fully engaged, and still issue a harmful command because their mental model of fleet state is out of date. This is particularly acute in contested environments where \\(\Delta_{\text{prop}}\\) can exceed 30 seconds and state can diverge significantly during that window.
 
-**Connection to Fleet Coherence**: The Causal Barrier extends Part 4's Merkle reconciliation protocol from fleet-to-fleet state synchronization to human-to-fleet command validation. The same \\(\Delta_{\text{state}}\\) that drives {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} merge frequency also determines the maximum safe command lag.
+**Connection to Fleet Coherence**: The Causal Barrier extends the Merkle reconciliation protocol from fleet-to-fleet state synchronization to human-to-fleet command validation. The same \\(\Delta_{\text{state}}\\) that drives {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} merge frequency also determines the maximum safe command lag.
 
 ### Semantic Compression
 
 <span id="def-53"></span>
-**Definition 53** (Intent Health Indicator). *Let \\(\Sigma\\) be the space of raw telemetry vectors and \\(\Lambda = \{\text{Aligned},\, \text{Drifted},\, \text{Diverged}\}\\) the 3-state Intent Health space. The semantic compression function \\(f: \Sigma \to \Lambda\\) is:*
+**Definition 53** (Intent Health Indicator). *Let \\(\Sigma\\) be the space of raw telemetry vectors and \\(\Lambda = \{\text{Aligned},\\, \text{Drifted},\\, \text{Diverged}\}\\) the 3-state Intent Health space. The semantic compression function \\(f: \Sigma \to \Lambda\\) is:*
 
 {% katex(block=true) %}
 f(\sigma) = \begin{cases}
@@ -980,11 +1020,11 @@ f(\sigma) = \begin{cases}
 \end{cases}
 {% end %}
 
-*where \\(\gamma(\sigma)\\) is the semantic convergence factor ([Part 1, Definition 1b](@/blog/2026-01-15/index.md#def-1b)) evaluated over telemetry \\(\sigma\\), \\(\gamma_{\text{high}}\\) is the high-confidence threshold, and \\(\varepsilon\\) is the convergence tolerance.*
+*where \\(\gamma(\sigma)\\) is the semantic convergence factor ([Definition 1b](@/blog/2026-01-15/index.md#def-1b)) evaluated over telemetry \\(\sigma\\), \\(\gamma_{\text{high}}\\) is the high-confidence threshold, and \\(\varepsilon\\) is the convergence tolerance.*
 
-The 3-state compression maps directly to operator-actionable states: **Aligned** requires no intervention; **Drifted** warrants monitoring (healing protocols are active, [Part 3](@/blog/2026-01-29/index.md)); **Diverged** requires immediate escalation (\\(\gamma < 1 - \varepsilon\\) means consensus has failed, [Part 1, Definition 1b](@/blog/2026-01-15/index.md#def-1b)). The compression eliminates alert fatigue by suppressing the high-dimensional telemetry stream that operators cannot process at the rate of generation.
+The 3-state compression maps directly to operator-actionable states: **Aligned** requires no intervention; **Drifted** warrants monitoring (healing protocols are active, [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md)); **Diverged** requires immediate escalation (\\(\gamma < 1 - \varepsilon\\) means consensus has failed, [Definition 1b](@/blog/2026-01-15/index.md#def-1b)). The compression eliminates alert fatigue by suppressing the high-dimensional telemetry stream that operators cannot process at the rate of generation.
 
-**Connection to health monitoring**: The Intent Health Indicator is the operator-facing projection of the fleet health state from [Part 2's {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} protocol](@/blog/2026-01-22/index.md). The {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} layer provides \\(\gamma(\sigma)\\); the compression layer translates it into human-actionable signal.
+**Connection to health monitoring**: The Intent Health Indicator is the operator-facing projection of the fleet health state from the [{% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} protocol](@/blog/2026-01-22/index.md). The {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} layer provides \\(\gamma(\sigma)\\); the compression layer translates it into human-actionable signal.
 
 ### L0 Physical Safety Interlock
 
@@ -1000,9 +1040,13 @@ The 3-state compression maps directly to operator-actionable states: **Aligned**
 \text{L0Physical}(t) = \mathbb{1}\!\left[\exists\, p \in \mathcal{P}_{\text{phys}}:\ \text{HardCondition}(p,\, t)\right]
 {% end %}
 
+- **Use**: Hardware circuit that trips the binary veto signal when any physical parameter crosses a wired threshold, independent of all software; software reads {% katex() %}v(t){% end %} at each Execute tick and skips the tick if {% katex() %}v(t) = 1{% end %} to prevent thermal runaway from software retrying commands to a fused actuator.
+- **Parameters**: Thresholds set at manufacture; non-programmable from software and non-resettable without physical intervention.
+- **Field note**: Put the L0 circuit on a separate power rail from main compute — a shared brownout can simultaneously defeat both the software watchdog and the physical interlock.
+
 *where {% katex() %}\mathcal{P}_{\text{phys}}{% end %} is the set of monitored physical parameters (voltage, temperature, acceleration, arming signal). When \\(\text{L0Physical}(t) = 1\\), the system enters \\(\mathcal{S}_{\text{phys}}\\) — a state that cannot be exited by any software command.*
 
-**Distinction from software watchdogs**: Definition 54 is distinct from the Software Watchdog ([Part 3, Definition 26](@/blog/2026-01-29/index.md#def-26)) and Terminal Safety State ([Part 3, Definition 36](@/blog/2026-01-29/index.md#def-36)). The Software Watchdog detects software failure and triggers a software response. The Terminal Safety State is a {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} outcome. The L0 Physical Interlock bypasses the entire software stack — it fires because a physical condition was met, regardless of whether the software is functioning. The {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop cannot override it; neither can a remote command.
+**Distinction from software watchdogs**: Definition 54 is distinct from the Software Watchdog ([Definition 26](@/blog/2026-01-29/index.md#def-26)) and Terminal Safety State ([Definition 36](@/blog/2026-01-29/index.md#def-36)). The Software Watchdog detects software failure and triggers a software response. The Terminal Safety State is a {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} outcome. The L0 Physical Interlock bypasses the entire software stack — it fires because a physical condition was met, regardless of whether the software is functioning. The {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop cannot override it; neither can a remote command.
 
 **Implementation examples**: Dead Man's Switch (DMS) circuits, hardware-enforced power cutoff, physically irreversible actuation (pyrotechnic separation, thermal runaway inhibitor). The interlock is not part of the autonomic control plane — it is the boundary condition that the autonomic control plane must never violate.
 
@@ -1044,7 +1088,7 @@ where \\(k\\) is a fleet-wide calibration constant and \\(T_{\max}\\) is a hard 
 
 **Step 6** (Difference Map): At \\(T\\) seconds, present \\(\Delta\Sigma(t)\\) (Definition 65) to the operator: the top \\(N_{\max}\\) diverged variables, ranked by \\(d_i\\), severity-tagged, with pre- and post-partition values side by side.
 
-**Step 7** (gate): \\(Q_{\text{command}}\\) activation requires explicit operator acknowledgment of the Difference Map. If CRITICAL-tier items remain unresolved, \\(T\\) extends by \\(T_{\text{ext}} = \min(T_{\max},\; k \cdot 30\,\text{s} \cdot |\text{CRITICAL}|)\\), where 30 s is the per-CRITICAL-item baseline extension, entering a second Shadow Mode cycle. This loop continues until all CRITICAL items are resolved or the operator accepts residual risk explicitly. \\(\square\\)
+**Step 7** (gate): \\(Q_{\text{command}}\\) activation requires explicit operator acknowledgment of the Difference Map. If CRITICAL-tier items remain unresolved, \\(T\\) extends by \\(T_{\text{ext}} = \min(T_{\max},\; k \cdot 30\\,\text{s} \cdot |\text{CRITICAL}|)\\), where 30 s is the per-CRITICAL-item baseline extension, entering a second Shadow Mode cycle. This loop continues until all CRITICAL items are resolved or the operator accepts residual risk explicitly. \\(\square\\)
 
 <span id="def-65"></span>
 
@@ -1054,7 +1098,11 @@ where \\(k\\) is a fleet-wide calibration constant and \\(T_{\max}\\) is a hard 
 \Delta\Sigma(t) = \left\{\, \bigl(\text{var}_i,\; v^{\text{pre}}_i,\; v^{\text{post}}_i,\; \delta_i,\; r_i,\; s_i\bigr) : d_i > 0,\; r_i \leq N_{\max} \,\right\}
 {% end %}
 
-where {% katex() %}\text{var}_i{% end %} is the variable identifier, {% katex() %}v^{\text{pre}}_i = \Sigma_i(t_0){% end %}, {% katex() %}v^{\text{post}}_i = \Sigma_i(t_{\text{reconnect}}){% end %}, {% katex() %}\delta_i = v^{\text{post}}_i - v^{\text{pre}}_i{% end %}, \\(r_i\\) is divergence rank, and \\(s_i \in \\{\text{CRITICAL},\, \text{WARN},\, \text{INFO}\\}\\) is the severity tier. Variables ranked beyond \\(N_{\max} = 7\\) are collapsed to an "\\(N - 7\\) additional changes" summary line. Severity tiers follow the same k-sigma structure as Definition 58 (Divergence Sanity Bound, [Part 2 extension](@/blog/2026-01-22/index.md#def-58)): CRITICAL for \\(d_i > 3\\), WARN for \\(d_i \in (1, 3]\\), INFO for \\(d_i \leq 1\\).
+- **Use**: Bounds operator time to Level 2 situational awareness at 15 seconds from the Difference Map briefing; {% katex() %}N_{\max} = 7{% end %} items and CRITICAL-first ordering are both required for the bound to hold, preventing SA overrun from information overload that degrades operator comprehension beyond the window.
+- **Parameters**: {% katex() %}N_{\max} = 7{% end %} items (Miller's Law); 1.5–3.0 s per item; CRITICAL tier requires 4–6 s for comprehension.
+- **Field note**: Validate with 10+ real operators under time pressure — lab conditions consistently produce {% katex() %}20\text{--}30\%{% end %} faster times than actual field deployments.
+
+where {% katex() %}\text{var}_i{% end %} is the variable identifier, {% katex() %}v^{\text{pre}}_i = \Sigma_i(t_0){% end %}, {% katex() %}v^{\text{post}}_i = \Sigma_i(t_{\text{reconnect}}){% end %}, {% katex() %}\delta_i = v^{\text{post}}_i - v^{\text{pre}}_i{% end %}, \\(r_i\\) is divergence rank, and \\(s_i \in \\{\text{CRITICAL},\\, \text{WARN},\\, \text{INFO}\\}\\) is the severity tier. Variables ranked beyond \\(N_{\max} = 7\\) are collapsed to an "\\(N - 7\\) additional changes" summary line. Severity tiers follow the same k-sigma structure as Definition 58 ([Divergence Sanity Bound](@/blog/2026-01-22/index.md#def-58)): CRITICAL for \\(d_i > 3\\), WARN for \\(d_i \in (1, 3]\\), INFO for \\(d_i \leq 1\\).
 
 The \\(N_{\max} = 7\\) cap reflects Miller's Law (working memory capacity \\(7 \pm 2\\) chunks, Miller 1956). Presenting more than 7 diverged variables simultaneously does not increase operator SA — it fragments attention and delays comprehension of the highest-priority items. The cap is a cognitive capacity constraint enforced by the protocol, not a data limitation.
 
@@ -1077,7 +1125,7 @@ stateDiagram-v2
 
 **Proposition 58** (Situation Awareness Bound). *Under the State-Delta Briefing Protocol (Definition 64) with Difference Map (Definition 65), if \\(|\Delta\Sigma(t)| \leq N_{\max} = 7\\) and variables are sorted CRITICAL-first, then a trained operator achieves Level 2 Situational Awareness (comprehension of current situation, Endsley 1995) within \\(T_{\text{brief}} \leq 15\\) seconds, independently of partition duration \\(\tau_{\text{partition}}\\).*
 
-*Proof sketch.* Information-theoretic bound: \\(15\,\text{s} / 7\,\text{items} \approx 2.1\,\text{s}\\) per item. Trained-operator HMI alert-processing rates for ranked alert summaries are 1.5–3.0 s per item (Endsley 1995; NTSB accident data). Severity-first ordering ensures CRITICAL items are processed in the first 4–6 seconds, exceeding Level 2 SA threshold for highest-priority variables before the 15-second mark. Shadow Mode (Step 5) pre-loads Level 1 SA during the observation window, so Difference Map comprehension begins with perceptual context already established. Partition duration \\(\tau_{\text{partition}}\\) affects \\(T\\) (Definition 64 Step 4) but not \\(T_{\text{brief}}\\) — longer partitions produce longer Shadow Mode intervals that absorb divergence perception incrementally, not longer Difference Map reading times. \\(\square\\)
+*Proof sketch.* Information-theoretic bound: \\(15\\,\text{s} / 7\\,\text{items} \approx 2.1\\,\text{s}\\) per item. Trained-operator HMI alert-processing rates for ranked alert summaries are 1.5–3.0 s per item (Endsley 1995; NTSB accident data). Severity-first ordering ensures CRITICAL items are processed in the first 4–6 seconds, exceeding Level 2 SA threshold for highest-priority variables before the 15-second mark. Shadow Mode (Step 5) pre-loads Level 1 SA during the observation window, so Difference Map comprehension begins with perceptual context already established. Partition duration \\(\tau_{\text{partition}}\\) affects \\(T\\) (Definition 64 Step 4) but not \\(T_{\text{brief}}\\) — longer partitions produce longer Shadow Mode intervals that absorb divergence perception incrementally, not longer Difference Map reading times. \\(\square\\)
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration.** Partition duration \\(\tau_{\text{partition}} = 47\\) minutes. Post-reconnection: \\(D_{\text{norm}} = d_{(1)} = 2.1\\) (fuel consumption 40% above plan, \\(d_{(1)} = 2.1\\); route sector deviation \\(d_{(2)} = 1.4\\); formation lead reassigned \\(d_{(3)} = 0.9\\) — all WARN, no CRITICAL). With \\(k = 0.5\\), Shadow Mode duration \\(T = \min(120,\; 0.5 \times 47 \times 2.1) \approx 49\\) seconds. The operator observes 49 seconds of autonomous operation, receives a 3-item Difference Map (WARN only), acknowledges, and gains \\(Q_{\text{command}}\\). Total reconnect-to-active-command time: under 65 seconds — the 15-second SA target applies to the Difference Map reading step alone; Shadow Mode absorbs the divergence perception load during the preceding observation window.
 

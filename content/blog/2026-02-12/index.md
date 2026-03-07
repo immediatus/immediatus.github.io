@@ -86,9 +86,13 @@ where \\(\nabla_\theta U\\) is the gradient of utility with respect to parameter
 \frac{d^2 P}{d\sigma^2} > 0 \quad \text{for } \sigma \in [0, \sigma_{\text{max}}]
 {% end %}
 
+- **Use**: Tests whether performance {% katex() %}P{% end %} is convex in stress {% katex() %}\sigma{% end %} ({% katex() %}d^2P/d\sigma^2 > 0{% end %}), meaning the system genuinely improves under repeated stress rather than just recovering; evaluate over at least 10 stress events to prevent resilience masquerade from being mislabeled as anti-fragility.
+- **Parameters**: Measure {% katex() %}P{% end %} over a 30-day rolling window; stress events include partitions, fault injections, and anomaly triggers.
+- **Field note**: Anti-fragility requires deliberate feedback from stress events into policy updates — passive resilience never produces {% katex() %}d^2P/d\sigma^2 > 0{% end %}.
+
 *By Jensen's inequality, convexity implies \\(\mathbb{E}[P(\sigma)] > P(\mathbb{E}[\sigma])\\): the system gains from stress variance itself. The {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} coefficient \\(\mathbb{A} = (P_1 - P_0)/\sigma\\) measures observed improvement per unit stress, where \\(P_0\\) is pre-stress performance and \\(P_1\\) is post-recovery performance.*
 
-**Operationalizing P**: System performance is multi-dimensional, so \\(P\\) must be defined before \\(\mathbb{A}\\) can be computed. The series uses the primary metric from Part 1 as the canonical scalar: \\(P = \bar{\mathcal{L}} = \mathbb{E}[\int_0^T \mathcal{L}(t)\,dt]/T\\), the time-averaged {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %}. For specific sub-problems, substitute: \\(P = \text{MTTR}^{-1}\\) (inverse mean time to recovery) for healing-speed analysis; \\(P = \text{F}_1\\) (anomaly-detection F-score) for detection accuracy; \\(P = \bar{\theta}\\) (average operational threshold) for threshold-learning tasks. The denominator \\(\sigma \in [0,1]\\) is normalized stress severity (0 = no stress, 1 = worst-case partition or hardware failure). With these substitutions, \\(\mathbb{A} > 0\\) is falsifiable: it requires that the chosen \\(P\\) metric is measurably higher after stress recovery than before the stress event.
+**Operationalizing P**: System performance is multi-dimensional, so \\(P\\) must be defined before \\(\mathbb{A}\\) can be computed. The series uses the primary metric as the canonical scalar: \\(P = \bar{\mathcal{L}} = \mathbb{E}[\int_0^T \mathcal{L}(t)\\,dt]/T\\), the time-averaged {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier L0-L4 from heartbeat-only survival to full fleet integration; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %}. For specific sub-problems, substitute: \\(P = \text{MTTR}^{-1}\\) (inverse mean time to recovery) for healing-speed analysis; \\(P = \text{F}_1\\) (anomaly-detection F-score) for detection accuracy; \\(P = \bar{\theta}\\) (average operational threshold) for threshold-learning tasks. The denominator \\(\sigma \in [0,1]\\) is normalized stress severity (0 = no stress, 1 = worst-case partition or hardware failure). With these substitutions, \\(\mathbb{A} > 0\\) is falsifiable: it requires that the chosen \\(P\\) metric is measurably higher after stress recovery than before the stress event.
 
 In other words, an {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} system does not just survive stress and return to baseline — it finishes in a better state than it started, and this improvement is proportional to how severe the stress was.
 
@@ -165,7 +169,7 @@ where \\(P_{\max}\\) is the highest performance observed across trials with vali
 \dot{V}(x) \approx \frac{1}{N} \sum_{i=1}^{N} \frac{V(x_{t+i}) - V(x_t)}{i \cdot \Delta t}
 {% end %}
 
-3. **Set \\(\alpha\\)**: Choose based on required convergence rate. \\(\alpha \in [0.1,\, 1.0]\ \text{s}^{-1}\\) covers most edge deployments; faster dynamics require higher \\(\alpha\\).
+3. **Set \\(\alpha\\)**: Choose based on required convergence rate. \\(\alpha \in [0.1,\\, 1.0]\ \text{s}^{-1}\\) covers most edge deployments; faster dynamics require higher \\(\alpha\\).
 
 4. **Monitor basin occupancy**: Track the fraction of time the system spends in \\(\mathcal{B}\\):
 
@@ -572,6 +576,10 @@ The same pattern — a hidden shared resource that makes two ostensibly independ
 I(\text{failure}) = -\log_2 P(\text{failure})
 {% end %}
 
+- **Use**: Computes information content (bits) of each stress event as {% katex() %}I = -\log_2 P(\text{event}){% end %}; weight parameter updates by {% katex() %}I(\text{event})/I_{\max}{% end %} after each stress event to prevent uniform learning that wastes adaptation budget on frequent low-information events.
+- **Parameters**: {% katex() %}P(\text{event}){% end %} estimated from {% katex() %}\geq 30{% end %} historical events; {% katex() %}I_{\max} = \log_2(1/P_{\min}){% end %} for the rarest observed event type.
+- **Field note**: A once-per-year partition carries \\(3{-}5\\times\\) more learning signal than a daily hiccup — weight it proportionally in your update rule.
+
 *Rare failures carry maximum learning value. A failure with probability \\(10^{-3}\\) carries approximately 10 bits of information, while a failure with probability \\(10^{-1}\\) carries only 3.3 bits.*
 
 **Adversarial non-stationarity caveat**: Prop 17 applies when \\(P(\text{failure})\\) is a property of the stationary environment. Under the adversarial Markov game (Def 32), the adversary controls the jamming schedule and can therefore set \\(P(\sigma)\\). An adversary who learns your anomaly detection threshold can make harmful stress *common* — driving \\(P(\text{failure})\\) from \\(10^{-3}\\) to \\(10^{-1}\\) reduces Shannon surprise from 10 bits to 3.3 bits while potentially increasing impact. In contested environments, use Prop 17 for offline post-hoc calibration only. For real-time learning prioritization, use the action-correlation CUSUM (Def 34): the adversarial signature is correlation between defender actions and \\(Q\\)-changes, not event rarity. An adversary deliberately making failures common cannot fake the absence of action-correlation without abandoning their adaptive strategy.
@@ -892,6 +900,10 @@ At each round, select the parameter \\(\theta\\) that maximizes the sum of its e
 \theta_{t+1} = \arg\max_{\theta \in \Theta} \left[ \hat{\mu}_{\theta}(t) + c\sqrt{\frac{\ln t}{n_{\theta}(t)}} \right]
 {% end %}
 
+- **Use**: Selects the arm maximizing empirical mean plus an exploration bonus; use only in stationary, non-adversarial environments where it prevents greedy stagnation from permanently abandoning arms that had early bad luck.
+- **Parameters**: {% katex() %}c{% end %} = exploration coefficient; use {% katex() %}c = 1.0{% end %} in production ({% katex() %}c = \sqrt{2} \approx 1.41{% end %} for the theoretical guarantee).
+- **Field note**: Use {% katex() %}c = 1.0{% end %} not 1.41 in practice — the theoretical value assumes unlimited rounds; real missions need faster convergence.
+
 Consider {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} interval selection. The design-time value is 5s. But the optimal value depends on current conditions:
 - Dense jamming: 3s provides faster anomaly propagation
 - Clear conditions: 8s conserves bandwidth without loss of awareness
@@ -910,6 +922,10 @@ Consider {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemina
 {% katex(block=true) %}
 R_T = O\left(\sqrt{T \cdot K \cdot \ln T}\right)
 {% end %}
+
+- **Use**: Bounds UCB cumulative regret at {% katex() %}O(\sqrt{T \cdot K \cdot \ln T}){% end %} over {% katex() %}T{% end %} rounds with {% katex() %}K{% end %} arms; certify UCB suitability for your horizon {% katex() %}T{% end %} and arm count {% katex() %}K{% end %} before deployment, and switch to EXP3-IX in adversarial settings where this bound does not hold.
+- **Parameters**: {% katex() %}K{% end %} = number of arms; {% katex() %}T{% end %} = total decision rounds; verify bound {% katex() %}<{% end %} mission's acceptable regret budget.
+- **Field note**: Per-round regret decreases as {% katex() %}\sqrt{1/T}{% end %} — UCB keeps improving over the mission horizon, unlike static policies with constant regret rate.
 
 *where \\(K\\) is the number of arms. This guarantees convergence to the optimal arm as \\(T \rightarrow \infty\\).*
 
@@ -931,6 +947,10 @@ Proposition 18 achieves \\(O(\sqrt{TK\ln T})\\) regret against an **oblivious** 
 {% katex(block=true) %}
 R_T^{\text{EXP3}} \leq O\!\left(\sqrt{TK \ln K}\right)
 {% end %}
+
+- **Use**: Gives the minimax regret bound {% katex() %}O(\sqrt{T \cdot K \cdot \ln K}){% end %} against an adaptive adversary; verify this bound before deploying in contested environments to prevent false confidence from UCB's {% katex() %}O(\ln T){% end %} guarantee that is invalid when rewards are adversarially selected.
+- **Parameters**: {% katex() %}K{% end %} = arm count; {% katex() %}T{% end %} = mission rounds; CONVOY example: {% katex() %}K=8,\, T=1000 \to \text{bound} \approx 188{% end %} regret units.
+- **Field note**: The {% katex() %}\sqrt{K \ln K}{% end %} factor grows faster in {% katex() %}K{% end %} than UCB — keep arm count below 16 in short-horizon tactical missions.
 
 {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %} maintains permanent exploration by updating each arm's weight \\(w_i\\) multiplicatively: arms that received higher importance-weighted reward \\(\hat{r}_i / p_i\\) grow faster, but no arm's weight collapses to zero because the minimum selection probability \\(\gamma/K\\) is always maintained.
 
@@ -1004,6 +1024,10 @@ w_i(t+1) = w_i(t) \cdot \exp\!\left(\eta \cdot \hat{r}_i^{\mathrm{IX}}(t)\right)
 p_i(t) = \frac{w_i(t)}{\sum_{j=1}^K w_j(t)}
 {% end %}
 
+- **Use**: Updates each arm's weight after observing reward, correcting for selection-probability bias via importance weighting; apply after every MAPE-K tick outcome to prevent importance-weight explosion for rarely-selected arms when the denominator floor {% katex() %}\gamma{% end %} is missing.
+- **Parameters**: {% katex() %}\eta = \sqrt{\ln K / (K \cdot T)}{% end %}; {% katex() %}\gamma{% end %} = implicit exploration floor (same order as {% katex() %}\eta{% end %}); {% katex() %}K{% end %} = arm count.
+- **Field note**: Clip importance weights at {% katex() %}1/\gamma{% end %} in implementation — float32 overflow is common on embedded hardware without this explicit clip.
+
 No forced exploration floor is required — the implicit \\(\gamma\\) bias in the estimator alone bounds regret. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} is a drop-in replacement for {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}: same weight structure, same selection rule; only the estimator changes. \\(\square\\)
 
 <span id="prop-34"></span>
@@ -1061,6 +1085,10 @@ where \\(\hat{\rho}(a_t, \Delta q_t)\\) is the sliding-window sample correlation
 \mathbb{E}[T_{\mathrm{detect}} - \tau] \leq \frac{h_Q + O(1)}{\delta - \delta_Q}
 {% end %}
 
+- **Use**: Gives the maximum rounds to detect a {% katex() %}\Delta q{% end %} shift in reward distribution at false-alarm rate {% katex() %}\delta{% end %}; calibrate detector sensitivity so {% katex() %}T_{\text{detect}}{% end %} is less than environment dwell time in any new regime to prevent stale-model persistence when the bandit cannot adapt.
+- **Parameters**: {% katex() %}\Delta q{% end %} = expected regime shift magnitude (0.1–0.5 reward units); {% katex() %}\delta = 0.05{% end %} typical false-alarm rate.
+- **Field note**: CONVOY regime shifts last 30–120 s — calibrate {% katex() %}T_{\text{detect}}{% end %} to at most 15 s or adaptation is permanently lagged behind real conditions.
+
 The dual false alarm rate satisfies:
 
 {% katex(block=true) %}
@@ -1117,6 +1145,85 @@ After 1000 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemi
 - Otherwise: {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} interval = 5s
 
 This policy illustrates how bandit algorithms can discover relationships between environmental conditions and optimal parameters - relationships that may not be apparent from design-time analysis alone.
+
+---
+
+### Delayed-Feedback Extension: Weibull-Aware Tuning Loop
+
+The three algorithms above assume reward is observed before the next arm pull. Under Weibull partitions (Definition 66) with \\(k_N < 1\\), the reward signal for the shape-parameter bandit (Definition 67) — measured as realized partition cost relative to prediction — arrives only at partition end, potentially hours later. Definition 69 adapts {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} for this regime; Proposition 60 bounds regret degradation; Definition 70 provides an immediate surrogate reward; Definition 71 discretizes partition context into O(1) memory.
+
+<span id="def-69"></span>
+
+**Definition 69** (Delayed-Feedback EXP3-IX). Let the feedback delay for pull at partition onset \\(s\\) be \\(d_s = T_N^{(s)}\\) — the actual partition duration, observed only at partition end. Define batch window \\(B = \lceil E[T_N] \rceil\\) (one expected partition, LUT-approximated per Definition 66). The **pending buffer** \\(\mathcal{P}\\) holds \\((k_s,\; s)\\) pairs for pulls awaiting reward; capacity is bounded by \\(|\mathcal{P}| \leq \lfloor Q_{0.95} / T_{\min} \rfloor\\) entries (static upper bound; MCU-allocatable). At each partition event \\(s\\):
+
+1. **Pull**: select arm \\(k_s \in \\{0.3, 0.4, \ldots, 1.0\\}\\) per {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weights; append \\((k_s,\; s)\\) to \\(\mathcal{P}\\).
+2. **Receive** (at partition end, time \\(s + d_s\\)): compute true reward \\(r_s = -\max(0,\; T_{\text{acc}}^{(s)} - E[T_N \mid k_s]) / Q_{0.95}(k_s)\\) (Definition 67 reward signal); remove \\((k_s,\; s)\\) from \\(\mathcal{P}\\).
+3. **Update**: {% katex() %}\hat{r}_{k_s}^{\text{IX}} = r_s / (p_{k_s}(s) + \gamma){}{% end %}; update \\(w_{k_s}\\) per Definition 33.
+
+\\(\square\\)
+
+<span id="prop-60"></span>
+
+**Proposition 60** (Regret Under Heavy-Tailed Delay). Under Definition 69 with \\(T\\) partition events and batch window \\(B = \lceil E[T_N] \rceil\\):
+
+{% katex(block=true) %}
+R_T^{\text{delay}} \leq 2\sqrt{T K \ln K} \cdot \sqrt{1 + E[T_N]/B} \leq 2\sqrt{2} \cdot \sqrt{T K \ln K}
+{% end %}
+
+- **Use**: Bounds delayed-feedback EXP3-IX regret; heavy-tailed Weibull partition durations add a {% katex() %}\sqrt{1 + E[T_N]/B}{% end %} overhead factor over the instantaneous bound; verify before deployment to avoid applying instantaneous guarantees in delayed-feedback settings where they are too optimistic.
+- **Parameters**: {% katex() %}B = \lceil E[T_N] \rceil{% end %} batch window; CONVOY {% katex() %}k_N=0.62 \to{% end %} overhead factor {% katex() %}\approx 1.41\times{% end %} over the instantaneous bound.
+- **Field note**: The Weibull assumption keeps the bound finite — verify {% katex() %}k_N > 0{% end %} from real partition data before claiming bounded regret.
+
+The factor \\(\sqrt{2}\\) is a constant independent of \\(k_N\\) or \\(\lambda_N\\) — setting \\(B\\) to the expected partition duration absorbs the delay into a single overhead term. The bound holds for all \\(k_N > 0\\): \\(E[T_N] = \lambda_N \cdot \Gamma(1 + 1/k_N)\\) is finite for every Weibull parameter. Contrast Pareto-distributed delays (\\(\alpha \leq 2\\)): \\(E[d] = \infty\\), breaking all standard regret bounds — the selection criterion from Section 2 of the design.
+
+*Proof sketch.* Index time by partition events. Rounds where true reward has not yet arrived contribute phantom zero-reward updates. By the delayed-feedback EXP3 analysis (Joulani et al., 2013), inserting \\(\sum_s d_s \approx T \cdot E[T_N] / B\\) phantom rounds inflates regret by \\(\sqrt{1 + E[T_N]/B}\\); with \\(B = \lceil E[T_N] \rceil\\), this factor is \\(\leq \sqrt{2}\\). \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration** (\\(k_N = 0.62\\), \\(\lambda_N = 4.62\\) hr, \\(K = 8\\), \\(T = 100\\) partition events): instantaneous bound \\(R_T \leq 2\sqrt{TK\ln K} \approx 115\\); delayed bound \\(R_T^{\text{delay}} \leq 2\sqrt{2} \cdot \sqrt{TK\ln K} \approx 163\\) — roughly \\(\sqrt{2} \approx 1.41\times\\) overhead. For \\(k_N = 0.3\\) (very heavy tail, \\(E[T_N]/B \approx 3\\)): regret inflates to \\(2\times\\) instantaneous — the bounded planning cost of catastrophic partitions before the bandit has seen enough events to calibrate.
+
+<span id="def-70"></span>
+
+**Definition 70** (Local Surrogate Reward). During active partition (\\(\Xi = N\\)), before the true end-of-partition reward (Definition 69, Step 2) arrives, the **surrogate reward** aggregates four MCU-local observables available on every MAPE-K tick:
+
+| Signal | Symbol | Scale |
+| :--- | :--- | :--- |
+| CPU temperature deviation | \\(\Delta T_{\text{cpu}}(t)\\) | \\(\Delta T_{\text{max}}\\) (throttle onset) |
+| Battery drain excess | \\(\dot{E}_{\text{bat}}(t) - \dot{E}_0\\) | \\(\dot{E}_0\\) (idle drain) |
+| MAPE-K loops per tick | \\(N_{\text{mape}}(t)\\) | \\(N_{\text{mape}}^{\text{max}}\\) (stable rate) |
+| Partition accumulator ratio | \\(T_{\text{acc}}(t)\\) | \\(Q_{0.95}\\) (Proposition 59 threshold) |
+
+{% katex(block=true) %}
+r_{\text{surr}}(t) = -\left[w_1 \frac{\Delta T_{\text{cpu}}}{\Delta T_{\text{max}}} + w_2 \frac{\dot{E}_{\text{bat}} - \dot{E}_0}{\dot{E}_0} + w_3 \frac{N_{\text{mape}}}{N_{\text{mape}}^{\text{max}}} + w_4 \frac{T_{\text{acc}}}{Q_{0.95}} \right], \quad \sum_i w_i = 1
+{% end %}
+
+- **Use**: Computes a scalar surrogate reward in {% katex() %}[-1, 0]{% end %} from CPU temp, battery drain, MAPE-K cycle count, and {% katex() %}T_{\text{acc}}{% end %} during partition; use as interim reward when the true partition-end reward is unavailable to prevent reward starvation during multi-hour partitions that causes severe EXP3-IX weight drift.
+- **Parameters**: {% katex() %}w_1+w_2+w_3+w_4 = 1{% end %}; CONVOY: {% katex() %}w_2=0.35{% end %} (battery-sensitive); bias-correct surrogates against realized reward at each partition end.
+- **Field note**: Without bias correction at partition end, surrogates systematically over-penalize compute-heavy but effective arms.
+
+so \\(r_{\text{surr}}(t) \in [-1, 0]\\). The surrogate is applied as a fractional Q-update (weight \\(\beta_{\text{surr}} \in (0,1)\\)) at each tick. When true reward \\(r_s\\) arrives at partition end, a **bias correction** {% katex() %}\Delta r = r_s - \beta_{\text{surr}} \cdot \bar{r}_{\text{surr}}{% end %} — where \\(\bar{r}_{\text{surr}}\\) is the partition-averaged surrogate — is applied as a one-shot Q-update, preventing surrogate-induced drift from compounding across partitions. \\(\square\\)
+
+<span id="def-71"></span>
+
+**Definition 71** (Partition Context Discretization). Arm selection is conditioned on three continuous partition-state variables, each quantized to 2 bits for O(1) lookup. Each variable \\(x\\) maps to bucket \\(b_x = \min(3,\; \lfloor 4x / x_{\max} \rfloor)\\) via a single integer right-shift:
+
+| Variable | \\(x_{\max}\\) | Bucket semantics |
+| :--- | :--- | :--- |
+| \\(T_{\text{acc}} / Q_{0.95}\\) | 1.0 | \\(b=0\\): early; \\(b=1\\): mid; \\(b=2\\): late; \\(b=3\\): past Proposition 59 gate |
+| \\(\hat{\pi}_N\\) (regime occupancy) | 1.0 | Quartiles of partition fraction |
+| \\(Q_{\text{link}} \in [0,1]\\) | 1.0 | Link-quality quartiles |
+
+The **context index** packs three 2-bit fields into one byte:
+
+{% katex(block=true) %}
+c(t) = b_{T}(t) \;\Big|\; \bigl(b_{\pi}(t) \ll 2\bigr) \;\Big|\; \bigl(b_{Q}(t) \ll 4\bigr) \;\in\; \{0,\ldots,63\}
+{% end %}
+
+- **Use**: Encodes partition state into a 6-bit context index at each MAPE-K tick, selecting the correct context-specific EXP3-IX weight vector; prevents uniform weight updates from conflating short and long partitions that require fundamentally different autonomic strategies.
+- **Parameters**: \\(64\\) contexts \\(\\times\\) {% katex() %}K{% end %} arms \\(\\times\\) \\(4\\) bytes = 2 KB total for {% katex() %}K=8{% end %}; fits in MCU SRAM without dynamic allocation.
+- **Field note**: Pre-populate weight vectors from simulation before deployment — cold-starting in the field wastes the first 50 real partitions on pure exploration.
+
+Each context maintains its own {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weight vector \\(\mathbf{w}^{(c)} \in \mathbb{R}^K\\); total memory: \\(64 \times K \times 4\\) bytes (for \\(K = 8\\): 2 KB — MCU-feasible). **{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} outcome** (100 partition events): contexts \\(b_T \geq 2\\) (long partitions) converge to lower-\\(k\\) arms (\\(k \approx 0.4\\)–\\(0.5\\)); contexts \\(b_T = 0\\) (short partitions) retain higher-\\(k\\) arms (\\(k \approx 0.7\\)–\\(0.8\\)) — the bandit naturally separates near-exponential short partitions from heavy-tailed long ones. \\(\square\\)
+
+---
 
 <span id="scenario-adaptshop"></span>
 
@@ -1338,7 +1445,7 @@ Three mechanisms close this gap. A reward clipping function (Definition 61) remo
 
 <span id="def-61"></span>
 
-**Definition 61** (Clipped Reward Function). Let \\(r_{\text{raw}}(t)\\) be the observed reward at time \\(t\\), and let \\(r_{L_0}\\) be the expected reward under the deterministic \\(L_0\\) policy — the survival baseline measured during the Phase-0 attestation window (Definition 60, Part 2 extension) before any learning begins. Let \\(\sigma_r(t)\\) be the running standard deviation of observed rewards maintained via Welford update (Definition 23, Part 2). The **clipped reward** is:
+**Definition 61** (Clipped Reward Function). Let \\(r_{\text{raw}}(t)\\) be the observed reward at time \\(t\\), and let \\(r_{L_0}\\) be the expected reward under the deterministic \\(L_0\\) policy — the survival baseline measured during the Phase-0 attestation window (Definition 60) before any learning begins. Let \\(\sigma_r(t)\\) be the running standard deviation of observed rewards maintained via Welford update (Definition 23). The **clipped reward** is:
 
 {% katex(block=true) %}
 r_{\text{clip}}(t) = \mathrm{clip}\!\left(r_{\text{raw}}(t),\; r_{L_0} - k_{\text{clip}}\,\sigma_r(t),\; r_{L_0} + k_{\text{clip}}\,\sigma_r(t)\right)
@@ -1348,13 +1455,17 @@ where \\(k_{\text{clip}}\\) is a fleet-wide policy parameter. The Welford estima
 
 <span id="def-62"></span>
 
-**Definition 62** (Safe Action Filter). Let \\(K(a)\\) be the gain associated with action \\(a\\) and \\(\tau(a)\\) be the corresponding stochastic transport delay (Definition 38, Part 3). The **safe feasible set** at time \\(t\\) is:
+**Definition 62** (Safe Action Filter). Let \\(K(a)\\) be the gain associated with action \\(a\\) and \\(\tau(a)\\) be the corresponding stochastic transport delay (Definition 38). The **safe feasible set** at time \\(t\\) is:
 
 {% katex(block=true) %}
 \mathcal{U}_{\text{safe}}(t) = \bigl\{a \in \mathcal{A} : K(a)\cdot\tau(a) < \pi/2\bigr\}
 {% end %}
 
-This is a sufficient gain-delay stability condition — bounding the product \\(K(a)\cdot\tau(a)\\) prevents phase crossover in the autonomic control loop — applied as a hard pre-filter on the action space before any Q-value comparison is made. Proposition 9 (Part 3) establishes the discrete-time analogue; the condition \\(K(a)\cdot\tau(a) < \pi/2\\) is the continuous-time sufficient criterion for phase margin. Any action that would push the autonomic control loop past the stability boundary is inadmissible regardless of its estimated reward. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %} — all actions currently violate the stability condition — the agent executes the deterministic \\(L_0\\) policy \\(\pi_{L_0}\\), covered by Proposition 36 (Hardened Hierarchy Fail-Down, Part 1). \\(\square\\)
+- **Use**: Computes the safe arm set by excluding actions where gain-times-delay product {% katex() %}K(a) \cdot \tau(a){% end %} exceeds the {% katex() %}\pi/2{% end %} phase margin; apply before each arm selection to prevent destabilizing high-gain, high-latency actions even when they appear rewarding in the short term.
+- **Parameters**: {% katex() %}K(a){% end %} = action state-change magnitude; {% katex() %}\tau(a){% end %} = expected execution delay; {% katex() %}\pi/2 \approx 1.57{% end %} rad phase margin threshold.
+- **Field note**: The safe set shrinks as link latency grows — re-compute it with real-time delay measurements, not the design-time value.
+
+This is a sufficient gain-delay stability condition — bounding the product \\(K(a)\cdot\tau(a)\\) prevents phase crossover in the autonomic control loop — applied as a hard pre-filter on the action space before any Q-value comparison is made. Proposition 9 establishes the discrete-time analogue; the condition \\(K(a)\cdot\tau(a) < \pi/2\\) is the continuous-time sufficient criterion for phase margin. Any action that would push the autonomic control loop past the stability boundary is inadmissible regardless of its estimated reward. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %} — all actions currently violate the stability condition — the agent executes the deterministic \\(L_0\\) policy \\(\pi_{L_0}\\), covered by Proposition 36 (Hardened Hierarchy Fail-Down). \\(\square\\)
 
 <span id="def-63"></span>
 
@@ -1375,27 +1486,31 @@ This is a sufficient gain-delay stability condition — bounding the product \\(
 \end{aligned}
 {% end %}
 
+- **Use**: Guarantees per-tick survival probability above {% katex() %}(1 - \varepsilon_{\text{surv}}){% end %} for any arm within the safe set; enforced as the hard gate in Safe-{% katex() %}\varepsilon{% end %}-Greedy at every MAPE-K tick to prevent reward-chasing from selecting arms that appear optimal but breach the survival floor.
+- **Parameters**: {% katex() %}\varepsilon_{\text{surv}} = 10^{-4}{% end %} for safety-critical deployments; {% katex() %}10^{-3}{% end %} for operational; never relax in field conditions.
+- **Field note**: {% katex() %}\varepsilon_{\text{surv}} = 10^{-4}{% end %} at a 5-second MAPE-K cycle means one allowed violation per ~14 hours — validate this against your mission SLA.
+
 The CUSUM accumulator \\(S_+\\) adopts the same one-sided Page-CUSUM structure as the Adversarial Non-Stationarity Detector (Definition 34), applied to the reward innovation \\(\xi(t) = r_t - \mu_r\\). The response pivots: where Definition 34 flags a regime change and triggers a policy switch, Step 8 responds to a *favorable* shift by increasing exploration — the inverse of the normal exploitation instinct. A reward trend that looks like an opportunity is treated as a threat hypothesis until diverse exploration cycles distinguish genuine improvement from adversarial bait. \\(\square\\)
 
 <span id="prop-56"></span>
 
 **Proposition 56** (Survival Invariant). Under Safe-\\(\varepsilon\\)-Greedy (Definition 63), the selected action satisfies {% katex() %}K(a_t)\cdot\tau(a_t) < \pi/2{% end %} whenever {% katex() %}\mathcal{U}_{\text{safe}}(t) \neq \emptyset{% end %}. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %}, the deterministic \\(L_0\\) policy is executed, which satisfies the survival constraint by Proposition 36.
 
-*Proof.* Step 1 constructs {% katex() %}\mathcal{U}_{\text{safe}}{% end %} by excluding all actions with {% katex() %}K(a)\cdot\tau(a) \geq \pi/2{% end %}. Both branches of Step 3 — exploration (uniform over {% katex() %}\mathcal{U}_{\text{safe}}{% end %}) and exploitation ({% katex() %}\arg\max{% end %} over {% katex() %}\mathcal{U}_{\text{safe}}{% end %}) — select exclusively from this set. The goto-Step-10 branch in Step 2 executes \\(\pi_{L_0}\\), whose gains are pre-validated during Phase-0 attestation to satisfy \\(K\cdot\tau(a) < \pi/2\\); Proposition 36 (Hardened Hierarchy Fail-Down, Part 1) ensures the \\(L_0\\) tier remains reachable when all autonomic actions are infeasible. \\(\square\\)
+*Proof.* Step 1 constructs {% katex() %}\mathcal{U}_{\text{safe}}{% end %} by excluding all actions with {% katex() %}K(a)\cdot\tau(a) \geq \pi/2{% end %}. Both branches of Step 3 — exploration (uniform over {% katex() %}\mathcal{U}_{\text{safe}}{% end %}) and exploitation ({% katex() %}\arg\max{% end %} over {% katex() %}\mathcal{U}_{\text{safe}}{% end %}) — select exclusively from this set. The goto-Step-10 branch in Step 2 executes \\(\pi_{L_0}\\), whose gains are pre-validated during Phase-0 attestation to satisfy \\(K\cdot\tau(a) < \pi/2\\); Proposition 36 (Hardened Hierarchy Fail-Down) ensures the \\(L_0\\) tier remains reachable when all autonomic actions are infeasible. \\(\square\\)
 
 <span id="prop-57"></span>
 
-**Proposition 57** (Adversarial Rejection Bound). Decompose the observed reward as \\(r_{\text{raw}}(t) = r_{\text{true}}(t) + \eta_{\text{adv}}(t)\\), where \\(r_{\text{true}}(t) \in [r_{L_0} - \delta_{\text{leg}}, r_{L_0} + \delta_{\text{leg}}]\\) is the legitimate reward deviation and \\(\eta_{\text{adv}}(t)\\) is adversarial perturbation. If \\(k_{\text{clip}}\,\sigma_r > \delta_{\text{leg}}\\), then no legitimate reward is clipped. The Q-value estimation bias satisfies:
+**Proposition 57** (Adversarial Rejection Bound). Decompose the observed reward as \\(r_{\text{raw}}(t) = r_{\text{true}}(t) + \eta_{\text{adv}}(t)\\), where \\(r_{\text{true}}(t) \in [r_{L_0} - \delta_{\text{leg}}, r_{L_0} + \delta_{\text{leg}}]\\) is the legitimate reward deviation and \\(\eta_{\text{adv}}(t)\\) is adversarial perturbation. If \\(k_{\text{clip}}\\,\sigma_r > \delta_{\text{leg}}\\), then no legitimate reward is clipped. The Q-value estimation bias satisfies:
 
 {% katex(block=true) %}
 \bigl|\mathbb{E}[Q_{\text{clip}}[a]] - Q_{\text{true}}[a]\bigr| \leq \bigl(k_{\text{clip}}\,\sigma_r + \delta_{\text{leg}}\bigr)\cdot P\!\left(|\eta_{\text{adv}}| > k_{\text{clip}}\,\sigma_r - \delta_{\text{leg}}\right)
 {% end %}
 
-Under Gaussian adversarial perturbations \\(\eta_{\text{adv}} \sim \mathcal{N}(0, \sigma_{\text{adv}}^2)\\), the right-hand side decays as \\(1 - \Phi\!\left(\tfrac{k_{\text{clip}}\,\sigma_r - \delta_{\text{leg}}}{\sigma_{\text{adv}}}\right)\\) — the same Gaussian tail form as Proposition 54 (False-Positive Ejection Bound, Part 2 extension). \\(\square\\)
+Under Gaussian adversarial perturbations \\(\eta_{\text{adv}} \sim \mathcal{N}(0, \sigma_{\text{adv}}^2)\\), the right-hand side decays as \\(1 - \Phi\!\left(\tfrac{k_{\text{clip}}\\,\sigma_r - \delta_{\text{leg}}}{\sigma_{\text{adv}}}\right)\\) — the same Gaussian tail form as Proposition 54 (False-Positive Ejection Bound). \\(\square\\)
 
 *Proof sketch.* Q-values are incremental averages of clipped rewards. Clipping truncates observations outside \\([r_{L_0} - k_{\text{clip}}\sigma_r,\; r_{L_0} + k_{\text{clip}}\sigma_r]\\); when \\(k_{\text{clip}}\sigma_r > \delta_{\text{leg}}\\), legitimate rewards lie within this interval and are never truncated. The bias from clipping a single adversarial observation is bounded by the clip radius; the expected bias over \\(N[a]\\) visits is \\(\text{clip\\_radius} \cdot P(\text{adversarial})\\), giving the stated bound. \\(\square\\)
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration.** With \\(r_{L_0}\\) measured over 48 hours of pre-deployment operation, \\(\sigma_r\\) converges within the first 200 observations by Proposition 24 (Kalman Baseline Convergence Rate, Part 2). Setting \\(k_{\text{clip}} = 3\\): the adversary's 10-minute EW reduction — yielding reward spike \\(|\eta_{\text{adv}}| \approx 2.8\,\sigma_r\\) — is admitted; a coordinated attack delivering \\(|\eta_{\text{adv}}| > 3\sigma_r\\) is clipped before reaching the Q-update. The CUSUM trap detector fires after approximately \\(\vartheta / \delta_{\text{cusum}}\\) steps of sustained positive innovation, tripling \\(\varepsilon\\) (\\(\gamma = 3\\)) — forcing {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} to re-explore rather than commit to the apparently optimal corridor. At day 15, the adversary's trap sequence fails: the swarm is too uncertain about C-7 to exploit it.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration.** With \\(r_{L_0}\\) measured over 48 hours of pre-deployment operation, \\(\sigma_r\\) converges within the first 200 observations by Proposition 24 (Kalman Baseline Convergence Rate). Setting \\(k_{\text{clip}} = 3\\): the adversary's 10-minute EW reduction — yielding reward spike \\(|\eta_{\text{adv}}| \approx 2.8\\,\sigma_r\\) — is admitted; a coordinated attack delivering \\(|\eta_{\text{adv}}| > 3\sigma_r\\) is clipped before reaching the Q-update. The CUSUM trap detector fires after approximately \\(\vartheta / \delta_{\text{cusum}}\\) steps of sustained positive innovation, tripling \\(\varepsilon\\) (\\(\gamma = 3\\)) — forcing {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} to re-explore rather than commit to the apparently optimal corridor. At day 15, the adversary's trap sequence fails: the swarm is too uncertain about C-7 to exploit it.
 
 ---
 

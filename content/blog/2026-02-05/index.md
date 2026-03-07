@@ -104,6 +104,10 @@ Edge architecture must find the balance: enough rules for critical coherence, en
 D(\Sigma_A, \Sigma_B) = \frac{|\Sigma_A \triangle \Sigma_B|}{|\Sigma_A \cup \Sigma_B|}
 {% end %}
 
+- **Use**: Gives the normalized fraction of state entries differing between two replicas (0 = identical, 1 = fully diverged); monitor {% katex() %}D{% end %} per object class during partition and alarm when {% katex() %}D > D_{\max}{% end %} to catch coherence decay before it surfaces as conflicting commands in the field.
+- **Parameters**: {% katex() %}D_{\max} \approx 0.1{% end %} for safety-critical objects; {% katex() %}\approx 0.3{% end %} for operational data stores; measure per object type.
+- **Field note**: One fleet-wide {% katex() %}D{% end %} number hides safety-critical divergence — always measure {% katex() %}D{% end %} separately per object class.
+
 *where \\(D \in [0, 1]\\), with \\(D = 0\\) indicating identical states and \\(D = 1\\) indicating completely disjoint states.*
 
 In other words, divergence is the fraction of the combined key space on which the two states disagree; zero means byte-for-byte identical, one means no key-value pair is shared.
@@ -140,6 +144,10 @@ During partition, state diverges through multiple mechanisms:
 E[D(\tau)] = 1 - e^{-\lambda \tau}
 {% end %}
 
+- **Use**: Predicts expected divergence after {% katex() %}\tau{% end %} seconds of partition at update rate {% katex() %}\lambda{% end %}; use this to estimate worst-case {% katex() %}D{% end %} at partition end for sizing the reconciliation buffer in Corollary 5b, preventing buffer undersizing from underestimating how fast state diverges.
+- **Parameters**: {% katex() %}\lambda{% end %} = update events per second (0.01–1 Hz for edge fleets); {% katex() %}\tau{% end %} = expected partition duration in hours.
+- **Field note**: Use {% katex() %}\lambda{% end %} at the 95th percentile of your update rate — burst writes dominate reconciliation cost, not the mean.
+
 *Proof sketch*: Model state as a binary indicator per key: identical (0) or divergent (1). Under independent Poisson arrivals with rate \\(\lambda\\), the probability a given key remains synchronized is \\(e^{-\lambda \tau}\\). The expected fraction of divergent keys follows the complementary probability. For sparse state changes, \\(E[D(\tau)] \approx 1 - e^{-\lambda \tau}\\) provides a tight upper bound.
 
 **Why Poisson fails for tactical edge**: Operational update streams alternate between burst and quiet phases (Definition 11b). The Fano factor \\(F = \mathrm{Var}[\text{updates}] / \mathbb{E}[\text{updates}]\\) for tactical edge systems is 3–15 (measured on {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} exercises), not \\(F = 1.0\\) as Poisson assumes. Burst events cluster temporally — contact events, terrain transitions, and threat detections arrive in correlated waves, followed by extended quiet periods. A uniform Poisson rate collapses this structure: it underestimates divergence at burst onset and overestimates it during quiet, making it unreliable for buffer sizing in either regime.
@@ -153,8 +161,8 @@ E[D(\tau)] = p_{\text{burst}} \cdot E[D_{\text{burst}}(\tau)] + p_{\text{quiet}}
 
 *where:*
 - \\(p_{\text{burst}} = \tau_{\text{burst}} / (\tau_{\text{burst}} + T_{\text{quiet}})\\) — fraction of time in burst phase
-- \\(E[D_{\text{burst}}(\tau)] = 1 - e^{-F \cdot \lambda \cdot \min(\tau,\, \tau_{\text{burst}})}\\) — divergence during burst
-- \\(E[D_{\text{quiet}}(\tau)] = 1 - e^{-0.1 \cdot \lambda \cdot \max(0,\, \tau - \tau_{\text{burst}})}\\) — divergence during quiet phase
+- \\(E[D_{\text{burst}}(\tau)] = 1 - e^{-F \cdot \lambda \cdot \min(\tau,\\, \tau_{\text{burst}})}\\) — divergence during burst
+- \\(E[D_{\text{quiet}}(\tau)] = 1 - e^{-0.1 \cdot \lambda \cdot \max(0,\\, \tau - \tau_{\text{burst}})}\\) — divergence during quiet phase
 
 *For worst-case buffer sizing, condition on partition onset coinciding with burst start:*
 
@@ -182,6 +190,10 @@ In other words, the total work at reconnection scales with how many key-value pa
 {% katex(block=true) %}
 \text{Buffer}_{\min} = |S| \cdot D_{\text{worst}}(\tau_{\text{max}}) \cdot b_{\text{item}}
 {% end %}
+
+- **Use**: Computes minimum on-device buffer in bytes to absorb worst-case post-partition divergence; apply during hardware BOM to size reconciliation memory and prevent buffer overflow at reconnect that permanently drops state deltas.
+- **Parameters**: {% katex() %}|S|{% end %} = object count; {% katex() %}D_{\text{worst}}{% end %} from burst-corrected Proposition 12; {% katex() %}b_{\text{item}} = 64\text{--}256{% end %} bytes per object.
+- **Field note**: Add a \\(2\\times\\) safety factor on top of the formula result — production networks always have higher burst rates than spec assumes.
 
 *where \\(|S|\\) is total state items and \\(b_{\text{item}}\\) is bytes per item. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(|S| = 500\\), \\(\lambda = 2\\) events/s, \\(F = 8\\), \\(\tau_{\text{burst}} = 5\text{s}\\), \\(\tau_{\text{max}} = 1800\text{s}\\)):*
 
@@ -238,7 +250,7 @@ s' = \bigsqcup_{\mathcal{W}}(\mathcal{U}) = \bigsqcup_{s_i \in \text{Admitted}(\
 
 *Corollary (Poison Resistance): A "signed but compromised" node cannot poison swarm state unless it controls a coalition with collective weight \\(> \Theta_{\text{trust}}\\). For \\(\Theta_{\text{trust}} = 0.67\\) and uniform weights, this requires \\(f > n/3\\) {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} nodes — exactly the BFT threshold.*
 
-**Connection to semantic convergence (Part 1, Definition 1b)**: Definition 12b guarantees \\(\gamma_{\text{data}} = 1\\) — every admitted update is data-consistent after Stage 2 join. It does not guarantee \\(\gamma = 1\\): merged state may still violate system policy even when no {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} node contributed (e.g., two clusters both committed the same exclusive resource independently). For the stability condition \\(\gamma \geq 1 - \varepsilon\\) and its effect on reconciliation cost, see Part 1 Definition 1b.
+**Connection to semantic convergence (Definition 1b)**: Definition 12b guarantees \\(\gamma_{\text{data}} = 1\\) — every admitted update is data-consistent after Stage 2 join. It does not guarantee \\(\gamma = 1\\): merged state may still violate system policy even when no {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} node contributed (e.g., two clusters both committed the same exclusive resource independently). For the stability condition \\(\gamma \geq 1 - \varepsilon\\) and its effect on reconciliation cost, see Definition 1b.
 
 *Note: \\(\\sqcup_W\\) is a **gated union operator**, not a classical semilattice. For any fixed admitted set (all quorum checks pass), it satisfies the commutativity, associativity, and idempotency of Definition 12. The admission gate is monotone: once a node's trust score exceeds \\(\\Theta_{\\text{trust}}\\), it remains admitted absent explicit revocation — so the {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} convergence guarantee (Proposition 13) holds within the admitted partition.*
 
@@ -680,7 +692,7 @@ l_m - \lfloor \mathrm{pt}_j \rfloor \;\leq\; \epsilon + \tau_{\mathrm{del}} \;\l
 
 If the observed difference exceeds \\(\epsilon + \tau_{\max}\\), either the sender violated property 3 (clock anomaly) or \\(\tau_{\mathrm{del}} > \tau_{\max}\\) (network anomaly). \\(\square\\)
 
-**Calibration**: Set \\(\tau_{\max}\\) to the 99th percentile of measured one-way delivery times during normal operation. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} on a local mesh with GPS-disciplined clocks (\\(\epsilon \approx 1\\)s): measured \\(\tau_{99} \approx 80\,\text{ms}\\), so \\(\tau_{\max} = 100\,\text{ms}\\), giving anomaly threshold \\(\epsilon + \tau_{\max} = 1.1\,\text{s}\\). For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} in mountain terrain: \\(\tau_{99} \approx 3\,\text{s}\\), so \\(\tau_{\max} = 5\,\text{s}\\), giving threshold 6 s. Both thresholds are evaluated against the current connectivity regime (Def 40b); \\(\tau_{\max}\\) updates when regime transitions are detected.
+**Calibration**: Set \\(\tau_{\max}\\) to the 99th percentile of measured one-way delivery times during normal operation. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} on a local mesh with GPS-disciplined clocks (\\(\epsilon \approx 1\\)s): measured \\(\tau_{99} \approx 80\\,\text{ms}\\), so \\(\tau_{\max} = 100\\,\text{ms}\\), giving anomaly threshold \\(\epsilon + \tau_{\max} = 1.1\\,\text{s}\\). For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} in mountain terrain: \\(\tau_{99} \approx 3\\,\text{s}\\), so \\(\tau_{\max} = 5\\,\text{s}\\), giving threshold 6 s. Both thresholds are evaluated against the current connectivity regime (Def 40b); \\(\tau_{\max}\\) updates when regime transitions are detected.
 
 <span id="def-41"></span>
 **Definition 41** ({% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}-Aware {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} Merge Function). *Let \\(s_1, s_2\\) be {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} states with {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamps \\(h_1, h_2\\) and node identifiers \\(n_1, n_2\\). The {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}-Aware Merge function replaces the physical-timestamp LWW comparator \\(t_{s_1} > t_{s_2}\\):*
@@ -760,7 +772,7 @@ l_j \leftarrow \max\!\left(l_j,\; \max_{i \in \mathrm{peers}} l_i\right), \qquad
 
 **Concrete scenario**: Drone 23 partitioned for 47 minutes; its RTC drifted 12 minutes fast (\\(\Delta_j = +720\\)s). Without {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}: all 847 local writes have {% katex() %}\mathrm{ts}_{\mathrm{local}} > \mathrm{ts}_{\mathrm{network}} + 720{% end %}s, silently overwriting 12 minutes of correct fleet state on rejoin — the fleet loses cohesion. With Def 42: Drone 23 enters quarantine, Phase 2 repairs \\(l_j\\), Phase 3 classifies all 847 writes as causally concurrent with peer writes in the same time window, and they are merged via OR-Set and RGA join operations — not silently winning. Convergence completes in 3 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds (consistent with Prop 4 on the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} 47-drone topology).
 
-**Phase timeline clarification — 3 rounds vs. O(|P|·n) rounds**: The "3 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds" figure refers to {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state propagation only (Phase 4 of Def 42: disseminating the merged {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} join to all peers). The Phase 3 Causality Audit — classifying all 847 partition operations as causally ordered or concurrent — runs asynchronously and takes \\(O(|P| \cdot n)\\) {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds, where \\(|P| = 847\\) (partition operations) and \\(n = 47\\) (fleet size). At the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate of \\(\lambda = 1\\) Hz and average convergence time of ~10 seconds per round (Prop 4), the full audit requires \\(847 \times 47 \approx 39,\!809\\) audit-exchanges at 1 Hz, completing in approximately 11 hours under continuous connectivity. In practice, the audit parallelizes across nodes (each node classifies its own \\(|P_j|\\) operations independently), reducing wall-clock time to \\(O(|P| / n \cdot D / \lambda) \approx 18 \times 8 / 1 \approx 144\\) seconds (18 operations per drone, diameter 8). The causality audit is not on the critical path for mission continuation — the node exits quarantine and resumes operations after state propagation completes in 3 rounds; the audit runs as a background verification process. The distinction matters operationally: "re-sync complete in 3 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds" means the fleet has a consistent {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state, not that causality has been fully audited.
+**Phase timeline clarification — 3 gossip rounds vs. \\(O(|P| \\times n)\\) audit rounds**: The "3 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds" figure refers to {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state propagation only (Phase 4 of Def 42: disseminating the merged {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} join to all peers). The Phase 3 Causality Audit — classifying all 847 partition operations as causally ordered or concurrent — runs asynchronously and takes \\(O(|P| \cdot n)\\) {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds, where \\(|P| = 847\\) (partition operations) and \\(n = 47\\) (fleet size). At the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rate of \\(\lambda = 1\\) Hz and average convergence time of ~10 seconds per round (Prop 4), the full audit requires \\(847 \times 47 \approx 39,\!809\\) audit-exchanges at 1 Hz, completing in approximately 11 hours under continuous connectivity. In practice, the audit parallelizes across nodes (each node classifies its own \\(|P_j|\\) operations independently), reducing wall-clock time to \\(O(|P| / n \cdot D / \lambda) \approx 18 \times 8 / 1 \approx 144\\) seconds (18 operations per drone, diameter 8). The causality audit is not on the critical path for mission continuation — the node exits quarantine and resumes operations after state propagation completes in 3 rounds; the audit runs as a background verification process. The distinction matters operationally: "re-sync complete in 3 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} rounds" means the fleet has a consistent {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state, not that causality has been fully audited.
 
 ### Logical Validation: Peer Corroboration and Byzantine-Resilient Quorum
 
@@ -790,6 +802,10 @@ For sensor readings, the condition is \\(\vert v_i - v \vert \leq \sigma_{\mathr
 P(\text{false claim accepted}) = \sum_{m=k_{\mathrm{accept}}}^{k} \binom{k}{m} p_{\mathrm{fool}}^{\,m} (1 - p_{\mathrm{fool}})^{k-m}
 {% end %}
 
+- **Use**: Gives the probability a Byzantine node passes peer validation given quorum size {% katex() %}k{% end %}; use when selecting {% katex() %}k{% end %} to satisfy your mission's false-acceptance risk tolerance and prevent insufficient quorum from trivially accepting malicious state claims.
+- **Parameters**: {% katex() %}k \geq 3{% end %} gives {% katex() %}P < 3\%{% end %}; {% katex() %}k \geq 5{% end %} gives {% katex() %}P < 0.4\%{% end %}; assume {% katex() %}p_{\text{fool}} = 0.1{% end %} per validator (use 0.3 in contested environments).
+- **Field note**: {% katex() %}k=1{% end %} (single validator) is trivially compromised; {% katex() %}k=2{% end %} allows 11% false acceptance — always use {% katex() %}k \geq 3{% end %} in any safety-relevant context.
+
 *For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} (\\(k = 6\\), \\(k_{\mathrm{accept}} = 4\\), \\(p_{\mathrm{fool}} = 0.10\\)):*
 
 {% katex(block=true) %}
@@ -806,6 +822,10 @@ P(\text{false accepted}) = \binom{6}{4}(0.1)^4(0.9)^2 + \binom{6}{5}(0.1)^5(0.9)
 {% katex(block=true) %}
 r_j(t) \leftarrow \alpha_r \cdot \mathbf{1}[\kappa(c_j, \cdot) \geq k_{\mathrm{accept}}] + (1 - \alpha_r) \cdot r_j(t-1)
 {% end %}
+
+- **Use**: Exponentially smooths reputation scores with additive recovery on passes and multiplicative decay on failures; update after every peer-validation check or gossip event to prevent Byzantine nodes from accumulating trust through easy low-stakes interactions.
+- **Parameters**: {% katex() %}\alpha_r{% end %} = EMA smoothing factor (0.1–0.3); starts at 1.0; asymmetric decay is intentional — fast down, slow up.
+- **Field note**: Equal gain/loss rates let a node recover in one success after a dangerous failure — the asymmetry must be at least 5:1.
 
 *where \\(\alpha_r \ll 1\\) (slow adaptation — prevents {% term(url="@/blog/2026-01-22/index.md#def-7", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} manipulation of the reputation update itself). The weighted vote of node \\(i\\) on claim \\(c\\) from node \\(j\\) is \\(V_i(c) = r_i(t) \cdot \phi(c, i)\\). Claim \\(c\\) is accepted under reputation weighting if:*
 
@@ -837,6 +857,10 @@ f_{\mathrm{eff}}(T) = \frac{\sum_{j \in \mathcal{B}} r_j(T)}{\sum_{j \in V} r_j(
 {% katex(block=true) %}
 \left|\left\{i \in Q : \mathrm{vote}_i(D) = \mathrm{YES}\right\}\right| \geq \left\lceil \frac{2\,|Q|}{3} \right\rceil
 {% end %}
+
+- **Use**: Requires a 2/3 supermajority of reputation-filtered voters before any irreversible high-stakes decision; verify this condition before every such decision to prevent simple-majority capture, which a 34% Byzantine coalition can break at 50%+1.
+- **Parameters**: {% katex() %}|Q|{% end %} = voters with reputation {% katex() %}\geq \rho_{\min}{% end %}; 2/3 threshold tolerates up to 1/3 Byzantine members in {% katex() %}Q{% end %}.
+- **Field note**: The reputation filter on {% katex() %}Q{% end %} matters as much as the 2/3 ratio — a quorum of low-trust nodes provides no Byzantine safety.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} "Change Mission" parameters** (\\(n = 47\\), \\(f \leq 15\\)):
 - Size: \\(\vert Q \vert \geq \lceil 94/3 \rceil + 1 = 33\\)
@@ -1462,6 +1486,101 @@ At 250 kbps, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-v
 
 **Why self-contained items matter**: If the window closes mid-transmission, untransmitted items remain in \\(\Delta_{i \to j}\\) for the next window. Transmitted items are applied atomically on receipt. The receiver's state is always the union of fully-applied {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} records — never a partial merge — because each delta item is a complete causal record, not a raw byte fragment.
 
+### Reconnection Storm Mitigation
+
+Definition 31 assumes bandwidth \\(B\\) is known a priori and the link remains stable throughout the sync window. In practice, the first opportunistic uplink after a long Weibull partition is marginal — MANET RF at the edge of coverage, or a satellite bounce during a brief atmospheric window. Transmitting the full {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state before measuring the link saturates the channel before any critical state is exchanged. Four extensions close this gap in sequence: a formal delta-state CRDT (Definition 72) reduces payload size; a pre-sync bandwidth probe (Definition 73) measures \\(\hat{B}\\) before Phase 1 of Definition 31; a QoS byte budget (Definition 74) translates \\(\hat{B}\\) into guaranteed tier allocations; and an exponential backoff condition (Proposition 61) detects link saturation mid-sync and pauses before destabilizing the uplink.
+
+<span id="def-72"></span>
+
+**Definition 72** (Delta-State {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} Mutant). For a join-semilattice \\((S, \sqcup)\\) (Definition 12), the **delta mutant** for operation \\(m\\) applied at state \\(x \in S\\) is the minimal sub-state satisfying:
+
+{% katex(block=true) %}
+\delta_m^x = \inf\!\bigl\{\, d \in S \;\big|\; d \sqcup x = m(x) \bigr\}
+{% end %}
+
+- **Use**: Extracts the minimal lattice sub-state produced by one mutation for transmission in place of full state; accumulate delta groups since the last sync epoch to prevent full-state retransmission on every sync regardless of how few fields changed.
+- **Parameters**: CONVOY sparse updates: {% katex() %}\delta \approx 5\%{% end %} of full state {% katex() %}\to 20\times{% end %} bandwidth reduction per sync cycle.
+- **Field note**: Delta extraction only pays when batching multiple mutations per transmission — individual deltas still carry full message header overhead.
+
+The **delta group** accumulated since sync epoch \\(e\\) is the join of all delta mutants produced by mutations \\(m_1, m_2, \ldots\\) applied at states \\(x_1, x_2, \ldots\\) since \\(e\\):
+
+{% katex(block=true) %}
+\Delta_i^{(e)} = \bigsqcup_{t > e}\, \delta_{m_t}^{x_t}
+{% end %}
+
+Three properties follow from the semilattice structure: (1) **Correctness** — \\(\Delta_i^{(e)} \sqcup s_j = m_n(\cdots m_1(s_j) \cdots)\\) for any \\(s_j \leq s_i^{(e)}\\); (2) **Size bound** — \\(|\Delta_i^{(e)}| \leq |S|\\) always; (3) **Sparse reduction** — for updates covering fraction \\(f\\) of \\(S\\), \\(|\Delta_i^{(e)}| \approx f \cdot |S|\\). Definition 31 Phase 2 implicitly constructs \\(\Delta_i^{(e)}\\) via vector-clock comparison; Definition 72 makes the delta-state structure explicit, enabling MCU-local delta storage without retaining the full join history. \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration**: 10,000-entry {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state (\\(|S| = 640\\,\text{KB}\\)); 500 entries updated during a 6.7 hr partition (\\(f = 0.05\\)). Definition 72 reduces Phase 2 payload from 640 KB to \\(\approx 32\\,\text{KB}\\) — a \\(20\times\\) reduction, shifting from a 20-second sync at 250 kbps to under 1 second.
+
+<span id="def-73"></span>
+
+**Definition 73** (Link Bandwidth Probe). A **bandwidth probe** fires at link detection, completing before Definition 31 Phase 1. The probe consists of a single request-response pair: transmit a probe packet of \\(L_{\text{probe}}\\) bytes (default: 512 bytes), record {% katex() %}\mathrm{RTT}_{\text{probe}} = t_{\text{ACK}} - t_{\text{send}}{% end %}. The instantaneous bandwidth estimate is:
+
+{% katex(block=true) %}
+\hat{B}_{\text{sample}} = \frac{L_{\text{probe}} \cdot 8}{\mathrm{RTT}_{\text{probe}}}
+{% end %}
+
+- **Use**: Estimates current bandwidth from a 512-byte probe with {% katex() %}\alpha{% end %}-EMA smoothing before each reconnection sync session; prevents link saturation from transmitting a full Merkle fingerprint over a marginal link without first knowing its actual capacity.
+- **Parameters**: {% katex() %}L_{\text{probe}} = 512{% end %} bytes; {% katex() %}\alpha = 0.25{% end %} EMA factor; fall back to {% katex() %}B_{\min} = 9.6{% end %} kbps if RTT {% katex() %}> 2{% end %} s or {% katex() %}\hat{B} < B_{\min}{% end %}.
+- **Field note**: Probe at every reconnect — link quality after a partition is routinely worse than before it and must be re-measured each time.
+
+Updated via \\(\alpha\\)-exponential moving average across successive probe windows:
+
+{% katex(block=true) %}
+\hat{B}_{n} = \alpha\,\hat{B}_{\text{sample}} + (1 - \alpha)\,\hat{B}_{n-1}, \quad \alpha = 0.25
+{% end %}
+
+If {% katex() %}\mathrm{RTT}_{\text{probe}} > T_{\text{timeout}}{% end %} (default: 2 s) or {% katex() %}\hat{B}_{n} < B_{\min}{% end %} (default: 9.6 kbps): set {% katex() %}\hat{B}_{n} = B_{\min}{% end %} and flag as **marginal link** — only tier-1 items (Definition 74) are transmitted. Probe cost: \\(L_{\text{probe}} + L_{\text{ACK}} \leq 560\\) bytes, 1 RTT — negligible against any usable link. \\(\square\\)
+
+<span id="def-74"></span>
+
+**Definition 74** (QoS Byte Budget). Given probed bandwidth \\(\hat{B}\\) and connectivity window \\(T_W\\), the **total byte budget** (fingerprint overhead pre-deducted per Definition 31 Phase 1) is:
+
+{% katex(block=true) %}
+\Omega = \hat{B} \cdot T_W - 2\,C_F
+{% end %}
+
+- **Use**: Computes usable bytes for the current sync window after subtracting two-way framing overhead; allocate by tier immediately after probing to prevent tier-1 critical state from being crowded out by large lower-priority deltas.
+- **Parameters**: {% katex() %}\alpha_1=0.50,\, \alpha_2=0.25,\, \alpha_3=0.15,\, \alpha_4=0.10{% end %}; unused budget from tier {% katex() %}k{% end %} cascades to tier {% katex() %}k+1{% end %}.
+- **Field note**: Cap tier-3 absolute size even when cascade budget is available — the cascade rule becomes a footgun for large low-priority payloads.
+
+The budget is partitioned into tier-reserved allocations:
+
+| Tier | Content | Reservation \\(\alpha_k\\) | Guaranteed bytes |
+| :--- | :--- | :--- | :--- |
+| 1 — \\(\mathcal{L}_0\\) critical | Threat vectors, node liveness | \\(\alpha_1 = 0.50\\) | \\(0.50\\,\Omega\\) |
+| 2 — Mission | Position, objectives | \\(\alpha_2 = 0.25\\) | \\(0.25\\,\Omega\\) |
+| 3 — Operational | Sensor readings, health | \\(\alpha_3 = 0.15\\) | \\(0.15\\,\Omega\\) |
+| 4 — \\(\mathcal{L}_4\\) telemetry | Logs, timestamps | \\(\alpha_4 = 0.10\\) | \\(0.10\\,\Omega\\) |
+
+Unused tier-\\(k\\) allocation cascades to tier \\(k+1\\): if \\(|\Delta_k| < \alpha_k\\,\Omega\\), the surplus \\(\alpha_k\\,\Omega - |\Delta_k|\\) is added to the tier-\\((k+1)\\) budget. Critical state receives its floor regardless of link quality: at \\(\hat{B} = B_{\min} = 9.6\\,\text{kbps}\\) with \\(T_W = 5\\,\text{s}\\), \\(\Omega \approx 6\\,\text{KB}\\) and \\(0.50\\,\Omega = 3\\,\text{KB}\\) is reserved for threat vectors and liveness — sufficient for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s 2 KB tier-1 delta. \\(\square\\)
+
+<span id="prop-61"></span>
+
+**Proposition 61** (Sync Stability Bound). During Definition 31 Phase 3, monitor ACK round-trip time \\(\mathrm{RTT}(t)\\) continuously. A **saturation event** is declared when:
+
+{% katex(block=true) %}
+\mathrm{RTT}(t) > \beta \cdot \mathrm{RTT}_{\text{probe}}, \quad \beta = 2.0
+{% end %}
+
+On saturation event \\(n\\) (\\(n = 0, 1, 2, \ldots\\)), pause transmission for \\(T_{\text{backoff}}(n) = T_0 \cdot 2^n\\), then resume from the first un-ACKed item (safe because Definition 31 items are self-contained). The total sync time satisfies:
+
+{% katex(block=true) %}
+T_{\text{total}} \leq T_{\text{sync}} + T_0 \cdot (2^{N_{\text{sat}}} - 1)
+{% end %}
+
+- **Use**: Bounds total sync duration including exponential backoff from link saturation events; verify the bound fits within the available reconnection window to prevent indefinite retransmission on a degraded link beyond the window.
+- **Parameters**: {% katex() %}T_0 = 100{% end %} ms base backoff interval; {% katex() %}N_{\text{sat}}{% end %} = saturation event count per session (0–3 typical); {% katex() %}T_{\text{sync}}{% end %} = baseline sync time.
+- **Field note**: Add a hard abort at {% katex() %}N_{\text{sat}} = 4{% end %} — continuing past that indicates persistent link degradation, not a transient saturation event.
+
+where \\(T_{\text{sync}} = \Omega / \hat{B}\\) and \\(N_{\text{sat}}\\) is the number of saturation events. **Tier-1 safety invariant**: tier-1 items transmit in the first \\(T_1 = \alpha_1\\,\Omega / \hat{B}\\) seconds; since \\(T_1 < T_0\\) for all {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}-class links (\\(T_1 = 0.06\\,\text{s}\\), \\(T_0 = 0.1\\,\text{s}\\)), tier-1 completes before the first backoff period can fire. The first backoff delays only tier-2 and below.
+
+*Proof sketch.* Each backoff period \\(T_0 \cdot 2^n\\) is bounded. The geometric sum \\(\sum_{n=0}^{N_{\text{sat}}-1} T_0 \cdot 2^n = T_0 \cdot (2^{N_{\text{sat}}} - 1)\\) gives total backoff overhead. The tier-1 safety invariant follows from the ordering guarantee of Definition 74 (tier-1 transmitted first) and \\(T_1 = 0.5\\,\Omega / \hat{B} \leq 0.5 \cdot T_W\\), so tier-1 finishes well before the first backoff fires at \\(T_0 = 100\\,\text{ms}\\). \\(\square\\)
+
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration** (\\(T_0 = 100\\,\text{ms}\\), \\(T_W = 5\\,\text{s}\\), \\(\hat{B} = 50\\,\text{kbps}\\) marginal link): maximum tolerable saturation events before window expires — \\(N_{\text{sat}}^{\max} = \lfloor \log_2((T_W - T_{\text{sync}}) / T_0 + 1) \rfloor = \lfloor \log_2(49) \rfloor = 5\\). After 5 saturation events, total backoff overhead is \\(100 \cdot (2^5 - 1) = 3{,}100\\,\text{ms}\\). Tier-1 and tier-2 state (16 KB at 50 kbps \\(= 2.6\\,\text{s}\\)) is already committed; audit logs queue for the next window.
+
+---
+
 ### Handling Actions Taken During Partition
 
 Physical actions cannot be "merged" logically. If Cluster A drove north and Cluster B drove south, they cannot merge to "drove north and south simultaneously."
@@ -1535,6 +1654,10 @@ J(\text{redundant}) = \alpha \cdot c_k \qquad J(\text{omission}) = \beta \cdot v
 p^* = \frac{\beta \cdot v_k}{\alpha \cdot c_k + \beta \cdot v_k}
 {% end %}
 
+- **Use**: Gives the per-node claim probability that minimizes total cost by balancing redundancy waste against omission loss per task tier; configure per tier to prevent uniform-probability allocation from treating critical telemetry identically to low-priority logs.
+- **Parameters**: {% katex() %}\alpha{% end %} = redundancy cost per unit; {% katex() %}\beta{% end %} = omission penalty per unit; set {% katex() %}\beta/\alpha \geq 5{% end %} for data-loss-averse workloads.
+- **Field note**: In MULTIWRITE field tests, tiered {% katex() %}p^*{% end %} cut redundant writes by 40% while keeping critical-tier omission probability below 0.1%.
+
 **Interpretation.** When \\(\beta v_k \gg \alpha c_k\\) — high-value task, cheap or abundant resource — \\(p^* \to 1\\): both clusters should attempt the task and accept the possibility of redundancy. When \\(\alpha c_k \gg \beta v_k\\) — expensive or irreplaceable resource, low-value task — \\(p^* \to 0\\): be conservative and risk omission rather than waste. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s EOD platform, \\(\alpha c_k \gg \beta v_k\\): the kit is irreplaceable mid-mission, and Sector 7 can be partially mitigated by other means. The correct \\(p^*\\) is low — closer to 0.3 than 0.9.
 
 The coefficients \\(\alpha\\) and \\(\beta\\) are fleet-wide policy parameters calibrated from post-partition audit history (Definition 57). During partition, each node uses its cached \\((\hat{\alpha}, \hat{\beta})\\) pair — stale estimates are safe to use because \\(p^*\\) is bounded in \\((0, 1)\\) regardless of coefficient drift.
@@ -1554,15 +1677,15 @@ P(a_i \mid \tau_k) = p^* \cdot H_i(t) \cdot \bigl(1 - D_i(t)\bigr)
 1. Computes \\(P(a_i \mid \tau_k)\\) from local state.
 2. Samples \\(u \sim \mathrm{Uniform}(0, 1)\\).
 3. If \\(u > P(a_i \mid \tau_k)\\): abstains. Task may be claimed by a healthier or lower-divergence node.
-4. If \\(u \leq P(a_i \mid \tau_k)\\): emits an **intent token** \\(\langle \tau_k,\, i,\, t \rangle\\) via the {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} protocol.
+4. If \\(u \leq P(a_i \mid \tau_k)\\): emits an **intent token** \\(\langle \tau_k,\\, i,\\, t \rangle\\) via the {% term(url="@/blog/2026-01-22/index.md#def-5", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} protocol.
 5. Any node receiving a prior intent token for \\(\tau_k\\) *before* committing resource \\(c_k\\) cancels its pending claim and does not commit. Under connected conditions, this window corresponds to \\(T_{\mathrm{gossip}}\\) (Proposition 4); under Denied regime the token may never arrive, in which case the node proceeds at its own \\(P(a_i \mid \tau_k)\\) risk.
 6. Node \\(i\\) commits resource \\(c_k\\) only after \\(T_{\mathrm{gossip}}\\) expires without receiving a counter-token.
 
-**No-leader guarantee.** Each node decides independently using only local state \\((H_i(t),\, D_i(t))\\) and the broadcast gossip record. No coordinator is required: the probability function itself is the coordination mechanism. During Denied connectivity (Definition 2), \\(T_{\mathrm{gossip}} \to \infty\\) and the intent token cannot propagate — the protocol degrades gracefully to the uncoordinated baseline, which the loss function already accounts for.
+**No-leader guarantee.** Each node decides independently using only local state \\((H_i(t),\\, D_i(t))\\) and the broadcast gossip record. No coordinator is required: the probability function itself is the coordination mechanism. During Denied connectivity (Definition 2), \\(T_{\mathrm{gossip}} \to \infty\\) and the intent token cannot propagate — the protocol degrades gracefully to the uncoordinated baseline, which the loss function already accounts for.
 
 **Byzantine resistance.** Intent tokens are gossip-propagated and subject to the reputation-weighted admission filter of Definition 12b (Stage 1). A compromised node cannot reliably suppress a legitimate intent token: doing so requires controlling a quorum of the claimant's \\(k\\) nearest gossip neighbors — the same threshold as Proposition 43.
 
-**Self-suppression under degradation.** As \\(H_i(t) \to 0\\) (node is failing) or \\(D_i(t) \to 1\\) (node has severely divergent state), \\(P(a_i \mid \tau_k) \to 0\\). Degraded nodes automatically yield resource commitments to healthier peers — the same gradient that governs healing action gating in Part 3 (Proposition 10) now governs resource stewardship.
+**Self-suppression under degradation.** As \\(H_i(t) \to 0\\) (node is failing) or \\(D_i(t) \to 1\\) (node has severely divergent state), \\(P(a_i \mid \tau_k) \to 0\\). Degraded nodes automatically yield resource commitments to healthier peers — the same gradient that governs healing action gating (Proposition 10) now governs resource stewardship.
 
 <span id="prop-53"></span>
 
@@ -1571,6 +1694,10 @@ P(a_i \mid \tau_k) = p^* \cdot H_i(t) \cdot \bigl(1 - D_i(t)\bigr)
 {% katex(block=true) %}
 P(\text{omission}) = (1 - P(a))^n
 {% end %}
+
+- **Use**: Computes the probability all {% katex() %}n{% end %} nodes independently skip a task given per-node claim probability {% katex() %}P(a){% end %}; verify this is below mission tolerance for each tier before deployment to prevent under-claiming in small fleets from producing non-negligible omission risk.
+- **Parameters**: {% katex() %}n{% end %} = fleet size; {% katex() %}P(a) = p^*{% end %} from Definition 55; example: {% katex() %}n=12{% end %}, {% katex() %}P(a)=0.5 \to P(\text{omission}) \approx 0.02\%{% end %}.
+- **Field note**: Fleet size {% katex() %}n{% end %} is the strongest lever — adding 2 nodes to a 5-node fleet reduces omission probability by 75% at a fixed claim probability.
 
 {% katex(block=true) %}
 \mathbb{E}[\text{redundant claims}] = n \cdot P(a) - 1 + (1 - P(a))^n
