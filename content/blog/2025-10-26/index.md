@@ -738,7 +738,7 @@ $$H_{cache} = H_1 + (1 - H_1) \times H_2$$
 **Target configuration (25% L2 coverage as shown in optimization table below):**
 - \\(H_1 = 0.60\\) (60% served from L1 in-process cache)
 - \\(H_2 = 0.625\\) (62.5% **conditional** hit rate - hits L2 given L1 miss)
-  - L2 serves: \\(0.40 \times 0.625 = 25\%\\) of total requests
+  - L2 serves: \\(0.40 \times 0.625 = 25\\%\\) of total requests
 - **Combined cache hit rate = 85%** (60% + 25%)
 - **Database queries = 15%** (cache miss → query CockroachDB)
 

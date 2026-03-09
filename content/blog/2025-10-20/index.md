@@ -121,8 +121,8 @@ All internal inventory has **base CPM pricing determined through negotiation**, 
 
 **With ML personalization:**
 - **User 1**: ML predicts 5% CTR for Nike, 3% CTR for Adidas
-  - Nike eCPM: \\(0.05 × B_{low} × 1000 = 50 × B_{low}\\)
-  - Adidas eCPM: \\(0.03 × B_{high} × 1000 = 40 × B_{low}\\) (adjusted for \\(B_{high} = 1.33 × B_{low}\\))
+  - Nike eCPM: \\(0.05 × B_{low} × 1000 = 50 \times B_{low}\\)
+  - Adidas eCPM: \\(0.03 × B_{high} × 1000 = 40 \times B_{low}\\) (adjusted for \\(B_{high} = 1.33 \times B_{low}\\))
   - **Show Nike** (25% higher eCPM despite lower base price)
 
 - **User 2**: ML predicts 1% CTR for Nike, 0.5% CTR for Adidas
