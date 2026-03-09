@@ -214,7 +214,7 @@ Self-hosted becomes economically viable when **infrastructure savings exceed ope
 
 **Break-even formula:**
 
-$$\text{Break-even QPS} = \frac{\text{Annual SRE Cost}}{\text{Cost Savings per Request} \times \text{Requests per Year}}$$
+{% katex() %}\text{Break-even QPS} = \frac{\text{Annual SRE Cost}}{\text{Cost Savings per Request} \times \text{Requests per Year}}{% end %}
 
 **Example calculation at 8B requests/day:**
 - DynamoDB: 100% baseline cost (reference pricing from AWS)
@@ -975,7 +975,7 @@ For α=1.0, \\(H(N, 1) \approx \ln(N) + \gamma\\) where γ ≈ 0.5772 (Euler-Mas
 
 **Step 2: Calculate base hit rate (L2 cache only)**
 
-$$\text{L2 Hit Rate} = \frac{18.8}{20.4} \approx 0.92 \text{ or } 92\%$$
+{% katex() %}\text{L2 Hit Rate} = \frac{18.8}{20.4} \approx 0.92 \text{ or } 92\%{% end %}
 
 **Wait, this seems too high!** The issue: this assumes **perfect LFU** and **independent requests**.
 
@@ -1003,7 +1003,7 @@ L1 contribution: Caffeine in-process cache with 60% hit rate captures hot subset
 
 Combined rate: \\(H_{total} = H_{L1} + (1 - H_{L1}) \times H_{L2}\\)
 
-$$H_{total} = 0.60 + (1 - 0.60) \times 0.78 = 0.60 + 0.31 = 0.91 \text{ or } 91\%$$
+{% katex() %}H_{total} = 0.60 + (1 - 0.60) \times 0.78 = 0.60 + 0.31 = 0.91 \text{ or } 91\%{% end %}
 
 **But:** L1 size is tiny (2-4GB), only caches ~1M hottest users (0.25% coverage)
 
@@ -1390,7 +1390,7 @@ Reports arrive at a dedicated endpoint, flow through the same Kafka-Flink-Cockro
 
 **Maturity considerations:**
 
-Privacy Sandbox is evolving through 2024/2025. Attribution Reporting API is in origin trials (pre-production testing), Topics API is already integrated for contextual interest signals ([Part 1](/blog/ads-platform-part-1-foundation/)), and Protected Audience API (formerly FLEDGE) for on-device auctions remains on the roadmap. The architecture must accommodate API changes as specifications stabilize.
+Privacy Sandbox is evolving through 2024/2025. Attribution Reporting API is in origin trials (pre-production testing), Topics API is already integrated for contextual interest signals ([Part 1](/blog/ads-platform-part-1-foundation-architecture/)), and Protected Audience API (formerly FLEDGE) for on-device auctions remains on the roadmap. The architecture must accommodate API changes as specifications stabilize.
 
 **Operational impact:**
 
