@@ -46,9 +46,9 @@ The distinction is not philosophical. In adversarial and non-stationary environm
 | Concept | Formal Contribution | Design Consequence |
 | :--- | :--- | :--- |
 | **Anti-Fragility** | Convexity: \\(d^2P/d\sigma^2 > 0\\) | Design response functions that gain from variance |
-| **Stress-Information** | \\(I = -\log_2 P(\text{failure})\\) | Prioritize learning from rare events |
-| **Online Optimization** | UCB, EXP3, Thompson Sampling; EXP3 minimax regret \\(O(\sqrt{TK \ln K})\\) | Converge to optimal parameters; degrade gracefully under partition |
-| **Judgment Horizon** | \\(d \in \mathcal{J} \Leftrightarrow I > \theta_I \lor P > \theta_P \lor \ldots\\) | Route high-stakes decisions to humans |
+| **Stress-Information** | {% katex() %}I = -\log_2 P(\text{failure}){% end %} | Prioritize learning from rare events |
+| **Online Optimization** | UCB, EXP3, Thompson Sampling; EXP3 minimax regret {% katex() %}O(\sqrt{TK \ln K}){% end %} | Converge to optimal parameters; degrade gracefully under partition |
+| **Judgment Horizon** | {% katex() %}d \in \mathcal{J} \Leftrightarrow I > \theta_I \lor P > \theta_P \lor \ldots{% end %} | Route high-stakes decisions to humans |
 | **Model Failure** | Taxonomy: drift, adversarial, distributional | Defense-in-depth for each failure class |
 
 This extends {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} theory (Taleb, 2012) and online learning (Auer et al., 2002) for contested edge environments.
@@ -75,6 +75,10 @@ where \\(\nabla_\theta U\\) is the gradient of utility with respect to parameter
 
 ## Defining Anti-Fragility
 
+> **Problem**: "Resilient" and "anti-fragile" are often used interchangeably, but they describe fundamentally different behaviors. A resilient system returns to baseline after stress. An anti-fragile system finishes in a better state than it started — the stress itself was the improvement mechanism.
+> **Solution**: Formalize anti-fragility as convexity of the performance function in stress magnitude (\\(d^2P/d\sigma^2 > 0\\)). This is not a metaphor — it is a testable property. If performance after recovery exceeds pre-stress performance, the system is anti-fragile. The coefficient {% katex() %}\mathbb{A} = (P_1 - P_0)/\sigma{% end %} makes improvement per unit stress quantifiable.
+> **Trade-off**: Anti-fragility requires deliberate feedback from stress events into policy updates. A system that passively absorbs stress and returns to baseline is resilient, not anti-fragile. The feedback loop adds latency and complexity. There is also a safe operating envelope — stress beyond \\(\sigma_{\text{max}}\\) exceeds the system's recovery capacity and produces catastrophic failure, not improvement.
+
 ### Beyond Resilience
 
 <span id="def-15"></span>
@@ -89,6 +93,8 @@ where \\(\nabla_\theta U\\) is the gradient of utility with respect to parameter
 - **Use**: Tests whether performance {% katex() %}P{% end %} is convex in stress {% katex() %}\sigma{% end %} ({% katex() %}d^2P/d\sigma^2 > 0{% end %}), meaning the system genuinely improves under repeated stress rather than just recovering; evaluate over at least 10 stress events to prevent resilience masquerade from being mislabeled as anti-fragility.
 - **Parameters**: Measure {% katex() %}P{% end %} over a 30-day rolling window; stress events include partitions, fault injections, and anomaly triggers.
 - **Field note**: Anti-fragility requires deliberate feedback from stress events into policy updates — passive resilience never produces {% katex() %}d^2P/d\sigma^2 > 0{% end %}.
+
+> **Physical translation**: \\(d^2P/d\sigma^2 > 0\\) means the performance curve bends *upward* as stress increases — each additional unit of stress produces more improvement than the last. This is the mathematical signature of a system that learns faster under more pressure. The anti-fragility coefficient {% katex() %}\mathbb{A} = (P_1 - P_0)/\sigma{% end %} gives the practical measure: how much did performance actually improve, per unit stress experienced? For RAVEN, if detection accuracy was 0.72 before a partition event (\\(P_0 = 0.72\\)) and reached 0.78 after parameter updates triggered by that event (\\(P_1 = 0.78\\)), and the partition severity was \\(\sigma = 0.4\\), then {% katex() %}\mathbb{A} = 0.06/0.4 = 0.15{% end %} — 15% improvement per unit stress.
 
 *By Jensen's inequality, convexity implies \\(\mathbb{E}[P(\sigma)] > P(\mathbb{E}[\sigma])\\): the system gains from stress variance itself. The {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} coefficient \\(\mathbb{A} = (P_1 - P_0)/\sigma\\) measures observed improvement per unit stress, where \\(P_0\\) is pre-stress performance and \\(P_1\\) is post-recovery performance.*
 
@@ -119,7 +125,7 @@ where \\(\delta_{\text{safe}}\\) limits per-step mutation to 10% of the feasible
 \theta_t + \Delta\theta_t \in [\theta_{\min}, \theta_{\max}] \;\land\; \|\Delta\theta_t\| \leq \delta_{\text{safe}}
 {% end %}
 
-If the magnitude bound is violated, the update is scaled to \\(\delta_{\text{safe}} \cdot \Delta\theta_t / \|\Delta\theta_t\|\\), preserving the gradient direction while enforcing the step-size limit.
+If the magnitude bound is violated, the update is scaled to {% katex() %}\delta_{\text{safe}} \cdot \Delta\theta_t / \|\Delta\theta_t\|{% end %}, preserving the gradient direction while enforcing the step-size limit.
 
 **Lyapunov stability criterion**: SOE bounds are necessary but not sufficient — an update within \\([\theta_{\min}, \theta_{\max}]\\) can still move the closed-loop system toward instability. The Lyapunov criterion enforces directional safety. A policy update is accepted only if the Lyapunov function \\(V(x)\\) (positive definite, radially unbounded) exhibits exponential decrease:
 
@@ -161,7 +167,7 @@ where \\(P_{\max}\\) is the highest performance observed across trials with vali
 
 **Practical implementation for edge deployment**:
 
-1. **Define \\(V(x)\\)**: Use a domain-specific stability metric. For altitude control: \\(V(x) = \sum_i (h_i - h_{\text{target}})^2\\). For inter-vehicle spacing: \\(V(x) = \sum_i (d_i - d_{\text{safe}})^2\\).
+1. **Define \\(V(x)\\)**: Use a domain-specific stability metric. For altitude control: {% katex() %}V(x) = \sum_i (h_i - h_{\text{target}})^2{% end %}. For inter-vehicle spacing: {% katex() %}V(x) = \sum_i (d_i - d_{\text{safe}})^2{% end %}.
 
 2. **Estimate \\(\dot{V}\\)**: Sample-based finite-difference over \\(N\\) observations:
 
@@ -169,7 +175,7 @@ where \\(P_{\max}\\) is the highest performance observed across trials with vali
 \dot{V}(x) \approx \frac{1}{N} \sum_{i=1}^{N} \frac{V(x_{t+i}) - V(x_t)}{i \cdot \Delta t}
 {% end %}
 
-3. **Set \\(\alpha\\)**: Choose based on required convergence rate. \\(\alpha \in [0.1,\\, 1.0]\ \text{s}^{-1}\\) covers most edge deployments; faster dynamics require higher \\(\alpha\\).
+3. **Set \\(\alpha\\)**: Choose based on required convergence rate. {% katex() %}\alpha \in [0.1,\, 1.0]\ \text{s}^{-1}{% end %} covers most edge deployments; faster dynamics require higher \\(\alpha\\).
 
 4. **Monitor basin occupancy**: Track the fraction of time the system spends in \\(\mathcal{B}\\):
 
@@ -187,7 +193,7 @@ Evolutionary game theory provides a stronger justification for building {% term(
 
 **ESS condition**: {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} policy \\(\theta^\*\\) satisfies \\(f(\theta^\*, \theta^\*) \geq f(\theta\', \theta^\*)\\) for all \\(\theta\' \neq \theta^\*\\), with strict inequality against any fragile mutant. Stress events always eventually occur; {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} policies convert them into gains while fragile ones do not.
 
-**ESS holds when** \\(\mathbb{E}[\text{mission duration}] \cdot \mu_{\text{stress}} > 1\\) — i.e., the expected number of stress events per mission exceeds 1. For shorter deployments, a fragile policy maximizing immediate performance may dominate.
+**ESS holds when** {% katex() %}\mathbb{E}[\text{mission duration}] \cdot \mu_{\text{stress}} > 1{% end %} — i.e., the expected number of stress events per mission exceeds 1. For shorter deployments, a fragile policy maximizing immediate performance may dominate.
 
 **Practical implication**: Weight {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %}-propagated policy updates by \\(\mathbb{A}\\): nodes with \\(\mathbb{A} > 1\\) propagate their parameters more aggressively. {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} policies spread faster through the fleet — exactly what ESS predicts under selection pressure.
 
@@ -203,9 +209,9 @@ The concept of {% term(url="#def-15", def="System property where performance imp
 
 | Category | Response to Stress | Example | Mathematical Signature |
 | :--- | :--- | :--- | :--- |
-| **Fragile** | Breaks, degrades | Porcelain cup | Concave: \\(\frac{d^2P}{d\sigma^2} < 0\\) |
-| **Resilient** | Returns to baseline | Rubber ball | Linear: \\(\frac{d^2P}{d\sigma^2} = 0\\) |
-| **Anti-fragile** | Improves beyond baseline | Muscle, immune system | Convex: \\(\frac{d^2P}{d\sigma^2} > 0\\) |
+| **Fragile** | Breaks, degrades | Porcelain cup | Concave: {% katex() %}\frac{d^2P}{d\sigma^2} < 0{% end %} |
+| **Resilient** | Returns to baseline | Rubber ball | Linear: {% katex() %}\frac{d^2P}{d\sigma^2} = 0{% end %} |
+| **Anti-fragile** | Improves beyond baseline | Muscle, immune system | Convex: {% katex() %}\frac{d^2P}{d\sigma^2} > 0{% end %} |
 
 The three archetypes map to distinct curvatures of the performance function \\(P_{\text{perf}}(\sigma)\\), where \\(P_0\\) is baseline performance: fragile (concave, \\(d^2P_{\text{perf}}/d\sigma^2 < 0\\)), resilient (linear), and {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} (convex, \\(d^2P_{\text{perf}}/d\sigma^2 > 0\\) — as established in Definition 15).
 
@@ -215,7 +221,7 @@ The chart below plots performance against stress magnitude for each archetype; t
 
 <div style="margin:1.5em 0;">
 <canvas id="chart-stress-response"
-        aria-label="Animated chart: System Response to Stress comparing fragile, resilient, and {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}anti-fragile{% end %} curves"
+        aria-label="Animated chart: System Response to Stress comparing fragile, resilient, and anti-fragile curves"
         width="700" height="440"
         style="width:100%;height:auto;border:1px solid #e0e0e0;border-radius:4px;background:#fff;"></canvas>
 <script>
@@ -229,7 +235,7 @@ The chart below plots performance against stress magnitude for each archetype; t
   var series = [
     { label:'Fragile (concave)',    color:'#e53935', vals:[100,98,92,82,68,50,28,2,0,0,0] },
     { label:'Resilient (flat)',     color:'#1976d2', vals:[100,100,100,100,100,100,100,100,100,100,100] },
-    { label:'{% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}Anti-fragile{% end %} (convex)',color:'#2e7d32', vals:[100,102,108,118,130,140,145,142,130,110,80] }
+    { label:'Anti-fragile (convex)',color:'#2e7d32', vals:[100,102,108,118,130,140,145,142,130,110,80] }
   ];
   function tx(s){ return M.left + (s/xMax)*pw; }
   function ty(p){ return M.top + ph - ((p-yMin)/(yMax-yMin))*ph; }
@@ -358,7 +364,7 @@ flowchart LR
 
 **Anti-Fragility Zones** (derived from convexity analysis):
 
-The performance slope \\(dP_{\text{perf}}/d\sigma\\) is governed by information gain \\(I(\sigma) = -\log_2 P(\text{event}|\sigma)\\) and learning rate \\(\eta(\sigma)\\), combined as \\(dP_{\text{perf}}/d\sigma = \eta(\sigma) \cdot I(\sigma) \cdot \text{sign}(\nabla_\theta U)\\). The Insufficient Stress zone (\\(\sigma < \sigma_L\\)) provides near-zero information gain from common events — the system stagnates without adaptive signal. The Anti-Fragile Zone (\\(\sigma_L \leq \sigma < \sigma^\*\\)) is the operational sweet spot where rare events yield maximum information and the performance slope is strictly positive. The High Stress Zone (\\(\sigma^* \leq \sigma < \sigma_H\\)) shows diminishing returns as information saturates and the slope flattens. The Brittle Zone (\\(\sigma \geq \sigma_H\\)) exceeds recovery capacity: information is saturated but capacity-limited, the slope turns negative, and continued exposure causes irreversible degradation. Thresholds \\(\sigma_L, \sigma^*, \sigma_H\\) depend on system capacity and learning mechanism.
+The performance slope {% katex() %}dP_{\text{perf}}/d\sigma{% end %} is governed by information gain {% katex() %}I(\sigma) = -\log_2 P(\text{event}|\sigma){% end %} and learning rate \\(\eta(\sigma)\\), combined as {% katex() %}dP_{\text{perf}}/d\sigma = \eta(\sigma) \cdot I(\sigma) \cdot \text{sign}(\nabla_\theta U){% end %}. The Insufficient Stress zone (\\(\sigma < \sigma_L\\)) provides near-zero information gain from common events — the system stagnates without adaptive signal. The Anti-Fragile Zone ({% katex() %}\sigma_L \leq \sigma < \sigma^*{% end %}) is the operational sweet spot where rare events yield maximum information and the performance slope is strictly positive. The High Stress Zone ({% katex() %}\sigma^* \leq \sigma < \sigma_H{% end %}) shows diminishing returns as information saturates and the slope flattens. The Brittle Zone ({% katex() %}\sigma \geq \sigma_H{% end %}) exceeds recovery capacity: information is saturated but capacity-limited, the slope turns negative, and continued exposure causes irreversible degradation. Thresholds \\(\sigma_L, \sigma^*, \sigma_H\\) depend on system capacity and learning mechanism.
 
 **Critical warning**: In the destructive zone (\\(\sigma \geq \sigma_H\\)), the {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} coefficient \\(\mathbb{A} = (P_1 - P_0)/\sigma\\) becomes **negative**. The system is no longer {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} - it is fragile. Continued stress exposure causes permanent degradation, not learning. Systems must detect when \\(\sigma\\) approaches \\(\sigma_H\\) and either shed load or enter protective shutdown. The {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} framework provides no benefit in the destructive zone; standard resilience (minimize damage) applies.
 
@@ -372,7 +378,7 @@ The chart below tracks \\(\mathbb{A}\\) as a percentage of its theoretical maxim
 
 <div style="margin:1.5em 0;">
 <canvas id="chart-antifragility"
-        aria-label="Animated chart: Anti-Fragility Coefficient Evolution over 30 days for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} deployment"
+        aria-label="Animated chart: Anti-Fragility Coefficient Evolution over 30 days for RAVEN deployment"
         width="700" height="380"
         style="width:100%;height:auto;border:1px solid #e0e0e0;border-radius:4px;background:#fff;"></canvas>
 <script>
@@ -420,7 +426,7 @@ The chart below tracks \\(\mathbb{A}\\) as a percentage of its theoretical maxim
     ctx.save(); ctx.translate(18,M.top+ph/2); ctx.rotate(-Math.PI/2);
     ctx.textBaseline='middle'; ctx.fillText('A as % of theoretical maximum',0,0); ctx.restore();
     ctx.font='bold 14px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText('Anti-Fragility Coefficient Evolution \u2014 {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} 30-day deployment',M.left+pw/2,10);
+    ctx.fillText('Anti-Fragility Coefficient Evolution \u2014 RAVEN 30-day deployment',M.left+pw/2,10);
   }
   function drawCurve(dayFrac){
     var STEPS=300;
@@ -460,8 +466,8 @@ The chart below tracks \\(\mathbb{A}\\) as a percentage of its theoretical maxim
 </script>
 </div>
 
-**Interpreting the coefficient evolution** (\\(\mathbb{A}_{\max} = 0.40\\) = 100%):
-- **Day 0**: \\(\mathbb{A} = 0\\) — system has no operational learning
+**Interpreting the coefficient evolution** ({% katex() %}\mathbb{A}_{\max} = 0.40{% end %} = 100%):
+- **Day 0**: {% katex() %}\mathbb{A} = 0{% end %} — system has no operational learning
 - **Days 1-10**: Rapid improvement to 65% of maximum as initial stress events (2 partitions, 1 drone loss) provide high-value information
 - **Days 10-20**: Continued improvement with diminishing returns, reaching 88% of maximum as easy optimizations are captured
 - **Days 20-30**: Asymptotic approach to maximum (93% to 95%) as remaining improvements require rarer events
@@ -541,9 +547,15 @@ graph TD
 
 SOE acts as the first guardrail — every update is magnitude-checked before being applied. The Lyapunov criterion is the second — stability is verified against observed trajectory data before the update is committed. Both checks add one \\(O(d)\\) inner product to the learning step, where \\(d\\) is parameter dimension.
 
+> **Cognitive Map**: The anti-fragility definition section establishes the theoretical foundation and its safety constraints. The convexity condition (\\(d^2P/d\sigma^2 > 0\\)) defines what anti-fragility *is*. The parameter update gradient ({% katex() %}\theta_{t+1} = \theta_t + \eta \nabla_\theta U{% end %}) defines how the system *learns* from stress. The Safe Operating Envelope and Lyapunov criterion together define what *prevents* the learning from diverging. The game-theoretic extension proves why any fleet that copies successful policies will eventually converge to anti-fragile ones — it is an Evolutionarily Stable Strategy when stress events occur more than once per mission.
+
 ---
 
 ## Stress as Information
+
+> **Problem**: Normal operation hides system structure. Dependencies between components are only visible when they fail — a backup radio that shares a power bus with the primary provides zero redundancy during the power transients it was supposed to guard against. You cannot discover this from logs of successful operations.
+> **Solution**: Treat stress events as information sources. The Stress-Information Duality (Proposition 17) formalizes this: {% katex() %}I = -\log_2 P(\text{failure}){% end %} — rare failures carry the most learning signal. Design the system to log comprehensively on every stress event, weight parameter updates by information content, and inject deliberate failures (chaos engineering) to surface hidden dependencies before they cause production incidents.
+> **Trade-off**: The duality applies to stationary environments. In adversarial settings, an opponent can manipulate \\(P(\text{failure})\\) — making previously rare failures common — which inflates apparent event frequency while reducing Shannon surprise. In contested environments, use the adversarial non-stationarity detector (Definition 34) rather than rarity alone to identify high-value learning events.
 
 ### Failures Reveal Hidden Dependencies
 
@@ -579,6 +591,8 @@ I(\text{failure}) = -\log_2 P(\text{failure})
 - **Use**: Computes information content (bits) of each stress event as {% katex() %}I = -\log_2 P(\text{event}){% end %}; weight parameter updates by {% katex() %}I(\text{event})/I_{\max}{% end %} after each stress event to prevent uniform learning that wastes adaptation budget on frequent low-information events.
 - **Parameters**: {% katex() %}P(\text{event}){% end %} estimated from {% katex() %}\geq 30{% end %} historical events; {% katex() %}I_{\max} = \log_2(1/P_{\min}){% end %} for the rarest observed event type.
 - **Field note**: A once-per-year partition carries \\(3{-}5\\times\\) more learning signal than a daily hiccup — weight it proportionally in your update rule.
+
+> **Physical translation**: {% katex() %}I(\text{failure}) = -\log_2 P(\text{failure}){% end %} is Shannon self-information — the number of bits needed to encode the surprise of seeing this event. A failure that occurs 50% of the time (\\(P = 0.5\\)) carries 1 bit: you already expected it. A failure that occurs 1-in-1000 times (\\(P = 0.001\\)) carries about 10 bits: the system's model of the world was significantly wrong. The practical consequence: don't spend equal engineering effort analyzing every alarm. Allocate analysis time proportional to \\(I\\) — rare failures deserve \\(10\\times\\) more investigation than common ones.
 
 *Rare failures carry maximum learning value. A failure with probability \\(10^{-3}\\) carries approximately 10 bits of information, while a failure with probability \\(10^{-1}\\) carries only 3.3 bits.*
 
@@ -749,9 +763,15 @@ The {% term(url="#def-15", def="System property where performance improves after
 
 Both outcomes improve the system. Recording decisions and overrides enables this improvement loop.
 
+> **Cognitive Map**: The stress-as-information section reframes failure events from costs to assets. Proposition 17 provides the weighting function — allocate learning budget proportional to {% katex() %}-\log_2 P{% end %}. The hidden-dependency discovery process (instrument comprehensively, document assumptions, inject deliberate chaos) is the operational implementation. FAILSTREAM demonstrates the commercial pattern: systematic fault injection produces a known dependency map and a measurable MTTR improvement. The Judgment horizon concept at the end establishes the boundary — some high-stakes decisions should route through human override, and those overrides themselves become learning data.
+
 ---
 
 ## Adaptive Behavior Under Pressure
+
+> **Problem**: Under resource pressure, a system must decide what to drop. Design-time estimates of task importance are static — they cannot account for how actual mission context shifts which tasks matter most.
+> **Solution**: Use a utility-per-cost priority function ({% katex() %}\text{Priority}(t) = U(t) \cdot P(t) / C(t){% end %}) to rank tasks for shedding. Let operational outcomes update the utility estimates over time — tasks that prove redundant in practice get lower utility scores; tasks that prove critical get higher ones. The degradation hierarchy itself becomes adaptive.
+> **Trade-off**: Dynamic re-tiering and adaptive utility estimates require a feedback loop that must be correct before the next stress event. An incorrect utility estimate learned from one context may be wrong in a different context — anti-fragile load shedding is only as good as the outcome labels it learns from.
 
 ### Intelligent Load Shedding
 
@@ -768,7 +788,7 @@ The shedding priority is the utility-per-cost ratio:
 \text{Priority}(t) = \frac{U(t) \cdot P(t)}{C(t)}
 {% end %}
 
-Tasks with the lowest priority-to-cost ratio are shed first. Tasks are shed in ascending priority order until \\(R_{\text{available}} \geq R_{\text{required}}\\). If even shedding all non-critical tasks yields \\(R_{\text{available}} < R_{\mathcal{L}_0}\\), the system transitions to \\(\mathcal{L}_0\\) survival mode regardless of task priorities.
+Tasks with the lowest priority-to-cost ratio are shed first. Tasks are shed in ascending priority order until {% katex() %}R_{\text{available}} \geq R_{\text{required}}{% end %}. If even shedding all non-critical tasks yields \\(R_{\text{available}} < R_{\mathcal{L}_0}\\), the system transitions to \\(\mathcal{L}_0\\) survival mode regardless of task priorities.
 
 {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} under power stress: the table shows five active tasks ranked by \\(\text{Priority}(t) = U(t) \cdot P(t) / C(t)\\), with the two lowest-priority tasks shed first to preserve mission-critical functions.
 
@@ -849,9 +869,15 @@ Learned re-tiering rules from operations:
 
 These rules emerged from post-hoc analysis of outcomes. The system learned which data classifications led to better mission outcomes under stress.
 
+> **Cognitive Map**: The adaptive behavior section shows anti-fragility applied to resource management. The load-shedding priority function turns task ranking into a single-objective decision. The degradation hierarchy maps connectivity thresholds to capability levels — stress events that force capability drops reveal which thresholds were set too conservatively. QoS tiers assign static priority but allow dynamic re-tiering when context changes. All three mechanisms share the same anti-fragile pattern: stress events update the parameters that govern future stress responses, making each successive resource-pressure event slightly better handled than the last.
+
 ---
 
 ## Learning from Disconnection
+
+> **Problem**: Edge systems are deployed with design-time parameter estimates that may be wrong for actual operational conditions. A gossip interval tuned for normal traffic may be too slow under dense jamming and wasteful during clear conditions. Static parameters cannot adapt.
+> **Solution**: Frame parameter selection as a multi-armed bandit problem. Each candidate parameter value is an "arm." The UCB algorithm balances exploitation (pick the arm with the best observed reward) against exploration (try less-tested arms to verify they aren't better). In adversarial environments, EXP3 maintains permanent randomization to prevent convergence to a predictable strategy.
+> **Trade-off**: UCB converges to the optimal parameter in stationary environments — but convergence is exploitability in adversarial ones. EXP3's minimax regret bound holds against oblivious adversaries; against fully adaptive adversaries, even EXP3 offers no unconditional guarantee. Choose the algorithm based on whether the environment is stochastic, oblivious-adversarial, or fully adaptive.
 
 ### Online Parameter Tuning
 
@@ -927,6 +953,8 @@ R_T = O\left(\sqrt{T \cdot K \cdot \ln T}\right)
 - **Parameters**: {% katex() %}K{% end %} = number of arms; {% katex() %}T{% end %} = total decision rounds; verify bound {% katex() %}<{% end %} mission's acceptable regret budget.
 - **Field note**: Per-round regret decreases as {% katex() %}\sqrt{1/T}{% end %} — UCB keeps improving over the mission horizon, unlike static policies with constant regret rate.
 
+> **Physical translation**: The UCB score \\(\hat{\mu}_a + c\sqrt{\ln t / n_a}\\) has two parts. \\(\hat{\mu}_a\\) is the arm's track record — average reward so far. The second term is the exploration bonus — large when \\(n_a\\) is small (under-tested arm, bonus is high) and shrinking as the arm accumulates trials. An arm with average reward 0.7 tried 5 times scores \\(0.7 + c \cdot 0.77\\) at round \\(t = 100\\). An arm with average reward 0.75 tried 50 times scores \\(0.75 + c \cdot 0.24\\). At \\(c = 1\\), the more-tested arm scores 0.99 vs. 1.47 — UCB selects the under-tested arm. Once both arms are similarly explored, the higher-mean arm wins permanently.
+
 *where \\(K\\) is the number of arms. This guarantees convergence to the optimal arm as \\(T \rightarrow \infty\\).*
 
 *Note*: The \\(O(\\sqrt{TK\\ln T})\\) form above is {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}'s **stochastic regret bound** in the worst case over arm gaps. UCB1's classical instance-dependent bound is \\(O\!\\left(\\sum_{k: \\Delta_k > 0} \\frac{\\ln T}{\\Delta_k}\\right)\\) where \\(\\Delta_k = \\mu^* - \\mu_k\\) is the suboptimality gap — tighter when gaps are large, looser when arms are nearly equal. The adversarial **minimax regret bound** ({% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}) replaces \\(\\ln T\\) with \\(\\ln K\\), giving \\(O(\\sqrt{TK\\ln K})\\); see the {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %} section below.
@@ -958,7 +986,9 @@ R_T^{\text{EXP3}} \leq O\!\left(\sqrt{TK \ln K}\right)
 w_i(t+1) = w_i(t) \cdot \exp\!\left(\eta \cdot \frac{\hat{r}_i(t)}{p_i(t)}\right)
 {% end %}
 
-where \\(\hat{r}_i(t) = r_i(t) \cdot \mathbb{1}[I_t = i] / p_i(t)\\) is the importance-weighted reward and \\(p_i(t) = (1-\gamma) w_i(t)/\sum_j w_j(t) + \gamma/K\\) maintains minimum exploration probability \\(\gamma/K > 0\\) on all arms permanently.
+> **Physical translation**: The weight update {% katex() %}w_i \leftarrow w_i \cdot \exp(\eta \hat{r}_i / p_i){% end %} is multiplicative — arms with good recent rewards grow their weights exponentially while arms with poor rewards shrink proportionally. The importance-weighting \\(\hat{r}_i / p_i\\) corrects for the selection probability: if arm \\(i\\) was only chosen 5% of the time (\\(p_i = 0.05\\)), its observed reward is scaled up by \\(20\\times\\) to get an unbiased estimate of what it would have returned if chosen more often. The \\(\gamma/K\\) floor ensures that even the weakest arm retains a minimum probability — the adversary can never learn that the system has permanently abandoned any arm, preventing exploitation of any deterministic pattern.
+
+where {% katex() %}\hat{r}_i(t) = r_i(t) \cdot \mathbb{1}[I_t = i] / p_i(t){% end %} is the importance-weighted reward and {% katex() %}p_i(t) = (1-\gamma) w_i(t)/\sum_j w_j(t) + \gamma/K{% end %} maintains minimum exploration probability \\(\gamma/K > 0\\) on all arms permanently.
 
 **The {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} connection**: {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}'s convergence to a single arm is fragile in adversarial settings - it creates a predictable target. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s regret bound holds against an *oblivious adversary* — one who fixes their strategy before the game begins. Against a fully adaptive adversary who responds to algorithm outputs, {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s minimax bound still holds as a worst-case guarantee over all oblivious strategies, but cannot match an adversary who observes selections and responds in real time. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}'s maintained randomization is genuinely {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %}: its performance improves relative to the adversary's best fixed strategy as \\(T \to \infty\\).
 
@@ -972,14 +1002,14 @@ During {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone su
 
 <span id="def-32"></span>
 
-**Definition 32** (Adversarial Markov Game). An adversarial connectivity game is a 6-tuple \\(\mathcal{G} = (S, A, B, Q, R, \gamma)\\) where:
+**Definition 32** (Adversarial Markov Game). An adversarial connectivity game is a 6-tuple {% katex() %}\mathcal{G} = (S, A, B, Q, R, \gamma){% end %} where:
 
 - \\(S = \\{C, D, I, N\\}\\) — connectivity regimes (Definition 2)
 - \\(A\\) — \\(K\\) defender actions (healing responses, bandit arms)
 - \\(B\\) — adversary action set (jamming intensities, timing windows)
-- \\(Q: A \times B \to\\) generator matrices — the CTMC generator when defender plays \\(a \in A\\) and adversary plays \\(b \in B\\)
-- \\(R: S \times A \times B \to \mathbb{R}\\) — per-step mission throughput reward
-- \\(\gamma \in (0,1)\\) — discount factor; adversary plays **adaptive** policy \\(\tau_t = \tau(h_t)\\) where \\(h_t\\) is the full defender action history
+- {% katex() %}Q: A \times B \to{% end %} generator matrices — the CTMC generator when defender plays \\(a \in A\\) and adversary plays \\(b \in B\\)
+- {% katex() %}R: S \times A \times B \to \mathbb{R}{% end %} — per-step mission throughput reward
+- \\(\gamma \in (0,1)\\) — discount factor; adversary plays **adaptive** policy {% katex() %}\tau_t = \tau(h_t){% end %} where \\(h_t\\) is the full defender action history
 
 The *security value* is:
 
@@ -987,11 +1017,11 @@ The *security value* is:
 V^* = \max_{\sigma:\, S \to \Delta(A)}\; \min_{\tau}\; \mathbb{E}\!\left[\sum_{t=0}^{\infty} \gamma^t R(s_t, a_t, b_t) \,\Big|\, s_0\right]
 {% end %}
 
-where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ranges over all adaptive adversary strategies. \\(\square\\)
+where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ranges over all adaptive adversary strategies.
 
 <span id="prop-33"></span>
 
-**Proposition 33** (Deterministic Policies Are Dominated). For any pure (deterministic) policy \\(\pi_D: S \to A\\), there exists an adversary strategy \\(\tau^\*\\) such that \\(V(\pi_D, \tau^\*) < V^\*\\). The minimax mixed policy \\(\sigma^\*\\) achieves \\(V^\*\\) under all adversary strategies. *(\\(\sigma^\*\\) here is the minimax mixed strategy; unsubscripted \\(\\sigma\\) throughout this article is stress magnitude in \\([0, \\sigma_{\\max}]\\).)*
+**Proposition 33** (Deterministic Policies Are Dominated). For any pure (deterministic) policy {% katex() %}\pi_D: S \to A{% end %}, there exists an adversary strategy \\(\tau^\*\\) such that \\(V(\pi_D, \tau^\*) < V^\*\\). The minimax mixed policy \\(\sigma^\*\\) achieves \\(V^\*\\) under all adversary strategies. *(\\(\sigma^\*\\) here is the minimax mixed strategy; unsubscripted \\(\\sigma\\) throughout this article is stress magnitude in \\([0, \\sigma_{\\max}]\\).)*
 
 *Proof.* By the minimax theorem (von Neumann, 1928) for finite \\(S, A, B\\):
 
@@ -1028,7 +1058,7 @@ p_i(t) = \frac{w_i(t)}{\sum_{j=1}^K w_j(t)}
 - **Parameters**: {% katex() %}\eta = \sqrt{\ln K / (K \cdot T)}{% end %}; {% katex() %}\gamma{% end %} = implicit exploration floor (same order as {% katex() %}\eta{% end %}); {% katex() %}K{% end %} = arm count.
 - **Field note**: Clip importance weights at {% katex() %}1/\gamma{% end %} in implementation — float32 overflow is common on embedded hardware without this explicit clip.
 
-No forced exploration floor is required — the implicit \\(\gamma\\) bias in the estimator alone bounds regret. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} is a drop-in replacement for {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}: same weight structure, same selection rule; only the estimator changes. \\(\square\\)
+No forced exploration floor is required — the implicit \\(\gamma\\) bias in the estimator alone bounds regret. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} is a drop-in replacement for {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}: same weight structure, same selection rule; only the estimator changes.
 
 <span id="prop-34"></span>
 
@@ -1038,9 +1068,9 @@ No forced exploration floor is required — the implicit \\(\gamma\\) bias in th
 R_T^{\mathrm{IX}} \leq 2\sqrt{T K \ln K} = O\!\left(\sqrt{T \ln T}\right)
 {% end %}
 
-since \\(K \leq T \Rightarrow \ln K \leq \ln T\\). This bound holds against **fully adaptive** adversaries where \\(r_i(t)\\) may depend on past action probabilities \\(\\{p_j(s)\\}_{s < t}\\).
+since {% katex() %}K \leq T \Rightarrow \ln K \leq \ln T{% end %}. This bound holds against **fully adaptive** adversaries where \\(r_i(t)\\) may depend on past action probabilities \\(\\{p_j(s)\\}_{s < t}\\).
 
-*Proof sketch.* The second moment of the IX estimator satisfies \\(\mathbb{E}[(\hat{r}_i^{\mathrm{IX}})^2] \leq 1/\gamma\\) (bounded because \\(p_i(t) + \gamma \geq \gamma\\) always). A potential function \\(\Phi_t = \sum_i w_i(t)\\) satisfies a standard recursion; summing over \\(t\\) and optimizing \\(\eta, \gamma\\) jointly yields \\(R_T^{\mathrm{IX}} \leq (\ln K)/\eta + \eta TK/(2\gamma) = 2\sqrt{TK \ln K}\\). \\(\square\\)
+*Proof sketch.* The second moment of the IX estimator satisfies {% katex() %}\mathbb{E}[(\hat{r}_i^{\mathrm{IX}})^2] \leq 1/\gamma{% end %} (bounded because {% katex() %}p_i(t) + \gamma \geq \gamma{% end %} always). A potential function {% katex() %}\Phi_t = \sum_i w_i(t){% end %} satisfies a standard recursion; summing over \\(t\\) and optimizing \\(\eta, \gamma\\) jointly yields {% katex() %}R_T^{\mathrm{IX}} \leq (\ln K)/\eta + \eta TK/(2\gamma) = 2\sqrt{TK \ln K}{% end %}. \\(\square\\)
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration** (\\(K = 5\\) healing actions, \\(T = 1000\\) decision rounds): \\(\eta \approx 0.018\\), \\(\gamma \approx 0.028\\); minimum arm probability \\(p_i \geq 0.12\\) (no arm collapses to zero). Regret \\(R_T^{\mathrm{IX}} \leq 180\\) rounds — an 18% "cost of unpredictability" — meaning the adversary cannot exploit any recovery window regardless of their observation capability.
 
@@ -1075,7 +1105,7 @@ where \\(\hat{\rho}(a_t, \Delta q_t)\\) is the sliding-window sample correlation
 | Above \\(h_Q\\) | Above \\(h_{\mathrm{corr}}\\) | Adversarial | Switch to EXP3-IX \\(\sigma^*\\); alert operators |
 | Below \\(h_Q\\) | Above \\(h_{\mathrm{corr}}\\) | Spurious | Log; no action |
 
-\\(\square\\)
+**Example**: In {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, a jammer monitoring mesh-re-establishment traffic consistently increases \\(q_{\text{Contested}\to\text{Denied}}\\) within 3–5 transitions of the swarm selecting its standard re-route action. The action-correlation CUSUM \\(S_t^{\mathrm{corr}}\\) crosses \\(h_{\mathrm{corr}}\\) before \\(S_t^Q\\) does, exposing the adversarial pattern (rate shift correlated with defender selection) rather than treating it as weather-driven natural drift. On dual alarm, the swarm switches to \\(\sigma^*\\) randomization and alerts the operator — the jammer can no longer time bursts to exploit a predictable recovery window.
 
 <span id="prop-35"></span>
 
@@ -1097,7 +1127,7 @@ P\!\left(S_t^Q > h_Q \wedge S_t^{\mathrm{corr}} > h_{\mathrm{corr}} \;\Big|\; H_
 
 where \\(\alpha_Q, \alpha_{\mathrm{corr}}\\) are the individual CUSUM false-alarm rates under null hypothesis \\(H_0\\) (no adversarial change).
 
-*Proof.* The rate-CUSUM delay bound follows from Wald's identity applied to the CUSUM random walk with drift \\(\delta - \delta_Q > 0\\). The product bound follows from the independence of \\(S_t^Q\\) and \\(S_t^{\mathrm{corr}}\\) under \\(H_0\\): when no adversarial change is present, defender actions and natural \\(Q\\)-changes are uncorrelated by design (the defender's randomized policy is independent of environmental noise). \\(\square\\)
+*Proof.* The rate-CUSUM delay bound follows from Wald's identity applied to the CUSUM random walk with drift {% katex() %}\delta - \delta_Q > 0{% end %}. The product bound follows from the independence of \\(S_t^Q\\) and \\(S_t^{\mathrm{corr}}\\) under \\(H_0\\): when no adversarial change is present, defender actions and natural \\(Q\\)-changes are uncorrelated by design (the defender's randomized policy is independent of environmental noise). \\(\square\\)
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration** (\\(h_Q = 5\\), \\(\delta_Q = 0.2 \cdot q_{\mathrm{base}}\\), \\(h_{\mathrm{corr}} = 3\\), \\(\alpha_Q = 0.01\\), \\(\alpha_{\mathrm{corr}} = 0.05\\)): dual false alarm rate \\(\leq 0.0005\\) (approximately one false alarm per 33 h of operation); detection delay \\(\leq 13\\) transitions from jamming onset (approximately 2 min at {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s observed transition rates).
 
@@ -1135,9 +1165,9 @@ Table: Decision algorithm selection guide.
 
 | Algorithm | Regret Bound | Non-stationarity | Adversarial Robustness | Complexity | Best For |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| UCB | \\(O(\sqrt{KT\ln T})\\) | Poor (assumes stationary) | Low | Low | Stationary environments |
-| EXP3 | \\(O(\sqrt{KT\ln K})\\) | Moderate (sliding window) | High (minimax optimal vs. oblivious adversary) | Low | Adversarial/non-stationary |
-| Thompson Sampling | \\(O(\sqrt{KT\ln T})\\) | Good (prior updating) | Moderate | Medium | Bayesian, posterior updates |
+| UCB | {% katex() %}O(\sqrt{KT\ln T}){% end %} | Poor (assumes stationary) | Low | Low | Stationary environments |
+| EXP3 | {% katex() %}O(\sqrt{KT\ln K}){% end %} | Moderate (sliding window) | High (minimax optimal vs. oblivious adversary) | Low | Adversarial/non-stationary |
+| Thompson Sampling | {% katex() %}O(\sqrt{KT\ln T}){% end %} | Good (prior updating) | Moderate | Medium | Bayesian, posterior updates |
 
 After 1000 {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} cycles, {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s learned policy:
 - If packet loss rate > 30%: {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} interval = 3s
@@ -1154,13 +1184,11 @@ The three algorithms above assume reward is observed before the next arm pull. U
 
 <span id="def-69"></span>
 
-**Definition 69** (Delayed-Feedback EXP3-IX). Let the feedback delay for pull at partition onset \\(s\\) be \\(d_s = T_N^{(s)}\\) — the actual partition duration, observed only at partition end. Define batch window \\(B = \lceil E[T_N] \rceil\\) (one expected partition, LUT-approximated per Definition 66). The **pending buffer** \\(\mathcal{P}\\) holds \\((k_s,\; s)\\) pairs for pulls awaiting reward; capacity is bounded by \\(|\mathcal{P}| \leq \lfloor Q_{0.95} / T_{\min} \rfloor\\) entries (static upper bound; MCU-allocatable). At each partition event \\(s\\):
+**Definition 69** (Delayed-Feedback EXP3-IX). Let the feedback delay for pull at partition onset \\(s\\) be \\(d_s = T_N^{(s)}\\) — the actual partition duration, observed only at partition end. Define batch window {% katex() %}B = \lceil E[T_N] \rceil{% end %} (one expected partition, LUT-approximated per Definition 66). The **pending buffer** \\(\mathcal{P}\\) holds \\((k_s,\\; s)\\) pairs for pulls awaiting reward; capacity is bounded by {% katex() %}|\mathcal{P}| \leq \lfloor Q_{0.95} / T_{\min} \rfloor{% end %} entries (static upper bound; MCU-allocatable). At each partition event \\(s\\):
 
-1. **Pull**: select arm \\(k_s \in \\{0.3, 0.4, \ldots, 1.0\\}\\) per {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weights; append \\((k_s,\; s)\\) to \\(\mathcal{P}\\).
-2. **Receive** (at partition end, time \\(s + d_s\\)): compute true reward \\(r_s = -\max(0,\; T_{\text{acc}}^{(s)} - E[T_N \mid k_s]) / Q_{0.95}(k_s)\\) (Definition 67 reward signal); remove \\((k_s,\; s)\\) from \\(\mathcal{P}\\).
+1. **Pull**: select arm \\(k_s \in \\{0.3, 0.4, \ldots, 1.0\\}\\) per {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weights; append \\((k_s,\\; s)\\) to \\(\mathcal{P}\\).
+2. **Receive** (at partition end, time \\(s + d_s\\)): compute true reward {% katex() %}r_s = -\max(0,\; T_{\text{acc}}^{(s)} - E[T_N \mid k_s]) / Q_{0.95}(k_s){% end %} (Definition 67 reward signal); remove \\((k_s,\\; s)\\) from \\(\mathcal{P}\\).
 3. **Update**: {% katex() %}\hat{r}_{k_s}^{\text{IX}} = r_s / (p_{k_s}(s) + \gamma){}{% end %}; update \\(w_{k_s}\\) per Definition 33.
-
-\\(\square\\)
 
 <span id="prop-60"></span>
 
@@ -1174,7 +1202,7 @@ R_T^{\text{delay}} \leq 2\sqrt{T K \ln K} \cdot \sqrt{1 + E[T_N]/B} \leq 2\sqrt{
 - **Parameters**: {% katex() %}B = \lceil E[T_N] \rceil{% end %} batch window; CONVOY {% katex() %}k_N=0.62 \to{% end %} overhead factor {% katex() %}\approx 1.41\times{% end %} over the instantaneous bound.
 - **Field note**: The Weibull assumption keeps the bound finite — verify {% katex() %}k_N > 0{% end %} from real partition data before claiming bounded regret.
 
-The factor \\(\sqrt{2}\\) is a constant independent of \\(k_N\\) or \\(\lambda_N\\) — setting \\(B\\) to the expected partition duration absorbs the delay into a single overhead term. The bound holds for all \\(k_N > 0\\): \\(E[T_N] = \lambda_N \cdot \Gamma(1 + 1/k_N)\\) is finite for every Weibull parameter. Contrast Pareto-distributed delays (\\(\alpha \leq 2\\)): \\(E[d] = \infty\\), breaking all standard regret bounds — the selection criterion from Section 2 of the design.
+The factor \\(\sqrt{2}\\) is a constant independent of \\(k_N\\) or \\(\lambda_N\\) — setting \\(B\\) to the expected partition duration absorbs the delay into a single overhead term. The bound holds for all \\(k_N > 0\\): {% katex() %}E[T_N] = \lambda_N \cdot \Gamma(1 + 1/k_N){% end %} is finite for every Weibull parameter. Contrast Pareto-distributed delays (\\(\alpha \leq 2\\)): \\(E[d] = \infty\\), breaking all standard regret bounds — the selection criterion from Section 2 of the design.
 
 *Proof sketch.* Index time by partition events. Rounds where true reward has not yet arrived contribute phantom zero-reward updates. By the delayed-feedback EXP3 analysis (Joulani et al., 2013), inserting \\(\sum_s d_s \approx T \cdot E[T_N] / B\\) phantom rounds inflates regret by \\(\sqrt{1 + E[T_N]/B}\\); with \\(B = \lceil E[T_N] \rceil\\), this factor is \\(\leq \sqrt{2}\\). \\(\square\\)
 
@@ -1187,7 +1215,7 @@ The factor \\(\sqrt{2}\\) is a constant independent of \\(k_N\\) or \\(\lambda_N
 | Signal | Symbol | Scale |
 | :--- | :--- | :--- |
 | CPU temperature deviation | \\(\Delta T_{\text{cpu}}(t)\\) | \\(\Delta T_{\text{max}}\\) (throttle onset) |
-| Battery drain excess | \\(\dot{E}_{\text{bat}}(t) - \dot{E}_0\\) | \\(\dot{E}_0\\) (idle drain) |
+| Battery drain excess | {% katex() %}\dot{E}_{\text{bat}}(t) - \dot{E}_0{% end %} | \\(\dot{E}_0\\) (idle drain) |
 | MAPE-K loops per tick | \\(N_{\text{mape}}(t)\\) | \\(N_{\text{mape}}^{\text{max}}\\) (stable rate) |
 | Partition accumulator ratio | \\(T_{\text{acc}}(t)\\) | \\(Q_{0.95}\\) (Proposition 59 threshold) |
 
@@ -1199,11 +1227,11 @@ r_{\text{surr}}(t) = -\left[w_1 \frac{\Delta T_{\text{cpu}}}{\Delta T_{\text{max
 - **Parameters**: {% katex() %}w_1+w_2+w_3+w_4 = 1{% end %}; CONVOY: {% katex() %}w_2=0.35{% end %} (battery-sensitive); bias-correct surrogates against realized reward at each partition end.
 - **Field note**: Without bias correction at partition end, surrogates systematically over-penalize compute-heavy but effective arms.
 
-so \\(r_{\text{surr}}(t) \in [-1, 0]\\). The surrogate is applied as a fractional Q-update (weight \\(\beta_{\text{surr}} \in (0,1)\\)) at each tick. When true reward \\(r_s\\) arrives at partition end, a **bias correction** {% katex() %}\Delta r = r_s - \beta_{\text{surr}} \cdot \bar{r}_{\text{surr}}{% end %} — where \\(\bar{r}_{\text{surr}}\\) is the partition-averaged surrogate — is applied as a one-shot Q-update, preventing surrogate-induced drift from compounding across partitions. \\(\square\\)
+so \\(r_{\text{surr}}(t) \in [-1, 0]\\). The surrogate is applied as a fractional Q-update (weight \\(\beta_{\text{surr}} \in (0,1)\\)) at each tick. When true reward \\(r_s\\) arrives at partition end, a **bias correction** {% katex() %}\Delta r = r_s - \beta_{\text{surr}} \cdot \bar{r}_{\text{surr}}{% end %} — where \\(\bar{r}_{\text{surr}}\\) is the partition-averaged surrogate — is applied as a one-shot Q-update, preventing surrogate-induced drift from compounding across partitions.
 
 <span id="def-71"></span>
 
-**Definition 71** (Partition Context Discretization). Arm selection is conditioned on three continuous partition-state variables, each quantized to 2 bits for O(1) lookup. Each variable \\(x\\) maps to bucket \\(b_x = \min(3,\; \lfloor 4x / x_{\max} \rfloor)\\) via a single integer right-shift:
+**Definition 71** (Partition Context Discretization). Arm selection is conditioned on three continuous partition-state variables, each quantized to 2 bits for O(1) lookup. Each variable \\(x\\) maps to bucket {% katex() %}b_x = \min(3,\; \lfloor 4x / x_{\max} \rfloor){% end %} via a single integer right-shift:
 
 | Variable | \\(x_{\max}\\) | Bucket semantics |
 | :--- | :--- | :--- |
@@ -1221,7 +1249,7 @@ c(t) = b_{T}(t) \;\Big|\; \bigl(b_{\pi}(t) \ll 2\bigr) \;\Big|\; \bigl(b_{Q}(t) 
 - **Parameters**: \\(64\\) contexts \\(\\times\\) {% katex() %}K{% end %} arms \\(\\times\\) \\(4\\) bytes = 2 KB total for {% katex() %}K=8{% end %}; fits in MCU SRAM without dynamic allocation.
 - **Field note**: Pre-populate weight vectors from simulation before deployment — cold-starting in the field wastes the first 50 real partitions on pure exploration.
 
-Each context maintains its own {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weight vector \\(\mathbf{w}^{(c)} \in \mathbb{R}^K\\); total memory: \\(64 \times K \times 4\\) bytes (for \\(K = 8\\): 2 KB — MCU-feasible). **{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} outcome** (100 partition events): contexts \\(b_T \geq 2\\) (long partitions) converge to lower-\\(k\\) arms (\\(k \approx 0.4\\)–\\(0.5\\)); contexts \\(b_T = 0\\) (short partitions) retain higher-\\(k\\) arms (\\(k \approx 0.7\\)–\\(0.8\\)) — the bandit naturally separates near-exponential short partitions from heavy-tailed long ones. \\(\square\\)
+Each context maintains its own {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weight vector \\(\mathbf{w}^{(c)} \in \mathbb{R}^K\\); total memory: \\(64 \times K \times 4\\) bytes (for \\(K = 8\\): 2 KB — MCU-feasible). **{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} outcome** (100 partition events): contexts \\(b_T \geq 2\\) (long partitions) converge to lower-\\(k\\) arms (\\(k \approx 0.4\\)–\\(0.5\\)); contexts \\(b_T = 0\\) (short partitions) retain higher-\\(k\\) arms (\\(k \approx 0.7\\)–\\(0.8\\)) — the bandit naturally separates near-exponential short partitions from heavy-tailed long ones.
 
 ---
 
@@ -1348,7 +1376,7 @@ The mathematical framework ({% term(url="#term-ucb", def="Upper Confidence Bound
 **Quantified improvement** (with uncertainty bounds):
 - Revenue lift vs. static policies: \\(+8.3\\% \pm 1.2\\%\\) (illustrative; 95% CI, measured over 12 weeks in simulation)
 - Adaptation time to major shifts: \\(4.8 \pm 1.4\\) hours (vs. \\(14 \pm 5\\) days for traditional A/B tests)
-- Regret reduction vs. epsilon-greedy: \\(34\\% \pm 6\\%\\) (theoretical bound: \\(O(\sqrt{T \ln K})\\) vs. \\(O(\epsilon T)\\))
+- Regret reduction vs. epsilon-greedy: \\(34\\% \pm 6\\%\\) (theoretical bound: {% katex() %}O(\sqrt{T \ln K}){% end %} vs. \\(O(\epsilon T)\\))
 
 ### Updating Local Models
 
@@ -1367,8 +1395,8 @@ P(\theta | D) = \frac{P(D | \theta) \cdot P(\theta)}{P(D)}
 Where \\(\theta\\) are model parameters, \\(D\\) is observed data, \\(P(\theta)\\) is prior belief, and \\(P(\theta|D)\\) is posterior belief.
 
 **Connectivity model update**: After 7 partition events, {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s Markov transition estimates improved:
-- Transition rate \\(\lambda_{connected \rightarrow degraded}\\): Prior 0.02/hour, Posterior 0.035/hour
-- Transition rate \\(\lambda_{degraded \rightarrow denied}\\): Prior 0.1/hour, Posterior 0.08/hour
+- Transition rate {% katex() %}\lambda_{connected \rightarrow degraded}{% end %}: Prior 0.02/hour, Posterior 0.035/hour
+- Transition rate {% katex() %}\lambda_{degraded \rightarrow denied}{% end %}: Prior 0.1/hour, Posterior 0.08/hour
 
 The updated model more accurately predicts partition probability, enabling better preemptive preparation.
 
@@ -1405,7 +1433,7 @@ This learning loop is the core mechanism of {% term(url="#def-15", def="System p
 \text{Var}(\theta | D_n) \approx \frac{\sigma^2}{n}
 {% end %}
 
-After \\(n\\) stress events, parameter uncertainty decreases by a factor of \\(\sqrt{n}\\). The system's confidence in its models grows with operational experience.
+After \\(n\\) stress events, parameter uncertainty decreases by a factor of {% katex() %}\sqrt{n}{% end %}. The system's confidence in its models grows with operational experience.
 
 ### Identifying Patterns That Predict Partition
 
@@ -1433,9 +1461,15 @@ Each prediction (correct or incorrect) improves the predictor:
 
 The system becomes {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} to partition: each partition event improves partition prediction, reducing the cost of future partitions.
 
+> **Cognitive Map**: The learning-from-disconnection section builds the three-algorithm toolkit for anti-fragile parameter management. UCB handles stochastic environments: exploration bonus decays as arms are tried, converging to the best arm. EXP3 handles adversarial environments: permanent randomization via importance-weighted multiplicative updates prevents convergence to any exploitable pattern. Thompson Sampling handles the Bayesian case: posterior uncertainty drives exploration naturally and composes with gossip-shared priors after reconnection. The partition prediction subsection closes the loop — partition events themselves become training data that improve the next partition's preparation.
+
 ---
 
 ## Defensive Learning Under Adversarial Rewards
+
+> **Problem**: An adaptive adversary can weaponize the learning process itself. If RAVEN's online learner converges to corridor C-7 because three consecutive low-jamming windows made it appear optimal, the adversary has successfully planted a predictable pattern that can be sprung as a trap.
+> **Solution**: Three-layer defensive learning: (1) clip rewards to \\(\pm k_{\text{clip}} \sigma_r\\) around the \\(L_0\\) baseline to reject adversarially large signals; (2) filter actions through the safe feasibility set \\(\mathcal{U}_{\text{safe}}\\) to enforce gain-delay stability before any arm is selected; (3) CUSUM-detect favorable reward trends and respond with *increased exploration* rather than increased exploitation — treat apparent opportunities as threat hypotheses.
+> **Trade-off**: Reward clipping that is too aggressive prevents the system from learning genuine improvements. Clipping set at {% katex() %}k_{\text{clip}} = 3\sigma{% end %} accepts most legitimate reward variation while rejecting adversarial spikes; {% katex() %}k_{\text{clip}} = 1\sigma{% end %} is very conservative and may suppress real signal. The \\(L_0\\) baseline anchor must be established during a clean Phase-0 attestation window — if that window was contaminated, all downstream clipping is miscalibrated.
 
 At day 11 of the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} deployment, signals intelligence identifies a pattern: EW intensity on corridor C-7 drops for 10–14 minutes every six hours, consistent with adversary equipment rotation. RAVEN's online learner accumulates positive reward for C-7 during three consecutive low-intensity windows and shifts its exploitation preference toward that corridor. Day 14, hour 06:00: the EW rotation does not happen. Maximum jamming activates on C-7 as RAVEN commits 31 of 47 drones to the corridor.
 
@@ -1451,7 +1485,7 @@ Three mechanisms close this gap. A reward clipping function (Definition 61) remo
 r_{\text{clip}}(t) = \mathrm{clip}\!\left(r_{\text{raw}}(t),\; r_{L_0} - k_{\text{clip}}\,\sigma_r(t),\; r_{L_0} + k_{\text{clip}}\,\sigma_r(t)\right)
 {% end %}
 
-where \\(k_{\text{clip}}\\) is a fleet-wide policy parameter. The Welford estimator \\(\sigma_r\\) is updated from \\(r_{\text{clip}}(t)\\), not \\(r_{\text{raw}}(t)\\), to prevent adversarial perturbations from inflating the clip window and defeating their own filtering. The anchor \\(r_{L_0}\\) is frozen at Phase-0 — it cannot be poisoned by adversarial rewards during operation. \\(\square\\)
+where \\(k_{\text{clip}}\\) is a fleet-wide policy parameter. The Welford estimator \\(\sigma_r\\) is updated from \\(r_{\text{clip}}(t)\\), not \\(r_{\text{raw}}(t)\\), to prevent adversarial perturbations from inflating the clip window and defeating their own filtering. The anchor \\(r_{L_0}\\) is frozen at Phase-0 — it cannot be poisoned by adversarial rewards during operation.
 
 <span id="def-62"></span>
 
@@ -1465,7 +1499,9 @@ where \\(k_{\text{clip}}\\) is a fleet-wide policy parameter. The Welford estima
 - **Parameters**: {% katex() %}K(a){% end %} = action state-change magnitude; {% katex() %}\tau(a){% end %} = expected execution delay; {% katex() %}\pi/2 \approx 1.57{% end %} rad phase margin threshold.
 - **Field note**: The safe set shrinks as link latency grows — re-compute it with real-time delay measurements, not the design-time value.
 
-This is a sufficient gain-delay stability condition — bounding the product \\(K(a)\cdot\tau(a)\\) prevents phase crossover in the autonomic control loop — applied as a hard pre-filter on the action space before any Q-value comparison is made. Proposition 9 establishes the discrete-time analogue; the condition \\(K(a)\cdot\tau(a) < \pi/2\\) is the continuous-time sufficient criterion for phase margin. Any action that would push the autonomic control loop past the stability boundary is inadmissible regardless of its estimated reward. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %} — all actions currently violate the stability condition — the agent executes the deterministic \\(L_0\\) policy \\(\pi_{L_0}\\), covered by Proposition 36 (Hardened Hierarchy Fail-Down). \\(\square\\)
+> **Physical translation**: \\(K(a) \cdot \tau(a) < \pi/2\\) is a phase-margin condition from control theory. \\(K(a)\\) is how aggressively the action changes the system state; \\(\tau(a)\\) is how long before that change takes effect. Their product is the total phase shift introduced into the control loop. When this product reaches \\(\pi/2\\) (\\(\approx 1.57\\) radians), the loop is at the stability boundary — any further increase causes oscillation. The condition says: never take an action that is simultaneously too aggressive *and* too slow. A gentle action (small \\(K\\)) can tolerate high delay; a fast-responding action (small \\(\tau\\)) can tolerate higher gain.
+
+This is a sufficient gain-delay stability condition — bounding the product \\(K(a)\cdot\tau(a)\\) prevents phase crossover in the autonomic control loop — applied as a hard pre-filter on the action space before any Q-value comparison is made. Proposition 9 establishes the discrete-time analogue; the condition \\(K(a)\cdot\tau(a) < \pi/2\\) is the continuous-time sufficient criterion for phase margin. Any action that would push the autonomic control loop past the stability boundary is inadmissible regardless of its estimated reward. When {% katex() %}\mathcal{U}_{\text{safe}}(t) = \emptyset{% end %} — all actions currently violate the stability condition — the agent executes the deterministic \\(L_0\\) policy \\(\pi_{L_0}\\), covered by Proposition 36 (Hardened Hierarchy Fail-Down).
 
 <span id="def-63"></span>
 
@@ -1490,7 +1526,7 @@ This is a sufficient gain-delay stability condition — bounding the product \\(
 - **Parameters**: {% katex() %}\varepsilon_{\text{surv}} = 10^{-4}{% end %} for safety-critical deployments; {% katex() %}10^{-3}{% end %} for operational; never relax in field conditions.
 - **Field note**: {% katex() %}\varepsilon_{\text{surv}} = 10^{-4}{% end %} at a 5-second MAPE-K cycle means one allowed violation per ~14 hours — validate this against your mission SLA.
 
-The CUSUM accumulator \\(S_+\\) adopts the same one-sided Page-CUSUM structure as the Adversarial Non-Stationarity Detector (Definition 34), applied to the reward innovation \\(\xi(t) = r_t - \mu_r\\). The response pivots: where Definition 34 flags a regime change and triggers a policy switch, Step 8 responds to a *favorable* shift by increasing exploration — the inverse of the normal exploitation instinct. A reward trend that looks like an opportunity is treated as a threat hypothesis until diverse exploration cycles distinguish genuine improvement from adversarial bait. \\(\square\\)
+The CUSUM accumulator \\(S_+\\) adopts the same one-sided Page-CUSUM structure as the Adversarial Non-Stationarity Detector (Definition 34), applied to the reward innovation {% katex() %}\xi(t) = r_t - \mu_r{% end %}. The response pivots: where Definition 34 flags a regime change and triggers a policy switch, Step 8 responds to a *favorable* shift by increasing exploration — the inverse of the normal exploitation instinct. A reward trend that looks like an opportunity is treated as a threat hypothesis until diverse exploration cycles distinguish genuine improvement from adversarial bait. \\(\square\\)
 
 <span id="prop-56"></span>
 
@@ -1500,21 +1536,27 @@ The CUSUM accumulator \\(S_+\\) adopts the same one-sided Page-CUSUM structure a
 
 <span id="prop-57"></span>
 
-**Proposition 57** (Adversarial Rejection Bound). Decompose the observed reward as \\(r_{\text{raw}}(t) = r_{\text{true}}(t) + \eta_{\text{adv}}(t)\\), where \\(r_{\text{true}}(t) \in [r_{L_0} - \delta_{\text{leg}}, r_{L_0} + \delta_{\text{leg}}]\\) is the legitimate reward deviation and \\(\eta_{\text{adv}}(t)\\) is adversarial perturbation. If \\(k_{\text{clip}}\\,\sigma_r > \delta_{\text{leg}}\\), then no legitimate reward is clipped. The Q-value estimation bias satisfies:
+**Proposition 57** (Adversarial Rejection Bound). Decompose the observed reward as {% katex() %}r_{\text{raw}}(t) = r_{\text{true}}(t) + \eta_{\text{adv}}(t){% end %}, where \\(r_{\text{true}}(t) \in [r_{L_0} - \delta_{\text{leg}}, r_{L_0} + \delta_{\text{leg}}]\\) is the legitimate reward deviation and \\(\eta_{\text{adv}}(t)\\) is adversarial perturbation. If \\(k_{\text{clip}}\\,\sigma_r > \delta_{\text{leg}}\\), then no legitimate reward is clipped. The Q-value estimation bias satisfies:
 
 {% katex(block=true) %}
 \bigl|\mathbb{E}[Q_{\text{clip}}[a]] - Q_{\text{true}}[a]\bigr| \leq \bigl(k_{\text{clip}}\,\sigma_r + \delta_{\text{leg}}\bigr)\cdot P\!\left(|\eta_{\text{adv}}| > k_{\text{clip}}\,\sigma_r - \delta_{\text{leg}}\right)
 {% end %}
 
-Under Gaussian adversarial perturbations \\(\eta_{\text{adv}} \sim \mathcal{N}(0, \sigma_{\text{adv}}^2)\\), the right-hand side decays as \\(1 - \Phi\!\left(\tfrac{k_{\text{clip}}\\,\sigma_r - \delta_{\text{leg}}}{\sigma_{\text{adv}}}\right)\\) — the same Gaussian tail form as Proposition 54 (False-Positive Ejection Bound). \\(\square\\)
+Under Gaussian adversarial perturbations {% katex() %}\eta_{\text{adv}} \sim \mathcal{N}(0, \sigma_{\text{adv}}^2){% end %}, the right-hand side decays as {% katex() %}1 - \Phi\!\left(\tfrac{k_{\text{clip}}\,\sigma_r - \delta_{\text{leg}}}{\sigma_{\text{adv}}}\right){% end %} — the same Gaussian tail form as Proposition 54 (False-Positive Ejection Bound). \\(\square\\)
 
-*Proof sketch.* Q-values are incremental averages of clipped rewards. Clipping truncates observations outside \\([r_{L_0} - k_{\text{clip}}\sigma_r,\; r_{L_0} + k_{\text{clip}}\sigma_r]\\); when \\(k_{\text{clip}}\sigma_r > \delta_{\text{leg}}\\), legitimate rewards lie within this interval and are never truncated. The bias from clipping a single adversarial observation is bounded by the clip radius; the expected bias over \\(N[a]\\) visits is \\(\text{clip\\_radius} \cdot P(\text{adversarial})\\), giving the stated bound. \\(\square\\)
+*Proof sketch.* Q-values are incremental averages of clipped rewards. Clipping truncates observations outside {% katex() %}[r_{L_0} - k_{\text{clip}}\sigma_r,\; r_{L_0} + k_{\text{clip}}\sigma_r]{% end %}; when {% katex() %}k_{\text{clip}}\sigma_r > \delta_{\text{leg}}{% end %}, legitimate rewards lie within this interval and are never truncated. The bias from clipping a single adversarial observation is bounded by the clip radius; the expected bias over \\(N[a]\\) visits is {% katex() %}\text{clip\_radius} \cdot P(\text{adversarial}){% end %}, giving the stated bound. \\(\square\\)
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration.** With \\(r_{L_0}\\) measured over 48 hours of pre-deployment operation, \\(\sigma_r\\) converges within the first 200 observations by Proposition 24 (Kalman Baseline Convergence Rate). Setting \\(k_{\text{clip}} = 3\\): the adversary's 10-minute EW reduction — yielding reward spike \\(|\eta_{\text{adv}}| \approx 2.8\\,\sigma_r\\) — is admitted; a coordinated attack delivering \\(|\eta_{\text{adv}}| > 3\sigma_r\\) is clipped before reaching the Q-update. The CUSUM trap detector fires after approximately \\(\vartheta / \delta_{\text{cusum}}\\) steps of sustained positive innovation, tripling \\(\varepsilon\\) (\\(\gamma = 3\\)) — forcing {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} to re-explore rather than commit to the apparently optimal corridor. At day 15, the adversary's trap sequence fails: the swarm is too uncertain about C-7 to exploit it.
+
+> **Cognitive Map**: The defensive learning section inverts the anti-fragile intuition: an adversary can weaponize a system's learning against it. The three-layer defense — reward clipping (Definition 61), safe action filter (Definition 62), and Safe-\\(\varepsilon\\)-Greedy with CUSUM trap detection (Definition 63) — each address a different attack vector. Reward clipping rejects large-magnitude adversarial signals. The safe filter prevents the learner from ever selecting a physically destabilizing action. The CUSUM trap detector responds to *favorable* trends with exploration rather than exploitation, denying the adversary the ability to funnel the system toward a predictable pattern. The survival invariant (Proposition 56) and adversarial rejection bound (Proposition 57) give the formal guarantees.
 
 ---
 
 ## Anti-Fragile Design Patterns Catalog
+
+> **Problem**: The mechanisms developed so far — bandit algorithms, safe action filters, reward clipping, defensive learning — are individually powerful but form a bewildering toolkit without a unifying structure for knowing when to use which.
+> **Solution**: Organize anti-fragile mechanisms into a pattern catalog by scenario class: redundancy under stress, learning from stress, partitioned operation, parameter adaptation, and information capture. Each pattern has applicability conditions, expected costs, and implementation guidance.
+> **Trade-off**: Patterns are templates, not implementations. The failure modes listed in each pattern reflect the known edge cases — but novel environments may surface new failure modes not in the catalog. The catalog's value is reducing time-to-correct-selection; it does not eliminate the need for environment-specific validation.
 
 Reusable patterns with applicability conditions, trade-offs, and implementation guidance.
 
@@ -1589,10 +1631,10 @@ The four state variables that the algorithm tracks per arm are described below, 
 
 | Component | Description | Update Rule |
 | :--- | :--- | :--- |
-| \\(\hat{\mu}_a\\) | Estimated reward for action \\(a\\) | \\(\hat{\mu}_a \leftarrow \hat{\mu}_a + \frac{1}{n_a}(r - \hat{\mu}_a)\\) |
+| \\(\hat{\mu}_a\\) | Estimated reward for action \\(a\\) | {% katex() %}\hat{\mu}_a \leftarrow \hat{\mu}_a + \frac{1}{n_a}(r - \hat{\mu}_a){% end %} |
 | \\(n_a\\) | Times action \\(a\\) selected | \\(n_a \leftarrow n_a + 1\\) |
 | \\(t\\) | Total selections | \\(t \leftarrow t + 1\\) |
-| \\(c\\) | Exploration coefficient | Typically \\(\sqrt{2}\\), tune empirically |
+| \\(c\\) | Exploration coefficient | Typically {% katex() %}\sqrt{2}{% end %}, tune empirically |
 
 **Applicability Conditions**: The Required column uses "Yes" for hard prerequisites and "~" for conditions that improve performance but are not strictly necessary.
 
@@ -1616,7 +1658,7 @@ The four state variables that the algorithm tracks per arm are described below, 
 
 | Metric | UCB | Thompson Sampling | \\(\varepsilon\\)-Greedy |
 | :--- | :--- | :--- | :--- |
-| Regret bound | \\(O(\sqrt{KT \ln T})\\) | \\(O(\sqrt{KT \ln T})\\) | \\(O(\epsilon T + K/\epsilon)\\) |
+| Regret bound | {% katex() %}O(\sqrt{KT \ln T}){% end %} | {% katex() %}O(\sqrt{KT \ln T}){% end %} | {% katex() %}O(\epsilon T + K/\epsilon){% end %} |
 | Computational cost | Low | Medium (sampling) | Lowest |
 | Handles non-stationarity | Poor | Moderate | Good (with decay) |
 | Implementation complexity | Simple | Moderate | Simplest |
@@ -1649,7 +1691,7 @@ p(\theta | D) = \frac{p(D | \theta) \cdot p(\theta)}{p(D)} \propto \text{likelih
 | Parameter Type | Likelihood | Prior | Posterior |
 | :--- | :--- | :--- | :--- |
 | Probability | Binomial | Beta(\\(\alpha\\), \\(\beta\\)) | Beta(\\(\alpha + k\\), \\(\beta + n - k\\)) |
-| Rate | Poisson | Gamma(\\(k\\), \\(\theta\\)) | Gamma(\\(k + \sum x_i\\), \\(\theta + n\\)) |
+| Rate | Poisson | Gamma(\\(k\\), \\(\theta\\)) | Gamma({% katex() %}k + \sum x_i{% end %}, \\(\theta + n\\)) |
 | Mean (known var) | Normal | Normal(\\(\mu_0\\), \\(\sigma_0^2\\)) | Normal(\\(\mu_n\\), \\(\sigma_n^2\\)) |
 | Transition rates | Exponential | Gamma | Gamma (with sufficient statistics) |
 
@@ -2259,9 +2301,15 @@ Most systems use multiple patterns together. Common combinations:
 
 Without these three, the system may survive stress but will not improve from it.
 
+> **Cognitive Map**: The design pattern catalog translates theory into selection criteria. Patterns are organized by mechanism class — learning (L), adaptive (A), and verification (V) — with explicit applicability conditions and failure modes for each. Pattern composition tables show which combinations synergize (L1 + A1 = healing action selection improves under stress) and which are prerequisites (V3 is the minimum viable verification pattern for any learning system). The RAVEN stack (L1, L2, L3, A2, A3, V1, V3) is the reference multi-pattern implementation for contested autonomic systems.
+
 ---
 
 ## The Limits of Automation
+
+> **Problem**: Anti-fragile learning depends on autonomous feedback loops. But autonomous healing can amplify problems rather than solving them — restarting a service during a deliberate stress test, locking an executive's account during a crisis, exhausting healing budget on adversarially-induced false alarms. The learning machinery itself can become a failure mode.
+> **Solution**: Monitor automation quality with circuit breakers and override tracking. The Judgment Horizon (Definition 16) provides a formal rule for when human authority is required — any decision crossing thresholds on irreversibility, precedent impact, uncertainty, or ethical weight gets escalated regardless of automation capability. The adaptive threshold (\\(\tau_{\text{override}}\\)) self-calibrates from override history.
+> **Trade-off**: Lowering the escalation threshold reduces autonomous action risk but increases human burden. The Brier-score proper scoring rule makes honest confidence reporting the dominant strategy, preventing strategic under-escalation near the boundary. The SPRT gives the statistically optimal stopping rule for when enough evidence has accumulated to act versus wait.
 
 ### When Autonomous Healing Makes Things Worse
 
@@ -2340,7 +2388,7 @@ The Crawford-Sobel escalation mechanism (above) addresses *who* should decide. T
 \Lambda_t = \sum_{i=1}^{t} \ln \frac{p(x_i \mid H_1)}{p(x_i \mid H_0)}
 {% end %}
 
-Stop and escalate when \\(\Lambda_t \geq B = \ln\frac{1-\beta}{\alpha}\\); stop and continue autonomous operation when \\(\Lambda_t \leq A = \ln\frac{\beta}{1-\alpha}\\); otherwise collect another observation. Here \\(\alpha\\) is the false-escalation rate and \\(\beta\\) is the missed-escalation rate.
+Stop and escalate when {% katex() %}\Lambda_t \geq B = \ln\frac{1-\beta}{\alpha}{% end %}; stop and continue autonomous operation when {% katex() %}\Lambda_t \leq A = \ln\frac{\beta}{1-\alpha}{% end %}; otherwise collect another observation. Here \\(\alpha\\) is the false-escalation rate and \\(\beta\\) is the missed-escalation rate.
 
 **Optimality**: Wald and Wolfowitz (1948) proved SPRT minimizes expected sample size among all sequential tests with the same error rates \\((\alpha, \beta)\\). For the {% term(url="#def-16", def="Boundary above which irreversibility, information content, or catastrophe probability exceeds the system's autonomy limit; the system halts and waits for human authorization rather than acting") %}judgment horizon{% end %}, this means SPRT reaches an escalation decision with the fewest possible observations - critical under the connectivity and power constraints of {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} and {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}.
 
@@ -2475,9 +2523,15 @@ Post-hoc analysis classifies overrides and routes them to appropriate improvemen
 
 {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} insight: **overrides improve automation calibration**. A system with 1000 logged overrides has a more accurate decision model than a system with none. The human-in-the-loop is not a bottleneck - it is a teacher.
 
+> **Cognitive Map**: The limits-of-automation section grounds the anti-fragile framework in the four failure modes where autonomous healing makes things worse. The Judgment Horizon formalizes the non-automatable decision class using four threshold conditions. The incentive-compatible escalation mechanism (adaptive \\(\tau_{\text{override}}\\) + Brier scoring) closes the feedback loop: every override is training data that recalibrates the escalation threshold. The SPRT provides the statistically optimal stopping rule within the judgment horizon framework — wait for evidence, then escalate decisively.
+
 ---
 
 ## The Anti-Fragile RAVEN
+
+> **Problem**: The anti-fragile framework is abstract until applied to a concrete system through a full improvement cycle. What does day-by-day parameter evolution actually look like, and how do the mechanisms interact over time?
+> **Solution**: Trace RAVEN from deployment through four weeks of operations: design-time parameters at Day 1, operational learning after stress events, measurable improvement in formation efficiency, detection accuracy, and connectivity threshold calibration by Day 30.
+> **Trade-off**: The improvement cycle requires a sufficient number of stress events to produce meaningful parameter updates — a system that sees no stress events produces no improvement. Anti-fragility is only observable over a horizon that includes multiple stress events. Short-duration missions may not have enough events for the UCB/EXP3 learners to converge.
 
 Let us trace the complete {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragile{% end %} improvement cycle for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} over four weeks of operations.
 
@@ -2499,7 +2553,7 @@ Parameter adjustments:
 - {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Gossip{% end %} interval: changed from fixed 5s to adaptive 3-8s based on packet loss rate
 
 Connectivity model update:
-- Transition \\(\lambda_{C \rightarrow D}\\): updated from 0.02 to 0.035 (more frequent degradation than expected)
+- Transition {% katex() %}\lambda_{C \rightarrow D}{% end %}: updated from 0.02 to 0.035 (more frequent degradation than expected)
 
 **Week 2: Adversarial Jamming**
 Two coordinated jamming episodes. Lessons learned:
@@ -2560,9 +2614,15 @@ The table below compares five key metrics between the deployment-day baseline an
 
 This is {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} in practice.
 
+> **Cognitive Map**: The anti-fragile RAVEN case trace shows anti-fragility as a quantified time series: formation efficiency improves from 67% to 89%, anomaly false-positive rate drops from 18% to 6%, connectivity threshold recalibrates from 0.3 to 0.25. Each improvement follows a stress event that provided learning signal. The four-week arc demonstrates the ESS argument: a fleet that copies successful policies will converge to anti-fragile parameter sets, because anti-fragile nodes accumulate operational improvements while fragile nodes repeatedly start from design-time estimates.
+
 ---
 
 ## Engineering Judgment: Where Models End
+
+> **Problem**: Every model has a validity envelope. UCB assumes stochastic rewards; EXP3 assumes oblivious adversaries; Lyapunov stability assumes the dynamics model is correct. When these assumptions fail, the formal guarantees evaporate — but the system keeps running, producing outputs that appear correct until they are not.
+> **Solution**: Enumerate the model boundaries explicitly as a catalog. For each abstraction, identify: the assumption that must hold, the observable signal when it fails, and the mitigation. Engineering judgment is not a fallback when models fail — it is the recognition that model boundaries are design artifacts requiring the same rigor as the models themselves.
+> **Trade-off**: Cataloging boundaries does not eliminate them. Some failure modes have no algorithmic mitigation — they require human judgment (see Judgment Horizon, Definition 16). The catalog's value is not solving the problem but making the problem visible before it becomes an incident.
 
 Every model has boundaries. Every abstraction leaks. Every automation encounters situations it was not designed to handle. The recurring theme throughout this series is the **limit of technical abstractions**.
 
@@ -2643,9 +2703,15 @@ Automation extends our reach. Judgment ensures we don't extend past what we can 
 
 > "The best edge systems are designed not for the world as we wish it were, but for the world as it is: contested, uncertain, and unforgiving of hubris about what our models can do."
 
+> **Cognitive Map**: The engineering judgment section is a meta-pattern for the entire series: enumerate assumptions, identify observable failure signals, specify mitigations, and accept that some boundaries require human judgment rather than algorithmic response. The model boundary catalog is not a list of known bugs — it is the explicit acknowledgment that every formal guarantee in this series has an assumption set, and those assumptions can be violated. An engineer who can recite the boundary catalog for their deployment is more operationally prepared than one who can recite the theorems.
+
 ---
 
 ## Model Scope and Failure Envelope
+
+> **Problem**: Every mechanism in this post carries implicit assumptions. Anti-fragility requires that stress events improve calibration — but this only holds if the feedback loop is correctly wired. UCB regret bounds assume stochastic rewards. The SOE bounds assume the dynamics model is approximately correct. In adversarial or distributional-shift scenarios, these assumptions can fail silently.
+> **Solution**: For each mechanism, enumerate the validity domain as a set of assumptions, specify the failure envelope, and identify observable detection signals and mitigations. The summary claim-assumption-failure table at the end of each subsection functions as a deployment checklist.
+> **Trade-off**: Validity envelopes define when to trust the formal guarantees — but they do not define when to trust the overall system. A system operating outside one mechanism's validity envelope may still function correctly if other mechanisms compensate. Defense-in-depth applies to validity constraints as well as to failure modes.
 
 Each mechanism has bounded validity. When assumptions fail, so does the mechanism.
 
@@ -2689,7 +2755,7 @@ where:
 - \\(B_2\\): Root cause is identifiable
 - \\(B_3\\): Information extraction mechanism exists
 
-**Information Bound**: \\(I = -\log_2 P(\text{failure})\\) is theoretical maximum. Practical extraction depends on logging fidelity.
+**Information Bound**: {% katex() %}I = -\log_2 P(\text{failure}){% end %} is theoretical maximum. Practical extraction depends on logging fidelity.
 
 **Failure Envelope**: Each row identifies a condition under which the information-from-stress mechanism fails silently — the most dangerous case because the system believes it is learning when it is not.
 
@@ -2764,9 +2830,15 @@ The table below consolidates the validity boundaries of the four core mechanisms
 | Bandits converge to optimal | Stationary, discrete, observable rewards | Stable environment | Adversarial adaptation |
 | Judgment horizon protects high-stakes | Irreversibility known, precedent exists | Well-characterized decisions | Novel scenarios |
 
+> **Cognitive Map**: The model scope section is a deployment-readiness checklist for Part 5. Anti-fragility measurement requires that stress events are correctly detected and attributed. UCB is valid only in stationary, non-adversarial environments. SOE bounds require a correct dynamics model. EXP3 provides minimax guarantees only against oblivious adversaries. The summary table maps each claim to its validity condition, observable failure signal, and mitigation — consult it before deploying any mechanism outside its design environment.
+
 ---
 
 ## Irreducible Trade-offs
+
+> **Problem**: Anti-fragile systems must simultaneously learn fast, remain stable, explore broadly, and defend against adversarial rewards. These objectives are mutually constraining — progress on any one comes at the cost of another.
+> **Solution**: Name the four fundamental trade-offs: learning rate vs. stability, exploration vs. exploitation, adaptability vs. predictability, and automation scope vs. oversight burden. Provide multi-objective formulations and Pareto characterizations for each. The architect's role is selecting a defensible point on each front, not eliminating the tension.
+> **Trade-off**: These are irreducible — not just difficult engineering problems, but fundamental conflicts where full optimization of one objective provably degrades another. The cost surface decomposition shows the total anti-fragility cost as a function of partition duration, learning rate, and adversarial intensity.
 
 No design eliminates these tensions. The architect selects a point on each Pareto front.
 
@@ -2813,7 +2885,7 @@ where \\(\sigma\\) is induced stress level.
 | 0.5 | 1.2 bits | 0.05 | +0.70 |
 | 0.8 | 1.8 bits | 0.15 | +0.30 |
 
-Higher stress yields more information but risks catastrophic failure. Optimal stress balances information gain against system risk. Diminishing returns beyond \\(\sigma \approx 0.5\\).
+Higher stress yields more information but risks catastrophic failure. Optimal stress balances information gain against system risk. Diminishing returns beyond {% katex() %}\sigma \approx 0.5{% end %}.
 
 ### Trade-off 3: Automation Speed vs. Decision Quality
 
@@ -2912,9 +2984,15 @@ Each trade-off identified in this section represents a Pareto front that no desi
 | Speed-Quality | Fast decisions vs. optimal decisions | Both for novel irreversible |
 | Explore-Exploit | Breadth vs. depth | Zero regret on both |
 
+> **Cognitive Map**: The irreducible trade-offs section identifies the four Pareto fronts that bound anti-fragile system design. Learning rate vs. stability is resolved by the SOE and Lyapunov constraints — they bound the learning rate to what the dynamics can absorb. Exploration vs. exploitation is resolved algorithmically (UCB, EXP3, Thompson Sampling) — the algorithm choice determines the Pareto point. Adaptability vs. predictability is resolved by the defensive learning layer — randomization provides adaptability while surviving the adversarial exploitation that pure adaptability enables. Automation vs. oversight is resolved by the Judgment Horizon — formal threshold conditions determine which decisions require human authority.
+
 ---
 
 ## Closing: What Anti-Fragile Decision-Making Establishes
+
+> **Problem**: Five separate articles have developed five separate capability layers. The question is what they establish *together* — and what the aggregate coefficient \\(\bar{\mathbb{A}}\\) proves about cumulative improvement over a deployment.
+> **Solution**: The deployment-wide coefficient {% katex() %}\bar{\mathbb{A}} = \sum_i \Delta P_i / \sum_i \sigma_i{% end %} measures average improvement per unit stress across all events. A positive \\(\bar{\mathbb{A}}\\) after 30 days confirms that the system as a whole learned from adversity rather than merely recovering from it.
+> **Trade-off**: The five capabilities (connectivity regime modeling, self-measurement, self-healing, fleet coherence, anti-fragile improvement) were developed against the constraints they individually resolve. Deploying all five raises a meta-question: in what sequence should they be built, and how do you know when each is sufficiently solved to advance? That question — the constraint sequence — is addressed in the next post.
 
 Five articles developed the complete autonomic architecture: self-measurement, self-healing, self-coherence, and self-improvement. {% term(url="#scenario-failstream", def="Chaos engineering platform for a streaming service; controlled fault injection discovered 147 hidden dependencies and reduced MTTR from 47 to 8 minutes") %}FAILSTREAM{% end %} converts deliberate stress to MTTR reduction; {% term(url="#scenario-adaptshop", def="E-commerce platform with bandit-optimized recommendations, rankings, and discounts; converts every user interaction into a parameter learning signal") %}ADAPTSHOP{% end %}'s bandits achieve near-optimal performance.
 
@@ -2929,6 +3007,8 @@ The aggregate coefficient across multiple stress events provides a deployment-wi
 {% katex(block=true) %}
 \bar{\mathbb{A}} = \frac{\sum_i \Delta P_i}{\sum_i \sigma_i}
 {% end %}
+
+> **Physical translation**: \\(\bar{\mathbb{A}}\\) is the slope of the performance-vs-cumulative-stress line. Each stress event \\(i\\) contributes {% katex() %}\Delta P_i / \sigma_i{% end %} — the improvement it produced per unit of stress it imposed. Summing across events gives the average. A positive \\(\bar{\mathbb{A}}\\) means the line slopes upward: more total stress produced more total improvement. For RAVEN, \\(\bar{\mathbb{A}} > 0\\) after 30 days means the stress of partitions, jamming events, and hardware failures left the swarm *permanently better calibrated* than it was before any of them occurred.
 
 {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} after 30 days of operation: detection rate improved from 0.72 to 0.89 (in simulation) after the jamming episode (Week 2), partition recovery dropped from 340s to 67s, and false positive rate fell from 12% to 3%. Each stress event contributed positively to \\(\bar{\mathbb{A}}\\). The deployment-wide coefficient was positive, confirming cumulative {% term(url="#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} rather than isolated recovery.
 
