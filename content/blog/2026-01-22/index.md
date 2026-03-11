@@ -234,9 +234,9 @@ The simplest effective approach. The two equations below update the running mean
 
 where {% katex() %}\lambda_{\text{drift}}{% end %} is the process drift rate in s{% katex() %}{}^{-1}{% end %}, calibrated from stationary field data. Example: {% katex() %}\lambda_{\text{drift}} = 0.02\,\text{s}^{-1}{% end %} gives {% katex() %}\alpha_{L3} \approx 0.095{% end %} (5 s tick, 53 s effective window) and {% katex() %}\alpha_{L1} \approx 0.181{% end %} (10 s tick, 55 s effective window) — windows matched to within 4%. Without this correction, a baseline that is appropriately tuned at L3 becomes systematically underresponsive at L1, suppressing \\(z_t^K\\) below the detection threshold precisely when the healing loop's corrective authority (Definition 81 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-81)) is most reduced.
 
-*\\(\lambda_{\text{drift}}\\) (process drift rate, s⁻¹) is the Kalman model noise rate calibrated from stationary field data. Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66, Part 1), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b, Part 1).*
+*\\(\lambda_{\text{drift}}\\) (process drift rate, \\(s^{-1}\\)) is the Kalman model noise rate calibrated from stationary field data. Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66, Part 1), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b, Part 1).*
 
-> **Physical translation**: A drift rate of 0.02 s⁻¹ sounds negligible — but in 60 seconds the baseline has shifted by a factor of 3× without adaptive correction. This is why the EMA window must track wall-clock elapsed time, not tick count: at L2 throttling (double the tick interval), the window must double too, or baseline drift appears as a false anomaly.
+> **Physical translation**: A drift rate of \\(0.02\,s^{-1}\\) sounds negligible — but in 60 seconds the baseline has shifted by a factor of \\(3{\times}\\) without adaptive correction. This is why the EMA window must track wall-clock elapsed time, not tick count: at L2 throttling (double the tick interval), the window must double too, or baseline drift appears as a false anomaly.
 
 Where \\(\alpha \in (0, 1)\\) controls the decay rate. Smaller \\(\alpha\\) means longer memory. Note: variance uses {% katex() %}\mu_{t-1}{% end %} to keep the estimate independent of \\(x_t\\), consistent with the anomaly score calculation.
 
@@ -518,7 +518,7 @@ z_t^K = \frac{x_t - \hat{\mu}_{t-1}}{\sqrt{\hat{P}_{t|t-1} + R}}
 
 **Connection to EWMA**: The update {% katex() %}\hat{\mu}_t = \hat{\mu}_{t-1} + K_t(x_t - \hat{\mu}_{t-1}){% end %} is structurally identical to the EWMA update {% katex() %}\mu_t = \alpha x_t + (1-\alpha)\mu_{t-1}{% end %}, with \\(K_t\\) in place of \\(\alpha\\). The critical difference: EWMA uses a fixed \\(\alpha\\); the Kalman gain \\(K_t\\) starts large (high initial uncertainty, learns fast) and converges to a smaller steady-state value \\(K_\infty\\) (tracks at the optimal rate for the observed noise level). Fixed-\\(\alpha\\) EWMA is a degenerate Kalman filter with {% katex() %}P_{t-1}{% end %} forced constant at \\(\alpha R/(1-\alpha)\\) every step.
 
-> **Physical translation**: The adaptive estimator tracks the sensor's "normal" behavior using exponential smoothing. A new reading updates the mean estimate, with the learning rate α_q scaled by how fast the connectivity regime is changing: when the node is transitioning between regimes (λ_drift large), the estimator adapts quickly to the new baseline. When connectivity is stable, it adapts slowly — preventing false alarms from random fluctuations around a steady operating point.
+> **Physical translation**: The adaptive estimator tracks the sensor's "normal" behavior using exponential smoothing. A new reading updates the mean estimate, with the learning rate \\(\alpha_q\\) scaled by how fast the connectivity regime is changing: when the node is transitioning between regimes (\\(\lambda_{\mathrm{drift}}\\) large), the estimator adapts quickly to the new baseline. When connectivity is stable, it adapts slowly — preventing false alarms from random fluctuations around a steady operating point.
 
 <span id="prop-24"></span>
 **Proposition 24** (Kalman Baseline Convergence Rate). *The Kalman gain sequence {% katex() %}\{K_t\}{% end %} converges geometrically to the steady-state value \\(K_\infty\\), where:*
@@ -808,6 +808,63 @@ For \\(d=5\\) features and \\(n > 500\\) training samples: {% katex() %}\text{TP
 {% end %}
 
 Typical parameters: \\(\varepsilon = 0.1\\), {% katex() %}\delta_{\max} = 0.5 \cdot \|w_0\|{% end %}. The spectral condition catches divergence before it compounds; the weight-norm condition catches slow persistent drift that Jacobian monitoring alone may miss.
+
+**RFF Extension: Non-Linear Boundary Approximation**
+
+The linear kernel assumption holds when failure modes cluster in linearly separable regions of the 5-dimensional feature space. In practice, bursty RF interference, partial jamming onset, and intermodulation products produce overlapping, non-convex clusters that a flat hyperplane cannot separate. Two drop-in replacements keep the same SRAM footprint.
+
+<span id="def-91"></span>
+**Definition 91** (Random Fourier Feature Map). *For the RBF kernel {% katex() %}k(\phi, \psi) = \exp(-\gamma\|\phi-\psi\|^2){% end %}, a D-dimensional RFF approximation draws offline {% katex() %}W \in \mathbb{R}^{D \times 5}{% end %} with {% katex() %}W_{ji} \sim \mathcal{N}(0, \gamma){% end %} and {% katex() %}b_j \sim \mathcal{U}[0, 2\pi]{% end %}, then maps each pre-scaled feature vector \\(\phi\\) to:*
+
+{% katex(block=true) %}
+z(\phi) = \sqrt{\frac{2}{D}} \begin{bmatrix} \cos(W_1^T \phi + b_1) \\ \vdots \\ \cos(W_D^T \phi + b_D) \end{bmatrix} \in \mathbb{R}^D
+{% end %}
+
+*The one-class SVM operates on \\(z(\phi)\\) in place of \\(\phi\\) with the same linear objective (above), yielding decision value {% katex() %}f(\phi) = w^T z(\phi) - \rho{% end %}. By Bochner's theorem, {% katex() %}\mathbb{E}[z(\phi)^T z(\psi)] = k(\phi, \psi){% end %} for all \\(\phi, \psi\\), so a linear classifier in RFF space approximates the full RBF kernel classifier.*
+
+- **D=4 on edge MCU**: W is \\(5 \times 4 = 20\\) Q15 values (40 bytes SRAM); b is 4 Q15 values (8 bytes SRAM); w is 4 Q15 values (8 bytes SRAM). Total working set: **56 bytes** — larger than the 20-byte linear weight budget but well within a 128-byte SRAM block allocation.
+- **\\(\gamma\\) calibration**: {% katex() %}\gamma = 1/(2\,\hat{\sigma}_\phi^2){% end %} where {% katex() %}\hat{\sigma}_\phi^2{% end %} is the empirical variance of \\(\phi\\) on clean training data; for {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensors, {% katex() %}\gamma \approx 0.5{% end %}.
+- **Alternative — Decision Stump Forest**: When RFF code overhead is unacceptable, five single-threshold stumps — one per \\(\phi_i\\) (threshold: 2 bytes Q15, direction: 1 bit, weight: 1 byte signed = \\(4\\,\text{bytes/stump} \times 5\\) = **20 bytes total**) — provide a piecewise-constant boundary with zero trigonometric computation.
+
+<span id="def-92"></span>
+**Definition 92** (Q15 Pre-Scaling for RF Feature Dimensions). *Before any classification step, each of the five feature dimensions is normalized to the fixed-point range {% katex() %}[-1, +1]{% end %} using stored per-dimension statistics {% katex() %}\mu_i{% end %} (Q15 mean) and {% katex() %}\texttt{inv3s}_i{% end %} (Q15 encoding of {% katex() %}1/(3\sigma_i){% end %}):*
+
+{% katex(block=true) %}
+\phi_i^{(\text{Q15})} = \operatorname{clamp}\!\left(\frac{x_i - \mu_i}{3\,\sigma_i},\;-1,\;+1\right) \times 32767
+{% end %}
+
+*All subsequent arithmetic — RFF projection, dot product, confidence comparison — operates on 16-bit signed integers. No floating-point unit is required.*
+
+- **Why Q15**: One 16-bit multiply + arithmetic right-shift in ARM Thumb-2 = two instructions. Division by {% katex() %}3\sigma_i{% end %} is precomputed as {% katex() %}\texttt{inv3s}[i]{% end %} at calibration time; inference is multiply-shift only.
+- **Storage**: {% katex() %}\mu[5]{% end %} + {% katex() %}\texttt{inv3s}[5]{% end %} = 20 bytes — may reside in flash (read-only) to leave SRAM for working buffers.
+- **Separability gain**: The 3-sigma clamp concentrates 99.7% of normal-condition samples across the full {% katex() %}[-1, +1]{% end %} dynamic range, pushing anomalous samples to the rail and increasing the margin for both the linear and RFF classifiers without touching training data.
+
+**Confidence Gate and Safety Mode Fallthrough**
+
+The decision value {% katex() %}f(\phi) = w^T z(\phi) - \rho{% end %} is a signed margin distance. On ambiguous RF conditions — partial jamming onset, marginal connectivity, sensor degradation — the value may be non-negative but small, indicating a boundary-straddling sample. Acting on an inconclusive score risks both false positives (wasted power on spurious transmissions) and false negatives (missed threat transitions).
+
+*Fallthrough rule*: The Q15 integer equivalent of a 0.6 confidence threshold is {% katex() %}\lfloor 0.6 \times 32767 \rfloor = 19660{% end %}. When the scaled decision value falls below this gate:
+
+1. **Do not act** on the current classification — treat as inconclusive.
+2. **Enter Safety Mode**: freeze actuator outputs at their last confirmed-safe state; reduce MAPE-K to the minimum viable tick rate (Definition 47); suppress non-critical radio transmissions.
+3. **Re-evaluate** after one refractory window (Definition 28): if the confidence gate is passed on two consecutive ticks, resume normal operation; otherwise escalate to the Terminal Safety State (Definition 36).
+
+The 0.6 threshold is calibrated empirically: at \\(\nu = 0.02\\) and \\(n > 500\\) training samples, the margin distribution of normal samples has a median near 0.85 in the normalized scale; 0.6 sits two standard deviations below the median, catching genuine boundary straddlers while passing well-separated normal readings.
+
+**RFF Inference Pipeline: Code Budget Verification**
+
+The three sequential stages — pre-scale, RFF projection, and classification with confidence gate — occupy fewer than 150 bytes of compiled ARM Thumb-2 code. The budget is verified by enumerating the dominant instruction patterns per stage.
+
+| Stage | Algorithm | Thumb-2 instructions | Code budget |
+| :--- | :--- | :--- | :--- |
+| Pre-scale (Definition 92) | 5 Q15 multiply-shifts followed by saturating clamp to \\([-32767, +32767]\\) | \\(\approx 10\\) | 20 B |
+| RFF projection (Definition 91) | 4 inner products \\(W_j^T \varphi + b_j\\) (Q15 multiply-accumulate, 5 terms each); 16-entry symmetric cosine LUT with 2-bit quadrant sign flip | \\(\approx 28\\) | 56 B |
+| Classify + confidence gate | Inner product \\(w_{\mathrm{svm}}^T z\\) (Q15, 4 terms); compare to 19660 (\\(\lfloor 0.6 \times 32767 \rfloor\\)); tail-call to Safety Mode if below gate | \\(\approx 30\\) | 60 B |
+| **Total** | | **\\(\approx 68\\)** | **136 B — below the 150 B target** |
+
+Stack during classification (freed on return): 5 pre-scaled Q15 values \\(\varphi[5]\\) = 10 B plus 4 RFF features \\(z[4]\\) = 8 B = **18 B stack**. The Safety Mode call is a tail-call with no additional frame. Non-stack SRAM (parameters W, b, w\_svm, cosine LUT) totals 72 B and may reside in flash read-only data.
+
+*Implementation notes*: (i) `cos_lut[16]` holds one symmetric quarter-period of cosine in Q15 (values from cos(0)=32767 down to cos(\\(\pi/2\\))=0); full-period wrapping uses bits 14–15 of the index for sign. The maximum LUT approximation error is {% katex() %}|\cos(\pi/32)-\cos(0)| \approx 0.005{% end %}, well above Q15 quantization noise ({% katex() %}1/32768 \approx 3 \times 10^{-5}{% end %}) but negligible for anomaly detection where margin differences of {% katex() %}\gg 0.01{% end %} drive classification. (ii) `enter_safety_mode()` is a tail-call and does not add to the classification code budget. (iii) Instruction counts assume ARM Cortex-M0+ (no single-cycle 32-bit multiply); Cortex-M4 is cheaper by roughly 30% due to the hardware MAC unit in `rff_map`.
 
 **Temporal Convolutional Network (TCN) for Sequence Anomalies**
 
@@ -1308,7 +1365,7 @@ where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus 
 - **Parameters**: {% katex() %}C_{\text{proc}}{% end %} = local processing capacity (bytes/s); filter drops input beyond {% katex() %}C_{\text{proc}} \cdot T_{\text{tick}}{% end %} bytes per window.
 - **Field note**: OUTPOST meshes produce 10–100x burst spikes over sustained rate — size the filter for peak burst, not average throughput.
 
-> **Physical translation**: On a severely bandwidth-constrained uplink ({% katex() %}\beta = 10^{-4}{% end %}), only a metric that has changed by more than 10% of its full operating range is worth transmitting — anything smaller is noise relative to the channel's information capacity. The filter enforces this automatically: safety-critical events always get through ({% katex() %}P_{\text{CRITICAL}}{% end %} override), stale readings are forced through at {% katex() %}\tau_{\max}{% end %} to keep the MAPE-K loop alive, and everything else is silenced until the change is large enough to be actionable. The result is a 100,000× reduction in radio transmissions on a 72-hour mission with no loss of decision-relevant information.
+> **Physical translation**: On a severely bandwidth-constrained uplink ({% katex() %}\beta = 10^{-4}{% end %}), only a metric that has changed by more than 10% of its full operating range is worth transmitting — anything smaller is noise relative to the channel's information capacity. The filter enforces this automatically: safety-critical events always get through ({% katex() %}P_{\text{CRITICAL}}{% end %} override), stale readings are forced through at {% katex() %}\tau_{\max}{% end %} to keep the MAPE-K loop alive, and everything else is silenced until the change is large enough to be actionable. The result is a 100,000-fold reduction in radio transmissions on a 72-hour mission with no loss of decision-relevant information.
 
 *where {% katex() %}m(t_{\text{last}}){% end %} is the last transmitted value of \\(m\\), {% katex() %}m_{\text{range}}{% end %} is the metric's operational dynamic range, \\(\theta_\Pi\\) is a baseline sensitivity parameter, \\(\beta = B_b/B_l\\) is the bandwidth asymmetry ratio, and {% katex() %}\tau_{\max}{% end %} is the maximum useful staleness bound from Proposition 5.*
 
@@ -2241,7 +2298,7 @@ Proposition 7 schedules measurements to preserve energy margin. A deeper constra
 
 <span id="def-83"></span>
 
-**Definition 83** (Autonomic Overhead Budget). For each capability level {% katex() %}\mathcal{L}_q,\ q \in \{0,1,2,3,4\}{% end %}, the *overhead budget* is a triple \\((\pi_q,\, M_q,\, T_q)\\) specifying the maximum CPU fraction, RAM reservation, and minimum MAPE-K tick interval permitted to the entire autonomic observation layer:
+**Definition 83** (Autonomic Overhead Budget). For each capability level {% katex() %}\mathcal{L}_q,\ q \in \{0,1,2,3,4\}{% end %}, the *overhead budget* is a triple \\((\pi_q,\\, M_q,\\, T_q)\\) specifying the maximum CPU fraction, RAM reservation, and minimum MAPE-K tick interval permitted to the entire autonomic observation layer:
 
 <style>
 #tbl_overhead_budget + table th:first-of-type { width: 8%; }
@@ -2263,7 +2320,7 @@ Proposition 7 schedules measurements to preserve energy margin. A deeper constra
 
 The budgets are monotone: {% katex() %}\pi_0 \leq \pi_1 \leq \ldots \leq \pi_4{% end %} and {% katex() %}M_0 \leq M_1 \leq \ldots \leq M_4{% end %}. The \\(\mathcal{L}_3\\) ceiling of 2% CPU and 1 MB RAM is the design constraint for the full Self-Measurement stack described in this article.
 
-> **Physical translation**: At \\(\mathcal{L}_0\\) (battery critically low, all connectivity severed), a node running floating-point Kalman updates at 1 Hz would consume roughly 60 FP multiply-adds per second on ARM Cortex-M4 — not catastrophic in isolation, but the covariance update, gossip Welford estimators, and Isolation Forest inference stack together into a measurable fraction of a 64 MHz core. The Q15 fixed-point EWMA replaces all of this with 12 integer operations per tick — under 1 µs at 64 MHz — leaving the CPU in WFI (Wait For Interrupt) sleep the remaining 59.999 seconds.
+> **Physical translation**: At \\(\mathcal{L}_0\\) (battery critically low, all connectivity severed), a node running floating-point Kalman updates at 1 Hz would consume roughly 60 FP multiply-adds per second on ARM Cortex-M4 — not catastrophic in isolation, but the covariance update, gossip Welford estimators, and Isolation Forest inference stack together into a measurable fraction of a 64 MHz core. The Q15 fixed-point EWMA replaces all of this with 12 integer operations per tick — under \\(1\\,\mu\text{s}\\) at 64 MHz — leaving the CPU in WFI (Wait For Interrupt) sleep the remaining 59.999 seconds.
 
 <span id="prop-63"></span>
 
@@ -2285,7 +2342,101 @@ The budgets are monotone: {% katex() %}\pi_0 \leq \pi_1 \leq \ldots \leq \pi_4{%
 
 **Assumption set {% katex() %}\mathcal{A}_{63}{% end %}**: CPU utilization \\(u(t)\\) is measured by a hardware cycle counter (DWT on ARM Cortex-M) with negligible overhead (\\(<0.001\\%\\)), not by the autonomic layer itself. The downgrade thresholds \\(u_q\\) are static design parameters, not runtime estimates.
 
-#### Fixed-Point Algorithm Tier (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_1\\))
+**Switched-Mode Stability Extension: Limit-Cycle Prevention**
+
+Proposition 63 identifies when a single downgrade transition occurs. It does not bound the *number* of transitions: if utilization oscillates near the downgrade threshold \\(u_q\\), the system can enter an infinite downgrade-upgrade cycle — revising to {% katex() %}\mathcal{L}_{q-1}{% end %}, recovering, promoting back to {% katex() %}\mathcal{L}_q{% end %}, then downgrading again — which permanently precludes a stable operating level without ever reaching {% katex() %}\mathcal{L}_0{% end %}. The extension below reframes the multi-level transition logic as a **discrete-time switched linear system**, constructs a Common Lyapunov Function, and derives the minimum dwell-time that eliminates limit cycles regardless of workload variability or changes in \\(T_{\text{tick}}\\).
+
+<span id="def-93"></span>
+**Definition 93** (Discrete-Time Switched Utilization System). *Let \\(\sigma(t) = q \in \{0,1,2,3,4\}\\) be the active capability level. In mode \\(q\\) with tick interval \\(T_q\\) (Definition 83), CPU utilization evolves as:*
+
+{% katex(block=true) %}
+u(t + T_q) = \alpha \cdot u(t) + \pi_q + w(t), \qquad w(t) \in [-\delta_w,\, \delta_w]
+{% end %}
+
+*where {% katex() %}\alpha \in (0,1){% end %} is the per-tick utilization decay factor (workload dissipation), {% katex() %}\pi_q{% end %} is the observer overhead at level \\(q\\) (Definition 83), and \\(w(t)\\) is bounded external disturbance. The unique mode-\\(q\\) equilibrium is:*
+
+{% katex(block=true) %}
+u_q^* = \frac{\pi_q}{1 - \alpha}
+{% end %}
+
+*Switching rules: downgrade {% katex() %}q \to q-1{% end %} when {% katex() %}u(t) + \pi_q \geq u_q{% end %} (Proposition 63 violated); upgrade {% katex() %}q \to q+1{% end %} eligible only when {% katex() %}u(t) + \pi_{q+1} < u_{q+1} - \delta_{\text{hyst}}{% end %} AND dwell-time {% katex() %}\Delta t_{\text{dwell}}(q){% end %} has elapsed since the last transition.*
+
+- **Parameters**: {% katex() %}\alpha = 1 - T_q/\tau_u{% end %} where {% katex() %}\tau_u{% end %} is the CPU load decay time constant; for burst compute tasks on OUTPOST sensors, {% katex() %}\tau_u \approx 5\,T_q{% end %} at each level, giving {% katex() %}\alpha \approx 0.80{% end %} independent of \\(q\\).
+
+<span id="prop-68"></span>
+**Proposition 68** (Switched-Mode CLF Stability and Dwell-Time Bound). *Under Definition 93 with {% katex() %}\alpha \in (0,1){% end %} and disturbance bound {% katex() %}\delta_w \geq 0{% end %}:*
+
+*(i) **Intra-mode contraction.** Let {% katex() %}e_q(t) = u(t) - u_q^*{% end %}. Then {% katex() %}V(e_q) = e_q^2{% end %} is a Lyapunov function for each mode in isolation:*
+
+{% katex(block=true) %}
+\Delta V \;=\; (\alpha^2 - 1)\,e_q^2(t) \;<\; 0 \quad \text{for all } e_q(t) \neq 0,\; \delta_w = 0
+{% end %}
+
+*The error decays geometrically at rate \\(\alpha\\) per tick:*
+
+{% katex(block=true) %}
+e_q(t + k\,T_q) = \alpha^k \cdot e_q(t_{\text{enter}})
+{% end %}
+
+*The number of ticks to reach {% katex() %}|e_q| < \varepsilon{% end %} is {% katex() %}\lceil \log_\alpha(\varepsilon/|e_q(t_{\text{enter}})|) \rceil{% end %}, independent of the value of \\(T_q\\). The wall-clock convergence time scales with \\(T_q\\), but the Lyapunov decrease per tick — and therefore the tick count — does not.*
+
+*(ii) **Inter-mode boundedness.** At a downgrade {% katex() %}q \to q-1{% end %}, the state \\(u(t)\\) is continuous. The error in the new mode satisfies:*
+
+{% katex(block=true) %}
+e_{q-1}(t^+) = e_q(t^-) + \underbrace{(u_q^* - u_{q-1}^*)}_{\geq\, 0}
+{% end %}
+
+*Each downgrade injects at most {% katex() %}u_q^* - u_{q-1}^* = (\pi_q - \pi_{q-1})/(1-\alpha){% end %} of error. Since there are at most four downgrades, total error injection across the full sequence is bounded by {% katex() %}\pi_4/(1-\alpha) \leq 1{% end %}.*
+
+*(iii) **Dwell-time lower bound.** Define the safe re-upgrade margin:*
+
+{% katex(block=true) %}
+u_{\text{safe}}(q) \;=\; u_q - \pi_q - \delta_{\text{hyst}}
+{% end %}
+
+*A limit cycle between levels \\(q\\) and \\(q-1\\) requires an upgrade attempt before \\(u(t)\\) has decayed below {% katex() %}u_{\text{safe}}(q){% end %} — which immediately triggers another downgrade. The minimum dwell-time at level \\(q-1\\) that eliminates this possibility is:*
+
+{% katex(block=true) %}
+\Delta t_{\text{dwell}}(q-1) \;=\; T_{q-1} \cdot \left\lceil \frac{\displaystyle\log\!\left(\frac{u_q - u_{q-1}^*}{u_{\text{safe}}(q) - u_{q-1}^*}\right)}{\log(1/\alpha)} \right\rceil
+{% end %}
+
+*Proof of (i)*: From Definition 93 with {% katex() %}\delta_w = 0{% end %}:
+
+{% katex(block=true) %}
+e_q(t+T_q) \;=\; u(t+T_q) - u_q^* \;=\; \alpha\,u(t) + \pi_q - \frac{\pi_q}{1-\alpha} \;=\; \alpha\!\left(u(t) - \frac{\pi_q}{1-\alpha}\right) \;=\; \alpha\,e_q(t)
+{% end %}
+
+*Therefore {% katex() %}V(e_q(t+T_q)) = \alpha^2\,V(e_q(t)){% end %} and {% katex() %}\Delta V = (\alpha^2-1)\,V < 0{% end %} for {% katex() %}\alpha < 1{% end %}. The convergence rate \\(\alpha\\) does not appear in the expression for \\(T_q\\), so changing \\(T_q\\) does not affect the tick-by-tick Lyapunov decrease. With bounded disturbance {% katex() %}\delta_w > 0{% end %}, the bounded real lemma gives ultimate boundedness: {% katex() %}V(e_q) \leq \delta_w^2/(1-\alpha^2){% end %} in steady state. \\(\square\\)*
+
+*Proof of (iii)*: After a downgrade at \\(t_0\\) with \\(u(t_0^-) \approx u_q\\), the trajectory at level \\(q-1\\) is:*
+
+{% katex(block=true) %}
+u(t_0 + k\,T_{q-1}) \;=\; u_{q-1}^* + \alpha^k\,(u_q - u_{q-1}^*)
+{% end %}
+
+*Setting this equal to {% katex() %}u_{\text{safe}}(q){% end %} and solving for \\(k\\) gives the stated expression. Any upgrade attempted before tick \\(k^\*\\) satisfies {% katex() %}u(t) > u_{\text{safe}}(q){% end %}, so {% katex() %}u(t) + \pi_q > u_q - \delta_{\text{hyst}}{% end %}, and the Schmitt-trigger upgrade gate (Definition 75 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-75)) with hysteresis {% katex() %}\delta_{\text{hyst}}{% end %} blocks the transition. \\(\square\\)*
+
+**OUTPOST calibration** ({% katex() %}\alpha = 0.80{% end %}, {% katex() %}\delta_{\text{hyst}} = 0.02{% end %}):
+
+| Transition | {% katex() %}u_q{% end %} | {% katex() %}u_{q-1}^*{% end %} | {% katex() %}u_{\text{safe}}{% end %} | {% katex() %}k^*{% end %} | {% katex() %}\Delta t_{\text{dwell}}{% end %} | Tick floor {% katex() %}T_{q-1}{% end %} | Auto-satisfied? |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
+| {% katex() %}\mathcal{L}_3 \to \mathcal{L}_2{% end %} | 0.80 | 0.05 | 0.76 | 1 | 5 s | 5 s | Yes — 1 tick |
+| {% katex() %}\mathcal{L}_2 \to \mathcal{L}_1{% end %} | 0.60 | 0.025 | 0.56 | 1 | 10 s | 10 s | Yes — 1 tick |
+| {% katex() %}\mathcal{L}_1 \to \mathcal{L}_0{% end %} | 0.50 | 0.005 | 0.46 | 1 | 60 s | 60 s | Yes — 1 tick |
+
+The dwell-time requirement is always met by waiting **one tick** at the lower level. The tick floor of Definition 83 is the natural dwell-time enforcer — no additional timer infrastructure is required. The existing MAPE-K tick clock implements the constraint by construction.
+
+**Gain-bound invariance across {% katex() %}T_{\text{tick}}{% end %} changes.** The MAPE-K loop stability criterion (Proposition 9 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-9)) requires control gain {% katex() %}K < 1/(1 + \tau/T_{\text{tick}}){% end %}. As \\(T_{\text{tick}}\\) increases (capability downgrade), the bound relaxes monotonically: a gain \\(K\\) satisfying the tightest constraint at the highest level automatically satisfies the constraint at all lower levels. If \\(K\\) is calibrated at {% katex() %}\mathcal{L}_4{% end %} (\\(T_{\text{tick}} = 0.1\\,\text{s}\\)), it remains stable at {% katex() %}\mathcal{L}_0{% end %} (\\(T_{\text{tick}} = 60\\,\text{s}\\)) without recalibration.
+
+**Corollary** (Error Convergence Under Changing \\(T_{\text{tick}}\\)). *Suppose the switching sequence undergoes \\(m \leq 4\\) downgrades before reaching stable level {% katex() %}q_\infty{% end %}. The error at time \\(t\\) after the last transition satisfies:*
+
+{% katex(block=true) %}
+|e_{q_\infty}(t)| \;\leq\; \alpha^{\lfloor t/T_{q_\infty} \rfloor} \cdot \left(|e_0| + \frac{\pi_4}{1-\alpha}\right) \;\to\; 0 \quad \text{as } t \to \infty
+{% end %}
+
+*The error converges to zero exponentially regardless of the path {% katex() %}q_0 \to \cdots \to q_\infty{% end %} and regardless of how many times \\(T_{\text{tick}}\\) changed along the way. The convergence exponent \\(\alpha\\) is a hardware characteristic of the MCU's workload dissipation, not a function of \\(T_{\text{tick}}\\).*
+
+#### Fixed-Point Algorithm Tier ({% katex() %}\mathcal{L}_0{% end %}–{% katex() %}\mathcal{L}_1{% end %})
 
 <span id="def-84"></span>
 
@@ -2304,7 +2455,7 @@ where the superscript \\((15)\\) denotes Q15 fixed-point representation (1 sign 
 where {% katex() %}\alpha_q^{(15)} = \lfloor \alpha_q \cdot 32768 \rfloor{% end %} is the pre-computed integer smoothing weight and \\(\gg 15\\) is a right-shift (equivalent to dividing by {% katex() %}2^{15}{% end %}). Variance update follows the same pattern with the squared deviation. The CUSUM accumulator {% katex() %}S_i^{(15)}{% end %} uses integer subtraction and a hardware-assisted compare-with-reset.
 
 - **CPU cost**: 6 16-bit multiply-shifts + 2 comparisons = **12 ARM Cortex-M cycles** per sensor per tick; no FPU required.
-- **Memory**: 6 bytes per sensor × 127 sensors (OUTPOST) = **762 bytes total** — fits in a single cache line with room to spare.
+- **Memory**: \\(6\\,\text{bytes/sensor} \times 127\\) sensors (OUTPOST) = **762 bytes total** — fits in a single cache line with room to spare.
 - **Precision loss vs. Kalman**: Q15 EWMA tracks the true Kalman steady-state mean to within {% katex() %}Q/R \cdot 32768^{-1} \approx 3 \times 10^{-9}{% end %} fractional error for OUTPOST thermal parameters. At \\(\mathcal{L}_0\\), where the only question is "still alive?" rather than "how anomalous?", this precision is entirely sufficient.
 
 > **Physical translation**: Replacing the Kalman filter with a Q15 EWMA at \\(\mathcal{L}_0\\) is not a degraded fallback — it is the correct algorithm for the task. The Kalman covariance update ({% katex() %}P_t = (1-K_t)\hat{P}_{t|t-1}{% end %}) adds precision in tracking the noise model, but at \\(\mathcal{L}_0\\) the noise model does not matter: the binary question is whether {% katex() %}z_t > \theta^*_{L0}{% end %}. Two multiply-shifts answer this question; six floating-point operations do not answer it better.
@@ -2376,9 +2527,9 @@ The table below audits each algorithm in this article against the Definition 83 
 - Welford estimator freeze at \\(\mathcal{L}_0\\) is already handled by Definition 60's Phase-0 seeding mechanism; no additional design change is required.
 - The Isolation Forest sketch requires {% katex() %}t \cdot d_{\max} \cdot d \cdot 4{% end %} bytes (19.2 KB for CONVOY parameters). This exceeds the \\(\mathcal{L}_1\\) 64 KB budget only when combined with other algorithm state — verify total footprint against \\(M_q\\) at integration time.
 
-**Fleet-level complexity**: Gossip convergence is \\(O(\ln n / \lambda)\\) (Proposition 4). Per-node gossip state is \\(O(n)\\) — the Welford estimator (Definition 58) requires 24 bytes × \\(n\\) peers. For OUTPOST (\\(n=127\\)): \\(127 \times 24 = 3{,}048\\) bytes at \\(\mathcal{L}_3\\), frozen at 0 bytes at \\(\mathcal{L}_0\\). The \\(O(n)\\) growth is bounded by fleet size, which is a fixed deployment parameter — not a runtime variable. Fleet size does not affect per-observation compute complexity (which remains \\(O(1)\\)) and only affects the static RAM allocation.
+**Fleet-level complexity**: Gossip convergence is \\(O(\ln n / \lambda)\\) (Proposition 4). Per-node gossip state is \\(O(n)\\) — the Welford estimator (Definition 58) requires \\(24\\,\text{bytes} \times n\\) peers. For OUTPOST (\\(n=127\\)): \\(127 \times 24 = 3{,}048\\) bytes at \\(\mathcal{L}_3\\), frozen at 0 bytes at \\(\mathcal{L}_0\\). The \\(O(n)\\) growth is bounded by fleet size, which is a fixed deployment parameter — not a runtime variable. Fleet size does not affect per-observation compute complexity (which remains \\(O(1)\\)) and only affects the static RAM allocation.
 
-**OUTPOST \\(\mathcal{L}_0\\) calibration**: 127 sensors × 6 bytes (Q15 state) = 762 bytes RAM. DMA ring buffer: 64 × 2 bytes = 128 bytes. Gossip state: frozen, 0 bytes active. Total autonomic observation footprint: **890 bytes** against the 4 KB \\(M_0\\) budget (22% utilization). CPU: 12 cycles/tick × 1 active tick/60 s = 200 cycles/hour at 64 MHz = {% katex() %}8.7 \times 10^{-8}{% end %} CPU fraction — **three orders of magnitude below** the 0.1% \\(\mathcal{L}_0\\) ceiling. The observer parsimony condition (Proposition 63) is satisfied with a margin of \\(> 99.99\\%\\).
+**OUTPOST \\(\mathcal{L}_0\\) calibration**: \\(127 \times 6\\,\text{bytes}\\) (Q15 state) = 762 bytes RAM. DMA ring buffer: \\(64 \times 2\\,\text{bytes}\\) = 128 bytes. Gossip state: frozen, 0 bytes active. Total autonomic observation footprint: **890 bytes** against the 4 KB \\(M_0\\) budget (22% utilization). CPU: \\(12\\,\text{cycles/tick} \times 1\\) active tick/60 s = 200 cycles/hour at 64 MHz = {% katex() %}8.7 \times 10^{-8}{% end %} CPU fraction — **three orders of magnitude below** the 0.1% \\(\mathcal{L}_0\\) ceiling. The observer parsimony condition (Proposition 63) is satisfied with a margin of \\(> 99.99\\%\\).
 
 ### Mesh-Wide Health Inference
 

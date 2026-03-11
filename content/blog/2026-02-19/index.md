@@ -535,9 +535,9 @@ The budget table above assumes a node can afford a 13 KB autonomic stack. On tru
 
 The Zero-Tax approach defers full stack initialization until anomaly evidence is quorum-confirmed.
 
-<span id="def-82"></span>
+<span id="def-101"></span>
 
-**Definition 82** (Zero-Tax Autonomic State Machine). *A three-state lazy-initialization machine with states* **OBSERVE**, **WAKEUP**, **ACTIVE** *and transitions:*
+**Definition 101** (Zero-Tax Autonomic State Machine). *A three-state lazy-initialization machine with states* **OBSERVE**, **WAKEUP**, **ACTIVE** *and transitions:*
 
 {% katex(block=true) %}
 \texttt{OBSERVE} \;\xrightarrow{z_t > \theta_0 \;\text{for}\; \tau_{\mathrm{confirm}}\;\text{ticks}}\; \texttt{WAKEUP} \;\xrightarrow{\text{quorum}=\text{FAULT}}\; \texttt{ACTIVE}
@@ -564,9 +564,9 @@ stateDiagram-v2
 - **Parameters**: tau_confirm = 3 ticks (default); theta_0 = initial EWMA threshold; reduce tau_confirm for fast-fault environments.
 - **Prevents**: Stack-induced mission starvation — full MAPE-K only allocates when anomaly evidence is quorum-confirmed.
 
-<span id="def-83"></span>
+<span id="def-102"></span>
 
-**Definition 83** (In-Place Hash Chain). *A health ledger using SipHash-2-4 applied iteratively to a 16-byte state register:*
+**Definition 102** (In-Place Hash Chain). *A health ledger using SipHash-2-4 applied iteratively to a 16-byte state register:*
 
 {% katex(block=true) %}
 h[n] = \mathrm{SipHash}_{2\text{-}4}\!\bigl(h[n-1] \;\|\; \hat{x}[n]\bigr), \qquad h[0] = k_{\mathrm{root}}
@@ -586,9 +586,9 @@ h[n] = \mathrm{SipHash}_{2\text{-}4}\!\bigl(h[n-1] \;\|\; \hat{x}[n]\bigr), \qqu
 - **Parameters**: k_root provisioned at manufacture; 4-byte suffix comparison gives {% katex() %}2^{32} \approx 4{% end %} billion collision resistance.
 - **Prevents**: Undetected metric corruption — single-byte tampering shifts the hash chain within one MAPE-K tick.
 
-<span id="def-84"></span>
+<span id="def-103"></span>
 
-**Definition 84** (Fixed-Point EWMA). *An exponentially weighted moving average in Q8.8 fixed-point arithmetic using only 16-bit integer operations:*
+**Definition 103** (Fixed-Point EWMA). *An exponentially weighted moving average in Q8.8 fixed-point arithmetic using only 16-bit integer operations:*
 
 {% katex(block=true) %}
 \mu[n] = \frac{\alpha_{\mathrm{fp}} \cdot x[n] \;+\; (256 - \alpha_{\mathrm{fp}}) \cdot \mu[n-1]}{256}, \qquad \alpha_{\mathrm{fp}} \in \{1, \ldots, 255\}
@@ -605,9 +605,9 @@ h[n] = \mathrm{SipHash}_{2\text{-}4}\!\bigl(h[n-1] \;\|\; \hat{x}[n]\bigr), \qqu
 - **Parameters**: alpha_fp = 26 (\\(\alpha \approx 0.10\\), 10-sample window); increase to 51 (\\(\alpha \approx 0.20\\)) for faster-drifting signals.
 - **Prevents**: FPU-dependency lock-in — soft-float EWMA on Cortex-M0+ costs \\(\\approx 50\\) cycles per update vs. 4 cycles fixed-point.
 
-<span id="prop-66"></span>
+<span id="prop-72"></span>
 
-**Proposition 66** (Wakeup Latency Bound). *Under Definition 82, the worst-case transition latency from OBSERVE to ACTIVE satisfies:*
+**Proposition 72** (Wakeup Latency Bound). *Under Definition 101, the worst-case transition latency from OBSERVE to ACTIVE satisfies:*
 
 {% katex(block=true) %}
 T_{\mathrm{wakeup}} \leq \tau_{\mathrm{confirm}} \cdot T_{\mathrm{tick}} + T_{\mathrm{gossip}}
@@ -634,6 +634,127 @@ T_{\mathrm{wakeup}} \leq T_{\mathrm{heal}} - T_{\mathrm{detect}} - T_{\mathrm{ma
 
 **The autonomic richness trade-off.** The Zero-Tax architecture trades *richness* for *feasibility*: a node in OBSERVE state cannot run EXP3-IX bandit selection, Kalman filtering, or the Weibull circuit breaker — those require ACTIVE state and the full 13 KB stack. This materializes the constraint sequence of Definition 17 as an *economic* ordering, not just a logical one. Self-measurement (hash chain + fixed-point EWMA) costs 140 B. Self-healing (Proposition 8 deadline loop) costs another 11 KB. {% term(url="@/blog/2026-02-12/index.md#def-15", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragile{% end %} learning (EXP3-IX, Kalman) costs another 4 KB. A 4 KB node gets exactly one capability tier — OBSERVE — and must accept that it cannot self-heal, only self-detect and alert. The constraint is not a software limitation: it is the physics of SRAM against the mathematics of autonomy.
 
+<span id="def-104"></span>
+
+**Definition 104** (Clock Trust Pivot). *A binary predicate on node \\(i\\) that sets the `trust_flag` field of Definition 106 based on whether the partition accumulator \\(T_{\mathrm{acc}}\\) has exceeded the platform-specific trust horizon \\(T_{\mathrm{trust}}\\):*
+
+{% katex(block=true) %}
+\texttt{trust\_flag}(i,t) \;=\; \begin{cases} 1 & T_{\mathrm{acc}}(t) \leq T_{\mathrm{trust}} \\ 0 & T_{\mathrm{acc}}(t) > T_{\mathrm{trust}} \end{cases}
+{% end %}
+
+*For an oscillator with drift \\(\delta_{\mathrm{ppm}}\\), the trust horizon satisfies \\(T_{\mathrm{trust}} = \varepsilon / \delta_{\mathrm{ppm}}\\), where \\(\varepsilon\\) is the clock uncertainty bound from Definition 95. At \\(\delta_{\mathrm{ppm}} = 5\\) and \\(\varepsilon = 4.6\\,\mathrm{s}\\): \\(T_{\mathrm{trust}} \approx 2.8\\,\mathrm{h}\\). Receivers must not use \\(T_{\mathrm{acc}}\\) from a sender with `trust_flag = 0` as a causal-ordering tiebreaker.*
+
+- **Computes**: Single-bit trust signal written to the UAH `flags` byte at every MAPE-K tick; zero additional SRAM beyond the `flags` byte already present in Definition 106.
+- **Apply when**: Any consumer of the Conflict Resolution Branch (Definition 95) reads `trust_flag` before using the sender's \\(T_{\mathrm{acc}}\\) as a tiebreaker for uncertainty-concurrent events.
+- **Parameters**: \\(\delta_{\mathrm{ppm}}\\) from oscillator datasheet; 5 ppm for TCXO-class crystals (RAVEN drones), 20 ppm for uncalibrated RC oscillators (OUTPOST Ultra-L0 sensor nodes).
+- **Prevents**: Silent causal inversion — a stale `trust_flag = 1` causes the Conflict Resolution Branch to treat a drifted \\(T_{\mathrm{acc}}\\) as authoritative, producing the exact physical-time inversion that Definition 95's uncertainty window was designed to prevent.
+
+<span id="def-105"></span>
+
+**Definition 105** (WAKEUP Heap Gate). *The contiguous-allocation precondition for the OBSERVE-to-WAKEUP transition of Definition 101:*
+
+{% katex(block=true) %}
+\mathrm{gate}_{\mathrm{wakeup}}(i) \;=\; \bigl[\mathrm{malloc}(C_{\mathrm{WAKEUP}}) \neq \texttt{NULL}\bigr], \qquad C_{\mathrm{WAKEUP}} = 2{,}048\,\mathrm{B}
+{% end %}
+
+*If {% katex() %}\mathrm{gate}_{\mathrm{wakeup}}(i) = 0{% end %}, the anomaly-evidence counter (\\(z_t > \theta_0\\) for \\(\tau_{\mathrm{confirm}}\\) consecutive ticks) is registered but the state transition is suppressed. The node remains in OBSERVE, continues hash-chain and fixed-point EWMA updates, and retries the gate at the next confirmation cycle. Definition 107's Resource threshold is precisely \\(\neg\\,\mathrm{gate}_{\mathrm{wakeup}}(i)\\) — the heap gate becoming permanently blocked is one of the three AES trigger conditions.*
+
+- **Computes**: Heap availability at the OBSERVE/WAKEUP boundary; result feeds both the transition guard of Definition 101 and the AES Resource condition of Definition 107.
+- **Apply when**: Checked once per \\(\tau_{\mathrm{confirm}}\\)-tick anomaly confirmation window; not polled per-tick to avoid allocation churn on fragmented heaps.
+- **Parameters**: \\(C_{\mathrm{WAKEUP}} = 2{,}048\\,\mathrm{B}\\) minimum; increase if gossip table exceeds 1 KB for fleets larger than 127 nodes.
+- **Prevents**: Partial-init abort — without the gate, a fragmented heap may return a non-NULL pointer for a smaller block and silently corrupt the gossip buffer layout, a failure mode undetectable until the first quorum vote.
+
+<span id="def-106"></span>
+
+**Definition 106** (Unified Autonomic Header — Firmware Memory Map). *The UAH is the 20-byte packed struct that (a) occupies the first 20 bytes of the 140 B OBSERVE static allocation and (b) forms the wire header of every inter-node frame and the 23-byte emergency beacon. Its bit-field layout is the strict byte-level serialization of the 8-stage constraint sequence (Definition 17): each field group maps to exactly one phase gate.*
+
+**Bit-field register map (160 bits = 20 bytes, little-endian):**
+
+<style>
+#tbl_uah + table th:first-of-type { width: 10%; }
+#tbl_uah + table th:nth-of-type(2) { width: 10%; }
+#tbl_uah + table th:nth-of-type(3) { width: 14%; }
+#tbl_uah + table th:nth-of-type(4) { width: 8%; }
+#tbl_uah + table th:nth-of-type(5) { width: 58%; }
+</style>
+<div id="tbl_uah"></div>
+
+| Byte(s) | Bits | Field | Width | Encoding and source |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | [7:4] | `q_i` | 4 b | Capability tier: 0=L0 ... 4=L4 (Definition 14); user-specified **4-bit Mode** field |
+| 0 | [3:2] | `zt_state` | 2 b | 00=OBSERVE, 01=WAKEUP, 10=ACTIVE, 11=AES (Definition 101) |
+| 0 | [1] | `nsg_veto` | 1 b | 1 = hardware veto active; \\(K_{\mathrm{gs}} = 0\\) (Proposition 62) |
+| 0 | [0] | `trust_flag` | 1 b | 1 = HLC trusted; 0 = drift exceeded \\(T_{\mathrm{trust}}\\) (Definition 104) |
+| 1 | [7:0] | `ep_lo` | 8 b | `energy_delta[7:0]`: low byte of 12-bit signed energy surplus |
+| 2 | [7:4] | `ep_hi` | 4 b | `energy_delta[11:8]`: high nibble; sign-bit in position 11 |
+| 2 | [3:0] | `rq_hi` | 4 b | `rho_q[11:8]`: high nibble of CBF margin \\(\\rho_{q,i}\\) |
+| 3 | [7:0] | `rq_lo` | 8 b | `rho_q[7:0]`: low byte; combined Q3.9 range \\([-4,+4)\\) mW |
+| 4–7 | [31:0] | `hlc_pt` | 32 b | HLC physical timestamp, ms mod \\(2^{32}\\) (Definition 40); user-specified **32-bit HLC** field |
+| 8–11 | [31:0] | `hlc_c` | 32 b | HLC Lamport counter (Definition 40) |
+| 12–15 | [31:0] | `t_acc` | 32 b | Partition accumulator \\(T_{\mathrm{acc}}\\), seconds (Definition 68) |
+| 16–19 | [31:0] | `h_sfx` | 32 b | SipHash-2-4 4-byte chain suffix (Definition 102) |
+
+*Total: \\(8+8+4+4+8+32+32+32+32 = 160\\) bits = **20 bytes**. The 12-bit `energy_delta` (bytes 1–2 high nibble + byte 1 low byte) is the user-specified **12-bit Energy Delta** field: it encodes the signed \\(\text{mW}{\cdot}\text{tick}\\) energy surplus derived from the fixed-point EWMA variance. The 12-bit `rho_q` is the CBF stability margin from Proposition 63.*
+
+**Firmware type contract** (ARM Cortex-M / RISC-V, `__attribute__((packed))`, little-endian):
+
+*The wire type `UAH_t` is a 20-byte packed struct with `__attribute__((packed))` and a compile-time `static_assert(sizeof(UAH_t) == 20)` to catch alignment padding. Without `packed`, GCC 13 on Cortex-M4 inserts 3 bytes after the `flags` byte, inflating the struct to 24 B and breaking every receiver's field parser. The three 8-bit bytes `ep_lo`, `ep_hi_rq_hi`, and `rq_lo` carry two nibble-packed 12-bit signed fields: the signed energy surplus in `ep_lo` plus the high nibble of `ep_hi_rq_hi`, and the CBF stability margin \\(\rho_{q,i}\\) in `rq_lo` plus the low nibble of `ep_hi_rq_hi`. Both fields are Q3.9 signed integers with range \\(\pm 4\\,\text{mW}\\), recovered by a 4-bit arithmetic right-shift of the 16-bit value after nibble assembly.*
+
+**OBSERVE flat struct layout (140 bytes, statically allocated at boot):**
+
+| Offset | Size | Symbol | Content |
+| :--- | :--- | :--- | :--- |
+| +0 | 20 B | `uah` | UAH struct (this definition) — updated in-place at each MAPE-K tick |
+| +20 | 16 B | `siphash_state[2]` | SipHash-2-4 running state \\(h[n]\\), uint64\_t[2] (Definition 102); key \\(k_{\mathrm{root}}\\) in flash |
+| +36 | 2 B | `ewma_mu` | Q8.8 EWMA baseline \\(\\hat{\\mu}[n]\\) (Definition 103) |
+| +38 | 2 B | `ewma_var` | Q8.8 running variance \\(\\hat{\\sigma}^2[n]\\) (Definition 103) |
+| +40 | 2 B | `ewma_thresh` | Q8.8 anomaly threshold \\(\\theta_0\\) |
+| +42 | 2 B | `ewma_hyst` | Q8.8 hysteresis band \\(\\delta_h\\) (Definition 75) |
+| +44 | 1 B | `alpha_fp` | EWMA smoothing byte \\(\\alpha_{\mathrm{fp}}\\) (Definition 103) |
+| +45 | 1 B | `confirm_cnt` | Consecutive anomaly tick counter |
+| +46 | 2 B | `ring_idx` | 16-sample EWMA history ring head index |
+| +48 | 32 B | `ewma_hist[16]` | 16-sample Q8.8 metric history ring (int16\_t[16]) |
+| +80 | 8 B | `bloom_seeds[4]` | Bloom filter seed keys (uint16\_t[4]) |
+| +88 | 52 B | `bloom_bits[52]` | 416-bit Bloom filter bit array (Definition 5 gossip fingerprint) |
+| **+140** | — | *(end of OBSERVE struct)* | — |
+
+*`OBSERVE_t` is a 140-byte packed struct with `__attribute__((packed))` and `static_assert(sizeof(OBSERVE_t) == 140)`. It is declared as `static OBSERVE_t obs_block` at global scope so the linker places it in `.bss` (zero-initialized at boot) — no heap allocation is needed. The leading field is `UAH_t uah` (bytes 0–19, Definition 106), followed by `uint64_t siphash_state[2]` (bytes 20–35, in-place hash chain state, Definition 102). The remaining 104 bytes hold the six EWMA scalars as Q8.8 `int16_t` values, the 16-sample history ring as `int16_t[16]`, and the 416-bit Bloom filter as `uint8_t[52]` (see offset table above). `obs_block.uah` is passed by pointer as the TX header — zero copy.*
+
+- **Computes**: (a) 20-byte wire format for every inter-node frame and the 23-byte AES beacon (UAH + node\_id 2 B + AES error code 1 B); (b) canonical byte-offset map for the 140 B OBSERVE static allocation, replacing the high-level component labels in the hardware tier table with auditable byte positions.
+- **Apply when**: `static OBSERVE_t obs_block` at global scope; linker places in `.bss` (zero-initialized) at boot; `siphash_state` is initialized from \\(k_{\mathrm{root}}\\) (read from flash OTP) before the first MAPE-K tick. `obs_block.uah` is then passed by pointer as the 20-byte TX header — zero copy.
+- **Parameters**: Little-endian byte order matches ARM Cortex-M and RISC-V; big-endian targets must byte-swap `hlc_pt`, `hlc_c`, `t_acc`, `h_sfx` at TX/RX. `ep_hi_rq_hi` is endian-neutral (single nibble-packed byte).
+- **Prevents**: Implicit struct padding — without `__attribute__((packed))`, GCC 13 on Cortex-M4 inserts 3 bytes of alignment padding after `flags`, inflating `UAH_t` from 20 B to 24 B and silently breaking every receiver's field parser; the `static_assert` catches this at compile time.
+
+<span id="prop-76"></span>
+
+**Proposition 76** (Firmware Memory Footprint). *The Zero-Tax autonomic stack satisfies \\(C_{\mathrm{static}} + C_{\mathrm{stack}} \leq 200\\,\mathrm{B}\\) at every OBSERVE-state MAPE-K tick:*
+
+{% katex(block=true) %}
+C_{\mathrm{static}} \;=\; \underbrace{20}_{\texttt{uah}} + \underbrace{16}_{\text{SipHash state}} + \underbrace{12}_{\text{EWMA scalars}} + \underbrace{32}_{\text{EWMA ring}} + \underbrace{60}_{\text{Bloom filter}} \;=\; 140\,\mathrm{B}
+{% end %}
+
+{% katex(block=true) %}
+C_{\mathrm{stack}} \;=\; \underbrace{20}_{\text{callee saves}} + \underbrace{20}_{\text{SipHash frame}} + \underbrace{8}_{\text{EWMA temps}} \;=\; 48\,\mathrm{B}
+{% end %}
+
+{% katex(block=true) %}
+C_{\mathrm{total}} \;=\; 140 + 48 \;=\; 188\,\mathrm{B} \;\leq\; 200\,\mathrm{B} \qquad \square
+{% end %}
+
+*Proof.* Static allocation (140 B): `OBSERVE_t` is a compile-time constant size, placed in `.bss`, and never freed. Heap is not required — Definition 105 guarantees heap failure suppresses WAKEUP, not OBSERVE. Stack: (i) callee-saved registers on Cortex-M0+ — LR + r4–r8 = 5 words = 20 B; (ii) SipHash-2-4 internal call frame per RFC 7693 Sec. 2.4 — \\(4 \times 32\\)-bit working words + return address = 20 B; SipHash operates on `siphash_state` in the static struct, so no secondary buffer is needed; (iii) EWMA update — `acc` (int32) + `x_raw` (int16) + `delta` (int16) = 8 B. `ep_hi_rq_hi` is computed in a single 8-bit register with no stack spill. The beacon ISR passes `&obs_block.uah` by pointer — zero stack copy. Total stack peak 48 B. \\(C_{\mathrm{total}} = 188\\,\mathrm{B} \leq 200\\,\mathrm{B}\\). \\(\square\\)
+
+| Component | Static | Stack | Constraint-sequence phase |
+| :--- | :--- | :--- | :--- |
+| `uah` (Definition 106) | 20 B | — | Phase 0 — frame header: all phases read/write `q_i`, `zt_state` |
+| SipHash state | 16 B | — | Phase 1 — self-measurement: integrity ledger (Definition 102) |
+| EWMA scalars (\\(\\hat{\\mu}, \\hat{\\sigma}^2, \\theta_0, \\delta_h, \\ldots\\)) | 12 B | — | Phase 1 — self-measurement: anomaly baseline (Definition 103) |
+| EWMA history ring | 32 B | — | Phase 1 — self-measurement: detection sensitivity |
+| Bloom filter | 60 B | — | Phase 2 — gossip readiness: peer fingerprint cache (Definition 5) |
+| Callee-saved registers | — | 20 B | ISR overhead: platform-invariant on Cortex-M0+ |
+| SipHash call frame | — | 20 B | Phase 1: per-tick transient; cleared after hash |
+| EWMA computation temps | — | 8 B | Phase 1: per-tick transient |
+| **Total** | **140 B** | **48 B** | \\(188\\,\text{B} \leq 200\\,\text{B}\\) |
+
 ### Cross-Part Cascade: L0 Resource Model
 
 Placing a node in OBSERVE state is not a local decision. Because every other part of the series assumes a running MAPE-K loop, the OBSERVE-state resource model propagates as a **cascade of assumption violations** through the formal machinery of each downstream part. The table below maps each upstream result to the assumption it requires, the violation OBSERVE creates, and the resulting impact.
@@ -657,11 +778,11 @@ Placing a node in OBSERVE state is not a local decision. Because every other par
 | **Self-Healing** | Proposition 63 CBF mode safety | Actuation loop active; {% katex() %}K_{\mathrm{gs}} > 0{% end %} possible | {% katex() %}K_{\mathrm{gs}} = 0{% end %} always in OBSERVE; NSG veto never fires (no actuation to veto) | Safe-set invariant is preserved trivially; mode-transition safety analysis irrelevant until WAKEUP |
 | **Fleet Coherence** | Proposition 12 divergence growth | Node updates state at rate {% katex() %}\lambda{% end %} | No local writes in OBSERVE; {% katex() %}\lambda_{\mathrm{local}} = 0{% end %} | OBSERVE node accumulates only incoming peer writes; {% katex() %}D(\tau){% end %} grows from peer side at full rate; buffer sizing must still account for OBSERVE node's post-wakeup delta |
 | **Fleet Coherence** | Definition 31 delta-sync Phase 2 | Vector clock {% katex() %}\vec{V}_i{% end %} reflects local events | {% katex() %}\vec{V}_i{% end %} frozen (no gossip events); delta set {% katex() %}\Delta_k = \emptyset{% end %} | Receiver of UAH with `zt_state = 00` skips {% katex() %}\vec{V}_i{% end %} comparison; uses {% katex() %}h_{\mathrm{sfx}}{% end %} only for integrity check |
-| **Fleet Coherence** | Definition 85 clock trust pivot | {% katex() %}T_{\mathrm{acc}}{% end %} reflects active partition duration | {% katex() %}T_{\mathrm{acc}}{% end %} still increments in OBSERVE | OUTPOST crystal node hits {% katex() %}T_{\mathrm{trust}} \approx 2.8\,\text{h}{% end %} regardless of Zero-Tax state; `trust_flag = 0` fires in OBSERVE if partition exceeds 2.8 h |
+| **Fleet Coherence** | Definition 104 clock trust pivot | {% katex() %}T_{\mathrm{acc}}{% end %} reflects active partition duration | {% katex() %}T_{\mathrm{acc}}{% end %} still increments in OBSERVE | OUTPOST crystal node hits {% katex() %}T_{\mathrm{trust}} \approx 2.8\,\text{h}{% end %} regardless of Zero-Tax state; `trust_flag = 0` fires in OBSERVE if partition exceeds 2.8 h |
 | **Anti-Fragile Learning** | Definition 33 EXP3-IX weight update | MAPE-K tick triggers arm evaluation | No arm evaluation in OBSERVE; weights frozen | On WAKEUP, EXP3-IX reinits at uniform weights; long-partition context (Definition 71) not built; first healing actions are exploratory, not optimized |
-| **Weibull Model** | Proposition 59 circuit breaker | {% katex() %}T_{\mathrm{acc}}{% end %} incremented by active MAPE-K at each tick | {% katex() %}T_{\mathrm{acc}}{% end %} still increments passively in OBSERVE (hash chain tick, Definition 83); breaker threshold {% katex() %}Q_{0.95}{% end %} is reached when partition exceeds the P95 Weibull quantile | Breaker fires correctly in OBSERVE: `q_i = L0` is already in effect ({% katex() %}K = 0{% end %}); the only new action is setting UAH capability tier to L0 explicitly — zero additional SRAM cost; if all three AES conditions co-occur, Definition 88 supersedes Proposition 59 and the AES bitmask (bit 0 = Resource) encodes the breaker event |
+| **Weibull Model** | Proposition 59 circuit breaker | {% katex() %}T_{\mathrm{acc}}{% end %} incremented by active MAPE-K at each tick | {% katex() %}T_{\mathrm{acc}}{% end %} still increments passively in OBSERVE (hash chain tick, Definition 102); breaker threshold {% katex() %}Q_{0.95}{% end %} is reached when partition exceeds the P95 Weibull quantile | Breaker fires correctly in OBSERVE: `q_i = L0` is already in effect ({% katex() %}K = 0{% end %}); the only new action is setting UAH capability tier to L0 explicitly — zero additional SRAM cost; if all three AES conditions co-occur, Definition 107 supersedes Proposition 59 and the AES bitmask (bit 0 = Resource) encodes the breaker event |
 
-The cascade has a single structural pattern: every result that assumes a running MAPE-K loop is vacuously satisfied or violated in OBSERVE, and every result that operates on passive signals ({% katex() %}T_{\mathrm{acc}}{% end %}, hash chain, CBF margin) continues to fire correctly. Proposition 59's Weibull circuit breaker belongs to the second category — it monitors the partition accumulator passively and fires at {% katex() %}Q_{0.95}{% end %} whether MAPE-K is running or not. The UAH (Definition 87) was designed precisely around this split: its Clock Fix fields ({% katex() %}l_i{% end %}, {% katex() %}T_{\mathrm{acc}}{% end %}) and Resource Fix field ({% katex() %}h_{\mathrm{sfx}}{% end %}) update in OBSERVE; its Stability Fix fields ({% katex() %}\rho_{q,i}{% end %}, {% katex() %}q_i{% end %}) and Zero-Tax state bits (`zt_state`) signal to every receiver exactly which assumptions are currently violated on the sender.
+The cascade has a single structural pattern: every result that assumes a running MAPE-K loop is vacuously satisfied or violated in OBSERVE, and every result that operates on passive signals ({% katex() %}T_{\mathrm{acc}}{% end %}, hash chain, CBF margin) continues to fire correctly. Proposition 59's Weibull circuit breaker belongs to the second category — it monitors the partition accumulator passively and fires at {% katex() %}Q_{0.95}{% end %} whether MAPE-K is running or not. The UAH (Definition 106) was designed precisely around this split: its Clock Fix fields ({% katex() %}l_i{% end %}, {% katex() %}T_{\mathrm{acc}}{% end %}) and Resource Fix field ({% katex() %}h_{\mathrm{sfx}}{% end %}) update in OBSERVE; its Stability Fix fields ({% katex() %}\rho_{q,i}{% end %}, {% katex() %}q_i{% end %}) and Zero-Tax state bits (`zt_state`) signal to every receiver exactly which assumptions are currently violated on the sender.
 
 ### Autonomic Emergency State: Triple-Threat Survival
 
@@ -669,24 +790,24 @@ The three fixes reach their individual theoretical limits gracefully — clock p
 
 **Triple-Threat state analysis.** On a 64 KB STM32L4 at 95% RAM utilization: free SRAM = 3.2 KB. The WAKEUP transition requests a 2 KB contiguous allocation. Due to heap fragmentation (worst-case: largest free block {% katex() %}= 0.5 \times \text{total free}{% end %}), the allocation fails. The OBSERVE footprint (140 B) was pre-allocated as a static struct at boot — it is not heap-dependent and cannot be fragmentation-evicted. Clock drift = 3,600 s satisfies {% katex() %}|\Delta t| \gg \varepsilon + \tau_{\max}{% end %} for every platform (RAVEN: threshold 1.1 s; CONVOY: 6 s; OUTPOST: 1 s + 60 s = 61 s). The Drift-Quarantine anomaly fires on any gossip contact. CBF margin {% katex() %}\rho_q < 0{% end %}: the node is outside the safe set, so {% katex() %}K_{\mathrm{gs}} = 0{% end %} and `nsg_veto = 1` in the UAH.
 
-<span id="def-88"></span>
+<span id="def-107"></span>
 
-**Definition 88** (Autonomic Emergency State). *The Autonomic Emergency State (AES) activates on node {% katex() %}i{% end %} when all three threat conditions are simultaneously satisfied:*
+**Definition 107** (Autonomic Emergency State). *The Autonomic Emergency State (AES) activates on node {% katex() %}i{% end %} when all three threat conditions are simultaneously satisfied:*
 
 {% katex(block=true) %}
 \mathrm{AES}(i) \;=\; \underbrace{\bigl[\mathrm{malloc}(C_{\mathrm{WAKEUP}}) = \texttt{NULL}\bigr]}_{\text{Resource threshold}} \;\wedge\; \underbrace{\bigl[|\Delta t_i| > \varepsilon + \tau_{\max}\bigr]}_{\text{Clock threshold}} \;\wedge\; \underbrace{\bigl[\rho_{q,i} < 0\bigr]}_{\text{Stability threshold}}
 {% end %}
 
-*where {% katex() %}C_{\mathrm{WAKEUP}}{% end %} is the contiguous WAKEUP allocation size (Definition 82), {% katex() %}\Delta t_i = l_i - \max_{j \in \mathrm{peers}} l_j{% end %} is the HLC watermark deviation, and {% katex() %}\rho_{q,i}{% end %} is the CBF stability margin from Proposition 63.*
+*where {% katex() %}C_{\mathrm{WAKEUP}}{% end %} is the contiguous WAKEUP allocation size (Definition 101), {% katex() %}\Delta t_i = l_i - \max_{j \in \mathrm{peers}} l_j{% end %} is the HLC watermark deviation, and {% katex() %}\rho_{q,i}{% end %} is the CBF stability margin from Proposition 63.*
 
 *In AES, the node executes exactly four actions and no others:*
 
 1. **Freeze**: halt all CRDT writes and delta-sync transmissions; set {% katex() %}K_{\mathrm{gs}} = 0{% end %}
 2. **Signal**: set UAH flags: `trust_flag = 0`, `zt_state = 00` (OBSERVE), `nsg_veto = 1`
-3. **Persist**: continue hash chain update {% katex() %}h[n]{% end %} (Definition 83) and {% katex() %}T_{\mathrm{acc}}{% end %} increment — passive monitoring survives
+3. **Persist**: continue hash chain update {% katex() %}h[n]{% end %} (Definition 102) and {% katex() %}T_{\mathrm{acc}}{% end %} increment — passive monitoring survives
 4. **Beacon**: transmit a 23-byte emergency frame every {% katex() %}T_{\mathrm{beacon}}{% end %} (default 60 s): UAH (20 B) + node\_id (2 B) + AES error code (1 B)
 
-*Exit condition: all three threat conditions must resolve simultaneously before re-entering OBSERVE (Definition 82):*
+*Exit condition: all three threat conditions must resolve simultaneously before re-entering OBSERVE (Definition 101):*
 
 {% katex(block=true) %}
 \mathrm{exit\_AES}(i) \;=\; \bigl[\mathrm{malloc}(C_{\mathrm{WAKEUP}}) \neq \texttt{NULL}\bigr] \;\wedge\; \bigl[|\Delta t_i| \leq \varepsilon + \tau_{\max}\bigr] \;\wedge\; \bigl[\rho_{q,i} \geq 0\bigr]
@@ -697,22 +818,22 @@ The three fixes reach their individual theoretical limits gracefully — clock p
 - **Parameters**: {% katex() %}T_{\mathrm{beacon}}{% end %} = 60 s (default); AES error code encodes which subset of the three conditions triggered (bitmask: bit 0 = Resource, bit 1 = Clock, bit 2 = Stability).
 - **Prevents**: Stack collapse under compound failure — without AES, independent fixes attempt independent recovery actions simultaneously, competing for the same 3.2 KB of fragmented heap.
 
-<span id="prop-69"></span>
+<span id="prop-77"></span>
 
-**Proposition 69** (AES Survival Guarantee). *Under Definition 88, the AES footprint survives the Triple-Threat scenario on any MCU with total SRAM {% katex() %}\geq 4\,\text{KB}{% end %}:*
+**Proposition 77** (AES Survival Guarantee). *Under Definition 107, the AES footprint survives the Triple-Threat scenario on any MCU with total SRAM {% katex() %}\geq 4\,\text{KB}{% end %}:*
 
 {% katex(block=true) %}
 C_{\mathrm{AES}} = 140\,\text{B (OBSERVE static)} + 23\,\text{B (beacon frame)} = 163\,\text{B} \leq 0.05 \times 4\,\text{KB} = 204\,\text{B}
 {% end %}
 
-*The 163 B AES footprint is below the 5% free headroom (204 B) of the smallest viable MCU in the framework (Ultra L0, 4 KB). AES therefore survives every tier in the hardware table of Definition 82.*
+*The 163 B AES footprint is below the 5% free headroom (204 B) of the smallest viable MCU in the framework (Ultra L0, 4 KB). AES therefore survives every tier in the hardware table of Definition 101.*
 
-*Proof.* The 140 B OBSERVE stack is pre-allocated as a static struct at boot (not heap-dependent; cannot be fragmentation-evicted). The 23-byte beacon frame is a stack-local variable within the beacon ISR. No dynamic allocation is required. The hash chain (Definition 83) operates in-place on the 16 B chain register within the 140 B struct. At 95% RAM utilization on a 4 KB MCU: free = 204 B > 163 B. The AES footprint fits with 41 B margin. \\(\square\\)
+*Proof.* The 140 B OBSERVE stack is pre-allocated as a static struct at boot (not heap-dependent; cannot be fragmentation-evicted). The 23-byte beacon frame is a stack-local variable within the beacon ISR. No dynamic allocation is required. The hash chain (Definition 102) operates in-place on the 16 B chain register within the 140 B struct. At 95% RAM utilization on a 4 KB MCU: free = 204 B > 163 B. The AES footprint fits with 41 B margin. \\(\square\\)
 
 | MCU tier | Total SRAM | 95% utilized | Free | AES footprint | Survives? |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Ultra L0 | 4 KB | 3.88 KB | 204 B | 163 B | Yes (41 B margin) |
-| Constrained L1 | 32 KB | 30.7 KB | 1.6 KB | 163 B | Yes (1.4 KB margin) |
+| Constrained L1 | 32 KB | 30.4 KB | 1.6 KB | 163 B | Yes (1.4 KB margin) |
 | Standard L2 | 64 KB | 60.8 KB | 3.2 KB | 163 B | Yes (3.0 KB margin) |
 | Rich L3+ | 256 KB | 243.2 KB | 12.8 KB | 163 B | Yes (12.6 KB margin) |
 
@@ -722,7 +843,7 @@ C_{\mathrm{AES}} = 140\,\text{B (OBSERVE static)} + 23\,\text{B (beacon frame)} 
 
 2. **Simultaneous-partition quorum deadlock.** If every node in the fleet enters OBSERVE simultaneously (e.g., GPS jamming + power surge disabling all radios), no gossip occurs and the WAKEUP quorum cannot form. The fleet is frozen in OBSERVE indefinitely. Resolution requires at least one node to be pre-designated as a **coordinator seed** — a node that exits OBSERVE unilaterally after {% katex() %}T_{\mathrm{acc}} > T_{\mathrm{seed}}{% end %} without waiting for quorum. This coordinator seed then forms the initial gossip contact that unfreezes the rest. The seed role must be assigned at provisioning, not at runtime.
 
-3. **Monotonic memory leak to AES.** A slow memory leak (unreleased gossip table entries, leaked event references) causes RAM to grow monotonically. AES activates when free SRAM drops below 204 B. But if the leak continues, even the 163 B AES footprint is threatened. The invariant of Proposition 69 requires the OBSERVE static struct to be non-reclaimable — this requires the struct to be declared as `static` in firmware and excluded from the heap region in the linker script. Software-heap AES is not AES.
+3. **Monotonic memory leak to AES.** A slow memory leak (unreleased gossip table entries, leaked event references) causes RAM to grow monotonically. AES activates when free SRAM drops below 204 B. But if the leak continues, even the 163 B AES footprint is threatened. The invariant of Proposition 77 requires the OBSERVE static struct to be non-reclaimable — this requires the struct to be declared as `static` in firmware and excluded from the heap region in the linker script. Software-heap AES is not AES.
 
 > **Cognitive Map**: The meta-constraint section proves that autonomic infrastructure competes with the mission it serves. The Proposition 21 bound gives the feasibility ceiling. The budget allocation table gives the practical distribution. The zero-tax implementation shows how ultra-constrained hardware (140 byte OBSERVE struct) enables minimum viable autonomic capability when the standard stack is infeasible. Three unresolvable failure modes identify the limits of software-level remediation — power failure mid-write, simultaneous quorum deadlock, and monotonic memory leak all require hardware-level or provisioning-level solutions, not software fixes.
 
@@ -857,7 +978,7 @@ Where \\(P_i\\) is the set of validation predicates for phase \\(i\\), \\(V_p(S)
 
 This creates a regression invariant: any change that invalidates an earlier gate \\(G_j\\) for \\(j < i\\) requires regression to phase \\(j\\) before proceeding.
 
-> **Re-certification cycle bound**: Proposition 22 enforces gate monotonicity going forward, but does not bound oscillation caused by intermittent hardware faults. If any gate \\(G_j\\) fails more than twice in a rolling 24-hour window after previously passing, the system must enter the Terminal Safety State ([Definition 36](@/blog/2026-01-29/index.md#def-36)) and await manual intervention rather than attempting further re-certification. This prevents a malfunctioning sensor from forcing infinite Phase 2 ↔ Phase 3 cycling. The 24-hour window and 2-failure threshold are mission-configurable; they must be set conservatively enough that random transients cannot trigger Terminal Safety State entry.
+> **Re-certification cycle bound**: Proposition 22 enforces gate monotonicity going forward, but does not bound oscillation caused by intermittent hardware faults. If any gate \\(G_j\\) fails more than twice in a rolling 24-hour window after previously passing, the system must enter the Terminal Safety State ([Definition 36](@/blog/2026-01-29/index.md#def-36)) and await manual intervention rather than attempting further re-certification. This prevents a malfunctioning sensor from forcing infinite Phase 2 to Phase 3 cycling. The 24-hour window and 2-failure threshold are mission-configurable; they must be set conservatively enough that random transients cannot trigger Terminal Safety State entry.
 
 **Phase gates and the judgment horizon operate at different timescales.** Phase gates (Definition 20, Proposition 22) are *static deployment-time* predicates — they answer "is this system ready to run the next capability layer?" and are evaluated once per phase transition. The {% term(url="@/blog/2026-02-12/index.md#def-16", def="Boundary above which irreversibility, information content, or catastrophe probability exceeds the system's autonomy limit; the system halts and waits for human authorization rather than acting") %}judgment horizon{% end %} (Definition 16, [Anti-Fragile Decision-Making](@/blog/2026-02-12/index.md#def-16)) is a *dynamic runtime* predicate — it answers "should the running system escalate this specific decision to a human?" and is evaluated on every decision event. The relationship is sequential: passing gate \\(G_3\\) certifies the system to make anti-fragile decisions autonomously up to but not beyond the judgment horizon; the certified system then enforces the horizon at runtime. A system that passes all five phase gates is still obligated to escalate decisions above the judgment horizon — certification expands the automatable decision space; it does not eliminate the escalation boundary.
 

@@ -784,7 +784,7 @@ The engineering response is a **hardware watchdog timer (WDT)**: a hardware coun
 
 **Layer separation principle**: \\(B_0\\) must be implementable with no component at hardware-interrupt level or above — no OS calls, no shared memory locks, no {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} module dependencies. Each layer must be strictly simpler than the one it monitors.
 
-> **Physical translation**: Three concentric alarms. The innermost watches MAPE-K every T₁ seconds — if MAPE-K stops heartbeating, the software watchdog restarts it. If the software watchdog itself stops, the hardware watchdog fires after T₀ seconds and resets the processor. The hardware layer has zero dependencies on the software it is watching: it monitors an electrical signal, not a function call. A processor frozen in a bad memory state will still trigger the hardware watchdog.
+> **Physical translation**: Three concentric alarms. The innermost watches MAPE-K every \\(T_1\\) seconds — if MAPE-K stops heartbeating, the software watchdog restarts it. If the software watchdog itself stops, the hardware watchdog fires after \\(T_0\\) seconds and resets the processor. The hardware layer has zero dependencies on the software it is watching: it monitors an electrical signal, not a function call. A processor frozen in a bad memory state will still trigger the hardware watchdog.
 
 {% mermaid() %}
 graph TD
@@ -990,7 +990,7 @@ V(S) = \sum_{i=1}^{N} \bigl[\varphi(\ell_i) + \varphi(d_i) + \varphi(q_i)\bigr],
 
 *where \\(\varepsilon > 0\\) softens the barrier near \\(x = 1\\). \\(\varphi\\) is strictly convex, \\(\varphi(0) = 0\\), {% katex() %}\varphi'(x) \to \infty{% end %} as \\(x \to 1\\).*
 
-**Authority gate (prerequisite)**: Before evaluating HAC, verify {% katex() %}Q_{\text{effective}}(t) \geq Q_{\text{required}}(a){% end %} (Definition 14). If the executing node lacks the required authority tier, reject action *a* immediately — HAC is not evaluated. This gate fires first in the execution pipeline: Authority → Hardware Veto (Proposition 62) → HAC → Actuate.
+**Authority gate (prerequisite)**: Before evaluating HAC, verify {% katex() %}Q_{\text{effective}}(t) \geq Q_{\text{required}}(a){% end %} (Definition 14). If the executing node lacks the required authority tier, reject action *a* immediately — HAC is not evaluated. This gate fires first in the execution pipeline: Authority, then Hardware Veto (Proposition 62), then HAC, then Actuate.
 
 *A healing action {% katex() %}A_{i \to j}{% end %} (transferring resource \\(r\\) from node \\(i\\) to node \\(j\\) by amount \\(\Delta r\\)) satisfies the* **Healing Admission Condition (HAC)** *if and only if:*
 
@@ -2150,7 +2150,7 @@ The cascade executes tiers in order, advancing to {% katex() %}T_{k+1}{% end %} 
 | \\(T_3\\) | Full power cycle via relay | At least 5 min since \\(T_2\\); fuel above 20% | Op state = RUNNING and current above 0 | 60s | 900s |
 | \\(T_4\\) | Human escalation | All prior tiers failed; mission at or below BOM threshold | Operator acknowledged | — | — |
 
-> **Physical translation**: Try the softest fix first. If it fails after W₁ seconds, wait out cooldown C₁ and escalate. The cascade halts when something works or when it reaches the human-in-the-loop step. Pre-conditions exist because a hot restart can permanently damage certain hardware — the cascade respects the generator's physics, not the MAPE-K loop's impatience. Skipping straight to the aggressive fix is not faster; it risks making the hardware unrecoverable.
+> **Physical translation**: Try the softest fix first. If it fails after \\(W_1\\) seconds, wait out cooldown \\(C_1\\) and escalate. The cascade halts when something works or when it reaches the human-in-the-loop step. Pre-conditions exist because a hot restart can permanently damage certain hardware — the cascade respects the generator's physics, not the MAPE-K loop's impatience. Skipping straight to the aggressive fix is not faster; it risks making the hardware unrecoverable.
 
 <span id="prop-48"></span>
 **Proposition 48** (Recovery Cascade Correctness). *Let {% katex() %}D_\text{recovery}{% end %} be the deadline by which the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} healing loop must restore \\(D\\) to an operational state. The Legacy Recovery Cascade \\(\mathcal{T}\\) satisfies the healing deadline (Prop 8) if:*

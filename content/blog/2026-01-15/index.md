@@ -61,7 +61,7 @@ This framework extends [partition-tolerant systems](https://users.ece.cmu.edu/~a
 
 6. **Decision quality under sustained uncertainty.** The capability hierarchy \\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\) specifies *what* to run at each connectivity level, but says nothing about *how* to improve decision quality over time. A system that degrades gracefully but never learns from partition events is structurally correct but operationally stagnant. *Constraint: the system must improve its decisions after stress events, not merely survive them.* Answered in [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md) by Definition 15 (Anti-Fragility), Propositions 17–18, and the EXP3-IX / UCB bandit framework.
 
-These six constraints are not independent. The resource floor (Constraint 2) directly tightens the mode-switching envelope (Constraint 3): a node entering OBSERVE state deactivates MAPE-K, rendering the healing stability proof vacuously satisfied but also providing zero healing coverage. The clock drift (Constraint 1) interacts with mode-switching: an OUTPOST crystal-oscillator node exceeds {% katex() %}T_{\mathrm{trust}}{% end %} in under three hours, meaning the causal pivot fires before most fault scenarios escalate. The first three fixes compose into a single 20-byte field — the [Unified Autonomic Header](@/blog/2026-02-05/index.md#def-87-uah) (Definition 87 in Fleet Coherence Under Partition) — that carries the clock fix, stability flag, and resource-tier signal in every gossip exchange without increasing per-item MTU. Constraints 4–6 are addressed independently in their respective articles but share the same gossip transport and state-vector substrate.
+These six constraints are not independent. The resource floor (Constraint 2) directly tightens the mode-switching envelope (Constraint 3): a node entering OBSERVE state deactivates MAPE-K, rendering the healing stability proof vacuously satisfied but also providing zero healing coverage. The clock drift (Constraint 1) interacts with mode-switching: an OUTPOST crystal-oscillator node exceeds {% katex() %}T_{\mathrm{trust}}{% end %} in under three hours, meaning the causal pivot fires before most fault scenarios escalate. The first three fixes compose into a single 20-byte field — the [Unified Autonomic Header](@/blog/2026-02-05/index.md#def-100-uah) (Definition 100 in Fleet Coherence Under Partition) — that carries the clock fix, stability flag, and resource-tier signal in every gossip exchange without increasing per-item MTU. Constraints 4–6 are addressed independently in their respective articles but share the same gossip transport and state-vector substrate.
 
 ---
 
@@ -192,8 +192,9 @@ Several symbols carry different meanings depending on context. The table below l
 | {% katex() %}\gamma_{\mathrm{FN}}{% end %} | False-negative cost escalation rate \\(\geq 0\\) | 0 = static threshold; 2.0 = OUTPOST calibration; bounded by \\([0, 5]\\) in practice |
 | \\(\beta\\) | Reconciliation cost ([Prop 1](#prop-1)); Holt-Winters trend coefficient; bandwidth asymmetry {% katex() %}\beta = B_{\text{backhaul}}/B_{\text{local}}{% end %}; Gamma prior rate \\(\beta_i^0\\) | Subscript or context selects meaning across articles |
 | \\(\rho\\) | Compute-to-transmit energy ratio {% katex() %}\rho = T_d/T_s \approx 10^{-3}\text{–}10^{-2}{% end %} — used in Proposition 23 dominance threshold; the local-dominant compute-cycle ceiling is {% katex() %}1/\rho = T_s/T_d \approx 10^2\text{–}10^3{% end %} | Subscript \\(\rho_q\\) = CBF stability margin in [Proposition 63](@/blog/2026-01-29/index.md#prop-63) (forward reference — defined in Self-Healing Without Connectivity); bare \\(\rho\\) always = compute-to-transmit energy ratio |
+| {% katex() %}\rho_J{% end %} | Spatial jamming correlation factor {% katex() %}\rho_J \in [0,1]{% end %} — scales how strongly a neighbor's denial state elevates a node's own Denied transition rate (Definition 90) | Distinct from bare \\(\rho\\) (compute-to-transmit ratio above); {% katex() %}\rho_J = 0{% end %} = independent fading; {% katex() %}\rho_J = 1{% end %} = full area-denial coupling |
 | \\(\lambda\\) | Bare \\(\lambda\\) = state update rate (events/s) in [Proposition 12](@/blog/2026-02-05/index.md#prop-12); subscript \\(\lambda_i\\) = Weibull scale above | Also used as gossip contact rate in [Proposition 4](@/blog/2026-01-22/index.md#prop-4) and drift coefficient in [Proposition 9](@/blog/2026-01-29/index.md#prop-9); subscript always disambiguates |
-| \\(\lambda_{\text{drift}}\\) | Kalman process noise rate (s⁻¹) — controls how fast the adaptive baseline adjusts across capability levels | Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b) |
+| \\(\lambda_{\text{drift}}\\) | Kalman process noise rate (\\(s^{-1}\\)) — controls how fast the adaptive baseline adjusts across capability levels | Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b) |
 
 ### Constraint Structure
 
@@ -789,6 +790,79 @@ A message that has not been reconciled (applied to state, forwarded, or acknowle
 **Reconnection storm TTL filter**: When connectivity resumes after a partition of duration {% katex() %}T_{\mathrm{acc}}{% end %}, apply a TTL pre-filter before reconciliation (Definition 31 in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-31)): discard all queued messages with {% katex() %}D_c^{\mathrm{TTL}} < T_{\mathrm{acc}}{% end %}. These messages have already expired by the time the reconnection window opens. For RAVEN with {% katex() %}T_{\mathrm{acc}} = 5\,\text{min}{% end %}: every position fix and collision-avoidance vector in the queue is discarded — the fleet must re-acquire current position from fresh sensor readings, not from stale gossip.
 
 **{% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: 47 drones, position update rate 1 Hz, message size 48 bytes. Without value-density routing, position fixes ({% katex() %}\nu = 0.14 \times V_{\mathrm{pos}} / 48{% end %}) compete equally with diagnostic telemetry ({% katex() %}\nu = 0.001 \times V_{\mathrm{diag}} / 200{% end %}). With value-density routing, position fixes have \\(\nu\\) ratio \\(140\times\\) higher per byte — they clear the queue first on every reconnection. CONVOY calibration at 250 kbps uplink: with 15 stale position fixes queued ({% katex() %}T_{\mathrm{acc}} = 90\,\text{s} > D_{\mathrm{pos}}^{\mathrm{TTL}} = 66\,\text{s}{% end %}), the TTL filter discards all 15 before transmission, freeing the channel for the 3 messages with residual value (config updates, still within their 77-minute TTL).
+
+**Causal Ordering Hazard in Physical-Time TTL Filtering**
+
+The TTL filter above uses the physical timestamp embedded in each message to compute AoI. Physical timestamps are only as reliable as the generating node's local clock. A node whose clock drifts forward by \\(\varepsilon\\) seconds produces timestamps that are \\(\varepsilon\\) seconds too large — its messages appear artificially newer than they are. A node whose clock drifts backward by \\(\varepsilon\\) produces timestamps that are \\(\varepsilon\\) seconds too old — its messages appear artificially staler, potentially crossing the TTL boundary and being discarded while causally later messages (with more accurate clocks) survive. The consequence is **causal inversion**: effects arrive at the reconciling node without their causes, which the TTL filter has already discarded as stale.
+
+*Example*: Node A (clock +500ms fast) detects a target at real time \\(t = 0\\) and stamps the detection \\(E_1\\) with physical time 500ms. Node B (accurate clock) receives \\(E_1\\), acts on it, and stamps "Target Neutralized" \\(E_2\\) with physical time 200ms. Node C, sorting by physical timestamp, orders \\(E_2(200\\,\text{ms}) < E_1(500\\,\text{ms})\\) — effects before cause. The TTL filter exacerbates this: if the TTL for fire control events is tight, \\(E_1\\) may be discarded (500ms old) while \\(E_2\\) survives (200ms old), leaving the event log with a neutralization and no detection.
+
+<span id="def-94"></span>
+**Definition 94** (HLC-Augmented Message Stamp with Dotted Version Vector). *Each message \\(m\\) in the queue carries a compound causality stamp:*
+
+{% katex(block=true) %}
+\mathrm{stamp}(m) \;=\; \bigl(\,\underbrace{(pt_m,\; c_m)}_{\text{HLC}},\;\; \underbrace{\{(i,\, n_i)\}}_{\text{DVV}}\bigr)
+{% end %}
+
+*where {% katex() %}(pt_m, c_m){% end %} is the Hybrid Logical Clock timestamp (Definition 40 in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-40)) and {% katex() %}\{(i, n_i)\}{% end %} is a Dotted Version Vector (DVV) — the set of dot pairs encoding every causal predecessor of \\(m\\). A dot {% katex() %}(i, n){% end %} means "I have seen all events from node \\(i\\) through sequence number \\(n\\)." The generating node assigns {% katex() %}n_{\mathrm{self}} \leftarrow n_{\mathrm{self}} + 1{% end %} and inherits all dots from the causal predecessors it observed before generating \\(m\\) (following the dot-kernel model of Definition 72 in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-72)).*
+
+*Causal precedence*: \\(m_1 \prec m_2\\) iff {% katex() %}(i_1, n_1) \in \mathrm{dvv}(m_2){% end %} for \\(m_1\\)'s self-dot. Under this relation, the reconciliation queue forms a partial order, not a linear sequence. Physical timestamps and HLC provide a total order for tie-breaking non-causally-related events; DVV is the ground truth for causally-related events.
+
+- **Generation rule**: At send time, set {% katex() %}pt_m = \max(pt_{\mathrm{local}}, pt_{\mathrm{max\,received}}){% end %}, increment \\(c\\) if {% katex() %}pt_m = pt_{\mathrm{prev}}{% end %} (HLC tie-break rule from Definition 40). Append self-dot {% katex() %}(\mathrm{self}, n_\mathrm{self}){% end %}; inherit all dots from incoming messages that causally precede \\(m\\).
+- **Size**: 10 bytes per message overhead — 5 bytes HLC (4-byte microsecond timestamp + 1-byte counter) + 5 bytes DVV (1 origin ID byte + 4-byte sequence number) for single-dependency events; multi-predecessor DVVs add 5 bytes per additional ancestor.
+
+<span id="def-95"></span>
+**Definition 95** (Clock Uncertainty Window). *Given per-node maximum clock drift \\(\varepsilon\\) (seconds) relative to a reference, define the uncertainty window of message \\(m\\) as the interval:*
+
+{% katex(block=true) %}
+\mathcal{W}_\varepsilon(m) \;=\; [pt_m - \varepsilon,\;\; pt_m + \varepsilon]
+{% end %}
+
+*Two messages {% katex() %}m_1, m_2{% end %} are **uncertainty-concurrent** iff their windows overlap:*
+
+{% katex(block=true) %}
+\mathcal{W}_\varepsilon(m_1) \cap \mathcal{W}_\varepsilon(m_2) \neq \emptyset \;\iff\; |pt_{m_1} - pt_{m_2}| < 2\varepsilon
+{% end %}
+
+*When two messages are uncertainty-concurrent, physical-time ordering is unreliable — either ordering is consistent with both clocks being within their drift bounds. The system must not act on the physical-time ordering alone; it must enter the **Conflict Resolution Branch**:*
+
+1. *Check DVV precedence: if {% katex() %}(i_1, n_1) \in \mathrm{dvv}(m_2){% end %}, then {% katex() %}m_1 \prec m_2{% end %} is definitive — apply \\(m_1\\) first.*
+2. *Check HLC ordering: if DVV does not resolve the order (concurrent events, neither is an ancestor of the other), use {% katex() %}(pt_{m_1}, c_{m_1}) < (pt_{m_2}, c_{m_2}){% end %} as the tiebreaker (lexicographic HLC comparison).*
+3. *If \\(m_2\\)'s DVV references a dot that is not yet in the local event log (a missing predecessor), hold \\(m_2\\) in a **pending buffer** until the predecessor arrives or the causal dependency times out.*
+
+- **Parameters**: {% katex() %}\varepsilon{% end %} is the GPS-denied clock drift bound — for OUTPOST sensors without NTP, {% katex() %}\varepsilon = 500\,\text{ms}{% end %} over a 10-minute partition (50 ppm TCXO); for CONVOY units with periodic GPS fixes, {% katex() %}\varepsilon = 50\,\text{ms}{% end %}.
+
+<span id="prop-69"></span>
+**Proposition 69** (Causal Anti-Inversion Guarantee). *Under Definition 94 stamps and Definition 95 uncertainty windows, if event {% katex() %}E_1{% end %} (Target Detection) causally precedes event {% katex() %}E_2{% end %} (Target Neutralized) — i.e., {% katex() %}\mathrm{dot}(E_1) \in \mathrm{dvv}(E_2){% end %} — then at every node in the fleet, {% katex() %}E_1{% end %} is applied to state before {% katex() %}E_2{% end %}, regardless of clock drift {% katex() %}\varepsilon \leq \varepsilon_{\max}{% end %}.*
+
+*Proof*: Since {% katex() %}\mathrm{dot}(E_1) \in \mathrm{dvv}(E_2){% end %}, the DVV check in the Conflict Resolution Branch immediately resolves the order as {% katex() %}E_1 \prec E_2{% end %}. Physical-time ordering is overridden. If {% katex() %}E_1{% end %} has not yet arrived when {% katex() %}E_2{% end %} is received, \\(E_2\\) is held in the pending buffer until {% katex() %}E_1{% end %} arrives (bounded by its TTL). The pending buffer prevents \\(E_2\\) from being applied with a missing causal predecessor. \\(\square\\)
+
+*Note on TTL interaction*: if {% katex() %}E_1{% end %} expires ({% katex() %}\Delta_{E_1} > D_c^{\mathrm{TTL}}{% end %}) before it arrives, \\(E_2\\) is also discarded from the pending buffer — both events are stale. A neutralization without a detectable cause is operationally invalid, and discarding both is safer than applying \\(E_2\\) alone with an unresolvable causal gap.
+
+**Three-Node OUTPOST Scenario: 500ms Drift**
+
+Nodes A (sensor, +500ms fast clock), B (actuator, accurate clock), C (command, accurate clock). Drift bound {% katex() %}\varepsilon = 500\,\text{ms}{% end %}. Fire control TTL {% katex() %}D_{\mathrm{fire}}^{\mathrm{TTL}} = 4.6\,\text{s}{% end %}.
+
+| Time | Event | Physical stamp | HLC stamp | DVV dot | Notes |
+| ---: | :--- | ---: | :--- | :--- | :--- |
+| real 0ms | A detects target, emitting \\(E_1\\) | 500ms (A fast) | (500ms, 0) | (A, 1) | A's clock is 500ms ahead |
+| real 50ms | B receives \\(E_1\\); B's HLC advances | — | (500ms, 0) | — | B inherits A's HLC on receipt |
+| real 200ms | B neutralizes, emitting \\(E_2\\) | 200ms (B accurate) | (500ms, 1) | {(A,1),(B,1)} | HLC = max(200ms, 500ms prev) + counter; DVV records causal dep on E_1 |
+| real 600ms | C reconnects; receives \\(E_2\\) first, then \\(E_1\\) | — | — | — | Network may deliver in any order |
+
+**Without HLC+DVV (physical-time only)**:
+- C sorts by physical stamp: \\(E_2(200\\,\text{ms}) < E_1(500\\,\text{ms})\\) — **causal inversion**: Target Neutralized processed before Target Detected.
+
+**With HLC+DVV (Proposition 69)**:
+1. C receives \\(E_2\\); notes {% katex() %}\mathrm{dvv}(E_2) = \{(A,1),(B,1)\}{% end %}; checks local log for dot (A,1) — not present.
+2. \\(E_2\\) enters pending buffer; pending timer set to {% katex() %}D_{\mathrm{fire}}^{\mathrm{TTL}} = 4.6\,\text{s}{% end %}.
+3. C receives \\(E_1\\); dot (A,1) satisfies pending dependency for \\(E_2\\).
+4. Conflict Resolution Branch: {% katex() %}|pt_{E_1} - pt_{E_2}| = |500 - 200| = 300\,\text{ms} < 2\varepsilon = 1000\,\text{ms}{% end %} — uncertainty-concurrent; physical order unreliable.
+5. DVV check: {% katex() %}\mathrm{dot}(E_1) = (A,1) \in \mathrm{dvv}(E_2){% end %}; therefore \\(E_1 \prec E_2\\) definitively.
+6. HLC order confirms: {% katex() %}(500\,\text{ms},\, 0) < (500\,\text{ms},\, 1){% end %} — consistent.
+7. C applies \\(E_1\\) then \\(E_2\\): **Target Detected then Target Neutralized**. \\(\square\\)
+
+The 500ms clock error on Node A is entirely absorbed by the HLC's {% katex() %}\max{% end %} rule: B's HLC advances to match A's, making \\(E_2\\)'s HLC timestamp strictly greater than \\(E_1\\)'s. Physical-time inversion is impossible under this construction for any {% katex() %}\varepsilon \leq D_{\mathrm{fire}}^{\mathrm{TTL}}/2 = 2.3\,\text{s}{% end %} — drift bound is not 500ms but over two seconds for fire control events.
 
 ### Architectural Response: Hierarchical Edge Tiers
 
@@ -1400,6 +1474,81 @@ T_{\mathrm{acc}}[n+1] = T_{\mathrm{acc}}[n] + T_{\mathrm{tick}} \cdot \mathbf{1}
 
 ---
 
+<span id="def-89"></span>
+**Definition 89** (Gilbert-Elliott Bursty Channel Model). *A 2-state hidden Markov chain operating at packet timescale models bursty RF interference on each link {% katex() %}(i, j){% end %}.*
+
+**Channel states**: \\(\mathcal{G}\\) (Good) and \\(\mathcal{B}\\) (Bad) with transition matrix:
+
+{% katex(block=true) %}
+P_{\mathrm{GE}} = \begin{pmatrix} 1-p & p \\ r & 1-r \end{pmatrix}
+{% end %}
+
+where {% katex() %}p = P(\mathcal{G} \to \mathcal{B}){% end %} is the burst-onset rate and {% katex() %}r = P(\mathcal{B} \to \mathcal{G}){% end %} is the recovery rate.
+
+**Packet error rates**: {% katex() %}\varepsilon_{\mathcal{G}} \ll 1{% end %} (near-zero in Good state) and {% katex() %}\varepsilon_{\mathcal{B}} \approx 1{% end %} (near-total loss in Bad state).
+
+**Connectivity signal**: The regime-level connectivity metric \\(C(t)\\) is derived from the GE output via a sliding-window moving average over \\(W\\) packet slots:
+
+{% katex(block=true) %}
+C(t) = \frac{1}{W} \sum_{\tau=t-W+1}^{t} \bigl(1 - \mathrm{loss}(\tau)\bigr)
+{% end %}
+
+where {% katex() %}\mathrm{loss}(\tau) \in \{0, 1\}{% end %} is the packet loss indicator at slot \\(\tau\\). The GE model operates at millisecond-to-second packet timescale; \\(C(t)\\) smoothed over \\(W\\) feeds into the regime-transition process of Definition 3, which operates at minutes-to-hours timescale. This two-timescale coupling preserves the semi-Markov structure of Definition 3 while capturing bursty loss patterns that a memoryless Markov chain cannot represent.
+
+- **Parameters**: {% katex() %}p \in (0,\, 0.05]{% end %} (burst onset), {% katex() %}r \in [0.1,\, 1){% end %} (recovery); stationary Bad-state fraction {% katex() %}\pi_{\mathcal{B}} = p/(p+r){% end %}; mean burst length {% katex() %}1/r{% end %} packets.
+- **CONVOY calibration**: {% katex() %}p = 0.02{% end %}, {% katex() %}r = 0.15{% end %} (mean burst = 6.7 packets; {% katex() %}\pi_{\mathcal{B}} \approx 0.12{% end %}); window {% katex() %}W = 200{% end %} packets at 10 ms/packet gives 2-second smoothing before \\(C(t)\\) is presented to the regime model.
+
+---
+
+<span id="def-90"></span>
+**Definition 90** (Spatial Jamming Correlation). *Let {% katex() %}\mathcal{N}_i{% end %} denote the set of neighbors of node \\(i\\) visible via gossip (Definition 5). The neighborhood denial fraction at time \\(t\\) is:*
+
+{% katex(block=true) %}
+f_N(t) = \frac{\bigl|\{j \in \mathcal{N}_i : \Xi_j(t) \in \{\mathcal{D},\, \mathcal{N}\}\}\bigr|}{|\mathcal{N}_i|}
+{% end %}
+
+*The spatial jamming correlation factor {% katex() %}\rho_J \in [0, 1]{% end %} modifies the transition rates of the embedded Markov chain in Definition 3. For any node \\(i\\) currently in a connected or degraded state, the rate toward the Denied regime is amplified and the recovery rate is suppressed:*
+
+{% katex(block=true) %}
+\tilde{q}_{i \to \mathcal{N}}(t) = q_{i \to \mathcal{N}} \cdot \bigl(1 + \rho_J \cdot f_N(t)\bigr)
+{% end %}
+
+{% katex(block=true) %}
+\tilde{q}_{\mathcal{N} \to i}(t) = \frac{q_{\mathcal{N} \to i}}{1 + \rho_J \cdot f_N(t)}
+{% end %}
+
+*When {% katex() %}\rho_J = 0{% end %} the model reduces to the spatially independent case (Definition 3). When {% katex() %}\rho_J = 1{% end %} and all neighbors are denied, the denial onset rate doubles and the recovery rate halves — modeling coordinated area-denial jamming where a node's own survival probability is strongly coupled to its neighbors' fates.*
+
+- **{% katex() %}\rho_J{% end %} calibration**: {% katex() %}\rho_J = 0{% end %} (independent Rayleigh fading), {% katex() %}\rho_J = 0.5{% end %} (partial area denial), {% katex() %}\rho_J = 1{% end %} (full coordinated jamming).
+- **RAVEN calibration**: {% katex() %}\rho_J = 0.8{% end %} for the 47-drone swarm under coordinated RF jamming; {% katex() %}f_N(t){% end %} is computed from the gossip state table (Definition 5) refreshed every MAPE-K tick.
+- **Interaction with Definition 3**: The modified rates \\(\tilde{q}\\) replace the static \\(q\\) values in the embedded chain, making the semi-Markov process time-inhomogeneous. The Weibull sojourn distributions (Definition 66) remain; only the jump probabilities change with \\(f_N(t)\\).
+
+---
+
+<span id="prop-67"></span>
+**Proposition 67** (Mode-Switching Hysteresis). *To prevent oscillation when the connectivity signal \\(C(t)\\) fluctuates at a regime boundary, each transition in the embedded chain of Definition 3 uses asymmetric Schmitt-trigger thresholds.*
+
+*Let {% katex() %}\theta_k{% end %} be the nominal regime boundary between adjacent regimes \\(k\\) and \\(k+1\\), and let {% katex() %}\delta_h > 0{% end %} be the hysteresis half-width. The transition rule is:*
+
+{% katex(block=true) %}
+\text{upward crossing: fire only if } C(t) > \theta_k + \delta_h
+{% end %}
+
+{% katex(block=true) %}
+\text{downward crossing: fire only if } C(t) < \theta_k - \delta_h
+{% end %}
+
+*Once a transition fires, the trigger is locked out for the refractory period {% katex() %}\tau_{\mathrm{ref}}{% end %} (Definition 28) before the opposite threshold becomes active. A signal flickering within the dead band {% katex() %}[\theta_k - \delta_h,\, \theta_k + \delta_h]{% end %} produces at most one transition per refractory window.*
+
+*Corollary*: Under the Gilbert-Elliott model (Definition 89), a burst of duration {% katex() %}1/r{% end %} packets produces a transient dip in \\(C(t)\\) of expected magnitude {% katex() %}\pi_{\mathcal{B}} \cdot (1 - \varepsilon_{\mathcal{G}}) \approx \pi_{\mathcal{B}}{% end %}. Setting {% katex() %}\delta_h \geq \pi_{\mathcal{B}}{% end %} ensures that a single burst cannot cross the downward threshold unilaterally, eliminating spurious regime transitions during burst events.
+
+*Reasoning*: The dead band absorbs transient \\(C(t)\\) dips without triggering architectural mode changes. The refractory lockout (Definition 28) ensures that even a sustained boundary-straddling signal cannot produce unbounded transition chatter; combined, these two mechanisms bound the switching rate independently of jamming intensity.
+
+- **CONVOY calibration**: {% katex() %}\delta_h = 0.08{% end %} for the {% katex() %}\mathcal{C}/\mathcal{D}{% end %} boundary (nominal {% katex() %}\theta = 0.70{% end %}); {% katex() %}\delta_h = 0.05{% end %} for the {% katex() %}\mathcal{D}/\mathcal{I}{% end %} boundary (nominal {% katex() %}\theta = 0.40{% end %}). With {% katex() %}\pi_{\mathcal{B}} = 0.12{% end %} and mean burst 6.7 packets, the corollary condition is satisfied at both boundaries.
+- **Interaction with Definition 75**: The Schmitt-trigger hysteresis here operates on regime-level \\(C(t)\\) at minutes timescale; Definition 75 operates on sensor-level MAPE-K thresholds at seconds timescale. They are complementary, not redundant.
+
+---
+
 <span id="prop-2"></span>
 **Proposition 2** (Architectural Regime Boundaries). *Under stated assumptions, the stationary distribution \\(\pi\\) provides guidance for architectural choices:*
 
@@ -1419,9 +1568,10 @@ T_{\mathrm{acc}}[n+1] = T_{\mathrm{acc}}[n] + T_{\mathrm{tick}} \cdot \mathbf{1}
 
 The connectivity spectrum suggests a natural architectural pattern: **process data at the earliest viable point** given current connectivity. This fog computing model distributes computation along the data path, with each layer adapted to the {% term(url="#def-2", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %} it typically experiences.
 
-> **Problem / Solution / Trade-off.**
 > **Problem**: Forwarding all raw sensor data to the cloud for processing requires a reliable uplink. When connectivity is Intermittent or Denied, unprocessed data queues until reconnection — creating dangerous decision lag precisely when decisions matter most.
+>
 > **Solution**: Place computation as close to the data source as hardware allows. Each layer processes and reduces data before forwarding; higher layers receive structured insights, not raw streams, so they can function even if lower-layer feeds are delayed.
+>
 > **Trade-off**: Each processing hop discards information. A fog node reducing 2.4 Gbps to 10 kbps preserves detection events but loses raw pixels. If the classifier was wrong, there is no recovery path. Fog processing trades reversibility for connectivity resilience — an explicit design choice, not an oversight.
 
 {% mermaid() %}
@@ -2202,9 +2352,10 @@ graph TD
 
 **The Edge Triangle Theorem** (informal): You cannot simultaneously maximize bandwidth, minimize latency, and ensure reliability in a contested communication environment. Improving any one dimension requires sacrificing at least one other.
 
-> **Problem / Solution / Trade-off.**
 > **Problem**: Every communication decision requires choosing between bandwidth (move more bits), reliability (lose fewer packets), and latency (deliver faster). No protocol can maximize all three simultaneously on a constrained physical channel.
+>
 > **Solution**: Parameterize the trade-off explicitly using \\(\alpha\\) (power allocation fraction). Different message classes operate at different points on the Pareto frontier — alerts at high reliability, sensor streams at high bandwidth, coordination at low latency.
+>
 > **Trade-off**: The \\(\alpha\\) parameter is not a dial you set once. Mission-critical messages may switch operating point within a single operation as conditions change. Proxy mesh infrastructure is what makes per-message-class switching feasible at runtime.
 
 ### Mathematical Formalization

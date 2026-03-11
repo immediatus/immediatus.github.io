@@ -630,7 +630,7 @@ LWW fails for:
 | Crystal (thermal stress, \\(70^\circ\text{C}\\)) | 200 ppm = {% katex() %}2\times10^{-4}{% end %} s/s | **42 min** | **Exceeded mid-sortie** |
 | RC oscillator (L0 beacon) | 10,000 ppm = {% katex() %}10^{-2}{% end %} s/s | **50 s** | **Exceeded immediately** |
 
-At 100 ppm (a conservative OUTPOST sensor specification), {% katex() %}\delta = 10^{-4}{% end %} s/s, so the {% katex() %}\pm 500\,\text{ms}{% end %} budget exhausts in {% katex() %}500\,\text{ms} / 10^{-4}\,\text{s/s} = 5{,}000\,\text{s} \approx 83\,\text{min}{% end %}. Any crystal-oscillator edge deployment with partitions exceeding 83 minutes **will experience LWW inversions** without HLC correction — this includes every OUTPOST mission scenario and most CONVOY urban-canyon transit periods. The HLC pivot in Definition 85 (Clock Trust Window) fires before this threshold; the Drift-Quarantine Re-sync Protocol (Definition 42) repairs clocks on reconnection.
+At 100 ppm (a conservative OUTPOST sensor specification), {% katex() %}\delta = 10^{-4}{% end %} s/s, so the {% katex() %}\pm 500\,\text{ms}{% end %} budget exhausts in {% katex() %}500\,\text{ms} / 10^{-4}\,\text{s/s} = 5{,}000\,\text{s} \approx 83\,\text{min}{% end %}. Any crystal-oscillator edge deployment with partitions exceeding 83 minutes **will experience LWW inversions** without HLC correction — this includes every OUTPOST mission scenario and most CONVOY urban-canyon transit periods. The HLC pivot in Definition 98 (Clock Trust Window) fires before this threshold; the Drift-Quarantine Re-sync Protocol (Definition 42) repairs clocks on reconnection.
 
 **Edge complication**: Wall-clock LWW assumes reliable timestamps. The oscillator analysis above shows "latest" becomes meaningless at timescales under 2 hours for thermal-stressed crystals. The structural fix is not a heuristic timeout but a causal ordering system (HLC + vector clocks) that is correct regardless of oscillator quality.
 
@@ -654,9 +654,9 @@ When HLC detects \\(h_1 \parallel h_2\\) (concurrent writes, neither causally do
 
 The clock drift problem cannot be patched within LWW — it requires a structural pivot to causal ordering when physical time becomes untrusted. The trigger is the partition accumulator {% katex() %}T_{\mathrm{acc}}{% end %} from Definition 68: once {% katex() %}T_{\mathrm{acc}}{% end %} exceeds the maximum duration for which hardware clock drift remains within the HLC skew bound {% katex() %}\varepsilon{% end %}, the {% katex() %}l{% end %} component of every HLC timestamp is no longer reliable.
 
-<span id="def-85"></span>
+<span id="def-98"></span>
 
-**Definition 85** (Clock Trust Window). *Given hardware clock drift rate {% katex() %}\delta_{\max}{% end %} (seconds per second, a constant from the hardware manufacturer's datasheet — not a tunable system parameter) and HLC skew bound {% katex() %}\varepsilon{% end %} from Proposition 41, the Clock Trust Window is:*
+**Definition 98** (Clock Trust Window). *Given hardware clock drift rate {% katex() %}\delta_{\max}{% end %} (seconds per second, a constant from the hardware manufacturer's datasheet — not a tunable system parameter) and HLC skew bound {% katex() %}\varepsilon{% end %} from Proposition 41, the Clock Trust Window is:*
 
 {% katex(block=true) %}
 T_{\mathrm{trust}} = \frac{\varepsilon}{\delta_{\max}}
@@ -680,7 +680,7 @@ For 30-day partitions ({% katex() %}T_{\mathrm{acc}} = 2{,}592{,}000\,\text{s}{%
 
 > **Physical translation**: How long can you trust a wall-clock timestamp for LWW (Last-Write-Wins) ordering before accumulated drift invalidates it? T_trust is that window. After T_trust seconds without an NTP sync, all timestamps are ambiguous within the drift envelope — the HLC (Definition 40) takes over as the ordering authority.
 
-The complete conflict resolution decision tree, combining Definition 85 with Definition 41's merge rules:
+The complete conflict resolution decision tree, combining Definition 98 with Definition 41's merge rules:
 
 {% mermaid() %}
 flowchart TD
@@ -697,9 +697,9 @@ flowchart TD
     M --> Z
 {% end %}
 
-<span id="prop-67"></span>
+<span id="prop-74"></span>
 
-**Proposition 67** (LWW-to-Causal Pivot Correctness). *The pivot from HLC ordering {% katex() %}\prec{% end %} to logical ordering {% katex() %}\prec_{\mathrm{logic}}{% end %} at {% katex() %}T_{\mathrm{acc}} > T_{\mathrm{trust}}{% end %} (Definition 85) satisfies:*
+**Proposition 74** (LWW-to-Causal Pivot Correctness). *The pivot from HLC ordering {% katex() %}\prec{% end %} to logical ordering {% katex() %}\prec_{\mathrm{logic}}{% end %} at {% katex() %}T_{\mathrm{acc}} > T_{\mathrm{trust}}{% end %} (Definition 98) satisfies:*
 
 1. **Monotonicity**: No previously committed value is overridden; {% katex() %}\prec_{\mathrm{logic}}{% end %} reclassifies some causal pairs as concurrent, never the reverse.
 2. **Completeness**: Every update pair is classified as causally ordered (one dominates) or concurrent (requiring CRDT join) — no update is silently discarded.
@@ -709,8 +709,8 @@ flowchart TD
 *Proof.* Property 1: {% katex() %}\prec_{\mathrm{logic}}{% end %} uses {% katex() %}(c_j, n_j){% end %} — sub-components of {% katex() %}\prec_{\mathrm{ext}}{% end %} (Definition 41, defined below in the Hybrid Logical Clocks section of this post). Any pair with {% katex() %}h_1 \prec_{\mathrm{logic}} h_2{% end %} also satisfies {% katex() %}h_1 \prec_{\mathrm{ext}} h_2{% end %} — logical dominance is a necessary condition for causal dominance. Incorrectly concurrent pairs resolve via CRDT join, which is monotone by Definition 12 (semilattice). Property 2: {% katex() %}\prec_{\mathrm{logic}}{% end %} is a total preorder on {% katex() %}(c, n){% end %} pairs; every pair is comparable or equal-then-tied. Property 3: follows from Property 1. Property 4: after Definition 42 Phase 2 (HLC repair), {% katex() %}l_j{% end %} is corrected; Phase 3 (causality audit) reclassifies previously-concurrent pairs; Definition 12 idempotency guarantees re-merge produces the same join result. \\(\square\\)
 
 - **Computes**: Formal correctness guarantees for the physical-to-logical clock pivot under long partitions.
-- **Apply when**: Verify at integration time that all CRDT types satisfy Definition 12 semilattice properties before deploying the Definition 85 pivot.
-- **Parameters**: {% katex() %}\varepsilon{% end %}, {% katex() %}T_{\mathrm{trust}}{% end %} from Definition 85; all CRDT types must satisfy Definition 12 (idempotency, commutativity, associativity).
+- **Apply when**: Verify at integration time that all CRDT types satisfy Definition 12 semilattice properties before deploying the Definition 98 pivot.
+- **Parameters**: {% katex() %}\varepsilon{% end %}, {% katex() %}T_{\mathrm{trust}}{% end %} from Definition 98; all CRDT types must satisfy Definition 12 (idempotency, commutativity, associativity).
 - **Prevents**: Pivot-induced data loss — Properties 1–3 prove the pivot only adds CRDT merges, never removes causally ordered updates.
 
 **Vector Clocks for Causality**
@@ -1644,9 +1644,9 @@ At 250 kbps, {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-v
 
 The Delta-Sync fingerprint {% katex() %}\Psi_i = (\vec{V}_i, \vec{h}_i){% end %} from Definition 31 already travels in Phase 1. Embedding the HLC state and clock-trust signal into this fingerprint costs 10 additional bytes — absorbed entirely within the constant {% katex() %}C_F{% end %} — leaving per-item and per-packet structure unchanged.
 
-<span id="def-86"></span>
+<span id="def-99"></span>
 
-**Definition 86** (Causal Packet Header). *The extended fingerprint {% katex() %}\tilde{\Psi}_i{% end %} augments Definition 31's {% katex() %}\Psi_i{% end %} with a 10-byte Causality Header:*
+**Definition 99** (Causal Packet Header). *The extended fingerprint {% katex() %}\tilde{\Psi}_i{% end %} augments Definition 31's {% katex() %}\Psi_i{% end %} with a 10-byte Causality Header:*
 
 {% katex(block=true) %}
 \tilde{\Psi}_i = \Bigl(\underbrace{\vec{V}_i}_{\text{vector clock}},\;\underbrace{\vec{h}_i}_{\text{Merkle roots}},\;\underbrace{l_i}_{\text{HLC watermark (4 B)}},\;\underbrace{c_i}_{\text{HLC counter (2 B)}},\;\underbrace{T_{\mathrm{acc},\,i}}_{\text{partition age (4 B)}}\Bigr)
@@ -1654,7 +1654,7 @@ The Delta-Sync fingerprint {% katex() %}\Psi_i = (\vec{V}_i, \vec{h}_i){% end %}
 
 *On receiving {% katex() %}\tilde{\Psi}_j{% end %} from peer {% katex() %}j{% end %}, node {% katex() %}i{% end %} immediately determines — with no additional round-trips:*
 
-- *Whether {% katex() %}j{% end %}'s clock is trusted:* {% katex() %}T_{\mathrm{acc},j} \leq T_{\mathrm{trust}}{% end %} *(Definition 85) — selects {% katex() %}\prec{% end %} vs {% katex() %}\prec_{\mathrm{logic}}{% end %} before applying any delta*
+- *Whether {% katex() %}j{% end %}'s clock is trusted:* {% katex() %}T_{\mathrm{acc},j} \leq T_{\mathrm{trust}}{% end %} *(Definition 98) — selects {% katex() %}\prec{% end %} vs {% katex() %}\prec_{\mathrm{logic}}{% end %} before applying any delta*
 - *{% katex() %}j{% end %}'s current HLC state:* {% katex() %}(l_j, c_j){% end %} *for the receive-update rule of Definition 40*
 - *Whether Drift-Quarantine (Definition 42) is required:* {% katex() %}|l_j - l_i| > \varepsilon + \tau_{\max}{% end %} *— quarantine before accepting any delta item*
 
@@ -1670,9 +1670,9 @@ The Delta-Sync fingerprint {% katex() %}\Psi_i = (\vec{V}_i, \vec{h}_i){% end %}
 - **Parameters**: {% katex() %}l_i{% end %}, {% katex() %}c_i{% end %} from Definition 40 send rule; {% katex() %}T_{\mathrm{acc},i}{% end %} from Definition 68 accumulator; all three fields updated at each MAPE-K tick.
 - **Prevents**: Clock-blindness on reconnect — without {% katex() %}T_{\mathrm{acc}}{% end %} in the fingerprint, the receiver cannot determine whether incoming HLC timestamps are trustworthy before applying 30 days of accumulated deltas.
 
-<span id="prop-68"></span>
+<span id="prop-75"></span>
 
-**Proposition 68** (Causality Header Overhead Bound). *Adding the 10-byte Causality Header to the Definition 31 fingerprint increases {% katex() %}C_F{% end %} by 10 bytes. The coverage loss relative to Proposition 32 is:*
+**Proposition 75** (Causality Header Overhead Bound). *Adding the 10-byte Causality Header to the Definition 31 fingerprint increases {% katex() %}C_F{% end %} by 10 bytes. The coverage loss relative to Proposition 32 is:*
 
 {% katex(block=true) %}
 \Delta n_1^{\max} = \left\lfloor \frac{B \cdot T_W - 2\,(C_F + 10)}{b_1} \right\rfloor - \left\lfloor \frac{B \cdot T_W - 2\,C_F}{b_1} \right\rfloor = -\left\lfloor \frac{20}{b_1} \right\rfloor \geq -1
@@ -1695,16 +1695,16 @@ The Delta-Sync fingerprint {% katex() %}\Psi_i = (\vec{V}_i, \vec{h}_i){% end %}
 
 ### Unified Autonomic Header: Synthesis of Three Fixes
 
-<span id="def-87-uah"></span>
+<span id="def-100-uah"></span>
 
-Definitions 85 and 86 (Clock Fix), the Nonlinear Safety Guardrail from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-63) (Stability Fix), and the Zero-Tax Hash Chain from [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#def-83) (Resource Fix) each add fields to the gossip fingerprint. Rather than three independent headers, they compose into a single 20-byte **Unified Autonomic Header (UAH)** — the concrete answer to the three structural design constraints introduced in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md).
+Definitions 85 and 86 (Clock Fix), the Nonlinear Safety Guardrail from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-63) (Stability Fix), and the Zero-Tax Hash Chain from [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#def-102) (Resource Fix) each add fields to the gossip fingerprint. Rather than three independent headers, they compose into a single 20-byte **Unified Autonomic Header (UAH)** — the concrete answer to the three structural design constraints introduced in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md).
 
-<span id="def-87"></span>
+<span id="def-100"></span>
 
-**Definition 87** (Unified Autonomic Header). *The UAH is a 20-byte field appended to the Phase 1 fingerprint of Definition 86, structured as follows:*
+**Definition 100** (Unified Autonomic Header). *The UAH is a 20-byte field appended to the Phase 1 fingerprint of Definition 99, structured as follows:*
 
 {% katex(block=true) %}
-\underbrace{l_i\;(4\,\text{B}),\;c_i\;(2\,\text{B}),\;T_{\mathrm{acc},i}\;(4\,\text{B})}_{\text{Clock Fix — Def 86}},\quad
+\underbrace{l_i\;(4\,\text{B}),\;c_i\;(2\,\text{B}),\;T_{\mathrm{acc},i}\;(4\,\text{B})}_{\text{Clock Fix — Def 99}},\quad
 \underbrace{\rho_{q,i}\;(1\,\text{B}),\;q_i\;(1\,\text{B})}_{\text{Stability Fix}},\quad
 \underbrace{h_{\mathrm{sfx},i}\;(4\,\text{B})}_{\text{Resource Fix}},\quad
 \underbrace{\mathtt{flags}_i\;(1\,\text{B}),\;\mathtt{pad}\;(3\,\text{B})}_{\text{control}}
@@ -1726,14 +1726,14 @@ Definitions 85 and 86 (Clock Fix), the Nonlinear Safety Guardrail from [Self-Hea
 | Bits | Name | Meaning |
 | :--- | :--- | :--- |
 | 0 | `trust_flag` | 1 when {% katex() %}T_{\mathrm{acc},i} \leq T_{\mathrm{trust}}{% end %} — physical clock trusted; use full HLC {% katex() %}\prec{% end %} |
-| 2:1 | `zt_state` | 00 = OBSERVE, 01 = WAKEUP, 10 = ACTIVE (Definition 82 Zero-Tax state) |
+| 2:1 | `zt_state` | 00 = OBSERVE, 01 = WAKEUP, 10 = ACTIVE ([Definition 101](@/blog/2026-02-19/index.md#def-101) Zero-Tax state) |
 | 3 | `nsg_veto` | 1 when {% katex() %}\rho_{q,i} < 0{% end %} — sender outside CBF safe set; {% katex() %}K_{\mathrm{gs}} = 0{% end %} enforced |
 | 7:4 | reserved | Must be zero |
 
 The three fixes are mutually reinforcing: a receiver seeing `zt_state = 00` (OBSERVE) knows simultaneously that the sender's vector clock is frozen (no delta items expected), the hash suffix is the sole integrity signal, and {% katex() %}K_{\mathrm{gs}} = 0{% end %} on the sender — no healing requests should be directed to it. A receiver seeing `nsg_veto = 1` suppresses high-severity healing requests regardless of the local anomaly score {% katex() %}z_t{% end %}. A receiver seeing `trust_flag = 0` applies {% katex() %}\prec_{\mathrm{logic}}{% end %} to all sender deltas before merging.
 
 - **Computes**: 20-byte synthesis of Clock Fix (HLC + {% katex() %}T_{\mathrm{acc}}{% end %}), Stability Fix (CBF margin + mode index), and Resource Fix (hash suffix + Zero-Tax state).
-- **Apply when**: Replace Definition 86's {% katex() %}\tilde{\Psi}_i{% end %} with the UAH at every gossip exchange; all fields updated at each MAPE-K tick.
+- **Apply when**: Replace Definition 99's {% katex() %}\tilde{\Psi}_i{% end %} with the UAH at every gossip exchange; all fields updated at each MAPE-K tick.
 - **Parameters**: {% katex() %}\rho_{q,i}{% end %} encoded as unsigned byte (0 = margin 0.0, 255 = margin 1.0); {% katex() %}h_{\mathrm{sfx},i}{% end %} = last 4 bytes of Definition 83 chain; {% katex() %}q_i \in \{0,1,2,3,4\}{% end %} matching L0–L4.
 - **Prevents**: Header proliferation — three independent fixes would grow the fingerprint by 16 B with redundant alignment; the UAH absorbs all three into 20 B with a single 3-byte pad.
 
