@@ -51,9 +51,9 @@ This framework extends [partition-tolerant systems](https://users.ece.cmu.edu/~a
 
 1. **Clock drift.** Crystal-oscillator nodes drift by seconds per hour and by minutes over 30-day partitions. Last-Write-Wins conflict resolution silently inverts causal order when physical timestamps are untrustworthy. *Constraint: the framework must not assume NTP availability for correctness guarantees.* Answered in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md) by Definition 85 (Clock Trust Window) and Definition 86 (Causality Header), which pivot from physical HLC ordering to pure logical ordering when the partition accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds the drift tolerance.
 
-2. **Resource floor.** The full autonomic monitoring stack — EWMA, Merkle health tree, gossip table, EXP3-IX weight vector, event queue, vector clock — totals approximately 13 KB of SRAM. A 4 KB MCU has an autonomic ceiling of roughly 800 bytes under Proposition 21. The stack exceeds its own budget by \\(16\\times\\) before a single line of mission code runs. *Constraint: the stack must have a zero-tax tier that fits within 200 bytes.* Answered in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#zero-tax-autonomic) by Definitions 82–84 (Zero-Tax State Machine, In-Place Hash Chain, Fixed-Point EWMA) and Proposition 66 (Wakeup Latency Bound).
+2. **Resource floor.** The full autonomic monitoring stack — EWMA, Merkle health tree, gossip table, EXP3-IX weight vector, event queue, vector clock — totals approximately 13 KB of SRAM. A 4 KB MCU has an autonomic ceiling of roughly 800 bytes under Proposition 21. The stack exceeds its own budget by \\(16\\times\\) before a single line of mission code runs. *Constraint: the stack must have a zero-tax tier that fits within 200 bytes.* Answered in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#zero-tax-autonomic) by Definitions 82–84 (Zero-Tax State Machine, In-Place Hash Chain, Fixed-Point EWMA) and Proposition 82 (Wakeup Latency Bound).
 
-3. **Stability under mode-switching.** Proposition 9's gain bound {% katex() %}K < 1/(1 + \tau/T_{\mathrm{tick}}){% end %} assumes linear, time-invariant plant dynamics. Power-shedding makes {% katex() %}T_{\mathrm{tick}}{% end %} a discrete function of capability level \\(q\\) — the closed loop is a switched linear system that jumps between modes as resources degrade. The LTI stability proof does not transfer across mode boundaries. *Constraint: the stability proof must remain valid under mode transitions, including transitions forced by the resource floor constraint above.* Answered in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) by Proposition 63 (CBF mode-invariant safety), Theorem PWL (SMJLS mean-square stability), and Proposition 65 (CBF-derived refractory bound).
+3. **Stability under mode-switching.** Proposition 9's gain bound {% katex() %}K < 1/(1 + \tau/T_{\mathrm{tick}}){% end %} assumes linear, time-invariant plant dynamics. Power-shedding makes {% katex() %}T_{\mathrm{tick}}{% end %} a discrete function of capability level \\(q\\) — the closed loop is a switched linear system that jumps between modes as resources degrade. The LTI stability proof does not transfer across mode boundaries. *Constraint: the stability proof must remain valid under mode transitions, including transitions forced by the resource floor constraint above.* Answered in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) by Proposition 80 (CBF mode-invariant safety), Theorem PWL (SMJLS mean-square stability), and Proposition 86 (CBF-derived refractory bound).
 
 4. **Health observability without central infrastructure.** This article defines the health vector \\(\mathbf{H}(t)\\) and the resource state \\(R(t)\\), but provides no mechanism for a node to populate those vectors without a central collector. During partition, there is no ground truth: a node can only observe its own sensors and neighbors it can reach. *Constraint: anomaly detection and health propagation must operate locally on partial information.* Answered in [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md) by Definitions 4–7 (Local Anomaly Detection, Gossip Health Protocol, Staleness, Byzantine Node) and Propositions 3–7.
 
@@ -187,11 +187,11 @@ Several symbols carry different meanings depending on context. The table below l
 | \\(\gamma\\) | Semantic convergence factor ([Def 1b](#def-1b)); age-decay rate; Holt-Winters seasonality; Byzantine reputation rates {% katex() %}\gamma_{\text{decay}}, \gamma_{\text{recover}}{% end %} | Bare \\(\gamma\\) = Def 1b in this article; subscript selects other roles |
 | \\(k_i\\) | Weibull shape for regime \\(i\\) — controls partition tail heaviness | \\(k_\mathcal{N} < 1\\) = heavy tail; \\(k=1\\) = exponential; \\(k>1\\) = light tail. Distinct from uppercase \\(K\\) (control loop gain) — \\(k_\mathcal{N}\\) is a Weibull parameter never used as a gain |
 | \\(\lambda_i\\) | Weibull scale for regime \\(i\\) — sets characteristic sojourn time | {% katex() %}\mathbb{E}[T_i] = \lambda_i\,\Gamma(1+1/k_i){% end %}; at \\(k=1\\): \\(\lambda_i = 1/q_i\\) |
-| {% katex() %}T_{\mathrm{acc}}{% end %} | Partition duration accumulator — contiguous time in \\(\mathcal{N}\\) | Reset to 0 on partition end; input to \\(\theta^\*(t)\\) and circuit breaker ([Proposition 59](@/blog/2026-01-29/index.md#prop-59) — forward reference, defined in Self-Healing Without Connectivity) |
+| {% katex() %}T_{\mathrm{acc}}{% end %} | Partition duration accumulator — contiguous time in \\(\mathcal{N}\\) | Reset to 0 on partition end; input to \\(\theta^\*(t)\\) and circuit breaker ([Proposition 92](@/blog/2026-01-29/index.md#prop-92) — forward reference, defined in Self-Healing Without Connectivity) |
 | {% katex() %}Q_{0.95}{% end %} | P95 partition duration planning threshold | {% katex() %}Q_{0.95} = \lambda_\mathcal{N}(\ln 20)^{1/k_\mathcal{N}}{% end %}; MCU: one `pow()` call |
 | {% katex() %}\gamma_{\mathrm{FN}}{% end %} | False-negative cost escalation rate \\(\geq 0\\) | 0 = static threshold; 2.0 = OUTPOST calibration; bounded by \\([0, 5]\\) in practice |
 | \\(\beta\\) | Reconciliation cost ([Prop 1](#prop-1)); Holt-Winters trend coefficient; bandwidth asymmetry {% katex() %}\beta = B_{\text{backhaul}}/B_{\text{local}}{% end %}; Gamma prior rate \\(\beta_i^0\\) | Subscript or context selects meaning across articles |
-| \\(\rho\\) | Compute-to-transmit energy ratio {% katex() %}\rho = T_d/T_s \approx 10^{-3}\text{–}10^{-2}{% end %} — used in Proposition 23 dominance threshold; the local-dominant compute-cycle ceiling is {% katex() %}1/\rho = T_s/T_d \approx 10^2\text{–}10^3{% end %} | Subscript \\(\rho_q\\) = CBF stability margin in [Proposition 63](@/blog/2026-01-29/index.md#prop-63) (forward reference — defined in Self-Healing Without Connectivity); bare \\(\rho\\) always = compute-to-transmit energy ratio |
+| \\(\rho\\) | Compute-to-transmit energy ratio {% katex() %}\rho = T_d/T_s \approx 10^{-3}\text{–}10^{-2}{% end %} — used in Proposition 23 dominance threshold; the local-dominant compute-cycle ceiling is {% katex() %}1/\rho = T_s/T_d \approx 10^2\text{–}10^3{% end %} | Subscript \\(\rho_q\\) = CBF stability margin in [Proposition 80](@/blog/2026-01-29/index.md#prop-80) (forward reference — defined in Self-Healing Without Connectivity); bare \\(\rho\\) always = compute-to-transmit energy ratio |
 | {% katex() %}\rho_J{% end %} | Spatial jamming correlation factor {% katex() %}\rho_J \in [0,1]{% end %} — scales how strongly a neighbor's denial state elevates a node's own Denied transition rate (Definition 90) | Distinct from bare \\(\rho\\) (compute-to-transmit ratio above); {% katex() %}\rho_J = 0{% end %} = independent fading; {% katex() %}\rho_J = 1{% end %} = full area-denial coupling |
 | \\(\lambda\\) | Bare \\(\lambda\\) = state update rate (events/s) in [Proposition 12](@/blog/2026-02-05/index.md#prop-12); subscript \\(\lambda_i\\) = Weibull scale above | Also used as gossip contact rate in [Proposition 4](@/blog/2026-01-22/index.md#prop-4) and drift coefficient in [Proposition 9](@/blog/2026-01-29/index.md#prop-9); subscript always disambiguates |
 | \\(\lambda_{\text{drift}}\\) | Kalman process noise rate (\\(s^{-1}\\)) — controls how fast the adaptive baseline adjusts across capability levels | Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b) |
@@ -204,7 +204,7 @@ Three hard constraints govern everything that follows. If any one of them is vio
 \begin{aligned}
 &B(t) \leq B_{\max} \cdot C(t) && \text{(bandwidth scales with connectivity)} \\
 &\mathcal{L}(t) \leq f(C(t), R(t)) && \text{(capability bounded by connectivity + resources)} \\
-&K < \frac{1}{1 + \tau/T_{\text{tick}}} && \text{(control loop stability; Proposition 9; Proposition 39 for stochastic \(\tau\))}
+&K < \frac{1}{1 + \tau/T_{\text{tick}}} && \text{(control loop stability; Proposition 9; Proposition 78 for stochastic \(\tau\))}
 \end{aligned}
 {% end %}
 
@@ -301,7 +301,7 @@ This mode-dependence is the surface symptom of a deeper structural problem. The 
 
 > **Physical translation**: Think of this as a state machine where each mode has its own stability rules. The guard fires when the resource state \\(R(t)\\) drops out of a mode's valid range — like a thermostat tripping a relay. Crucially, the error history \\(x\\) carries over across transitions with no reset, meaning every mode jump inherits the full consequence of what came before.
 
-State resets are **absent**: the error history \\(x\\) is continuous across mode transitions. Every capability-level change is therefore a potential stability hazard that requires explicit pre-transition verification by Definition 80 (Nonlinear Safety Guardrail, defined in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-80)).
+State resets are **absent**: the error history \\(x\\) is continuous across mode transitions. Every capability-level change is therefore a potential stability hazard that requires explicit pre-transition verification by Definition 110 (Nonlinear Safety Guardrail, defined in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-110)).
 
 <span id="def-79"></span>
 
@@ -332,7 +332,7 @@ State resets are **absent**: the error history \\(x\\) is continuous across mode
 | L1 (thermal throttle) | 10 s | 0.33 | 0.28 | \\(2.8\sigma\\) |
 | L0 (monitoring only) | 60 s | 0 | — | — |
 
-A fault at \\(3.2\sigma\\) lies safely inside {% katex() %}\mathcal{R}_{L3}{% end %} (diameter \\(4.2\sigma\\)) and is correctable. The **identical fault** under L1 thermal throttle exceeds {% katex() %}\mathcal{R}_{L1}{% end %} (diameter \\(2.8\sigma\\)) — the healing loop diverges without a prior gain reduction. Definition 80 (Nonlinear Safety Guardrail, [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-80)) detects this pre-transition and enforces the required derate automatically.
+A fault at \\(3.2\sigma\\) lies safely inside {% katex() %}\mathcal{R}_{L3}{% end %} (diameter \\(4.2\sigma\\)) and is correctable. The **identical fault** under L1 thermal throttle exceeds {% katex() %}\mathcal{R}_{L1}{% end %} (diameter \\(2.8\sigma\\)) — the healing loop diverges without a prior gain reduction. Definition 110 (Nonlinear Safety Guardrail, [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-110)) detects this pre-transition and enforces the required derate automatically.
 
 ### Prerequisite Ordering
 
@@ -741,9 +741,9 @@ where {% katex() %}\mathrm{size}(m){% end %} is the transmission size in bytes. 
 - **Use**: Rank queued messages by \\(\nu(m, \Delta_m)\\) at each transmission opportunity; transmit the highest-density message first. Re-rank at each opportunity as AoI evolves.
 - **Field note**: A message whose value density has decayed below the value density of new messages in the queue should yield channel access — it is less valuable per byte *and* getting worse.
 
-<span id="prop-65"></span>
+<span id="prop-86"></span>
 
-**Proposition 65** (AoI-Optimal Routing Priority). *Among all non-preemptive transmission schedules with bounded channel capacity \\(B\\) bytes/s and a queue of \\(n\\) messages with independent exponential decay, the schedule minimizing total value lost in \\([0, T]\\) is the greedy schedule that transmits messages in decreasing order of \\(\nu(m, \Delta_m)\\) at each decision epoch.*
+**Proposition 86** (AoI-Optimal Routing Priority). *Among all non-preemptive transmission schedules with bounded channel capacity \\(B\\) bytes/s and a queue of \\(n\\) messages with independent exponential decay, the schedule minimizing total value lost in \\([0, T]\\) is the greedy schedule that transmits messages in decreasing order of \\(\nu(m, \Delta_m)\\) at each decision epoch.*
 
 *Proof sketch*: By exchange argument — swapping any two adjacent messages in the queue that are out of value-density order strictly increases total transmitted value. The greedy rule is therefore optimal among single-channel non-preemptive schedulers. \\(\square\\)
 
@@ -946,20 +946,20 @@ Each tier has a different **partition survival requirement**. T0 assumes connect
 
 The tier architecture pre-assigns nodes to fixed clusters. Partition breaks those assignments. When cluster communication is severed, nodes must form operating coalitions *without centralized coordination* — a **hedonic coalition formation game** where each node acts in its own interest and the architecture must guarantee the outcome is still collectively safe.
 
-> **The Problem**: Pre-assigned clusters may be split by a partition into subgroups that can no longer communicate with each other. Each subgroup must decide independently: stay as-is, merge with another reachable subgroup, or operate alone? Making that decision incorrectly wastes resources (too large a coalition) or risks missing {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} (too small).
+> **The Problem**: Pre-assigned clusters may be split by a partition into subgroups that can no longer communicate with each other. Each subgroup must decide independently: stay as-is, merge with another reachable subgroup, or operate alone? Making that decision incorrectly wastes resources (too large a coalition) or risks missing {% term(url="@/blog/2026-01-29/index.md#def-121", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} (too small).
 >
 > **The Solution**: Model each node's preferences formally and find the Nash-stable coalition size — the size where no node has an incentive to defect. The optimal size is a function of *expected partition duration*: short partition \\(\to\\) larger coalition; long partition \\(\to\\) smaller self-sufficient unit.
 >
-> **The Trade-off**: Larger coalitions deliver more aggregate capability but accumulate more state divergence \\(D(t)\\) and create costlier reconciliation at reconnection. Smaller coalitions are cheap to reconcile but may fall below the {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} threshold and lose mission-critical function.
+> **The Trade-off**: Larger coalitions deliver more aggregate capability but accumulate more state divergence \\(D(t)\\) and create costlier reconciliation at reconnection. Smaller coalitions are cheap to reconcile but may fall below the {% term(url="@/blog/2026-01-29/index.md#def-121", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} threshold and lose mission-critical function.
 
 **Model**: Each node \\(i\\) has preferences over coalitions \\(S \ni i\\) based on three competing factors:
 - Aggregate capability: {% katex() %}\sum_{j \in S} \mathcal{L}_j{% end %}
 - Communication overhead: {% katex() %}|S| \cdot c_{\text{msg}}{% end %}
-- {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} achievability: {% katex() %}P(\text{MVS achievable} \mid S){% end %}
+- {% term(url="@/blog/2026-01-29/index.md#def-121", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} achievability: {% katex() %}P(\text{MVS achievable} \mid S){% end %}
 
 A **Nash-stable partition** is one where no node prefers to join a different coalition or operate alone: no \\(i\\) with current coalition \\(S_i\\) prefers any \\(S\' \neq S_i\\) containing \\(i\\).
 
-**Optimal coalition size** — the size \\(k\\) that maximizes the difference between {% term(url="@/blog/2026-01-29/index.md#def-10", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} achievability and cumulative messaging cost scaled by expected partition duration:
+**Optimal coalition size** — the size \\(k\\) that maximizes the difference between {% term(url="@/blog/2026-01-29/index.md#def-121", def="Smallest set of components that must remain operational to sustain the mission-critical L1 survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} achievability and cumulative messaging cost scaled by expected partition duration:
 
 {% katex(block=true) %}
 |S^*| = \arg\max_{k} \left[ P(\text{MVS} \mid k) - k \cdot c_{\text{msg}} \cdot \mathbb{E}[T_{\text{partition}}] \right]
@@ -1415,7 +1415,7 @@ Q_{0.95} = \lambda_\mathcal{N}\,(\ln 20)^{1/k_\mathcal{N}}
 
 > **Physical translation**: The 95th-percentile partition duration — how long 95 in 100 blackouts will last. With Weibull shape k < 1 (heavy-tailed, typical in contested environments), this value is far larger than the mean duration. Exponential models catastrophically underestimate it; the Weibull shape parameter k is the difference between "probably back in 5 minutes" and "plan for 2 hours."
 
-- **Use**: Computes the p-th percentile of partition duration from the fitted Weibull model; use {% katex() %}Q_{0.95}{% end %} as the {% katex() %}T_{\text{acc}}{% end %} ceiling for the circuit breaker in Proposition 59 to catch heavy-tailed outages that an exponential ({% katex() %}k=1{% end %}) model underestimates by 2–5x.
+- **Use**: Computes the p-th percentile of partition duration from the fitted Weibull model; use {% katex() %}Q_{0.95}{% end %} as the {% katex() %}T_{\text{acc}}{% end %} ceiling for the circuit breaker in Proposition 92 to catch heavy-tailed outages that an exponential ({% katex() %}k=1{% end %}) model underestimates by 2–5x.
 - **Parameters**: {% katex() %}k_N < 1{% end %} for heavy-tailed environments (RAVEN {% katex() %}k \approx 0.62{% end %}); {% katex() %}\lambda_N{% end %} = scale in hours; fit both from real partition logs.
 - **Field note**: Actual {% katex() %}k_N{% end %} differs from spec by 2–3x routinely — never assume the exponential default; always fit from field data.
 
@@ -1470,7 +1470,7 @@ T_{\mathrm{acc}}[n+1] = T_{\mathrm{acc}}[n] + T_{\mathrm{tick}} \cdot \mathbf{1}
 - **Parameters**: {% katex() %}T_{\text{tick}}{% end %} = MAPE-K cycle period (e.g., 5 s); accumulator ceiling {% katex() %}Q_{0.95}{% end %} triggers protective state transitions.
 - **Field note**: Reset-on-reconnect is essential — without it, a 30-second blip accumulates the same weight as a 4-hour outage.
 
-*Reset condition: {% katex() %}T_{\mathrm{acc}} \leftarrow 0{% end %} when \\(\Xi\\) transitions out of \\(\mathcal{N}\\) (partition ends). The accumulator is the input to both the time-varying anomaly threshold (Proposition 3 in the self-measurement article) and the circuit breaker (Proposition 59).*
+*Reset condition: {% katex() %}T_{\mathrm{acc}} \leftarrow 0{% end %} when \\(\Xi\\) transitions out of \\(\mathcal{N}\\) (partition ends). The accumulator is the input to both the time-varying anomaly threshold (Proposition 3 in the self-measurement article) and the circuit breaker (Proposition 92).*
 
 ---
 
@@ -1538,14 +1538,14 @@ f_N(t) = \frac{\bigl|\{j \in \mathcal{N}_i : \Xi_j(t) \in \{\mathcal{D},\, \math
 \text{downward crossing: fire only if } C(t) < \theta_k - \delta_h
 {% end %}
 
-*Once a transition fires, the trigger is locked out for the refractory period {% katex() %}\tau_{\mathrm{ref}}{% end %} (Definition 28) before the opposite threshold becomes active. A signal flickering within the dead band {% katex() %}[\theta_k - \delta_h,\, \theta_k + \delta_h]{% end %} produces at most one transition per refractory window.*
+*Once a transition fires, the trigger is locked out for the refractory period {% katex() %}\tau_{\mathrm{ref}}{% end %} (Definition 117) before the opposite threshold becomes active. A signal flickering within the dead band {% katex() %}[\theta_k - \delta_h,\, \theta_k + \delta_h]{% end %} produces at most one transition per refractory window.*
 
 *Corollary*: Under the Gilbert-Elliott model (Definition 89), a burst of duration {% katex() %}1/r{% end %} packets produces a transient dip in \\(C(t)\\) of expected magnitude {% katex() %}\pi_{\mathcal{B}} \cdot (1 - \varepsilon_{\mathcal{G}}) \approx \pi_{\mathcal{B}}{% end %}. Setting {% katex() %}\delta_h \geq \pi_{\mathcal{B}}{% end %} ensures that a single burst cannot cross the downward threshold unilaterally, eliminating spurious regime transitions during burst events.
 
-*Reasoning*: The dead band absorbs transient \\(C(t)\\) dips without triggering architectural mode changes. The refractory lockout (Definition 28) ensures that even a sustained boundary-straddling signal cannot produce unbounded transition chatter; combined, these two mechanisms bound the switching rate independently of jamming intensity.
+*Reasoning*: The dead band absorbs transient \\(C(t)\\) dips without triggering architectural mode changes. The refractory lockout (Definition 117) ensures that even a sustained boundary-straddling signal cannot produce unbounded transition chatter; combined, these two mechanisms bound the switching rate independently of jamming intensity.
 
 - **CONVOY calibration**: {% katex() %}\delta_h = 0.08{% end %} for the {% katex() %}\mathcal{C}/\mathcal{D}{% end %} boundary (nominal {% katex() %}\theta = 0.70{% end %}); {% katex() %}\delta_h = 0.05{% end %} for the {% katex() %}\mathcal{D}/\mathcal{I}{% end %} boundary (nominal {% katex() %}\theta = 0.40{% end %}). With {% katex() %}\pi_{\mathcal{B}} = 0.12{% end %} and mean burst 6.7 packets, the corollary condition is satisfied at both boundaries.
-- **Interaction with Definition 75**: The Schmitt-trigger hysteresis here operates on regime-level \\(C(t)\\) at minutes timescale; Definition 75 operates on sensor-level MAPE-K thresholds at seconds timescale. They are complementary, not redundant.
+- **Interaction with Definition 118**: The Schmitt-trigger hysteresis here operates on regime-level \\(C(t)\\) at minutes timescale; Definition 118 operates on sensor-level MAPE-K thresholds at seconds timescale. They are complementary, not redundant.
 
 ---
 

@@ -1043,7 +1043,7 @@ The *security value* is:
 V^* = \max_{\sigma:\, S \to \Delta(A)}\; \min_{\tau}\; \mathbb{E}\!\left[\sum_{t=0}^{\infty} \gamma^t R(s_t, a_t, b_t) \,\Big|\, s_0\right]
 {% end %}
 
-where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ranges over all adaptive adversary strategies. *(Disambiguation: \\(\tau\\) here denotes an adversary strategy mapping; it is distinct from {% katex() %}\tau_{\text{ref}}{% end %} (the adaptive refractory backoff period in [Definition 76](@/blog/2026-01-29/index.md#def-76)) and from \\(\tau(a)\\) (the stochastic transport delay in Definition 62 of this article). Where needed, adversary strategies are written {% katex() %}\tau_{\text{adv}}{% end %}.)*
+where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ranges over all adaptive adversary strategies. *(Disambiguation: \\(\tau\\) here denotes an adversary strategy mapping; it is distinct from {% katex() %}\tau_{\text{ref}}{% end %} (the adaptive refractory backoff period in [Definition 119](@/blog/2026-01-29/index.md#def-119)) and from \\(\tau(a)\\) (the stochastic transport delay in Definition 62 of this article). Where needed, adversary strategies are written {% katex() %}\tau_{\text{adv}}{% end %}.)*
 
 *(Scope: The adversarial Markov Game model applies during active jamming or sensor-spoofing scenarios where failure is intentional and correlated with defender actions. During normal partition — where failure is environmental rather than intentional — the [cooperative gossip model](@/blog/2026-01-22/index.md) applies and achieves higher utility because nodes benefit from sharing state. The two models are not in conflict: use the adversarial MAB during contested operations, cooperative gossip during uncontested isolation.)*
 
@@ -1352,7 +1352,7 @@ The factor \\(\sqrt{2}\\) is a constant independent of \\(k_N\\) or \\(\lambda_N
 | CPU temperature deviation | {% katex() %}\Delta T_{\text{cpu}}(t){% end %} | {% katex() %}\Delta T_{\text{max}}{% end %} (throttle onset) |
 | Battery drain excess | {% katex() %}\dot{E}_{\text{bat}}(t) - \dot{E}_0{% end %} | \\(\dot{E}_0\\) (idle drain) |
 | MAPE-K loops per tick | {% katex() %}N_{\text{mape}}(t){% end %} | {% katex() %}N_{\text{mape}}^{\text{max}}{% end %} (stable rate) |
-| Partition accumulator ratio | {% katex() %}T_{\text{acc}}(t){% end %} | {% katex() %}Q_{0.95}{% end %} (Proposition 59 threshold) |
+| Partition accumulator ratio | {% katex() %}T_{\text{acc}}(t){% end %} | {% katex() %}Q_{0.95}{% end %} (Proposition 92 threshold) |
 
 {% katex(block=true) %}
 r_{\text{surr}}(t) = -\left[w_1 \frac{\Delta T_{\text{cpu}}}{\Delta T_{\text{max}}} + w_2 \frac{\dot{E}_{\text{bat}} - \dot{E}_0}{\dot{E}_0} + w_3 \frac{N_{\text{mape}}}{N_{\text{mape}}^{\text{max}}} + w_4 \frac{T_{\text{acc}}}{Q_{0.95}} \right], \quad \sum_i w_i = 1
@@ -1370,7 +1370,7 @@ so {% katex() %}r_{\text{surr}}(t) \in [-1, 0]{% end %}. The surrogate is applie
 
 | Variable | {% katex() %}x_{\max}{% end %} | Bucket semantics |
 | :--- | :--- | :--- |
-| {% katex() %}T_{\text{acc}} / Q_{0.95}{% end %} | 1.0 | \\(b=0\\): early; \\(b=1\\): mid; \\(b=2\\): late; \\(b=3\\): past Proposition 59 gate |
+| {% katex() %}T_{\text{acc}} / Q_{0.95}{% end %} | 1.0 | \\(b=0\\): early; \\(b=1\\): mid; \\(b=2\\): late; \\(b=3\\): past Proposition 92 gate |
 | {% katex() %}\hat{\pi}_N{% end %} (regime occupancy) | 1.0 | Quartiles of partition fraction |
 | {% katex() %}Q_{\text{link}} \in [0,1]{% end %} | 1.0 | Link-quality quartiles |
 
@@ -1626,7 +1626,7 @@ where {% katex() %}k_{\text{clip}}{% end %} is a fleet-wide policy parameter. Th
 
 <span id="def-62"></span>
 
-**Definition 62** (Safe Action Filter). Let \\(K(a)\\) be the gain associated with action \\(a\\) and \\(\tau(a)\\) be the corresponding stochastic transport delay (Definition 38). The **safe feasible set** at time \\(t\\) is:
+**Definition 62** (Safe Action Filter). Let \\(K(a)\\) be the gain associated with action \\(a\\) and \\(\tau(a)\\) be the corresponding stochastic transport delay (Definition 108). The **safe feasible set** at time \\(t\\) is:
 
 {% katex(block=true) %}
 \mathcal{U}_{\text{safe}}(t) = \bigl\{a \in \mathcal{A} : K(a)\cdot\tau(a) < \pi/2\bigr\}
@@ -1660,7 +1660,7 @@ This is a sufficient gain-delay stability condition — bounding the product \\(
 \end{aligned}
 {% end %}
 
-**(Step 0 — Hardware veto check)**: Read hardware veto signal \\(v(t)\\). If \\(v(t) = 1\\) ([Proposition 62](@/blog/2026-01-29/index.md#prop-62)), halt immediately — no action is issued, \\(Q_d\\) remains frozen, no retry is scheduled. Hardware is in control; the software algorithm does not proceed. This check has absolute priority over all subsequent steps.
+**(Step 0 — Hardware veto check)**: Read hardware veto signal \\(v(t)\\). If \\(v(t) = 1\\) ([Proposition 87](@/blog/2026-01-29/index.md#prop-87)), halt immediately — no action is issued, \\(Q_d\\) remains frozen, no retry is scheduled. Hardware is in control; the software algorithm does not proceed. This check has absolute priority over all subsequent steps.
 
 > **Field note — veto signal integrity**: (1) Signal loss: if the hardware veto GPIO signal is disconnected or floating, treat it as v(t) = 1 (conservative — assume veto active). Never assume an absent signal means "no veto." (2) Race condition: v(t) must be re-sampled immediately before action issuance (Step 3 or Step 10) as well as at Step 0. On embedded systems without atomic read-execute, latch v(t) at Step 0 and hold the latch until the action completes — a 0-to-1 transition between Step 0 and Step 10 must abort the action. (3) Multiple veto signals: if the system has more than one physical interlock, any asserted veto overrides all others.
 

@@ -232,7 +232,7 @@ The simplest effective approach. The two equations below update the running mean
 
 > **Physical translation**: When the MAPE-K tick interval doubles because the system degraded to a lower capability level, \\(\alpha_q\\) adjusts so the window stays fixed in wall-clock seconds. Without this correction, a baseline appropriately tuned at L3 becomes underresponsive at L1 — suppressing the anomaly score exactly when the healing loop's corrective authority is most reduced.
 
-where {% katex() %}\lambda_{\text{drift}}{% end %} is the process drift rate in s{% katex() %}{}^{-1}{% end %}, calibrated from stationary field data. Example: {% katex() %}\lambda_{\text{drift}} = 0.02\,\text{s}^{-1}{% end %} gives {% katex() %}\alpha_{L3} \approx 0.095{% end %} (5 s tick, 53 s effective window) and {% katex() %}\alpha_{L1} \approx 0.181{% end %} (10 s tick, 55 s effective window) — windows matched to within 4%. Without this correction, a baseline that is appropriately tuned at L3 becomes systematically underresponsive at L1, suppressing \\(z_t^K\\) below the detection threshold precisely when the healing loop's corrective authority (Definition 81 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-81)) is most reduced.
+where {% katex() %}\lambda_{\text{drift}}{% end %} is the process drift rate in s{% katex() %}{}^{-1}{% end %}, calibrated from stationary field data. Example: {% katex() %}\lambda_{\text{drift}} = 0.02\,\text{s}^{-1}{% end %} gives {% katex() %}\alpha_{L3} \approx 0.095{% end %} (5 s tick, 53 s effective window) and {% katex() %}\alpha_{L1} \approx 0.181{% end %} (10 s tick, 55 s effective window) — windows matched to within 4%. Without this correction, a baseline that is appropriately tuned at L3 becomes systematically underresponsive at L1, suppressing \\(z_t^K\\) below the detection threshold precisely when the healing loop's corrective authority (Definition 111 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-111)) is most reduced.
 
 *\\(\lambda_{\text{drift}}\\) (process drift rate, \\(s^{-1}\\)) is the Kalman model noise rate calibrated from stationary field data. Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66, Part 1), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b, Part 1).*
 
@@ -331,7 +331,7 @@ where {% katex() %}\gamma_{\mathrm{FN}} \geq 0{% end %} is the false-negative co
 
 where \\(\theta^\*_0\\) is the static baseline threshold from the likelihood ratio condition above.
 
-*Interpretation*: As {% katex() %}T_{\mathrm{acc}} \to 0{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0{% end %} (partition just started, baseline sensitivity). As {% katex() %}T_{\mathrm{acc}} \to Q_{0.95}{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0 / (1 + \gamma_{\mathrm{FN}}){% end %} — the detector becomes {% katex() %}(1 + \gamma_{\mathrm{FN}}){% end %} times more sensitive. For {% katex() %}T_{\mathrm{acc}} > Q_{0.95}{% end %}: the circuit breaker (Proposition 59) fires, the system enters L0, and \\(\theta^\*(t)\\) is frozen at its current value — further threshold drift is irrelevant since healing actions are suspended.
+*Interpretation*: As {% katex() %}T_{\mathrm{acc}} \to 0{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0{% end %} (partition just started, baseline sensitivity). As {% katex() %}T_{\mathrm{acc}} \to Q_{0.95}{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0 / (1 + \gamma_{\mathrm{FN}}){% end %} — the detector becomes {% katex() %}(1 + \gamma_{\mathrm{FN}}){% end %} times more sensitive. For {% katex() %}T_{\mathrm{acc}} > Q_{0.95}{% end %}: the circuit breaker (Proposition 92) fires, the system enters L0, and \\(\theta^\*(t)\\) is frozen at its current value — further threshold drift is irrelevant since healing actions are suspended.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: With {% katex() %}\gamma_{\mathrm{FN}} = 2.0{% end %} (anomalies during long denied periods cost \\(3\times\\) baseline due to inability to request sensor replacement), the threshold drops from \\(\theta^\*_0 = 2.5\\,\sigma\\) at partition start to {% katex() %}\theta^*_0 / 3 \approx 0.83\,\sigma{% end %} at the P95 boundary. This triggers more sensitive detection of health anomalies precisely when external recovery is least available.
 
@@ -846,8 +846,8 @@ The decision value {% katex() %}f(\phi) = w^T z(\phi) - \rho{% end %} is a signe
 *Fallthrough rule*: The Q15 integer equivalent of a 0.6 confidence threshold is {% katex() %}\lfloor 0.6 \times 32767 \rfloor = 19660{% end %}. When the scaled decision value falls below this gate:
 
 1. **Do not act** on the current classification — treat as inconclusive.
-2. **Enter Safety Mode**: freeze actuator outputs at their last confirmed-safe state; reduce MAPE-K to the minimum viable tick rate (Definition 47); suppress non-critical radio transmissions.
-3. **Re-evaluate** after one refractory window (Definition 28): if the confidence gate is passed on two consecutive ticks, resume normal operation; otherwise escalate to the Terminal Safety State (Definition 36).
+2. **Enter Safety Mode**: freeze actuator outputs at their last confirmed-safe state; reduce MAPE-K to the minimum viable tick rate (Definition 123); suppress non-critical radio transmissions.
+3. **Re-evaluate** after one refractory window (Definition 117): if the confidence gate is passed on two consecutive ticks, resume normal operation; otherwise escalate to the Terminal Safety State (Definition 124).
 
 The 0.6 threshold is calibrated empirically: at \\(\nu = 0.02\\) and \\(n > 500\\) training samples, the margin distribution of normal samples has a median near 0.85 in the normalized scale; 0.6 sits two standard deviations below the median, catching genuine boundary straddlers while passing well-separated normal readings.
 
@@ -2322,9 +2322,9 @@ The budgets are monotone: {% katex() %}\pi_0 \leq \pi_1 \leq \ldots \leq \pi_4{%
 
 > **Physical translation**: At \\(\mathcal{L}_0\\) (battery critically low, all connectivity severed), a node running floating-point Kalman updates at 1 Hz would consume roughly 60 FP multiply-adds per second on ARM Cortex-M4 — not catastrophic in isolation, but the covariance update, gossip Welford estimators, and Isolation Forest inference stack together into a measurable fraction of a 64 MHz core. The Q15 fixed-point EWMA replaces all of this with 12 integer operations per tick — under \\(1\\,\mu\text{s}\\) at 64 MHz — leaving the CPU in WFI (Wait For Interrupt) sleep the remaining 59.999 seconds.
 
-<span id="prop-63"></span>
+<span id="prop-71"></span>
 
-**Proposition 63** (Observer Parsimony Condition). Let \\(u(t) \in [0,1]\\) be the node's current CPU utilization fraction, \\(u_q\\) the utilization fraction that triggers downgrade from \\(\mathcal{L}_q\\) to {% katex() %}\mathcal{L}_{q-1}{% end %}, and \\(\pi_q\\) the observation overhead fraction at level \\(q\\). The autonomic observation layer satisfies the *parsimony condition* iff:
+**Proposition 71** (Observer Parsimony Condition). Let \\(u(t) \in [0,1]\\) be the node's current CPU utilization fraction, \\(u_q\\) the utilization fraction that triggers downgrade from \\(\mathcal{L}_q\\) to {% katex() %}\mathcal{L}_{q-1}{% end %}, and \\(\pi_q\\) the observation overhead fraction at level \\(q\\). The autonomic observation layer satisfies the *parsimony condition* iff:
 
 {% katex(block=true) %}
 \pi_q < u_q - u(t)
@@ -2336,7 +2336,7 @@ The budgets are monotone: {% katex() %}\pi_0 \leq \pi_1 \leq \ldots \leq \pi_4{%
 
 *Proof*: If \\(u(t) + \pi_q \geq u_q\\), then enabling level-\\(q\\) observation pushes utilization past the downgrade trigger \\(u_q\\), causing an immediate transition to {% katex() %}\mathcal{L}_{q-1}{% end %}. This transition is itself observed by the MAPE-K Monitor loop, potentially triggering further recursive observation overhead — a positive feedback path to \\(\mathcal{L}_0\\). \\(\square\\)
 
-> **Physical translation**: An autonomic manager that spends 3% of CPU on health monitoring when the CPU is already at 98% utilization will itself push the node over the edge into survival mode. The observation budget must be sized against the *current* CPU margin, not against the theoretical maximum. Proposition 63 is the formal statement of "the doctor must not kill the patient with the examination."
+> **Physical translation**: An autonomic manager that spends 3% of CPU on health monitoring when the CPU is already at 98% utilization will itself push the node over the edge into survival mode. The observation budget must be sized against the *current* CPU margin, not against the theoretical maximum. Proposition 71 is the formal statement of "the doctor must not kill the patient with the examination."
 
 > *(Scope note: The parsimony condition uses CPU utilization fraction \\(u(t)\\) — a single-resource signal intentionally scoped to CPU only. The capability-level downgrade trigger in Part 1 (Proposition 2) uses the composite resource state \\(R(t)\\) (battery SOC, free memory, CPU). These gates are complementary rather than redundant: the composite \\(R(t)\\) gate prevents downgrade under adequate-CPU-but-depleted-battery conditions; the parsimony condition prevents the observation layer itself from consuming the last CPU margin. A node can satisfy {% katex() %}R(t) \geq R_{\min}{% end %} yet violate parsimony if CPU is near \\(u_q\\) regardless of battery state. Both conditions must be evaluated at each MAPE-K tick.)*
 
@@ -2344,7 +2344,7 @@ The budgets are monotone: {% katex() %}\pi_0 \leq \pi_1 \leq \ldots \leq \pi_4{%
 
 **Switched-Mode Stability Extension: Limit-Cycle Prevention**
 
-Proposition 63 identifies when a single downgrade transition occurs. It does not bound the *number* of transitions: if utilization oscillates near the downgrade threshold \\(u_q\\), the system can enter an infinite downgrade-upgrade cycle — revising to {% katex() %}\mathcal{L}_{q-1}{% end %}, recovering, promoting back to {% katex() %}\mathcal{L}_q{% end %}, then downgrading again — which permanently precludes a stable operating level without ever reaching {% katex() %}\mathcal{L}_0{% end %}. The extension below reframes the multi-level transition logic as a **discrete-time switched linear system**, constructs a Common Lyapunov Function, and derives the minimum dwell-time that eliminates limit cycles regardless of workload variability or changes in \\(T_{\text{tick}}\\).
+Proposition 71 identifies when a single downgrade transition occurs. It does not bound the *number* of transitions: if utilization oscillates near the downgrade threshold \\(u_q\\), the system can enter an infinite downgrade-upgrade cycle — revising to {% katex() %}\mathcal{L}_{q-1}{% end %}, recovering, promoting back to {% katex() %}\mathcal{L}_q{% end %}, then downgrading again — which permanently precludes a stable operating level without ever reaching {% katex() %}\mathcal{L}_0{% end %}. The extension below reframes the multi-level transition logic as a **discrete-time switched linear system**, constructs a Common Lyapunov Function, and derives the minimum dwell-time that eliminates limit cycles regardless of workload variability or changes in \\(T_{\text{tick}}\\).
 
 <span id="def-93"></span>
 **Definition 93** (Discrete-Time Switched Utilization System). *Let \\(\sigma(t) = q \in \{0,1,2,3,4\}\\) be the active capability level. In mode \\(q\\) with tick interval \\(T_q\\) (Definition 83), CPU utilization evolves as:*
@@ -2359,7 +2359,7 @@ u(t + T_q) = \alpha \cdot u(t) + \pi_q + w(t), \qquad w(t) \in [-\delta_w,\, \de
 u_q^* = \frac{\pi_q}{1 - \alpha}
 {% end %}
 
-*Switching rules: downgrade {% katex() %}q \to q-1{% end %} when {% katex() %}u(t) + \pi_q \geq u_q{% end %} (Proposition 63 violated); upgrade {% katex() %}q \to q+1{% end %} eligible only when {% katex() %}u(t) + \pi_{q+1} < u_{q+1} - \delta_{\text{hyst}}{% end %} AND dwell-time {% katex() %}\Delta t_{\text{dwell}}(q){% end %} has elapsed since the last transition.*
+*Switching rules: downgrade {% katex() %}q \to q-1{% end %} when {% katex() %}u(t) + \pi_q \geq u_q{% end %} (Proposition 71 violated); upgrade {% katex() %}q \to q+1{% end %} eligible only when {% katex() %}u(t) + \pi_{q+1} < u_{q+1} - \delta_{\text{hyst}}{% end %} AND dwell-time {% katex() %}\Delta t_{\text{dwell}}(q){% end %} has elapsed since the last transition.*
 
 - **Parameters**: {% katex() %}\alpha = 1 - T_q/\tau_u{% end %} where {% katex() %}\tau_u{% end %} is the CPU load decay time constant; for burst compute tasks on OUTPOST sensors, {% katex() %}\tau_u \approx 5\,T_q{% end %} at each level, giving {% katex() %}\alpha \approx 0.80{% end %} independent of \\(q\\).
 
@@ -2414,7 +2414,7 @@ e_q(t+T_q) \;=\; u(t+T_q) - u_q^* \;=\; \alpha\,u(t) + \pi_q - \frac{\pi_q}{1-\a
 u(t_0 + k\,T_{q-1}) \;=\; u_{q-1}^* + \alpha^k\,(u_q - u_{q-1}^*)
 {% end %}
 
-*Setting this equal to {% katex() %}u_{\text{safe}}(q){% end %} and solving for \\(k\\) gives the stated expression. Any upgrade attempted before tick \\(k^\*\\) satisfies {% katex() %}u(t) > u_{\text{safe}}(q){% end %}, so {% katex() %}u(t) + \pi_q > u_q - \delta_{\text{hyst}}{% end %}, and the Schmitt-trigger upgrade gate (Definition 75 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-75)) with hysteresis {% katex() %}\delta_{\text{hyst}}{% end %} blocks the transition. \\(\square\\)*
+*Setting this equal to {% katex() %}u_{\text{safe}}(q){% end %} and solving for \\(k\\) gives the stated expression. Any upgrade attempted before tick \\(k^\*\\) satisfies {% katex() %}u(t) > u_{\text{safe}}(q){% end %}, so {% katex() %}u(t) + \pi_q > u_q - \delta_{\text{hyst}}{% end %}, and the Schmitt-trigger upgrade gate (Definition 118 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-118)) with hysteresis {% katex() %}\delta_{\text{hyst}}{% end %} blocks the transition. \\(\square\\)*
 
 **OUTPOST calibration** ({% katex() %}\alpha = 0.80{% end %}, {% katex() %}\delta_{\text{hyst}} = 0.02{% end %}):
 
@@ -2464,7 +2464,7 @@ where {% katex() %}\alpha_q^{(15)} = \lfloor \alpha_q \cdot 32768 \rfloor{% end 
 
 <span id="def-85"></span>
 
-**Definition 85** (Variable-Fidelity Monitor Schedule). The MAPE-K Monitor phase at level \\(q\\) selects an algorithm tier {% katex() %}\tau \in \{0, 1, 2, 3\}{% end %} based on current CPU availability \\(1 - u(t)\\) (where \\(u(t)\\) is CPU utilization as in Proposition 63), independently of the capability level transition threshold:
+**Definition 85** (Variable-Fidelity Monitor Schedule). The MAPE-K Monitor phase at level \\(q\\) selects an algorithm tier {% katex() %}\tau \in \{0, 1, 2, 3\}{% end %} based on current CPU availability \\(1 - u(t)\\) (where \\(u(t)\\) is CPU utilization as in Proposition 71), independently of the capability level transition threshold:
 
 {% katex(block=true) %}
 \tau(t) = \begin{cases}
@@ -2478,7 +2478,7 @@ where {% katex() %}\alpha_q^{(15)} = \lfloor \alpha_q \cdot 32768 \rfloor{% end 
 Default thresholds: {% katex() %}\varepsilon_0 = 0.05,\ \varepsilon_1 = 0.30,\ \varepsilon_2 = 0.70{% end %}. Tier \\(\tau(t)\\) is re-evaluated at each MAPE-K tick before the Monitor phase executes — the manager is itself autonomic, scaling its own cost to the available margin. Tier selection takes 2 integer comparisons (\\(<10\\) cycles) and precedes all other Monitor work.
 
 - **Field note**: The variable-fidelity schedule operates at finer granularity than capability level transitions. A node at \\(\mathcal{L}_3\\) running a temporary burst computation drops to tier 1 during the burst without triggering a level transition — preserving detection coverage at minimal cost rather than either suspending detection or forcing a premature downgrade.
-- **Hysteresis**: Apply a dead-band of {% katex() %}\pm \varepsilon_{\text{hyst}} = 0.05{% end %} to tier transitions (Schmitt Trigger, Definition 75 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-75)) to prevent oscillation between tiers during CPU load ramps.
+- **Hysteresis**: Apply a dead-band of {% katex() %}\pm \varepsilon_{\text{hyst}} = 0.05{% end %} to tier transitions (Schmitt Trigger, Definition 118 in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-118)) to prevent oscillation between tiers during CPU load ramps.
 
 #### Event-Driven vs. Polling
 
@@ -2529,7 +2529,7 @@ The table below audits each algorithm in this article against the Definition 83 
 
 **Fleet-level complexity**: Gossip convergence is \\(O(\ln n / \lambda)\\) (Proposition 4). Per-node gossip state is \\(O(n)\\) — the Welford estimator (Definition 58) requires \\(24\\,\text{bytes} \times n\\) peers. For OUTPOST (\\(n=127\\)): \\(127 \times 24 = 3{,}048\\) bytes at \\(\mathcal{L}_3\\), frozen at 0 bytes at \\(\mathcal{L}_0\\). The \\(O(n)\\) growth is bounded by fleet size, which is a fixed deployment parameter — not a runtime variable. Fleet size does not affect per-observation compute complexity (which remains \\(O(1)\\)) and only affects the static RAM allocation.
 
-**OUTPOST \\(\mathcal{L}_0\\) calibration**: \\(127 \times 6\\,\text{bytes}\\) (Q15 state) = 762 bytes RAM. DMA ring buffer: \\(64 \times 2\\,\text{bytes}\\) = 128 bytes. Gossip state: frozen, 0 bytes active. Total autonomic observation footprint: **890 bytes** against the 4 KB \\(M_0\\) budget (22% utilization). CPU: \\(12\\,\text{cycles/tick} \times 1\\) active tick/60 s = 200 cycles/hour at 64 MHz = {% katex() %}8.7 \times 10^{-8}{% end %} CPU fraction — **three orders of magnitude below** the 0.1% \\(\mathcal{L}_0\\) ceiling. The observer parsimony condition (Proposition 63) is satisfied with a margin of \\(> 99.99\\%\\).
+**OUTPOST \\(\mathcal{L}_0\\) calibration**: \\(127 \times 6\\,\text{bytes}\\) (Q15 state) = 762 bytes RAM. DMA ring buffer: \\(64 \times 2\\,\text{bytes}\\) = 128 bytes. Gossip state: frozen, 0 bytes active. Total autonomic observation footprint: **890 bytes** against the 4 KB \\(M_0\\) budget (22% utilization). CPU: \\(12\\,\text{cycles/tick} \times 1\\) active tick/60 s = 200 cycles/hour at 64 MHz = {% katex() %}8.7 \times 10^{-8}{% end %} CPU fraction — **three orders of magnitude below** the 0.1% \\(\mathcal{L}_0\\) ceiling. The observer parsimony condition (Proposition 71) is satisfied with a margin of \\(> 99.99\\%\\).
 
 ### Mesh-Wide Health Inference
 
