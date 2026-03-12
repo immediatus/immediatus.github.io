@@ -705,10 +705,37 @@ h_q\!\bigl(A_q x + B_q u\bigr) \;\geq\; (1 - \gamma)\,h_q(x)
 - **Use**: Check {% katex() %}h_q(A_q x + B_q u) \geq (1-\gamma)h_q(x){% end %} before every Execute phase; if violated, reduce \\(K\\) via the CBF-QP closed form until the condition holds.
 - **Parameters**: \\(\gamma \in (0,1)\\) — smaller \\(\gamma\\) means tighter contraction and tighter constraint on admissible \\(K\\); \\(\gamma = 0.05\\) is a safe default for 5 s MAPE-K ticks; runtime cost is one \\(6\times6\\) quadratic form (36 multiplications, \\(<20\\,\mu\\)s on Cortex-M4 at L1 throttle).
 - **Field note**: The dCBF check costs the same as evaluating \\(\rho_q(t)\\) — if you are already logging the stability margin, the safety filter is essentially free.
+
+> **The Sampling Frequency Trap.** The 20 μs dCBF evaluation is only the *logic cost* — the cost of checking \\(h_q(A_q x + B_q u) \geq (1-\gamma) h_q(x)\\) once \\(x\\) is known. The hidden cost is *state estimation*: obtaining a fresh \\(x(t)\\) requires an IMU sample, sensor fusion, and state prediction. Under nominal flight, a 5 Hz MAPE-K cycle (one sample every 200 ms) is sufficient. Under fault conditions — rotor asymmetry, rapid attitude change, impending crash — the control-theoretic safety guarantee requires \\(x(t)\\) to be fresher than the failure propagation time (~100–300 ms for RAVEN; see Proposition 80). This creates a regime-dependent sensing cost:
+>
+> | Regime | Required sample rate | IMU power (RAVEN) | State estimation cost |
+> |--------|---------------------|-------------------|-----------------------|
+> | Nominal (MAPE-K cycle) | 0.2 Hz | ~0.05 mW | Included in Zero-Tax baseline |
+> | Degraded (fault detected) | 10–50 Hz | ~2–8 mW | **NOT** in Zero-Tax baseline |
+> | Emergency (CBF active) | 100+ Hz | ~15–25 mW | Requires dedicated power reservation |
+>
+> **Design implication.** The Zero-Tax autonomic tier budgets for logic computation at baseline sensing rates. When the CBF safety filter activates (fault detected), the system must *automatically escalate* its sensing rate — and the power budget for that escalation must be pre-reserved. For RAVEN, this means reserving ~20 mW of the "emergency power margin" exclusively for high-rate IMU sampling during CBF-active intervals. Failure to reserve this margin can cause the CBF to operate on stale \\(x(t)\\), rendering the safety certificate void.
+
 - **Model-validity condition**: The condition \\(h_q(A_q x + B_q u) \geq (1-\gamma)h_q(x)\\) is conditional on \\(A_q\\) accurately representing the *current* plant dynamics. Under physical damage (motor degradation shifts poles) or sustained RF interference (actuator desaturation changes \\(B_q\\)), the true one-step map \\(f_{\text{true}}(x,u) \neq A_q x + B_q u\\). A dCBF check that passes against the nominal model may fail against the true model. The guarantee of Proposition 80 is valid only within the accuracy envelope of \\(A_q\\); see Proposition 86 for the recovery-time implication.
 - **Staleness correction under partition**: When state estimate \\(x(t)\\) is stale (partition age \\(T_{\text{acc}} > \tau_\text{stale}^\text{max}\\) from [Definition 6](@/blog/2026-01-22/index.md#def-6)), substitute {% katex() %}h_q(x(t)) - \lambda_{\text{decay}} \cdot \Delta t_{\text{stale}}{% end %} in place of \\(h_q(x(t))\\) in the safety check, where \\(\lambda_{\text{decay}}\\) is the staleness decay coefficient from [Definition 116](#def-116). This makes the check **conservative**: a stale state estimate shows a smaller safety margin, deferring actions rather than falsely approving them.
 
 > **Notation.** The staleness decay coefficient \\(\lambda_\text{decay}\\) is the initial slope of the exponential decay curve from Definition 116: \\(\lambda_\text{decay} = 1/\tau_\text{stale}^\text{max}\\). Geometrically, it is the rate at which the safety margin shrinks per second of stale data. For the OUTPOST temperature sensor example (\\(\tau_\text{stale}^\text{max} = 96\,\text{s}\\)), \\(\lambda_\text{decay} = 0.0104\,\text{s}^{-1}\\).
+
+> **Sensitivity analysis: ε_model calibration and false-lockout risk.** The model-error tolerance \\(\varepsilon_\text{model} = 0.05\\) is not a universal constant — it is a tunable threshold with a direct false-lockout/false-clearance trade-off:
+>
+> | ε_model | False lockout risk | False clearance risk | Recommended use case |
+> |---------|-------------------|---------------------|---------------------|
+> | 0.01 | High — benign IMU noise triggers lockout | Very low | Safety-critical systems with high-quality sensors and well-identified plant models |
+> | 0.05 | Moderate — works for RAVEN with ±2% gyro noise | Low | General-purpose; well-calibrated edge nodes |
+> | 0.10 | Low | Moderate — mild model drift passes undetected | Harsh environments with significant sensor noise; accept higher model uncertainty |
+> | 0.20 | Very low | High — significant model errors pass | Only if model accuracy is structurally unachievable; pair with frequent re-identification |
+>
+> **Calibration procedure.** Set \\(\varepsilon_\text{model}\\) from field data in three steps:
+> 1. **Characterise baseline model error.** Run the identified model \\((A_q, B_q)\\) against recorded nominal trajectories. Measure \\(\|\hat{x}(t+1) - x(t+1)\|\\) distribution; record the 95th-percentile residual \\(e_{\text{P95}}\\).
+> 2. **Set threshold above noise floor.** \\(\varepsilon_\text{model} = 1.5 \times e_{\text{P95}}\\) provides a 50% safety margin above typical prediction error. For RAVEN: \\(e_{\text{P95}} \approx 0.033\\); calibrated \\(\varepsilon_\text{model} = 0.05\\).
+> 3. **Validate with fault-injection.** Inject known model-invalidating faults (e.g., locked rotor, calibration drift of 20%) and verify \\(\varepsilon_\text{model}\\) detects them within \\(n_\text{detect} \leq 3\\) MAPE-K ticks. If not, lower the threshold.
+>
+> **False-lockout scenario.** During a sudden air-density change (rapid altitude drop, downdraft), aerodynamic coefficients shift by ~8–12% for a RAVEN drone. With \\(\varepsilon_\text{model} = 0.05\\), this temporarily exceeds the threshold — a non-critical environmental transient triggers a model-invalid lockout, suppressing the healing action. The mitigation: use a CUSUM accumulator (Definitions from [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md)) rather than a single-sample threshold, requiring the model error to *persist* above \\(\varepsilon_\text{model}\\) for \\(n_\text{persist} \geq 3\\) consecutive ticks before lockout. This filters single-sample glitches while preserving detection of sustained model failures.
 
 <span id="def-111"></span>
 

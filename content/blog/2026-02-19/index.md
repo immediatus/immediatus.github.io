@@ -537,6 +537,8 @@ The budget table above assumes a node can afford a 13 KB autonomic stack. On tru
 
 The Zero-Tax approach defers full stack initialization until anomaly evidence is quorum-confirmed.
 
+> **Sensing cost is separate from logic cost.** The Zero-Tax tier budgets for *autonomic logic* — the computation performed once sensor data is available. It does not budget for *state estimation overhead*: the power required to run sensors at the rate needed to keep the state estimate \\(x(t)\\) fresh enough for safety-critical checks. At baseline MAPE-K rates (0.2 Hz for RAVEN), sensing cost is absorbed into the platform's normal sensor budget. If the dCBF safety filter activates and requires high-rate IMU sampling (10–100 Hz), the sensing cost rises by 10–100× and must be drawn from the emergency power reserve — not the Zero-Tax logic budget. Deployments that treat Zero-Tax logic cost as the total autonomic overhead will underestimate power consumption during fault events by one to two orders of magnitude.
+
 <span id="def-101"></span>
 
 **Definition 101** (Zero-Tax Autonomic State Machine). *A three-state lazy-initialization machine with states* **OBSERVE**, **WAKEUP**, **ACTIVE** *and transitions:*

@@ -1047,6 +1047,25 @@ In other words, every node keeps a score between 0 and 1 for each fleet member, 
 >
 > **Reference implementation.** For scalar health signals \\(h_i \in [0,1]\\): conservative merge \\(M(h_a, h_b) = \max(h_a, h_b)\\) satisfies all three properties. Staleness-weighted blend \\(M_\tau(h_a, h_b) = (w_a h_a + w_b h_b)/(w_a + w_b)\\) where \\(w_i = e^{-\gamma \tau_i}\\) is idempotent only when both observations have equal staleness weights. Simple averaging is NOT idempotent in the general case; last-write-wins is NOT commutative under out-of-order delivery. Verify your merge implementation satisfies all three properties before deployment.
 
+> **Metadata overhead analysis.** Each gossip packet carries two mandatory overhead fields:
+>
+> | Field | Size | Scales with |
+> |-------|------|------------|
+> | Unified Autonomic Header (UAH) | ~20 bytes | Constant per packet |
+> | Dotted Version Vector (DVV) | ~2 bytes × N nodes | Fleet size N |
+>
+> For a RAVEN swarm (N = 47): DVV ≈ 94 bytes, total overhead ≈ 114 bytes. For a 10-byte temperature payload, **protocol efficiency = 10 / (10 + 114) = 8%**. For OUTPOST (N = 127): DVV ≈ 254 bytes, overhead dominates at 4% efficiency for the same payload.
+>
+> **When overhead becomes the primary cost driver.** In large IoT fleets (N > 500), the DVV alone exceeds typical LoRaWAN/BLE packet MTUs (≤255 bytes), forcing packet fragmentation or DVV compression. Three mitigation strategies:
+>
+> | Strategy | DVV size | Trade-off |
+> |----------|---------|-----------|
+> | Full DVV (correctness-optimal) | 2N bytes | Correct causal ordering; impractical above N~100 |
+> | Bloom-clock (probabilistic) | 16–32 bytes fixed | 0.1–1% false-positive causal violation rate |
+> | Epoch-scoped DVV (partition-local) | 2 × K bytes (K = partition subgroup size) | Exact within partition; requires epoch reconciliation on reconnect |
+>
+> For deployments where N > 100, evaluate Bloom-clock or epoch-scoped DVV before assuming the full gossip stack is viable. The autonomic logic costs in this article are independent of this choice; the overhead affects *transport*, not *detection*.
+
 <span id="def-proxy-observer"></span>
 
 **Definition: Synthetic Observability** (Proxy-Observer). *For \\(\mathcal{L}_0\\)-incompatible hardware without native health APIs, define the proxy health signal:*
