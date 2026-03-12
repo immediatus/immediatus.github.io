@@ -118,9 +118,11 @@ graph TD
 
 **Execute**: Apply remediation, coordinate with affected components, verify success.
 
+> **Healing action durability contract**: Execute-phase actions that modify shared replicated state are tagged with a causal identifier (vector clock entry from [*Fleet Coherence Under Partition*](@/blog/2026-02-05/index.md#def-40)). A healing action is **provisional** until confirmed by the next successful delta-sync or quorum check. Conflicting provisional actions from partitioned clusters are resolved by Semantic Commit Order ([*Fleet Coherence Under Partition*](@/blog/2026-02-05/index.md#def-29)); the physical execution of a losing action constitutes an anomaly event that triggers a fresh MAPE-K observation cycle.
+
 **Knowledge**: Distributed state—topology, policies, historical effectiveness, health estimates. Must be eventually consistent and partition-tolerant.
 
-*Implementation note: the Knowledge Base {% katex() %}\mathcal{K}{% end %} is realized as a {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %}-backed state map ([Definition 12](@/blog/2026-02-05/index.md#def-12)) — each monitored variable is a {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} register. "Successful Knowledge Base synchronization" means all registers have received at least one {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} update from a quorum of reachable nodes within {% katex() %}\tau_{\max}{% end %} (Proposition 5, [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md)).*
+*Implementation note: the Knowledge Base \\(\mathcal{K}\\) is a replicated state store supporting concurrent writes; its merge semantics are established in [*Fleet Coherence Under Partition*](@/blog/2026-02-05/index.md) — each monitored variable is a {% term(url="@/blog/2026-02-05/index.md#def-12", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} register. "Successful Knowledge Base synchronization" means all registers have received at least one {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}gossip{% end %} update from a quorum of reachable nodes within {% katex() %}\tau_\text{stale}^\text{max}{% end %} (Proposition 5, [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md)).*
 
 The control loop executes continuously:
 
@@ -458,6 +460,21 @@ K < \frac{1}{1 + \tau/T_{\text{tick}}}
 {% end %}
 \\(\square\\)
 
+> **Quantile-aware tightening (tail-instability correction).** The bound above uses a fixed delay \\(\tau\\) — typically the mean or a measured round-trip time. For Weibull-distributed partition durations (Definition 66), the mean underestimates the tail: when \\(k_N < 1\\) (the common case for denied-connectivity episodes), the P99 duration is roughly \\(3.5 \times \mathrm{E}[\tau]\\). Calibrating the gain formula against \\(\mathrm{E}[\tau]\\) produces a loop that is stable for typical partitions but permits oscillation in the worst 1% of events — precisely when healing matters most.
+>
+> The quantile-aware bound substitutes the \\(\alpha\\)-quantile of the Weibull partition duration for \\(\tau\\):
+>
+> {% katex(block=true) %}\tau_{P\alpha} = \lambda_i \cdot (-\ln(1-\alpha))^{1/k_N}{% end %}
+>
+> where \\(\lambda_i\\) is the Weibull scale parameter for node \\(i\\), \\(k_N\\) is the adaptive shape parameter (Definition 67), and \\(\alpha = 0.99\\) is the recommended operating point. The stability condition becomes:
+>
+> {% katex(block=true) %}K < \frac{1}{1 + \tau_{P\alpha}/T_{\text{tick}}}{% end %}
+>
+> **RAVEN calibration**: \\(\lambda_i \approx 180\,\mathrm{s}\\), \\(k_N \approx 0.6\\), \\(T_{\text{tick}} = 5\,\mathrm{s}\\).
+> \\(\tau_{P99} = 180 \cdot (-\ln 0.01)^{1/0.6} \approx 630\,\mathrm{s}\\).
+> Quantile-aware ceiling: \\(K < 1/(1 + 630/5) = 0.0078\\) — versus \\(K < 0.028\\) from the \\(\mathrm{E}[\tau]\\)-based bound. For Intermittent and Denied regimes, always use \\(\tau_{P99}\\) from Proposition 78 rather than the mean delay.
+> (\\(\lambda_i\\) is the Weibull scale parameter and \\(k_N\\) the shape parameter for node \\(i\\)'s partition duration distribution; see Definitions 66–67 in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-66) for calibration from partition logs.)
+
 - **Use**: Computes the maximum safe MAPE-K loop gain {% katex() %}K{% end %} given feedback delay {% katex() %}\tau{% end %}; tune the healing actuator below this ceiling to prevent fault/heal flapping from overcorrection at the actual observed round-trip delay.
 - **Parameters**: {% katex() %}\tau = T_{\text{tick}} \to K_{\max} = 0.5{% end %}; {% katex() %}\tau = 2T_{\text{tick}} \to K_{\max} = 0.33{% end %}.
 - **Field note**: Set {% katex() %}K = 0.7 K_{\max}{% end %} in production — the formula gives the stability ceiling, not a recommended operating point.
@@ -474,7 +491,7 @@ In other words, the slower the feedback (larger \\(\tau\\)), the more gently the
 K_{\text{stale}}(t_{\text{stale}}) = K \cdot \bigl(1 - \delta(t_{\text{stale}})\bigr)
 {% end %}
 
-reduces effective gain in proportion to the staleness decay function {% katex() %}\delta(t_{\text{stale}}) = 1 - e^{-t_{\text{stale}}/\tau_{\max}}{% end %} (Definition 116). Since {% katex() %}K_{\text{stale}} \leq K{% end %}, any \\(K\\) satisfying Proposition 9's stability condition continues to satisfy it with {% katex() %}K_{\text{stale}}{% end %} substituted — staleness correction provides additional stability margin when acting on uncertain state, at the cost of reduced healing responsiveness.
+reduces effective gain in proportion to the staleness decay function {% katex() %}\delta(t_{\text{stale}}) = 1 - e^{-t_{\text{stale}}/\tau_\text{stale}^\text{max}}{% end %} (Definition 116). Since {% katex() %}K_{\text{stale}} \leq K{% end %}, any \\(K\\) satisfying Proposition 9's stability condition continues to satisfy it with {% katex() %}K_{\text{stale}}{% end %} substituted — staleness correction provides additional stability margin when acting on uncertain state, at the cost of reduced healing responsiveness.
 
 **Stochastic extension: when \\(\tau\\) is not constant**
 
@@ -555,7 +572,7 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surve
 K_{\mathrm{robust,fleet}} \leq \frac{1}{1 + 39.4/T_{\text{tick}}} \approx 0.025 \quad (T_{\text{tick}} = 1\;\text{s})
 {% end %}
 
-This is a 10× tighter gain ceiling than the single-node bound of 0.240, reflecting the actual safety requirement for a 47-node mission.
+This is a \\(10\times\\) tighter gain ceiling than the single-node bound of 0.240, reflecting the actual safety requirement for a 47-node mission.
 
 *Gossip coupling amplifier*: A drone that hits the \\(\delta_{\text{node}}\\) tail and begins oscillating injects jitter into its neighbors' gossip-based state estimates (Definition 5), raising their effective \\(\hat{\tau}\\) and pulling their gain schedulers toward instability. This positive feedback between per-node oscillation and fleet-wide estimation noise means fleet stability is not a consequence of per-node stability alone. The fleet-level \\(\delta_{\text{node}}\\) bound provides the correct single-node target for independent failures; correlated cascade failures — requiring inter-node action coordination — are blocked by the Severity 2 suppression rule in Proposition 78.
 
@@ -665,9 +682,11 @@ The gain conditions in Proposition 9 and Proposition 78 guarantee stability *wit
 
 *Proof sketch*: Between transitions, {% katex() %}V_q(x(t+T_{\text{tick}})) \leq (1-\lambda_q)\,V_q(x(t)){% end %} by (C1). At each transition \\(q \to q\'\\), {% katex() %}V_{q'}(x) \leq \mu^* V_q(x){% end %} by (C2). After \\(N\\) transitions over horizon \\(T\\): {% katex() %}V(x(T)) \leq (\mu^*)^N (1-\lambda^*)^{T/T_{\text{tick}}^{\max}} V(x(0)) \to 0{% end %} as {% katex() %}T \to \infty{% end %} when (C3) holds. \\(\square\\)
 
-*Implementation note: the \\(P_q\\) matrices are computed **offline** — once per firmware build using MATLAB* `dlyap` *or Python* `cvxpy` *— and stored as read-only constants in MCU flash. No LMI is solved at runtime. At each MAPE-K tick the only computation is one quadratic form \\(\rho_q(t) = 1 - x^\top P_q x / c_q\\) for state dimension \\(n \leq d_{\max} + 1 \leq 6\\), costing at most 36 multiply-accumulate instructions on a Cortex-M4. The SMJLS contraction factor below is likewise precomputed from calibrated Weibull shape parameters and stored as a scalar constant; it is updated between missions on recalibration, not per tick. The 50 μs runtime budget cited in the NSG diagram below refers entirely to these quadratic-form evaluations — no online eigenvalue computation or LMI solve occurs.*
+*Implementation note: the \\(P_q\\) matrices are computed **offline** — once per firmware build using MATLAB* `dlyap` *or Python* `cvxpy` *— and stored as read-only constants in MCU flash. No LMI is solved at runtime. At each MAPE-K tick the only computation is one quadratic form \\(\rho_q(t) = 1 - x^\top P_q x / c_q\\) for state dimension \\(n \leq d_{\max} + 1 \leq 6\\), costing at most 36 multiply-accumulate instructions on a Cortex-M4. The SMJLS contraction factor below is likewise precomputed from calibrated Weibull shape parameters and stored as a scalar constant; it is updated between missions on recalibration, not per tick. The \\(50\\,\mu\text{s}\\) runtime budget cited in the NSG diagram below refers entirely to these quadratic-form evaluations — no online eigenvalue computation or LMI solve occurs.*
 
 {% term(url="#theorem-pwl", def="Semi-Markov Jump Linear System: switched linear system whose mode-dwell times follow a Weibull heavy-tail distribution; mean-square stable gain ceiling is 18% tighter than per-mode LTI bounds (k_N = 0.62 for RAVEN)") %}**SMJLS tightening.**{% end %} Under the Weibull partition model (Definition 66), mode durations are heavy-tailed and switching is semi-Markovian. The mean-square stable gain {% katex() %}K_{\text{SMJLS}}^*(q){% end %} is strictly tighter than the per-mode LTI bound. For RAVEN ({% katex() %}k_N = 0.62{% end %}): {% katex() %}K_{\text{SMJLS}}^*(q) \approx 0.82 \cdot K_{\max}^{\text{LTI}}(q){% end %} — an 18% reduction that propagates directly into the gain scheduler below.
+
+> **Field note — conservative bound for CBF-constrained controllers**: The 0.82 tightening factor is established for linear LTI systems. Its applicability to CBF-constrained nonlinear controllers (Definition 110) has not been analytically verified. Use the conservative bound {% katex() %}K_{\text{SMJLS}} \leq K_{\max}^{\text{LTI}}{% end %} for safety-critical deployments; treat the 0.82 factor as an empirical target to validate during field certification ([Definition 37](@/blog/2026-02-19/index.md#def-37)).
 
 > **Derivation of the 0.82 factor.** The factor is not empirical — it is the analytic solution of Condition (C3) for the RAVEN parameter set. Solving the LMI system (C1)–(C3) for RAVEN ({% katex() %}T_{\text{tick}} = 5\,\text{s}{% end %}, {% katex() %}d_{\max} = 5{% end %}) yields: mode-decay rate \\(\lambda^\* \approx 0.048\\) (from the L3 delay-chain companion LMI) and Lyapunov jump multiplier \\(\mu^\* \approx 1.22\\) (from the L2\\(\\to\\)L3 transition, the tightest adjacent-mode pair). The SMJLS mean-square stability condition then requires the gain-scaled LMI to remain feasible under the Weibull-distributed dwell-time distribution — specifically, the expected Lyapunov growth per mode-switch must stay bounded. Numerically, this contracts the feasible \\(K\\) set from the LTI interval {% katex() %}(0,\,K_{\max}^{\text{LTI}}){% end %} to {% katex() %}(0,\,0.82\,K_{\max}^{\text{LTI}}){% end %}. The 0.82 scaling is parameter-specific: for exponential dwell times (\\(k=1\\), classical MJLS), the contraction is \\(\approx 5\\%\\); for RAVEN's heavy tail (\\(k_N = 0.62\\)), it reaches 18% because heavy tails produce short-dwell excursions that increase the effective transition frequency and compound the Lyapunov jump accumulation.
 
@@ -686,6 +705,10 @@ h_q\!\bigl(A_q x + B_q u\bigr) \;\geq\; (1 - \gamma)\,h_q(x)
 - **Use**: Check {% katex() %}h_q(A_q x + B_q u) \geq (1-\gamma)h_q(x){% end %} before every Execute phase; if violated, reduce \\(K\\) via the CBF-QP closed form until the condition holds.
 - **Parameters**: \\(\gamma \in (0,1)\\) — smaller \\(\gamma\\) means tighter contraction and tighter constraint on admissible \\(K\\); \\(\gamma = 0.05\\) is a safe default for 5 s MAPE-K ticks; runtime cost is one \\(6\times6\\) quadratic form (36 multiplications, \\(<20\\,\mu\\)s on Cortex-M4 at L1 throttle).
 - **Field note**: The dCBF check costs the same as evaluating \\(\rho_q(t)\\) — if you are already logging the stability margin, the safety filter is essentially free.
+- **Model-validity condition**: The condition \\(h_q(A_q x + B_q u) \geq (1-\gamma)h_q(x)\\) is conditional on \\(A_q\\) accurately representing the *current* plant dynamics. Under physical damage (motor degradation shifts poles) or sustained RF interference (actuator desaturation changes \\(B_q\\)), the true one-step map \\(f_{\text{true}}(x,u) \neq A_q x + B_q u\\). A dCBF check that passes against the nominal model may fail against the true model. The guarantee of Proposition 80 is valid only within the accuracy envelope of \\(A_q\\); see Proposition 86 for the recovery-time implication.
+- **Staleness correction under partition**: When state estimate \\(x(t)\\) is stale (partition age \\(T_{\text{acc}} > \tau_\text{stale}^\text{max}\\) from [Definition 6](@/blog/2026-01-22/index.md#def-6)), substitute {% katex() %}h_q(x(t)) - \lambda_{\text{decay}} \cdot \Delta t_{\text{stale}}{% end %} in place of \\(h_q(x(t))\\) in the safety check, where \\(\lambda_{\text{decay}}\\) is the staleness decay coefficient from [Definition 116](#def-116). This makes the check **conservative**: a stale state estimate shows a smaller safety margin, deferring actions rather than falsely approving them.
+
+> **Notation.** The staleness decay coefficient \\(\lambda_\text{decay}\\) is the initial slope of the exponential decay curve from Definition 116: \\(\lambda_\text{decay} = 1/\tau_\text{stale}^\text{max}\\). Geometrically, it is the rate at which the safety margin shrinks per second of stale data. For the OUTPOST temperature sensor example (\\(\tau_\text{stale}^\text{max} = 96\,\text{s}\\)), \\(\lambda_\text{decay} = 0.0104\,\text{s}^{-1}\\).
 
 <span id="def-111"></span>
 
@@ -745,6 +768,18 @@ Runtime: two {% katex() %}(d_{\max}+1) \times (d_{\max}+1){% end %} quadratic fo
 - **Use**: Formally certifies that no healing action fires while the system is outside its Stability Region in any capability mode; this invariant is required evidence for Level 3+ Field Autonomic Certification (Definition 37, defined in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#def-37)).
 - **Parameters**: Precondition {% katex() %}x(0) \in \mathcal{R}_{q(0)}{% end %} is verified at boot (Phase 0 of FAC, Definition 37); {% katex() %}d_{\max} \leq 5{% end %} ticks of DEFER guarantees re-entry for all RAVEN/CONVOY/OUTPOST configurations.
 - **Field note**: A {% katex() %}\rho_q(t){% end %} trending from 0.85 to 0.40 over 90 minutes under sustained L1 throttle is actionable intelligence — under pure LTI analysis, {% katex() %}K = 0.30 < K_{\max} = 0.33{% end %} appears healthy at every tick until the loop suddenly destabilizes.
+
+> **Inter-tick safety margin (physical validity condition).** The discrete-time safety certificate \\(h_q(x(t_k)) \geq 0\\) is only physically meaningful if failure modes propagate slower than the sampling period \\(T_{\text{tick}}\\). Formally:
+>
+> {% katex(block=true) %}h_q(x(t_k)) \geq L_h \cdot \|f_q\|_{\max} \cdot T_{\text{tick}}{% end %}
+>
+> must hold at every tick, where \\(L_h\\) is the Lipschitz constant of \\(h_q\\) and \\(\|f_q\|_{\max}\\) is the maximum rate of change of the system state. This margin ensures that the invariant set is not exited between consecutive checks.
+>
+> **Calibration.** For RAVEN rotor-failure propagation at approximately 200 ms and \\(T_{\text{tick}} = 5\,\mathrm{s}\\), this condition is violated by 25×. The certificate guarantees the swarm was safe at the last check interval, not that it remains safe until the next. Systems with failure propagation times shorter than \\(T_{\text{tick}}\\) require either interrupt-driven sensing or a physical L0 interlock (Definition 54) as the true safety backstop.
+
+> **L0 Physical Safety Interlock (Definition 54, preview).** Definition 54 is formally introduced in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#def-54). In brief: a hardware-wired circuit that arrests all actuators regardless of software state; non-resettable without physical human action. It is the true safety backstop for failure modes that propagate faster than the MAPE-K sampling interval \\(T_\text{tick}\\) — precisely the inter-tick gap identified in Proposition 80.
+
+> **Calibrating \\(L_h\\).** The Lipschitz constant \\(L_h\\) bounds how fast the safety function \\(h_q(x)\\) can change as the system state evolves. Empirical estimate: linearize \\(h_q\\) around the equilibrium and compute \\(L_h = \max_x \|\nabla h_q(x)\|\\) over a representative state trajectory from field data. For RAVEN's rotor-health barrier function (\\(h_q = \text{min rotor speed} - \text{threshold}\\)), \\(L_h \approx 1\\) (speed changes linearly with applied torque at low angles). For nonlinear barriers (e.g., CBF based on kinetic energy), \\(L_h\\) must be estimated numerically. A conservative upper bound is sufficient for the safety certificate; a tight \\(L_h\\) improves the frequency at which the certificate is non-vacuous.
 
 *Proof*: By strong induction on tick \\(t\\). **Base**: {% katex() %}x(0) \in \mathcal{R}_{q(0)}{% end %} by precondition. **Inductive step**: assume {% katex() %}x(t) \in \mathcal{R}_{q(t)}{% end %}. *(i) Within-mode tick*: {% katex() %}K_{\mathrm{gs}}{% end %} is selected to satisfy the dCBF decrease condition (Definition 110), giving {% katex() %}h_{q(t)}(x(t+1)) \geq (1-\gamma)h_{q(t)}(x(t)) \geq 0{% end %}, so {% katex() %}x(t+1) \in \mathcal{R}_{q(t)}{% end %}. *(ii) Mode transition \\(q \to q\'\\)*: the ANALYZE phase checks {% katex() %}\rho_{q'} > 0{% end %} — equivalently {% katex() %}x(t)^\top P_{q'} x(t) < c_{q'}{% end %} — before allowing transition. If the check passes, {% katex() %}x(t) \in \mathcal{R}_{q'}{% end %} and within-mode stability applies for \\(q\'\\). If it fails, the transition is deferred and the within-mode argument applies to \\(q(t)\\). *(iii) DEFER with \\(\rho_q < 0\\)*: {% katex() %}K_{\mathrm{gs}} = 0{% end %}; the open-loop delay chain \\(A_q^0\\) (gain removed) has all eigenvalues at zero (nilpotent shift), so \\(V_q(x)\\) decreases monotonically — {% katex() %}x(t+N) \in \mathcal{R}_q{% end %} for finite {% katex() %}N \leq d_{\max}{% end %}. \\(\square\\)
 
@@ -1059,7 +1094,7 @@ t_{\mathrm{fire},i} = t_{\mathrm{eligible},i} + \delta_i, \qquad \delta_i \sim \
 {% end %}
 
 - **Parameters**: \\(\varepsilon = 0.01\\); {% katex() %}\eta_{\min} = 0.001 \cdot V(S){% end %} (require 0.1% fleet stress reduction per action); {% katex() %}\Delta r_{\max} = 0.2{% end %} (max single-transfer fraction).
-- **Implementation**: \\(V(S)\\) is computed from the gossip health vector ({% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Definition 5{% end %}). Peer data is bounded-stale by {% katex() %}\tau_{\max}{% end %} ({% term(url="@/blog/2026-01-22/index.md#prop-5", def="Maximum useful staleness bound: gossip data older than tau_max degrades anomaly detection below acceptable sensitivity") %}Proposition 5{% end %}). HAC check is \\(O(N)\\) in gossip vector size — constant time for a fixed fleet.
+- **Implementation**: \\(V(S)\\) is computed from the gossip health vector ({% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in O(D ln n/lambda) rounds by Proposition 4") %}Definition 5{% end %}). Peer data is bounded-stale by {% katex() %}\tau_\text{stale}^\text{max}{% end %} ({% term(url="@/blog/2026-01-22/index.md#prop-5", def="Maximum useful staleness bound: gossip data older than tau_max degrades anomaly detection below acceptable sensitivity") %}Proposition 5{% end %}). HAC check is \\(O(N)\\) in gossip vector size — constant time for a fixed fleet.
 - **Field note**: Log \\(V(S)\\) at every Execute phase. Monotone decrease is the primary diagnostic: a non-decreasing \\(V\\) trace indicates either a HAC implementation bug or a fault not addressable by load redistribution (escalate to severity S3, Definition 115).
 
 > **Physical translation**: \\(V(S)\\) is the mathematical analog of a stress elevation above sea level. Every healing action is a downhill step — the HAC check confirms the step goes down before it is taken. Node A shedding to Node B lowers the hill; shedding back would go uphill. HAC rejects it. The fleet can only descend.
@@ -1089,7 +1124,7 @@ t_{\mathrm{fire},i} = t_{\mathrm{eligible},i} + \delta_i, \qquad \delta_i \sim \
 
 **Relationship to existing results**: The HAC gate addresses a failure mode orthogonal to those in Definitions 28 and 75–77. The refractory period (Definition 117, Proposition 85) prevents a *single node's* loop from firing too frequently; the Schmitt trigger (Definition 118) prevents threshold chatter on a *single sensor*; the derivative dampener (Definition 120) suppresses transient spikes on a *single signal*. HAC is the first mechanism that constrains *inter-node* healing transfers at the fleet level. The conditions are complementary: a system should enforce all of them in the Execute phase.
 
-**Authority prerequisite**: HAC applies only to actions for which the executing node holds the required authority tier (Definition 14, Part 4: Fleet Coherence Under Partition). *(Authority tiers: L0 = node-scope actions only; L1 = cluster-scope; L2 = fleet-scope; L3 = command-scope. Formally defined in [Definition 14, Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-14).)* A node operating at {% katex() %}Q_{\text{effective}}(t) < Q_{\text{required}}(\text{action}){% end %} rejects the action at the authority gate before reaching HAC — HAC is not evaluated. This ordering ensures that a partitioned node with temporarily elevated effective tier cannot bypass the Lyapunov energy gate.
+**Authority prerequisite**: HAC applies only to actions for which the executing node holds the required authority tier (Definition 14). *(Authority tiers: L0 = node-scope actions only; L1 = cluster-scope; L2 = fleet-scope; L3 = command-scope. Formally defined in [Definition 14, Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-14).)* A node operating at {% katex() %}Q_{\text{effective}}(t) < Q_{\text{required}}(\text{action}){% end %} rejects the action at the authority gate before reaching HAC — HAC is not evaluated. This ordering ensures that a partitioned node with temporarily elevated effective tier cannot bypass the Lyapunov energy gate.
 
 ### Resource Priority Matrix: Deterministic Conflict Resolution
 
@@ -1434,15 +1469,17 @@ where {% katex() %}\Delta\theta = \theta^*(t+1) - \theta(t){% end %} and {% kate
 <span id="def-116"></span>
 ### Staleness-Aware Healing Threshold
 
-**Definition 116** (Staleness Decay Function). *Let {% katex() %}t_{\text{stale}} \geq 0{% end %} denote elapsed time since the last successful Knowledge Base synchronization. The staleness decay function is:*
+**Definition 116** (Staleness Decay Time Constant (\\(\tau_\text{stale}^\text{max}\\))). *Let {% katex() %}t_{\text{stale}} \geq 0{% end %} denote elapsed time since the last successful Knowledge Base synchronization. The staleness decay function is:*
+
+> **Notation.** This constant is written \\(\tau_\text{stale}^\text{max}\\) throughout this article to distinguish it from the HLC trust-window latency bound \\(\tau_\text{max}\\) in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md), which is an entirely different quantity (one-way message delivery time, measured in milliseconds, not hours).
 
 {% katex(block=true) %}
-\delta(t_{\text{stale}}) = 1 - e^{-t_{\text{stale}}/\tau_{\max}}
+\delta(t_{\text{stale}}) = 1 - e^{-t_{\text{stale}}/\tau_\text{stale}^\text{max}}
 {% end %}
 
 *({% katex() %}\delta(t_{\text{stale}}){% end %} = staleness decay function; distinct from the failure severity scalar \\(\delta\\) in the utility function)*
 
-*where {% katex() %}\tau_{\max}{% end %} is the staleness threshold from Proposition 5: {% katex() %}\tau_{\max} = (\Delta h / (z_{\alpha/2} \cdot \sigma))^2{% end %}, with \\(\Delta h\\) the acceptable health drift and \\(\sigma\\) measurement noise. At {% katex() %}t_{\text{stale}} = 0{% end %}: \\(\delta = 0\\) (fully current). At {% katex() %}t_{\text{stale}} = \tau_{\max}{% end %}: {% katex() %}\delta \approx 0.63{% end %}. As {% katex() %}t_{\text{stale}} \to \infty{% end %}: {% katex() %}\delta \to 1{% end %} (fully stale).*
+*where {% katex() %}\tau_\text{stale}^\text{max}{% end %} is the staleness threshold from Proposition 5: {% katex() %}\tau_\text{stale}^\text{max} = (\Delta h / (z_{\alpha/2} \cdot \sigma))^2{% end %}, with \\(\Delta h\\) the acceptable health drift and \\(\sigma\\) measurement noise. At {% katex() %}t_{\text{stale}} = 0{% end %}: \\(\delta = 0\\) (fully current). At {% katex() %}t_{\text{stale}} = \tau_\text{stale}^\text{max}{% end %}: {% katex() %}\delta \approx 0.63{% end %}. As {% katex() %}t_{\text{stale}} \to \infty{% end %}: {% katex() %}\delta \to 1{% end %} (fully stale).*
 
 **Staleness-aware threshold**: Let {% katex() %}s(a) = 1 - \theta^*(a) \in [0,1]{% end %} be the severity of action \\(a\\), derived from Proposition 84's optimal threshold. High \\(s(a)\\) means missing the failure is expensive (low \\(\theta^\*\\), large {% katex() %}C_{\text{FN}}{% end %}). The staleness-augmented threshold floor raises as the Knowledge Base ages:
 
@@ -1455,7 +1492,7 @@ where {% katex() %}\Delta\theta = \theta^*(t+1) - \theta(t){% end %} and {% kate
 **Confidence horizon**: The time at which non-critical healing (\\(s(a) = 0\\)) is suppressed to the maximum threshold {% katex() %}\theta_{\max}{% end %}:
 
 {% katex(block=true) %}
-T_{\text{conf}} = \tau_{\max} \cdot \ln\!\left(\frac{1}{1 - (\theta_{\max} - \theta^*(a))}\right)
+T_{\text{conf}} = \tau_\text{stale}^\text{max} \cdot \ln\!\left(\frac{1}{1 - (\theta_{\max} - \theta^*(a))}\right)
 {% end %}
 
 *Valid when {% katex() %}\theta^*(a) < \theta_{\max}{% end %}. Beyond {% katex() %}T_{\text{conf}}{% end %}, the system enters minimal-healing mode: only actions with {% katex() %}s(a) > 1 - (\theta_{\max} - \theta^*(a))/\delta(t_{\text{stale}}){% end %} remain actionable.*
@@ -1466,7 +1503,7 @@ graph LR
         A["Fresh KB, delta = 0"] --> B["theta_stale = theta_opt<br/>Full healing active"]
     end
 
-    subgraph S1["t = tau_max"]
+    subgraph S1["t = tau_stale_max"]
         C["Stale KB, delta = 0.63"] --> D["theta_stale rises<br/>Low-severity suppressed"]
     end
 
@@ -1481,17 +1518,17 @@ graph LR
     style F fill:#ffcdd2,stroke:#c62828
 {% end %}
 
-> **Read the diagram**: Three time-snapshots shown left to right. At \\(t = 0\\) (green): Knowledge Base is fresh, \\(\delta = 0\\), staleness-adjusted threshold equals the optimal threshold — full healing active. At {% katex() %}t = \tau_{\max}{% end %} (yellow): Knowledge Base has aged to its calibrated limit; \\(\delta = 0.63\\) and the threshold rises above \\(\theta^\*\\) for low-severity actions, progressively suppressing them. At {% katex() %}t > T_{\text{conf}}{% end %} (red): the threshold exceeds 1.0 for non-critical actions — they are effectively disabled. Critical failures (\\(s(a) \to 1\\)) remain actionable throughout all three states regardless of staleness.
+> **Read the diagram**: Three time-snapshots shown left to right. At \\(t = 0\\) (green): Knowledge Base is fresh, \\(\delta = 0\\), staleness-adjusted threshold equals the optimal threshold — full healing active. At {% katex() %}t = \tau_\text{stale}^\text{max}{% end %} (yellow): Knowledge Base has aged to its calibrated limit; \\(\delta = 0.63\\) and the threshold rises above \\(\theta^\*\\) for low-severity actions, progressively suppressing them. At {% katex() %}t > T_{\text{conf}}{% end %} (red): the threshold exceeds 1.0 for non-critical actions — they are effectively disabled. Critical failures (\\(s(a) \to 1\\)) remain actionable throughout all three states regardless of staleness.
 
-*{% katex() %}\tau_{\max}{% end %} from Proposition 5 simultaneously calibrates the Brownian staleness model (maximum observation age before health estimates are unreliable) and the exponential time constant of healing suppression. A tightly-calibrated deployment with small \\(\Delta h\\) has a short {% katex() %}\tau_{\max}{% end %} and fast-acting suppression; a loosely-calibrated one tolerates longer Knowledge Base age before healing hesitance sets in.*
+*{% katex() %}\tau_\text{stale}^\text{max}{% end %} from Proposition 5 simultaneously calibrates the Brownian staleness model (maximum observation age before health estimates are unreliable) and the exponential time constant of healing suppression. A tightly-calibrated deployment with small \\(\Delta h\\) has a short {% katex() %}\tau_\text{stale}^\text{max}{% end %} and fast-acting suppression; a loosely-calibrated one tolerates longer Knowledge Base age before healing hesitance sets in.*
 
 The staleness threshold is calibrated from the Brownian diffusion model ([Proposition 5](@/blog/2026-01-22/index.md#prop-5)):
 
 {% katex(block=true) %}
-\tau_{\max} = \left(\frac{\Delta h}{z_{\alpha/2} \cdot \sigma}\right)^2
+\tau_\text{stale}^\text{max} = \left(\frac{\Delta h}{z_{\alpha/2} \cdot \sigma}\right)^2
 {% end %}
 
-where \\(\\Delta h\\) is the decision-relevant drift threshold, {% katex() %}z_{\alpha/2}{% end %} is the normal quantile at confidence \\(1-\\alpha\\), and \\(\\sigma\\) is the observation noise standard deviation. Both {% katex() %}\tau_{\max}{% end %} here and the staleness-aware healing threshold {% katex() %}\theta_{\text{stale}}{% end %} are governed by this calibrated constant.
+where \\(\\Delta h\\) is the decision-relevant drift threshold, {% katex() %}z_{\alpha/2}{% end %} is the normal quantile at confidence \\(1-\\alpha\\), and \\(\\sigma\\) is the observation noise standard deviation. Both {% katex() %}\tau_\text{stale}^\text{max}{% end %} here and the staleness-aware healing threshold {% katex() %}\theta_{\text{stale}}{% end %} are governed by this calibrated constant.
 
 ### The Harm of Wrong Healing
 
@@ -1597,18 +1634,57 @@ When \\(Q_d(t)\\) reaches {% katex() %}Q_{\text{aw}}{% end %}, the system enters
 **Proposition 86** (CBF-Derived Refractory Bound). *The Proposition 85 floor {% katex() %}\tau_{\mathrm{ref}} \geq 2\tau_{\mathrm{fb}}{% end %} is necessary but not sufficient under mode-switching dynamics. Under the Stability Region framework (Definition 79), the refractory period must also allow {% katex() %}\rho_q{% end %} to recover above {% katex() %}\rho_{\min} = 0.2{% end %} before the next action. The CBF-derived refractory bound for mode \\(q\\) is:*
 
 {% katex(block=true) %}
-\tau_{\mathrm{ref}}^{\mathrm{CBF}}(q) = \left\lceil \frac{\ln\!\bigl(\rho_{\min} / \rho_q(t_{\mathrm{action}})\bigr)}{-\ln(1 - \gamma)} \right\rceil \cdot T_{\mathrm{tick}}(q)
+\tau_{\mathrm{ref}}^{\mathrm{CBF}}(q) = \left\lceil \frac{\ln\!\bigl(\rho_{\min} / \max(\rho_q(t_{\mathrm{action}}),\, \rho_\varepsilon)\bigr)}{-\ln(1 - \gamma)} \right\rceil \cdot T_{\mathrm{tick}}(q)
 {% end %}
 
-*where {% katex() %}\rho_{\min} = 0.2{% end %} and {% katex() %}\rho_q(t_{\mathrm{action}}){% end %} is the stability margin immediately after the first healing action fires. The effective refractory period is:*
+*where {% katex() %}\rho_{\min} = 0.2{% end %}, {% katex() %}\rho_\varepsilon = 10^{-3}{% end %} is a regularization floor, and {% katex() %}\rho_q(t_{\mathrm{action}}){% end %} is the stability margin immediately after the first healing action fires. The effective refractory period is:*
 
 {% katex(block=true) %}
-\tau_{\mathrm{ref}}(q) = \max\!\bigl(\tau_{\mathrm{ref}}^{\mathrm{CBF}}(q),\; 2\,\tau_{\mathrm{fb}}\bigr)
+\tau_{\mathrm{ref}}(q) = \min\!\bigl(\tau_{\mathrm{ref}}^{\max},\; \max\!\bigl(\tau_{\mathrm{ref}}^{\mathrm{CBF}}(q),\; 2\,\tau_{\mathrm{fb}}\bigr)\bigr)
 {% end %}
 
+> **Singularity prevention (\\(\rho_\varepsilon\\) floor).** Without the floor, if \\(\rho_q(t_{\mathrm{action}}) \to 0\\) (node approaching complete unreliability), the argument of \\(\ln\\) diverges and \\(\tau_{\mathrm{ref}}^{\mathrm{CBF}} \to \infty\\). The \\(\rho_\varepsilon = 10^{-3}\\) floor prevents this: it caps the computed refractory period at {% katex() %}\lceil\ln(\rho_{\min}/\rho_\varepsilon)/(-\ln(1-\gamma))\rceil \cdot T_{\text{tick}}{% end %}, which for RAVEN (\\(\gamma = 0.05\\), \\(T_{\text{tick}} = 5\\,\mathrm{s}\\)) evaluates to \\(\lceil\ln(200)/0.051\rceil \cdot 5 \approx 515\\,\mathrm{s}\\). The companion \\(\tau_{\mathrm{ref}}^{\max}\\) upper clamp (set operationally, e.g., 600 s for RAVEN) provides a hard ceiling so that a single catastrophically degraded node does not permanently block healing attempts on a system that is in fact recoverable. A node clamped at \\(\tau_{\mathrm{ref}}^{\max}\\) is flagged for manual review after one full cycle.
+
 - **Use**: Replaces the fixed {% katex() %}2\tau_{\mathrm{fb}}{% end %} floor with a state-dependent lower bound that ensures the stability margin recovers above {% katex() %}\rho_{\min}{% end %} before the next healing action; larger healing actions that consume more stability margin automatically produce longer refractory periods.
-- **Parameters**: {% katex() %}\rho_{\min} = 0.2{% end %} (minimum safe margin before re-action); \\(\gamma\\) from Definition 110 (dCBF); for RAVEN L3 with \\(\gamma = 0.05\\) and a large action dropping \\(\rho\\) to 0.1: {% katex() %}\tau_{\mathrm{ref}}^{\mathrm{CBF}} = \lceil\ln(0.2/0.1)/(-\ln(0.95))\rceil \cdot 5 \approx 70\,\text{s}{% end %} vs. the Prop 85 floor of 10 s.
+- **Parameters**: {% katex() %}\rho_{\min} = 0.2{% end %} (minimum safe margin before re-action); {% katex() %}\rho_\varepsilon = 10^{-3}{% end %} (singularity floor); \\(\gamma\\) from Definition 110 (dCBF); for RAVEN L3 with \\(\gamma = 0.05\\) and a large action dropping \\(\rho\\) to 0.1: {% katex() %}\tau_{\mathrm{ref}}^{\mathrm{CBF}} = \lceil\ln(0.2/0.1)/(-\ln(0.95))\rceil \cdot 5 \approx 70\,\text{s}{% end %} vs. the Prop 85 floor of 10 s.
 - **Field note**: Log {% katex() %}\rho_q(t_{\mathrm{action}}){% end %} alongside every healing event — the gap between {% katex() %}\tau_{\mathrm{ref}}^{\mathrm{CBF}}{% end %} and {% katex() %}2\tau_{\mathrm{fb}}{% end %} quantifies how much stability margin the action consumed and is the primary diagnostic for oversized healing gains.
+
+> **Model-validity scope of {% katex() %}\tau_{\mathrm{ref}}^{\mathrm{CBF}}{% end %}**: The formula derives from the nominal contraction rate \\((1-\gamma)\\) per tick — the rate at which \\(\rho_q\\) recovers under the pre-flight \\(A_q\\) model. If the true plant dynamics have drifted from \\(A_q\\), this rate is wrong and the formula produces either a dangerously short or a uselessly long refractory period.
+>
+> **Hyper-aggressive failure** (under-refractory): physical damage slows \\(\rho_q\\) recovery below the nominal rate. Example — RAVEN drone motor at 60% thrust efficiency shifts the dominant eigenvalue from \\(|\\lambda| = 0.95\\) to \\(|\\lambda| = 0.98\\); the ticks required for \\(\rho: 0.10 \to 0.20\\) extend from \\(\lceil \ln 2 / 0.051 \rceil = 14\\) ticks (70 s) to \\(\lceil \ln 2 / 0.020 \rceil = 35\\) ticks (175 s). The formula fires the next healing action at tick 14 when true \\(\rho \approx 0.15\\) — still below \\(\rho_{\min} = 0.20\\). A second actuation on an under-margined plant can collapse the voltage rail.
+>
+> **Hyper-conservative failure** (over-refractory): RF jamming injects noise into the state estimate \\(x\\), depressing the measured {% katex() %}\rho_q(t_{\mathrm{action}}){% end %} below its true value. The formula computes {% katex() %}\tau_{\mathrm{ref}}^{\mathrm{CBF}}{% end %} from an artificially low starting point, producing a refractory period far longer than the true dynamics require. The system remains locked in L0 long after recovery is physically complete.
+>
+**How the CUSUM sentinel works**
+
+Vibration noise is zero-mean and short-lived — random errors cancel over a few ticks. Genuine actuator degradation is persistent: the nominal model A_q consistently over-predicts performance. The sentinel accumulates prediction errors over time; noise cancels itself, drift does not.
+
+The one-step prediction error is {% katex() %}\Delta\rho_{\text{pred}}(t) = \rho_q^{\text{nom}}(t{+}1) - \rho_q^{\text{meas}}(t{+}1){% end %}. Under a healthy plant this is zero-mean Gaussian with rolling standard deviation {% katex() %}\hat{\sigma}_{\text{noise}}{% end %}; under motor degradation it becomes persistently positive. \\(g^+\\) counts evidence the model is too optimistic; \\(g^-\\) counts evidence it is too pessimistic. The slack \\(k = 1.5\hat{\sigma}_{\text{noise}}\\) drains either accumulator after clean ticks, so a single noise spike never triggers an alarm.
+
+**Why \\(k = 1.5\hat{\sigma}_{\text{noise}}\\)?** Standard CUSUM reference-value formula \\(k = \delta/2\\) for detecting a 3\\(\sigma\\) sustained shift. Random noise alone never pushes \\(g^+\\) above \\(h\\) before draining; a 3\\(\sigma\\) sustained drift accumulates to \\(h\\) in five ticks. **Why a 20-tick rolling window?** Drone blade-pass vibration produces correlated noise bursts at the MAPE-K tick rate; 20 ticks (100 s at 5 s/tick) spans roughly five vibration cycles, ensuring \\(\hat{\sigma}_{\text{noise}}\\) reflects the true noise envelope.
+
+| Scenario | \\(\Delta\rho_{\text{pred}}\\)/tick | \\(g^+\\) outcome | Verdict |
+|----------|--------------------------------------|-------------------|---------|
+| Single vibration spike (1 tick, 0.08) | 0.06 above slack | Peaks at 0.06; drains in 3 ticks | No alarm |
+| Correlated burst (3 ticks, 0.06 each) | \\(\hat{\sigma}\\) rises, \\(k\\) and \\(h\\) auto-adjust | Threshold rises faster than accumulation | Suppressed |
+| Sustained motor degradation (0.05/tick) | Grows 0.03/tick | Alarm at tick 4 (20 s) | Correct detection |
+| Sub-threshold creep (0.03/tick) | Grows 0.01/tick | Alarm at tick 10 (50 s) | Caught — 3-tick test would never fire |
+
+> **Detection — CUSUM model-drift sentinel**: At each tick during the refractory window, compute the one-step prediction error {% katex() %}\Delta\rho_{\mathrm{pred}}(t) = \rho_q^{\mathrm{nom}}(t+1) - \rho_q^{\mathrm{meas}}(t+1){% end %}, where {% katex() %}\rho_q^{\mathrm{nom}}(t+1) = h_q(A_q x(t) + B_q u(t))/c_q{% end %}. A fixed 3-consecutive-tick threshold is load-bearing and fragile: in high-vibration environments (RAVEN drones), state estimate errors \\(x(t)\\) are correlated across adjacent ticks at the vibration resonance frequency. Correlated noise cannot be treated as independent, so three consecutive exceedances of 0.05 are far more likely than \\(p^3\\) implies. The fix is a Page-CUSUM statistic — the same structure used in the Adversarial Non-Stationarity Detector ([Anti-Fragile Decision-Making at the Edge, Definition 34](@/blog/2026-02-12/index.md#def-34)):
+>
+> \\[g^+(t) = \max\!\bigl(0,\; g^+(t-1) + \Delta\rho_{\mathrm{pred}}(t) - k\bigr), \qquad g^-(t) = \max\!\bigl(0,\; g^-(t-1) - \Delta\rho_{\mathrm{pred}}(t) - k\bigr)\\]
+>
+> where {% katex() %}k = 1.5\,\hat{\sigma}_{\mathrm{noise}}{% end %} is the slack parameter ({% katex() %}\hat{\sigma}_{\mathrm{noise}}{% end %} is a rolling 20-tick empirical standard deviation of {% katex() %}\Delta\rho_{\mathrm{pred}}{% end %} under nominal conditions). Alarm thresholds: \\(h^+ = h^- = 5k\\), calibrated for {% katex() %}\mathrm{ARL}_0 \approx 500{% end %} ticks under null — one false alarm per ~42 minutes at 5 s/tick. \\(g^+(t) > h^+\\) triggers the hyper-aggressive path; \\(g^-(t) > h^-\\) triggers hyper-conservative.
+>
+> **RAVEN calibration** ({% katex() %}3\hat{\sigma}_{\mathrm{noise}} \approx 0.04{% end %}, so {% katex() %}\hat{\sigma}_{\mathrm{noise}} \approx 0.013{% end %}): \\(k \approx 0.020\\), \\(h^+ = h^- \approx 0.10\\).
+> - *Transient spike* (gust of wind, 1 tick at \\(\Delta\rho = +0.08\\)): \\(g^+(1) = 0.060 < 0.10\\). Next ticks drain: \\(g^+(2) = 0.040\\), \\(g^+(3) = 0.020\\), \\(g^+(4) = 0\\). **No alarm.** The 3-tick consecutive test with threshold 0.05 would also not fire here; CUSUM's advantage appears in the correlated case below.
+> - *Correlated vibration* (3 ticks at \\(\Delta\rho \approx 0.06\\) due to resonance, then recovery): 3-tick test fires (three consecutive exceedances of 0.05). CUSUM: \\(g^+(3) = 3(0.060 - 0.020) = 0.120 > 0.10\\) — also fires, but the rolling {% katex() %}\hat{\sigma}_{\mathrm{noise}}{% end %} estimate rises during the vibration episode, pushing \\(k\\) toward 0.030 and \\(h^+\\) toward 0.15 — threshold self-adjusts upward, suppressing the false alarm.
+> - *Sustained motor degradation* (\\(\Delta\rho = +0.05\\) per tick consistently): \\(g^+(n) = n(0.050 - 0.020)\\); alarm at \\(n = \lceil 0.10/0.030 \rceil = 4\\) ticks (20 s). Correct detection.
+> - *Sub-threshold drift* (\\(\Delta\rho = +0.03\\) per tick — below any fixed 0.05 threshold): \\(g^+(n) = n(0.030 - 0.020) = n \times 0.010\\); alarm at \\(n = 10\\) ticks (50 s). The 3-tick consecutive test would never fire; CUSUM detects degradation that produces no individual-tick exceedance.
+>
+> **Response**: \\(g^+(t) > h^+\\) (hyper-aggressive): extend the remaining refractory budget by one additional {% katex() %}\tau_{\mathrm{ref}}^{\mathrm{CBF}}{% end %} period, reset \\(g^+\\), and re-evaluate; if \\(g^+\\) exceeds \\(h^+\\) again before the extension expires, hold L0 and flag for human review. \\(g^-(t) > h^-\\) (hyper-conservative): the refractory window may be released early once {% katex() %}\rho_q^{\mathrm{meas}}(t) \geq \rho_{\min}{% end %} — the measured margin is the authoritative signal when it is *above* the threshold. Reset \\(g^-\\) on early release.
+>
+> The \\(\eta = 0.85\\) gain margin in Definition 111 absorbs up to 15% uncertainty in {% katex() %}K_{\max}^{\mathrm{LTI}}{% end %} — this is a *gain* margin against \\(K\\) mismatch, not a *recovery-rate* margin against \\(A_q\\) pole migration. The two corrections are orthogonal.
 
 **Required relationship — confirmation window vs. hardware response time**: The confirmation window {% katex() %}\tau_{\text{confirm}}{% end %} must satisfy {% katex() %}\tau_{\text{confirm}} \geq \tau_{\text{hw\_response}}{% end %}, where {% katex() %}\tau_{\text{hw\_response}}{% end %} is the mechanical or electrical settling time of the actuated component. If {% katex() %}\tau_{\text{confirm}} < \tau_{\text{hw\_response}}{% end %}, the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop can issue a second actuation command while the first is still in progress, resulting in compounded commands on an actuator in an undefined intermediate state. Concrete example: a {% term(url="@/blog/2026-01-15/index.md#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} protective relay has a mechanical response time of 500 ms. If {% katex() %}\tau_{\text{confirm}} = 300\,\text{ms}{% end %} (3 samples at 10 Hz), the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop confirms "action taken" before the relay has physically moved; a second fault event can send a second trip command to a relay mid-travel. Minimum safe value: {% katex() %}\tau_{\text{confirm}} \geq \max(\tau_{\text{hw\_response}}, \text{measurement period} \times n_{\text{confirm}}){% end %}. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} motor controllers (electrical settling time {% katex() %}\approx 50\,\text{ms}{% end %}), {% katex() %}\tau_{\text{confirm}} = 3\,\text{samples} \times 1\,\text{s/sample} = 3\,\text{s}{% end %} comfortably satisfies the constraint.
 
@@ -1691,6 +1767,12 @@ The threshold \\(\gamma\\) is the rate at which confidence would traverse half t
 > **Physical translation**: A spike in confidence that is already falling when Execute checks it is likely transient noise, not a stable fault. The derivative dampener adds a trend check: if {% katex() %}\dot{\theta} < -\gamma{% end %}, the anomaly is recovering faster than the confirmation window — hold execution. The oscillation-prevention benefit is that a transient spike above \\(\theta_H\\) that would trigger an immediate healing action is instead suppressed until the trend stabilizes, eliminating the class of false-positive healing on self-recovering conditions that account for the majority of unnecessary interventions in practice.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration**: Link-quality confidence reaches {% katex() %}\theta = 0.82 \geq \theta_H = 0.80{% end %} at \\(t = 0\\) s, but {% katex() %}\dot{\theta} = -0.04{% end %} s{% katex() %}{}^{-1} < -\gamma = -0.02{% end %} s{% katex() %}{}^{-1}{% end %} (\\(w = 5\\), {% katex() %}T_{\text{tick}} = 1{% end %} s, \\(\Delta\theta = 0.20\\)). Derivative dampener holds. At \\(t = 10\\) s: {% katex() %}\theta \approx 0.42 < \theta_L = 0.60{% end %} — natural recovery, Schmitt trigger releases to NOMINAL with no action taken. Without dampening: a reroute command fires at \\(t = 0\\) on a self-recovering link, triggering a full-convoy reroute maneuver that costs 8 minutes of mission time.
+
+<span id="prop-liveness-healing"></span>
+
+**Proposition (Healing Algorithm Liveness).** *The composite flapping-prevention mechanism (Definitions 118–120) terminates within* {% katex() %}n_{\max} = \lceil \log_2(T_{\text{mission}} / \tau_{\text{ref}}(0)) \rceil{% end %} *retry cycles. After* \\(n_{\max}\\) *failed retries, adaptive refractory backoff (Definition 119) has extended* \\(\tau_{\text{ref}}(n)\\) *beyond the remaining mission duration; the system transitions unconditionally to Terminal Safety State ([Definition 124](#def-124)) and the hardware veto interlock (Proposition 87) takes effect. This is the global failure-safe exit.*
+
+**RAVEN calibration**: \\(\tau_{\text{ref}}(0) = 240\\) s, \\(T_{\text{mission}} = 7200\\) s, giving \\(n_{\max} = 5\\) retries. For OUTPOST with 72-hour missions, set \\(\tau_{\text{ref}}(0) \leq 300\\) s to keep \\(n_{\max} \leq 10\\).
 
 <span id="prop-87"></span>
 

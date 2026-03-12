@@ -49,9 +49,9 @@ This framework extends [partition-tolerant systems](https://users.ece.cmu.edu/~a
 
 **Three constraints you must answer before the framework can claim practical validity.** These are introduced here as structural design constraints — not afterthoughts — because each shapes the formal machinery from the ground up:
 
-1. **Clock drift.** Crystal-oscillator nodes drift by seconds per hour and by minutes over 30-day partitions. Last-Write-Wins conflict resolution silently inverts causal order when physical timestamps are untrustworthy. *Constraint: the framework must not assume NTP availability for correctness guarantees.* Answered in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md) by Definition 85 (Clock Trust Window) and Definition 86 (Causality Header), which pivot from physical HLC ordering to pure logical ordering when the partition accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds the drift tolerance.
+1. **Clock drift.** Crystal-oscillator nodes drift by seconds per hour and by minutes over 30-day partitions. Last-Write-Wins conflict resolution silently inverts causal order when physical timestamps are untrustworthy. *Constraint: the framework must not assume NTP availability for correctness guarantees.* Answered in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md) by [Definition 98](@/blog/2026-02-05/index.md#def-98) (Clock Trust Window) and [Definition 99](@/blog/2026-02-05/index.md#def-99) (Causality Header), which pivot from physical HLC ordering to pure logical ordering when the partition accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds the drift tolerance.
 
-2. **Resource floor.** The full autonomic monitoring stack — EWMA, Merkle health tree, gossip table, EXP3-IX weight vector, event queue, vector clock — totals approximately 13 KB of SRAM. A 4 KB MCU has an autonomic ceiling of roughly 800 bytes under Proposition 21. The stack exceeds its own budget by \\(16\\times\\) before a single line of mission code runs. *Constraint: the stack must have a zero-tax tier that fits within 200 bytes.* Answered in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#zero-tax-autonomic) by Definitions 82–84 (Zero-Tax State Machine, In-Place Hash Chain, Fixed-Point EWMA) and Proposition 82 (Wakeup Latency Bound).
+2. **Resource floor.** The full autonomic monitoring stack — EWMA, Merkle health tree, gossip table, EXP3-IX weight vector, event queue, vector clock — totals approximately 13 KB of SRAM. A 4 KB MCU has an autonomic ceiling of roughly 800 bytes under Proposition 21. The stack exceeds its own budget by \\(16\\times\\) before a single line of mission code runs. *Constraint: the stack must have a zero-tax tier that fits within 200 bytes.* Answered in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#zero-tax-autonomic) by Definitions 101–103 (Zero-Tax State Machine, In-Place Hash Chain, Fixed-Point EWMA) and Proposition 72 (Wakeup Latency Bound).
 
 3. **Stability under mode-switching.** Proposition 9's gain bound {% katex() %}K < 1/(1 + \tau/T_{\mathrm{tick}}){% end %} assumes linear, time-invariant plant dynamics. Power-shedding makes {% katex() %}T_{\mathrm{tick}}{% end %} a discrete function of capability level \\(q\\) — the closed loop is a switched linear system that jumps between modes as resources degrade. The LTI stability proof does not transfer across mode boundaries. *Constraint: the stability proof must remain valid under mode transitions, including transitions forced by the resource floor constraint above.* Answered in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) by Proposition 80 (CBF mode-invariant safety), Theorem PWL (SMJLS mean-square stability), and Proposition 86 (CBF-derived refractory bound).
 
@@ -62,6 +62,8 @@ This framework extends [partition-tolerant systems](https://users.ece.cmu.edu/~a
 6. **Decision quality under sustained uncertainty.** The capability hierarchy \\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\) specifies *what* to run at each connectivity level, but says nothing about *how* to improve decision quality over time. A system that degrades gracefully but never learns from partition events is structurally correct but operationally stagnant. *Constraint: the system must improve its decisions after stress events, not merely survive them.* Answered in [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md) by Definition 15 (Anti-Fragility), Propositions 17–18, and the EXP3-IX / UCB bandit framework.
 
 These six constraints are not independent. The resource floor (Constraint 2) directly tightens the mode-switching envelope (Constraint 3): a node entering OBSERVE state deactivates MAPE-K, rendering the healing stability proof vacuously satisfied but also providing zero healing coverage. The clock drift (Constraint 1) interacts with mode-switching: an OUTPOST crystal-oscillator node exceeds {% katex() %}T_{\mathrm{trust}}{% end %} in under three hours, meaning the causal pivot fires before most fault scenarios escalate. The first three fixes compose into a single 20-byte field — the [Unified Autonomic Header](@/blog/2026-02-05/index.md#def-100-uah) (Definition 100 in Fleet Coherence Under Partition) — that carries the clock fix, stability flag, and resource-tier signal in every gossip exchange without increasing per-item MTU. Constraints 4–6 are addressed independently in their respective articles but share the same gossip transport and state-vector substrate.
+
+> **Applicability note.** These solutions apply when the deployment satisfies the {% term(url="#prop-1", def="The connectivity level below which distributed autonomy outperforms cloud control") %}Inversion Threshold{% end %} condition (Proposition 1): \\(P(C(t) = 0) > \tau^\*\\). If partition probability is below \\(\tau^\*\\), cloud-connected diagnostics may be more cost-effective than the local autonomy stack developed across this series.
 
 ---
 
@@ -195,6 +197,22 @@ Several symbols carry different meanings depending on context. The table below l
 | {% katex() %}\rho_J{% end %} | Spatial jamming correlation factor {% katex() %}\rho_J \in [0,1]{% end %} — scales how strongly a neighbor's denial state elevates a node's own Denied transition rate (Definition 90) | Distinct from bare \\(\rho\\) (compute-to-transmit ratio above); {% katex() %}\rho_J = 0{% end %} = independent fading; {% katex() %}\rho_J = 1{% end %} = full area-denial coupling |
 | \\(\lambda\\) | Bare \\(\lambda\\) = state update rate (events/s) in [Proposition 12](@/blog/2026-02-05/index.md#prop-12); subscript \\(\lambda_i\\) = Weibull scale above | Also used as gossip contact rate in [Proposition 4](@/blog/2026-01-22/index.md#prop-4) and drift coefficient in [Proposition 9](@/blog/2026-01-29/index.md#prop-9); subscript always disambiguates |
 | \\(\lambda_{\text{drift}}\\) | Kalman process noise rate (\\(s^{-1}\\)) — controls how fast the adaptive baseline adjusts across capability levels | Distinct from: Weibull scale \\(\lambda_i\\) (Definition 66), gossip fanout rate \\(\lambda\\) (Proposition 4), and information decay rate \\(\lambda_c\\) (Definition 1b) |
+
+### Multi-Meaning Symbol Index
+
+The following symbols carry distinct meanings across the series. When in doubt, the subscript always disambiguates. Use this table as a cross-reference anchor.
+
+| Symbol | Meaning in this article | Same symbol, different meaning | Defined where |
+|--------|------------------------|-------------------------------|---------------|
+| \\(\\rho\\) | Compute-to-transmit energy ratio \\(T_d/T_s\\) | \\(\\rho_q\\): CBF stability margin (dimensionless) | *Self-Healing Without Connectivity*, Definition 110 |
+| \\(\\rho\\) (bare) | Compute-to-transmit energy ratio | \\(\\delta_{\\text{ppm}}\\): physical clock drift rate | *Fleet Coherence Under Partition*, HLC section |
+| \\(\\lambda\\) | Weibull scale parameter \\(\\lambda_i\\) per regime | Gossip contact rate; Kalman drift rate \\(\\lambda_{\\text{drift}}\\); state update rate | Subscript always disambiguates |
+| \\(\\gamma\\) | Semantic convergence factor (Definition 1b) | dCBF contraction rate (Definition 110); EXP3-IX exploration floor (Definition 33) | Subscript always disambiguates |
+| \\(\\beta\\) | Reconciliation cost (Proposition 1) | Holt-Winters trend coefficient; bandwidth asymmetry \\(B_{\\text{backhaul}}/B_{\\text{local}}\\); Gamma prior rate | Subscript always disambiguates |
+| \\(\\tau^*\\) | Inversion threshold (partition probability) | \\(\\theta^*\\): anomaly classification threshold | *Self-Measurement Without Central Observability*, Definition 4 |
+| **H**(t) | Per-component health vector for one node | **H** = fleet-wide health vector over \\(n\\) nodes | *Self-Measurement Without Central Observability*, Definition 5 |
+| \\(K\\) | EXP3-IX arm count | \\(k_N\\): Weibull shape parameter (separate bandit) | Definition 67 (this article) vs. Definition 33 (*Anti-Fragile Decision-Making at the Edge*) |
+| L0–L4 | Capability levels (functional service tier) | Authority tier \\(\\mathcal{Q}_j\\): decision-scope hierarchy | Definition 78 (capability) vs. Definition 14 in *Fleet Coherence Under Partition* (authority) |
 
 ### Constraint Structure
 
@@ -741,9 +759,9 @@ where {% katex() %}\mathrm{size}(m){% end %} is the transmission size in bytes. 
 - **Use**: Rank queued messages by \\(\nu(m, \Delta_m)\\) at each transmission opportunity; transmit the highest-density message first. Re-rank at each opportunity as AoI evolves.
 - **Field note**: A message whose value density has decayed below the value density of new messages in the queue should yield channel access — it is less valuable per byte *and* getting worse.
 
-<span id="prop-86"></span>
+<span id="prop-128"></span>
 
-**Proposition 86** (AoI-Optimal Routing Priority). *Among all non-preemptive transmission schedules with bounded channel capacity \\(B\\) bytes/s and a queue of \\(n\\) messages with independent exponential decay, the schedule minimizing total value lost in \\([0, T]\\) is the greedy schedule that transmits messages in decreasing order of \\(\nu(m, \Delta_m)\\) at each decision epoch.*
+**Proposition 128** (AoI-Optimal Routing Priority). *Among all non-preemptive transmission schedules with bounded channel capacity \\(B\\) bytes/s and a queue of \\(n\\) messages with independent exponential decay, the schedule minimizing total value lost in \\([0, T]\\) is the greedy schedule that transmits messages in decreasing order of \\(\nu(m, \Delta_m)\\) at each decision epoch.*
 
 *Proof sketch*: By exchange argument — swapping any two adjacent messages in the queue that are out of value-density order strictly increases total transmitted value. The greedy rule is therefore optimal among single-channel non-preemptive schedulers. \\(\square\\)
 
@@ -1471,6 +1489,8 @@ T_{\mathrm{acc}}[n+1] = T_{\mathrm{acc}}[n] + T_{\mathrm{tick}} \cdot \mathbf{1}
 - **Field note**: Reset-on-reconnect is essential — without it, a 30-second blip accumulates the same weight as a 4-hour outage.
 
 *Reset condition: {% katex() %}T_{\mathrm{acc}} \leftarrow 0{% end %} when \\(\Xi\\) transitions out of \\(\mathcal{N}\\) (partition ends). The accumulator is the input to both the time-varying anomaly threshold (Proposition 3 in the self-measurement article) and the circuit breaker (Proposition 92).*
+
+> **Reset rule.** \\(T_{\mathrm{acc}}\\) runs only during partition (\\(\Xi = \mathcal{N}\\)). It resets to zero on partition end (first successful round-trip to any peer). It does NOT reset on capability-level transitions; a node degrading from L3 to L1 accumulates \\(T_{\mathrm{acc}}\\) continuously through all level changes until connectivity resumes. This ensures that Proposition 3's time-varying threshold ([Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md)) remains valid and monotonically tightening across mode changes during a single partition episode.
 
 ---
 

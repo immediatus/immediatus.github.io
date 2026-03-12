@@ -664,6 +664,8 @@ The clock drift problem cannot be patched within LWW — it requires a structura
 T_{\mathrm{trust}} = \frac{\varepsilon}{\delta_{\max}}
 {% end %}
 
+> **Derivation**: After partition duration \\(T\\), physical clocks diverge by at most {% katex() %}|\Delta l| \leq \varepsilon + \delta_{\text{ppm}} \cdot T{% end %}. The HLC timestamp remains trustworthy while the drift contribution has not dominated the initial uncertainty: {% katex() %}\delta_{\text{ppm}} \cdot T \leq \varepsilon \implies T \leq \varepsilon / \delta_{\text{ppm}} \equiv T_{\text{trust}}{% end %}. Beyond \\(T_{\text{trust}}\\), accumulated drift exceeds the initial uncertainty and the system pivots to pure logical ordering. **Calibration**: crystal oscillator (\\(\delta_{\text{ppm}} = 10^{-4}\\), \\(\varepsilon = 1\\) ms) gives \\(T_{\text{trust}} \approx 2.8\\) h. GPS-denied tactical (\\(\delta_{\text{ppm}} = 10^{-3}\\)) gives \\(T_{\text{trust}} \approx 17\\) min.
+
 *During {% katex() %}T_{\mathrm{acc}} \leq T_{\mathrm{trust}}{% end %}, the HLC physical watermark {% katex() %}l_j{% end %} remains within {% katex() %}\varepsilon{% end %} of true time; full HLC ordering {% katex() %}\prec{% end %} (Definition 40) is used. When {% katex() %}T_{\mathrm{acc}} > T_{\mathrm{trust}}{% end %}, the system pivots to pure logical ordering {% katex() %}\prec_{\mathrm{logic}}{% end %}, comparing only the counter and node-ID components {% katex() %}(c_j, n_j){% end %} and ignoring {% katex() %}l_j{% end %}.*
 
 | Node class | Clock source | {% katex() %}\delta_{\max}{% end %} | {% katex() %}\varepsilon{% end %} (Prop 41) | {% katex() %}T_{\mathrm{trust}}{% end %} | Implication |
@@ -686,7 +688,7 @@ The complete conflict resolution decision tree, combining Definition 98 with Def
 
 {% mermaid() %}
 flowchart TD
-    S["Two versions arrive: v₁,h₁ and v₂,h₂"] --> P{"T_acc > T_trust?<br/>Def 85: physical clock untrusted"}
+    S["Two versions arrive: v₁,h₁ and v₂,h₂"] --> P{"T_acc > T_trust?<br/>Def 98: physical clock untrusted"}
     P -->|"No — T_acc ≤ T_trust<br/>full HLC trusted"| F["Compare h₁ ≺ h₂<br/>Def 40 lexicographic ordering"]
     P -->|"Yes — T_acc > T_trust<br/>drop l component"| G["Compare (c₁,n₁) vs (c₂,n₂)<br/>≺_logic: logical-only ordering"]
     F --> D{"Causally ordered?"}
@@ -788,6 +790,8 @@ c_m + 1            & \text{if } l' = l_m > l_j \\
 
 *{% katex() %}\tau_{\max}{% end %} bounds the 99th-percentile one-way delivery time under normal (non-adversarial) conditions and is calibrated from operational measurements. It does not bound adversarially injected delay. The anomaly detection threshold in Proposition 41 depends on {% katex() %}\tau_{\max}{% end %} at the current connectivity level.*
 
+> **Notation**: \\(\tau_{\max}\\) here denotes maximum one-way network message delivery time (milliseconds to seconds). This is distinct from the staleness time constant \\(\tau_{\text{stale}}^{\max}\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-116), which measures the observation expiry window (minutes to hours).
+
 <span id="prop-41"></span>
 **Proposition 41** ({% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} Causal Ordering Properties). *For any two events \\(e\\), \\(f\\) with {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamps \\(h_e\\), \\(h_f\\) on a fleet with maximum physical clock skew \\(\epsilon\\):*
 
@@ -839,13 +843,22 @@ The node-ID tiebreaker for concurrent LWW-Register writes gives every node a det
 
 The LWW-Register merge is then \\(s_1\\) if {% katex() %}(h_2, n_2) \prec_{\text{ext}} (h_1, n_1){% end %}, \\(s_2\\) otherwise — a total order on \\((h, n)\\) pairs requiring no coordination. The three-level comparison subsumes the general \\(h_1 \parallel h_2\\) concurrent case from Definition 41.
 
-**Clock drift bound** (Proposition 41, Property 3): With drift rate \\(\rho\\) (fractional; {% katex() %}10^{-4}{% end %} for crystal oscillators, {% katex() %}10^{-3}{% end %} for GPS-denied tactical edge), maximum clock divergence after partition duration \\(T\\) is:
+**Clock drift bound** (Proposition 41, Property 3): With drift rate \\(\delta_{\text{ppm}}\\) (\\(\delta_{\text{ppm}}\\) denotes fractional clock drift rate; distinct from the compute-to-transmit energy ratio \\(\rho = T_d/T_s\\) in *Why Edge Is Not Cloud Minus Bandwidth*) (fractional; {% katex() %}10^{-4}{% end %} for crystal oscillators, {% katex() %}10^{-3}{% end %} for GPS-denied tactical edge), maximum clock divergence after partition duration \\(T\\) is:
+
+> **Multi-part symbol disambiguation.** Several Greek letters carry different meanings across this series:
+>
+> | Symbol | Meaning in this article | Meaning elsewhere |
+> |--------|------------------------|-------------------|
+> | \\(\delta_{\text{ppm}}\\) | Crystal oscillator drift rate (ppm) | Not used elsewhere with this subscript |
+> | \\(\rho\\) | (not used in this article) | Energy ratio \\(T_d/T_s\\) in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md); stability margin \\(\rho_q\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) |
+> | \\(\delta_m^x\\) | Delta-state CRDT mutant (Definition 72) | Distinct from staleness decay \\(\delta(t_{\text{stale}})\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) |
+> | \\(\tau_{\max}\\) | Maximum one-way message delivery time | Staleness time constant renamed \\(\tau_{\text{stale}}^{\max}\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) |
 
 {% katex(block=true) %}
-|\Delta l| \leq \varepsilon + \rho \cdot T
+|\Delta l| \leq \varepsilon + \delta_{\text{ppm}} \cdot T
 {% end %}
 
-For a 2-hour GPS-denied partition (\\(T = 7200\\) s, {% katex() %}\rho = 10^{-3}{% end %}): {% katex() %}|\Delta l| \leq \varepsilon + 7.2{% end %} s. Since {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} watermarks track the maximum observed physical time rather than raw wall clocks, logical counters absorb any remaining tie-breaking load without requiring NTP.
+For a 2-hour GPS-denied partition (\\(T = 7200\\) s, {% katex() %}\delta_{\text{ppm}} = 10^{-3}{% end %}): {% katex() %}|\Delta l| \leq \varepsilon + 7.2{% end %} s. Since {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} watermarks track the maximum observed physical time rather than raw wall clocks, logical counters absorb any remaining tie-breaking load without requiring NTP.
 
 <span id="def-42"></span>
 **Definition 42** (Drift-Quarantine Re-sync Protocol). *When partitioned node \\(j\\) rejoins with signed drift {% katex() %}\Delta_j = l_j - \max_{i \in \mathrm{peers}} l_i{% end %} (positive: clock ran fast; negative: clock ran slow), execute the following four phases:*
@@ -872,7 +885,7 @@ l_j \leftarrow \max\!\left(l_j,\; \max_{i \in \mathrm{peers}} l_i\right), \qquad
 
 **Phase 4 — Exit Quarantine**: When all partition operations are audited and {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state has converged with peers, exit read-only mode and resume normal {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} operation.
 
-**Permanent isolation**: If a quarantined node's partition duration accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds {% katex() %}Q_{0.95}{% end %} (the Proposition 92 Weibull circuit-breaker threshold from Part 3) without re-sync completing, the node self-transitions to Terminal Safety State (Definition 124, Part 3): ceases all write operations, freezes its CRDT state, and broadcasts a `QUARANTINE_PERMANENT` flag to any reachable peers for audit logging. This prevents a permanently isolated node's stale state from contaminating fleet state on a surprise reconnect after an operationally long isolation.
+**Permanent isolation**: If a quarantined node's partition duration accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds {% katex() %}Q_{0.95}{% end %} (the Proposition 92 Weibull circuit-breaker threshold from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md)) without re-sync completing, the node self-transitions to Terminal Safety State ([Definition 124](@/blog/2026-01-29/index.md#def-124)): ceases all write operations, freezes its CRDT state, and broadcasts a `QUARANTINE_PERMANENT` flag to any reachable peers for audit logging. This prevents a permanently isolated node's stale state from contaminating fleet state on a surprise reconnect after an operationally long isolation.
 
 <span id="prop-42"></span>
 **Proposition 42** (Re-sync Correctness). *The Drift-Quarantine Protocol (Def 42) guarantees:*
@@ -1122,7 +1135,18 @@ In other words, a decision belongs to tier \\(\mathcal{Q}_j\\) based solely on h
 | \\(\mathcal{Q}_2\\) | Fleet | All nodes | Mission parameter change |
 | \\(\mathcal{Q}_3\\) | Command | Beyond fleet | Rules of engagement |
 
-*Notation: {% katex() %}Q_i \in \{Q_0, Q_1, Q_2, Q_3\}{% end %} (higher index = higher authority) denotes a tier level (a compile-time constant per node class). {% katex() %}Q_{\text{effective}}(t){% end %} is the runtime effective tier at time \\(t\\) — may be downgraded from the design tier during partition. {% katex() %}Q_{\text{delegated}}(\tau){% end %} is the tier granted by a higher-authority node for a partition of duration \\(\\tau\\). All three share the codomain {% katex() %}\{Q_0, \ldots, Q_3\}{% end %}.* (See also the Constraint Sequence in [Part 6](@/blog/2026-02-19/index.md#def-17), which formalizes the prerequisite ordering under which authority tiers must be satisfied before capability levels advance.)
+*Notation: {% katex() %}Q_i \in \{Q_0, Q_1, Q_2, Q_3\}{% end %} (higher index = higher authority) denotes a tier level (a compile-time constant per node class). {% katex() %}Q_{\text{effective}}(t){% end %} is the runtime effective tier at time \\(t\\) — may be downgraded from the design tier during partition. {% katex() %}Q_{\text{delegated}}(\tau){% end %} is the tier granted by a higher-authority node for a partition of duration \\(\\tau\\). All three share the codomain {% katex() %}\{Q_0, \ldots, Q_3\}{% end %}.* (See also the Constraint Sequence in [Constraint Sequence](@/blog/2026-02-19/index.md#def-17), which formalizes the prerequisite ordering under which authority tiers must be satisfied before capability levels advance.)
+
+> **Authority Tiers vs. Capability Levels.** These are two orthogonal hierarchies that both use the term "level" but govern different aspects of node behaviour:
+>
+> | Concept | Symbol | Determined by | Governs |
+> |---------|--------|--------------|---------|
+> | Capability Level (L_0–L_4) | \\(q\\) | Remaining battery / resource budget | Energy fidelity, MAPE-K tick rate, measurement stack activation |
+> | Authority Tier | \\(Q_j\\) | Partition duration + pre-delegation rules | Decision scope, write authority, which actions a node may take autonomously |
+>
+> A node at capability level L1 (low battery) may simultaneously hold authority tier Q3 (high autonomy) if it was pre-delegated before the partition. The two hierarchies are independent.
+>
+> **Disambiguation — capability level vs. authority tier**: *Capability level* (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\), *Why Edge Is Not Cloud Minus Bandwidth*) describes what functional service a node delivers. *Authority tier* (\\(\mathcal{Q}_j\\), this definition) describes what decisions a node may make autonomously. These are orthogonal: a node at \\(\mathcal{L}_0\\) (heartbeat survival only) may hold \\(\mathcal{Q}_0\\) command authority; an \\(\mathcal{L}_4\\) node (full mission capability) may hold only field-level \\(\mathcal{Q}_3\\) authority. When other sections say "escalate to L0," context determines which hierarchy is meant: in the healing framework (*Self-Healing Without Connectivity*), "L0" always means capability level (functional degradation); in conflict-resolution rules in this article, "authority tier" always means decision scope.
 
 Not all decisions have the same scope. The authority tier hierarchy is defined in Definition 14 above. During partition: \\(\mathcal{Q}_0\\) and \\(\mathcal{Q}_1\\) decisions continue normally; \\(\mathcal{Q}_2\\) decisions become problematic since fleet-wide coordination is impossible; \\(\mathcal{Q}_3\\) decisions cannot be made and the system must operate within pre-authorized bounds.
 
@@ -1153,7 +1177,7 @@ graph TD
 
 **Authority elevation during partition**: When connectivity is lost, authority must be explicitly delegated downward. The system cannot simply assume lower levels can make higher-level decisions.
 
-> **Interaction with healing admission**: The Authority Tier check precedes the Healing Admission Condition (HAC) in Part 3. A node whose {% katex() %}Q_{\text{effective}}(t) < Q_{\text{required}}(\text{action}){% end %} does not evaluate HAC — the action is rejected before the Lyapunov gate is reached. This ordering ensures partitioned nodes with temporarily elevated effective tier cannot issue healing actions they lack the authority to perform.
+> **Interaction with healing admission**: The Authority Tier check precedes the Healing Admission Condition (HAC) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md). A node whose {% katex() %}Q_{\text{effective}}(t) < Q_{\text{required}}(\text{action}){% end %} does not evaluate HAC — the action is rejected before the Lyapunov gate is reached. This ordering ensures partitioned nodes with temporarily elevated effective tier cannot issue healing actions they lack the authority to perform.
 
 ### Authority Delegation Under Partition
 
@@ -1664,7 +1688,7 @@ The Delta-Sync fingerprint {% katex() %}\Psi_i = (\vec{V}_i, \vec{h}_i){% end %}
 | :--- | :--- | :--- | :--- |
 | {% katex() %}l_i{% end %} — HLC watermark | 4 B | Definition 40 send rule | Apply receive rule of Def 40; check anomaly condition of Prop 41 |
 | {% katex() %}c_i{% end %} — HLC counter | 2 B | Definition 40 send rule | Merge into local HLC counter |
-| {% katex() %}T_{\mathrm{acc},\,i}{% end %} — partition age | 4 B | {% katex() %}T_{\mathrm{acc}}{% end %} accumulator (Def 68) | Select {% katex() %}\prec{% end %} vs {% katex() %}\prec_{\mathrm{logic}}{% end %} (Def 85); decide quarantine (Def 42) |
+| {% katex() %}T_{\mathrm{acc},\,i}{% end %} — partition age | 4 B | {% katex() %}T_{\mathrm{acc}}{% end %} accumulator (Def 68) | Select {% katex() %}\prec{% end %} vs {% katex() %}\prec_{\mathrm{logic}}{% end %} (Def 98); decide quarantine (Def 42) |
 | **Total** | **10 B** | — | Absorbed into {% katex() %}C_F{% end %}; zero per-item overhead |
 
 - **Computes**: Three-signal causality header (HLC state, clock trust, quarantine decision) embedded in the Phase 1 fingerprint; 10 B total addition to {% katex() %}C_F{% end %}.
@@ -1699,7 +1723,7 @@ The Delta-Sync fingerprint {% katex() %}\Psi_i = (\vec{V}_i, \vec{h}_i){% end %}
 
 <span id="def-100-uah"></span>
 
-Definitions 85 and 86 (Clock Fix), the Nonlinear Safety Guardrail from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-80) (Stability Fix), and the Zero-Tax Hash Chain from [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#def-102) (Resource Fix) each add fields to the gossip fingerprint. Rather than three independent headers, they compose into a single 20-byte **Unified Autonomic Header (UAH)** — the concrete answer to the three structural design constraints introduced in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md).
+Definitions 98 and 99 (Clock Fix), the Nonlinear Safety Guardrail from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-80) (Stability Fix), and the Zero-Tax Hash Chain from [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#def-102) (Resource Fix) each add fields to the gossip fingerprint. Rather than three independent headers, they compose into a single 20-byte **Unified Autonomic Header (UAH)** — the concrete answer to the three structural design constraints introduced in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md).
 
 <span id="def-100"></span>
 
@@ -1716,7 +1740,7 @@ Definitions 85 and 86 (Clock Fix), the Nonlinear Safety Guardrail from [Self-Hea
 | :--- | :--- | :--- | :--- | :--- |
 | 0–3 | {% katex() %}l_i{% end %} — HLC watermark | 4 B | Definition 40 send rule | Apply Def 40 receive rule; check Prop 41 anomaly condition |
 | 4–5 | {% katex() %}c_i{% end %} — HLC counter | 2 B | Definition 40 send rule | Merge into local HLC counter |
-| 6–9 | {% katex() %}T_{\mathrm{acc},i}{% end %} — partition age | 4 B | Definition 68 accumulator | Select {% katex() %}\prec{% end %} vs {% katex() %}\prec_{\mathrm{logic}}{% end %} (Def 85); decide quarantine (Def 42) |
+| 6–9 | {% katex() %}T_{\mathrm{acc},i}{% end %} — partition age | 4 B | Definition 68 accumulator | Select {% katex() %}\prec{% end %} vs {% katex() %}\prec_{\mathrm{logic}}{% end %} (Def 98); decide quarantine (Def 42) |
 | 10 | {% katex() %}\rho_{q,i}{% end %} — CBF margin | 1 B | Prop 80, Q0.8 encoding | Check NSG veto; {% katex() %}\rho_{q,i} = 0{% end %} means outside safe set |
 | 11 | {% katex() %}q_i{% end %} — mode index | 1 B | Capability level L0–L4 | Skip high-severity healing requests if {% katex() %}q_i = 0{% end %} (OBSERVE) |
 | 12–15 | {% katex() %}h_{\mathrm{sfx},i}{% end %} — hash suffix | 4 B | Definition 83 chain suffix | Compare to local suffix; divergence within one tick = metric corruption |
@@ -1739,6 +1763,24 @@ The three fixes are mutually reinforcing: a receiver seeing `zt_state = 00` (OBS
 - **Parameters**: {% katex() %}\rho_{q,i}{% end %} encoded as unsigned byte (0 = margin 0.0, 255 = margin 1.0); {% katex() %}h_{\mathrm{sfx},i}{% end %} = last 4 bytes of Definition 83 chain; {% katex() %}q_i \in \{0,1,2,3,4\}{% end %} matching L0–L4.
 - **Prevents**: Header proliferation — three independent fixes would grow the fingerprint by 16 B with redundant alignment; the UAH absorbs all three into 20 B with a single 3-byte pad.
 
+> **Scope of the UAH's causal ordering guarantee — 20 bytes cannot hold a 47-node vector clock**: The UAH is not a compressed vector clock. The `c_i` field (2 B) is the HLC sub-second disambiguator: it increments only when two events share the same physical second, and resets to zero at the next clock tick. Under typical MAPE-K operation (5 s/tick), `c_i ∈ {0, 1}` at almost every tick — 2 bytes is not a constraint in practice.
+>
+> **The counter-wrap risk lives in `vec{V}_i`, not in the UAH.** Under `≺_logic` (physical clock untrusted, `T_acc > T_trust`), the system discards `l_i` and orders events by `(c_i, n_i)`. Because `c_i` resets every second, this ordering has no cross-second resolution: a day-1 event and a day-29 event can both have `c_i = 0` and be indistinguishable under `≺_logic` alone. The mechanism that provides day-level causal ordering is the vector clock `vec{V}_i` — the separate, variable-size component of the Phase 1 fingerprint, not part of the 20-byte UAH.
+>
+> For RAVEN (47 drones), `vec{V}_i` is a 4-byte-per-node integer vector (188 bytes at full size). The bandwidth analysis above shows this exceeds the link budget; the mitigation — dotted version vectors at 8 clusters \\(\times\\) 4-byte counters = 64 bytes — preserves causal ordering at cluster granularity. **Counter-wrap check at mission timescale**: at 200 updates/min from ~6 drones per cluster, the per-cluster sequence number accumulates {% katex() %}200 \times 1{,}440 \times 30 \approx 8.6\,\text{M}{% end %} events over 30 days. A 4-byte counter holds 4.29 B — no wrap for a 30-day mission. If 1-byte counters were erroneously substituted (255 max), the first wrap would occur in 255 / 200 min \\(\approx\\) **77 seconds**, and over 30 days each counter would wrap \\(\approx\\) 33,880 times, producing false causal links on reconnection that could overwrite 30 days of valid data with a stale update that happens to carry a higher wrapped-index.
+>
+> **OUTPOST deployment timescale — the Day-497 bug**: RAVEN is mission-bound to 30 days; OUTPOST is a persistent installation operating for months to years. A "hot" sensor node running high-frequency telemetry (100 Hz — plausible for seismic or acoustic threat detection) generates 6,000 events/min. Its per-cluster sequence number wraps at {% katex() %}4{,}294{,}967{,}295 / 6{,}000 \approx 716{,}000\,\text{min}{% end %} \\(\approx\\) **497 days**. On Day 498, the counter wraps to low values. When the fusion node next reconciles, it sees the cluster's sequence number as apparently smaller than its last known value and — without wrap-detection — treats all post-wrap events as causally prior, potentially overwriting 497 days of current state with stale data.
+>
+> **Stale Vector Counter (SVC) quarantine**: During Phase 1 fingerprint exchange, apply sequence-number arithmetic (RFC 1323 Sec. 3 — the same technique TCP uses to detect wrapped sequence numbers) to each cluster entry received:
+>
+> {% katex(block=true) %}\text{suspect\_wrap}(k) = \bigl(V_{\mathrm{recv}}[k] - V_{\mathrm{last}}[k]\bigr) \bmod 2^{32} > 2^{31}{% end %}
+>
+> A received counter that appears to have *decreased* by more than \\(2^{31}\\) modulo the counter width is flagged as a suspected wrap. Response mirrors the Drift-Quarantine Re-sync Protocol (Definition 42): (1) enter read-only mode for node \\(k\\)'s state; (2) broadcast a **counter-epoch request** to peer nodes — any peer whose last-known sequence for \\(k\\) is near \\(2^{32}\\) (within \\(2^{29}\\)) confirms the wrap; (3) if quorum confirms, increment an **epoch counter** \\(e_k\\) stored out-of-band and re-order events as \\((e_k, V[k])\\) tuples — the epoch promotes all post-wrap events above all pre-wrap events; (4) exit quarantine when all local entries are epoch-consistent with the quorum.
+>
+> **Deployment decision**: for OUTPOST, either (a) use 8-byte sequence counters in the dotted version vector — wraps at {% katex() %}4.29\text{ B} \times 2^{32} / 6{,}000\,\text{min} \approx 305{,}000\,\text{years}{% end %}, problem eliminated; or (b) deploy the SVC quarantine above with 4-byte counters and accept the minor coordination cost on Day 497. For RAVEN, 4-byte counters are sufficient without quarantine at all mission-relevant timescales.
+>
+> The UAH's `trust_flag` and `T_acc` fields signal *which* ordering to use; the vector clock `vec{V}_i` is the ordering mechanism itself. Both are required. The UAH alone, without `vec{V}_i`, provides only within-second causal disambiguation — correct for clock-trust signaling and HLC integration, but insufficient for post-partition reconciliation of multi-day accumulated state.
+
 ### Reconnection Storm Mitigation
 
 Definition 31 assumes bandwidth \\(B\\) is known a priori and the link remains stable throughout the sync window. In practice, the first opportunistic uplink after a long Weibull partition is marginal — MANET RF at the edge of coverage, or a satellite bounce during a brief atmospheric window. Transmitting the full {% term(url="#def-12", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state before measuring the link saturates the channel before any critical state is exchanged. Four extensions close this gap in sequence: a formal delta-state CRDT (Definition 72) reduces payload size; a pre-sync bandwidth probe (Definition 73) measures \\(\hat{B}\\) before Phase 1 of Definition 31; a QoS byte budget (Definition 74) translates \\(\hat{B}\\) into guaranteed tier allocations; and an exponential backoff condition (Proposition 61) detects link saturation mid-sync and pauses before destabilizing the uplink.
@@ -1757,6 +1799,8 @@ Definition 31 assumes bandwidth \\(B\\) is known a priori and the link remains s
 - **Dot-kernel connection**: In Shapiro et al.'s dot-kernel representation, each lattice element carries a **dot** — a pair \\((i, e)\\) where \\(i\\) is the node identifier and \\(e\\) is a per-node event counter. The delta mutant \\(\delta_m^x\\) produced by mutation \\(m\\) at node \\(i\\) corresponds to generating exactly one new dot \\((i, e)\\): the minimal sub-state containing that dot and no others. The delta group {% katex() %}\Delta_i^{(e)}{% end %} is then the **dot store** — the join of all dots generated at node \\(i\\) since epoch \\(e\\). This correspondence makes causal context explicit in every delta transmission without requiring a full vector clock per message: the receiver can reconstruct which dots it is missing from {% katex() %}\Delta_i^{(e)}{% end %} alone, without exchanging a \\(|N|\\)-dimensional clock vector.
 
 > **Physical translation**: Only the changed portion of the CRDT state is transmitted, not the full state. A vehicle that updated 500 of its 10,000 position-history entries during a partition transmits those 500 entries as a delta group — not all 10,000. The semilattice join guarantees the peer can merge the delta group into its own state correctly without receiving the unchanged 9,500 entries.
+
+> **Notation note.** \\(\delta_m^x\\) denotes the delta-state CRDT structure. This is distinct from the staleness decay function \\(\delta(t_{\text{stale}})\\) defined in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-116); the shared \\(\delta\\) symbol is disambiguated by subscript.
 
 The **delta group** accumulated since sync epoch \\(e\\) is the join of all delta mutants produced by mutations \\(m_1, m_2, \ldots\\) applied at states \\(x_1, x_2, \ldots\\) since \\(e\\):
 
@@ -1786,34 +1830,36 @@ Updated via \\(\alpha\\)-exponential moving average across successive probe wind
 \hat{B}_{n} = \alpha\,\hat{B}_{\text{sample}} + (1 - \alpha)\,\hat{B}_{n-1}, \quad \alpha = 0.25
 {% end %}
 
-If {% katex() %}\mathrm{RTT}_{\text{probe}} > T_{\text{timeout}}{% end %} (default: 2 s) or {% katex() %}\hat{B}_{n} < B_{\min}{% end %} (default: 9.6 kbps): set {% katex() %}\hat{B}_{n} = B_{\min}{% end %} and flag as **marginal link** — only tier-1 items (Definition 74) are transmitted. Probe cost: {% katex() %}L_{\text{probe}} + L_{\text{ACK}} \leq 560{% end %} bytes, 1 RTT — negligible against any usable link.
+If {% katex() %}\mathrm{RTT}_{\text{probe}} > T_{\text{timeout}}{% end %} (default: 2 s) or {% katex() %}\hat{B}_{n} < B_{\min}{% end %} (default: 9.6 kbps): set {% katex() %}\hat{B}_{n} = B_{\min}{% end %} and flag as **marginal link** — only Service Level \\(\mathcal{L}_1\\) items (Definition 74) are transmitted. Probe cost: {% katex() %}L_{\text{probe}} + L_{\text{ACK}} \leq 560{% end %} bytes, 1 RTT — negligible against any usable link.
 
 <span id="def-74"></span>
 
-**Definition 74** (QoS Byte Budget). Given probed bandwidth \\(\hat{B}\\) and connectivity window \\(T_W\\), the **total byte budget** (fingerprint overhead pre-deducted per Definition 31 Phase 1) is:
+**Definition 74** (QoS Byte Budget). Note: 'service level' here refers to capability-level tiers (\\(\mathcal{L}_1\\)–\\(\mathcal{L}_4\\) from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md)), not the authority-tier concept (\\(Q_j\\) from Definition 14). Given probed bandwidth \\(\hat{B}\\) and connectivity window \\(T_W\\), the **total byte budget** (fingerprint overhead pre-deducted per Definition 31 Phase 1) is:
 
 {% katex(block=true) %}
 \Omega = \hat{B} \cdot T_W - 2\,C_F
 {% end %}
 
-- **Use**: Computes usable bytes for the current sync window after subtracting two-way framing overhead; allocate by tier immediately after probing to prevent tier-1 critical state from being crowded out by large lower-priority deltas.
-- **Parameters**: {% katex() %}\alpha_1=0.50,\, \alpha_2=0.25,\, \alpha_3=0.15,\, \alpha_4=0.10{% end %}; unused budget from tier {% katex() %}k{% end %} cascades to tier {% katex() %}k+1{% end %}.
-- **Field note**: Cap tier-3 absolute size even when cascade budget is available — the cascade rule becomes a footgun for large low-priority payloads.
+- **Use**: Computes usable bytes for the current sync window after subtracting two-way framing overhead; allocate by service level immediately after probing to prevent Service Level \\(\mathcal{L}_1\\) critical state from being crowded out by large lower-priority deltas.
+- **Parameters**: {% katex() %}\alpha_1=0.50,\, \alpha_2=0.25,\, \alpha_3=0.15,\, \alpha_4=0.10{% end %}; unused budget from service level {% katex() %}k{% end %} cascades to service level {% katex() %}k+1{% end %}.
+- **Field note**: Cap Service Level \\(\mathcal{L}_3\\) absolute size even when cascade budget is available — the cascade rule becomes a footgun for large low-priority payloads.
 
-The budget is partitioned into tier-reserved allocations:
+> **Note**: 'service level' here refers to the capability level (\\(\mathcal{L}_0\\)–\\(\mathcal{L}_4\\)) that reserves this bandwidth allocation — distinct from the decision-scope *authority tier* (\\(\mathcal{Q}_j\\)) of Definition 14.
 
-| Tier | Content | Reservation \\(\alpha_k\\) | Guaranteed bytes |
+The budget is partitioned into service-level-reserved allocations:
+
+| Service Level | Content | Reservation \\(\alpha_k\\) | Guaranteed bytes |
 | :--- | :--- | :--- | :--- |
-| 1 — \\(\mathcal{L}_0\\) critical | Threat vectors, node liveness | \\(\alpha_1 = 0.50\\) | \\(0.50\\,\Omega\\) |
-| 2 — Mission | Position, objectives | \\(\alpha_2 = 0.25\\) | \\(0.25\\,\Omega\\) |
-| 3 — Operational | Sensor readings, health | \\(\alpha_3 = 0.15\\) | \\(0.15\\,\Omega\\) |
-| 4 — \\(\mathcal{L}_4\\) telemetry | Logs, timestamps | \\(\alpha_4 = 0.10\\) | \\(0.10\\,\Omega\\) |
+| \\(\mathcal{L}_1\\) (safety/control) — \\(\mathcal{L}_0\\) critical | Threat vectors, node liveness | \\(\alpha_1 = 0.50\\) | \\(0.50\\,\Omega\\) |
+| \\(\mathcal{L}_2\\) (mission) — Mission | Position, objectives | \\(\alpha_2 = 0.25\\) | \\(0.25\\,\Omega\\) |
+| \\(\mathcal{L}_3\\) (operational) — Operational | Sensor readings, health | \\(\alpha_3 = 0.15\\) | \\(0.15\\,\Omega\\) |
+| \\(\mathcal{L}_4\\) (telemetry) — \\(\mathcal{L}_4\\) telemetry | Logs, timestamps | \\(\alpha_4 = 0.10\\) | \\(0.10\\,\Omega\\) |
 
-Unused tier-\\(k\\) allocation cascades to tier \\(k+1\\): if \\(|\Delta_k| < \alpha_k\\,\Omega\\), the surplus \\(\alpha_k\\,\Omega - |\Delta_k|\\) is added to the tier-\\((k+1)\\) budget. Critical state receives its floor regardless of link quality: at {% katex() %}\hat{B} = B_{\min} = 9.6\,\text{kbps}{% end %} with \\(T_W = 5\\,\text{s}\\), {% katex() %}\Omega \approx 6\,\text{KB}{% end %} and {% katex() %}0.50\,\Omega = 3\,\text{KB}{% end %} is reserved for threat vectors and liveness — sufficient for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s 2 KB tier-1 delta.
+Unused Service Level {% katex() %}\mathcal{L}_k{% end %} allocation cascades to {% katex() %}\mathcal{L}_{k+1}{% end %}: if \\(|\Delta_k| < \alpha_k\\,\Omega\\), the surplus \\(\alpha_k\\,\Omega - |\Delta_k|\\) is added to the Service Level \\(\mathcal{L}_{k+1}\\) budget. Critical state receives its floor regardless of link quality: at {% katex() %}\hat{B} = B_{\min} = 9.6\,\text{kbps}{% end %} with \\(T_W = 5\\,\text{s}\\), {% katex() %}\Omega \approx 6\,\text{KB}{% end %} and {% katex() %}0.50\,\Omega = 3\,\text{KB}{% end %} is reserved for threat vectors and liveness — sufficient for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s 2 KB Service Level \\(\mathcal{L}_1\\) delta.
 
-> **Physical translation**: Safety-critical messages always get their 50% slice of the byte budget, even when bandwidth collapses to the minimum 9.6 kbps link. At that floor, a 5-second window yields only 6 KB total — but 3 KB is hard-reserved for threat vectors and node liveness. Audit logs and telemetry queue for the next window. The tier system prevents a flood of operational data from crowding out the life-safety state during link degradation.
+> **Physical translation**: Safety-critical messages always get their 50% slice of the byte budget, even when bandwidth collapses to the minimum 9.6 kbps link. At that floor, a 5-second window yields only 6 KB total — but 3 KB is hard-reserved for threat vectors and node liveness. Audit logs and telemetry queue for the next window. The service-level system prevents a flood of operational data from crowding out the life-safety state during link degradation.
 
-**Budget starvation**: When the total byte budget falls below the Tier 1 minimum reservation ({% katex() %}\alpha_1 \cdot B_{\min} \cdot T_W{% end %}), the node enters communication blackout: only L0 hardware-level heartbeats (\\(\leq 8\\) bytes/s) are permitted. All autonomic sync is suspended until {% katex() %}B_{\text{available}} > \alpha_1 \cdot B_{\min}{% end %} for two consecutive probe intervals.
+**Budget starvation**: When the total byte budget falls below the Service Level \\(\mathcal{L}_1\\) minimum reservation ({% katex() %}\alpha_1 \cdot B_{\min} \cdot T_W{% end %}), the node enters communication blackout: only L0 hardware-level heartbeats (\\(\leq 8\\) bytes/s) are permitted. All autonomic sync is suspended until {% katex() %}B_{\text{available}} > \alpha_1 \cdot B_{\min}{% end %} for two consecutive probe intervals.
 
 <span id="prop-61"></span>
 
@@ -1833,15 +1879,15 @@ T_{\text{total}} \leq T_{\text{sync}} + T_0 \cdot (2^{N_{\text{sat}}} - 1)
 - **Parameters**: {% katex() %}T_0 = 100{% end %} ms base backoff interval; {% katex() %}N_{\text{sat}}{% end %} = saturation event count per session (0–3 typical); {% katex() %}T_{\text{sync}}{% end %} = baseline sync time.
 - **Field note**: Add a hard abort at {% katex() %}N_{\text{sat}} = 4{% end %} — continuing past that indicates persistent link degradation, not a transient saturation event.
 
-where {% katex() %}T_{\text{sync}} = \Omega / \hat{B}{% end %} and {% katex() %}N_{\text{sat}}{% end %} is the number of saturation events. **Tier-1 safety invariant**: tier-1 items transmit in the first {% katex() %}T_1 = \alpha_1\,\Omega / \hat{B}{% end %} seconds; since \\(T_1 < T_0\\) for all {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}-class links (\\(T_1 = 0.06\\,\text{s}\\), \\(T_0 = 0.1\\,\text{s}\\)), tier-1 completes before the first backoff period can fire. The first backoff delays only tier-2 and below.
+where {% katex() %}T_{\text{sync}} = \Omega / \hat{B}{% end %} and {% katex() %}N_{\text{sat}}{% end %} is the number of saturation events. **Service Level \\(\mathcal{L}_1\\) safety invariant**: Service Level \\(\mathcal{L}_1\\) items transmit in the first {% katex() %}T_1 = \alpha_1\,\Omega / \hat{B}{% end %} seconds; since \\(T_1 < T_0\\) for all {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}-class links (\\(T_1 = 0.06\\,\text{s}\\), \\(T_0 = 0.1\\,\text{s}\\)), Service Level \\(\mathcal{L}_1\\) completes before the first backoff period can fire. The first backoff delays only Service Level \\(\mathcal{L}_2\\) and below.
 
-*Proof sketch.* Each backoff period \\(T_0 \cdot 2^n\\) is bounded. The geometric sum {% katex() %}\sum_{n=0}^{N_{\text{sat}}-1} T_0 \cdot 2^n = T_0 \cdot (2^{N_{\text{sat}}} - 1){% end %} gives total backoff overhead. The tier-1 safety invariant follows from the ordering guarantee of Definition 74 (tier-1 transmitted first) and {% katex() %}T_1 = 0.5\,\Omega / \hat{B} \leq 0.5 \cdot T_W{% end %}, so tier-1 finishes well before the first backoff fires at {% katex() %}T_0 = 100\,\text{ms}{% end %}. \\(\square\\)
+*Proof sketch.* Each backoff period \\(T_0 \cdot 2^n\\) is bounded. The geometric sum {% katex() %}\sum_{n=0}^{N_{\text{sat}}-1} T_0 \cdot 2^n = T_0 \cdot (2^{N_{\text{sat}}} - 1){% end %} gives total backoff overhead. The Service Level \\(\mathcal{L}_1\\) safety invariant follows from the ordering guarantee of Definition 74 (Service Level \\(\mathcal{L}_1\\) transmitted first) and {% katex() %}T_1 = 0.5\,\Omega / \hat{B} \leq 0.5 \cdot T_W{% end %}, so Service Level \\(\mathcal{L}_1\\) finishes well before the first backoff fires at {% katex() %}T_0 = 100\,\text{ms}{% end %}. \\(\square\\)
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration** ({% katex() %}T_0 = 100\,\text{ms}{% end %}, \\(T_W = 5\\,\text{s}\\), {% katex() %}\hat{B} = 50\,\text{kbps}{% end %} marginal link): maximum tolerable saturation events before window expires — {% katex() %}N_{\text{sat}}^{\max} = \lfloor \log_2((T_W - T_{\text{sync}}) / T_0 + 1) \rfloor = \lfloor \log_2(49) \rfloor = 5{% end %}. After 5 saturation events, total backoff overhead is {% katex() %}100 \cdot (2^5 - 1) = 3{,}100\,\text{ms}{% end %}. Tier-1 and tier-2 state (16 KB at 50 kbps \\(= 2.6\\,\text{s}\\)) is already committed; audit logs queue for the next window.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration** ({% katex() %}T_0 = 100\,\text{ms}{% end %}, \\(T_W = 5\\,\text{s}\\), {% katex() %}\hat{B} = 50\,\text{kbps}{% end %} marginal link): maximum tolerable saturation events before window expires — {% katex() %}N_{\text{sat}}^{\max} = \lfloor \log_2((T_W - T_{\text{sync}}) / T_0 + 1) \rfloor = \lfloor \log_2(49) \rfloor = 5{% end %}. After 5 saturation events, total backoff overhead is {% katex() %}100 \cdot (2^5 - 1) = 3{,}100\,\text{ms}{% end %}. Service Level \\(\mathcal{L}_1\\) and \\(\mathcal{L}_2\\) state (16 KB at 50 kbps \\(= 2.6\\,\text{s}\\)) is already committed; audit logs queue for the next window.
 
-> **Physical translation**: The exponential backoff \\(T_0 \cdot 2^n\\) prevents sync storms during partition recovery. Without backoff, a congested link would cause both vehicles to retransmit simultaneously, collide, retransmit again, and lock the channel. With backoff: after the first saturation event the sender pauses 100 ms, after the second 200 ms, after the third 400 ms. The total penalty for 5 saturation events is only 3.1 seconds — well inside the 5-second window, and tier-1 critical state was already committed in the first 60 ms before any backoff could fire.
+> **Physical translation**: The exponential backoff \\(T_0 \cdot 2^n\\) prevents sync storms during partition recovery. Without backoff, a congested link would cause both vehicles to retransmit simultaneously, collide, retransmit again, and lock the channel. With backoff: after the first saturation event the sender pauses 100 ms, after the second 200 ms, after the third 400 ms. The total penalty for 5 saturation events is only 3.1 seconds — well inside the 5-second window, and Service Level \\(\mathcal{L}_1\\) critical state was already committed in the first 60 ms before any backoff could fire.
 
-> **Cognitive Map**: Reconnection protocols address three overlapping challenges: identifying what diverged (Merkle trees in \\(O(k \log n)\\)); transferring only the delta (Delta-Sync with QoS byte budget); and ordering ambiguous concurrent updates without NTP (Hybrid Logical Clocks). HLC is the linchpin: it provides causal ordering that survives partition and re-sync by combining physical and logical timestamps — LWW-Register becomes correct only with HLC, not wall-clock. The Drift-Quarantine Re-sync Protocol handles the case where clocks have drifted too far for HLC to bridge; Proposition 42 bounds the correctness condition. Delta-Sync's QoS tiers ensure safety-critical state (tier 1) completes before the first backoff event can fire. Next: even with correct reconciliation, some partition actions conflict at the semantic level and require arbitration rather than merge.
+> **Cognitive Map**: Reconnection protocols address three overlapping challenges: identifying what diverged (Merkle trees in \\(O(k \log n)\\)); transferring only the delta (Delta-Sync with QoS byte budget); and ordering ambiguous concurrent updates without NTP (Hybrid Logical Clocks). HLC is the linchpin: it provides causal ordering that survives partition and re-sync by combining physical and logical timestamps — LWW-Register becomes correct only with HLC, not wall-clock. The Drift-Quarantine Re-sync Protocol handles the case where clocks have drifted too far for HLC to bridge; Proposition 42 bounds the correctness condition. Delta-Sync's QoS service levels ensure safety-critical state (Service Level \\(\mathcal{L}_1\\)) completes before the first backoff event can fire. Next: even with correct reconciliation, some partition actions conflict at the semantic level and require arbitration rather than merge.
 
 ---
 

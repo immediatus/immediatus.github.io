@@ -935,6 +935,23 @@ Consider {% term(url="@/blog/2026-01-22/index.md#def-5", def="Epidemic dissemina
 - Clear conditions: 8s conserves bandwidth without loss of awareness
 - Marginal conditions: 5s balances trade-offs
 
+> **Discretization requirement — arms must be qualitatively distinct, not a fine grid**: EXP3-IX is a discrete bandit. When the true action space is continuous (\\(\theta \in \Theta \subset \mathbb{R}\\)), discretizing to \\(K\\) arms introduces two additive regret components:
+>
+> \\[R_{\text{total}} = R_{\text{bandit}} + R_{\text{disc}} = O\!\left(\sqrt{TK\ln K}\right) + T \cdot B(\varepsilon)\\]
+>
+> where {% katex() %}\varepsilon = (\theta_{\max} - \theta_{\min})/K{% end %} is the arm spacing and {% katex() %}B(\varepsilon) = \varepsilon \cdot |\partial r/\partial \theta|_{\max}{% end %} is the per-round approximation error from picking the nearest arm instead of the true optimum. These forces oppose: \\(R_{\text{bandit}}\\) grows with \\(K\\) (more arms = harder exploration), while \\(R_{\text{disc}}\\) shrinks with \\(K\\) (finer grid = less quantization loss). For short edge-mission horizons (\\(T \leq 2000\\)) and typical reward curvature, **\\(K \leq 8\\) per tuned parameter** keeps \\(R_{\text{bandit}}\\) from dominating. When precision requires \\(K > 16\\) arms to achieve acceptable \\(B(\varepsilon)\\), EXP3-IX is the wrong tool — use gradient descent or Bayesian optimization instead.
+>
+> The gossip example above (\\(K = 3\\): 3 s / 5 s / 8 s) is the correct design choice for this reason: the three values represent qualitatively distinct operating regimes (fast propagation, balanced, bandwidth-conserving), not a fine grid over \\([3,8]\\). No intermediate value would produce a qualitatively different outcome. Adding a fourth arm at 4 s would shrink \\(B(\varepsilon)\\) by 25% while increasing \\(R_{\text{bandit}}\\) by 40% at \\(T = 1000\\) — a net loss.
+>
+> **Non-convex reward surfaces and the Valley of Death**: The \\(R_{\text{disc}}\\) formula is derived under a Lipschitz smoothness assumption — {% katex() %}B(\varepsilon) = \varepsilon \cdot |\partial r/\partial \theta|_{\max}{% end %} is finite and bounded. If the reward surface is non-convex between arms — for example, a gossip interval of 4 s coincides with a TDMA frame boundary, causing systematic packet collisions — the local Lipschitz constant blows up and \\(R_{\text{disc}}\\) is invalid. More critically, EXP3-IX treats arms as independent random variables with no model of the reward surface between them. **Implementation jitter** bridges this gap in a dangerous way: a scheduler with 50 ms resolution selecting the "3 s arm" may occasionally execute at 3.4 s or 3.8 s, inadvertently sampling the inter-arm space. The contaminated reward is attributed to Arm 1 (3 s), not to the 4 s valley the jitter reached. If both Arm 1 and Arm 2 (5 s) accumulate jitter-contaminated rewards, neither arm's weight dominates decisively and the bandit oscillates between them — correctly, given the information it has, but for the wrong reason.
+>
+> **Three guards against valley contamination**:
+> 1. *Jitter-safe arm spacing*: ensure the gap between adjacent arms exceeds the implementation's timer jitter envelope: {% katex() %}|\theta_i - \theta_{i+1}| \gg 2\sigma_{\text{jitter}}{% end %}. For RAVEN's 5 s MAPE-K tick with 50 ms scheduler resolution, \\(\sigma_{\text{jitter}} \approx 100\\,\text{ms}\\) (2-sigma); the 3 s / 5 s / 8 s arms have gaps of 2 s and 3 s — \\(10\text{–}15\times\\) the jitter envelope, providing isolation. A 3 s / 4 s arm pair with 1 s gap would be jitter-unsafe.
+> 2. *Pre-flight resonance scan*: before deployment, measure reward at each arm candidate AND at the midpoints. If any midpoint reward falls more than \\(\delta_{\text{valley}}\\) below both neighbors (a practical threshold is {% katex() %}\delta_{\text{valley}} = 0.15{% end %} in normalized reward units), the inter-arm space contains a valley — adjust arm placement to move both neighbors away from it, not toward it.
+> 3. *Per-arm variance monitoring*: if {% katex() %}\widehat{\mathrm{Var}}[r \mid a_i] > 3 \cdot \mathrm{median}_j\bigl(\widehat{\mathrm{Var}}[r \mid a_j]\bigr){% end %}, arm \\(i\\) has anomalously high reward variance — the signature of jitter contamination from an inter-arm valley. Flag this arm for spacing review; do not suppress it in the bandit (that would introduce selection bias) but do widen its gap before the next deployment.
+>
+> The 3 s / 5 s / 8 s arm design satisfies all three guards simultaneously: jitter-isolated, no known LoRa or MANET collision resonances between them, and empirically validated uniform variance in RAVEN pre-flight testing.
+
 <span id="prop-18"></span>
 <span id="term-ucb"></span>
 **Proposition 18** ({% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} Regret Bound). *The Upper Confidence Bound ({% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}) algorithm achieves sublinear regret:*
@@ -961,6 +978,8 @@ R_T = O\left(\sqrt{T \cdot K \cdot \ln T}\right)
 
 *Proof sketch*: The {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %} term ensures each arm is tried \\(O(\ln T)\\) times. The regret from suboptimal arms scales as {% katex() %}\sqrt{T \ln T / K}{% end %} per arm, giving total regret {% katex() %}O(\sqrt{TK \ln T}){% end %}.
 Select the arm with highest {% term(url="#term-ucb", def="Upper Confidence Bound algorithm; selects the arm with highest estimated reward plus exploration bonus; achieves sublinear regret in stochastic environments but is exploitable by an adaptive adversary") %}UCB{% end %}. This naturally explores under-tried arms while exploiting high-performing arms.
+
+> **Operational acceptability — when is the regret budget acceptable?** For RAVEN with \\(T = 1000\\) decisions and \\(K = 5\\) arms: {% katex() %}R \approx \sqrt{1000 \cdot 5 \cdot \ln 1000} \approx 263{% end %} regret units. If total mission utility is 1000 units, regret is approximately 26% — meaning the system operates at 74% of optimal *during the learning phase*. This is acceptable when the learned policy will govern **future** missions; it is unacceptable for single-use deployments. **Rule of thumb**: regret \\(< 10\\%\\) of mission utility requires either (a) warm-start priors (Definition 96) that cut effective \\(T\\) by \\(N_q\\) virtual observations, or (b) reducing \\(K\\) until the bound is satisfied. RAVEN with warm-start (\\(N_q = 921\\) virtual observations) reduces effective \\(T\\) to 79 rounds, cutting regret by 70%.
 
 <span id="term-exp3"></span>
 
@@ -1005,7 +1024,7 @@ This assumption breaks when the environment **responds to your actions**. An ada
 - **Switch to adversarial** (EXP3-IX below): after the Adversarial Non-Stationarity Detector (Definition 34) fires for two consecutive detection windows, or during pre-mission threat assessment when adaptive interference is part of the operational environment — e.g., RAVEN operating in contested EW airspace, CONVOY in active jamming corridors.
 - **Switch back**: when the non-stationarity detector clears for 30 continuous minutes, revert to the stochastic model to reduce overhead (Definition 83, Autonomic Overhead Budget).
 
-The formal adversarial model follows.
+The formal adversarial model follows. (The Adversarial Markov Game formalizing this model is Definition 32 below; readers may skip ahead to it for the formal structure.)
 
 ---
 
@@ -1019,35 +1038,36 @@ During {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone su
 >
 > | Symbol | Role | Constraint | Definition |
 > |--------|------|-----------|------------|
-> | \\(\\gamma\\) (Def 32) | Discount factor in infinite-horizon value function | \\(\\gamma \\in (0,1)\\) | Definition 32 |
+> | \\(\\gamma_V\\) (Def 32) | Value-function discount factor in infinite-horizon value function | \\(\\gamma_V \\in (0,1)\\) | Definition 32 |
 > | \\(\\gamma\\) (EXP3 standard) | Additive mixture with uniform distribution: probability floor = \\(\gamma/K\\) per arm (distinct from EXP3-IX's denominator-floor mechanism) | \\(\\gamma/K\\) = minimum arm probability | From Stochastic to Adversarial: The Markov Game |
 > | \\(\\gamma\\) (Def 33, EXP3-IX) | Implicit exploration floor in IX estimator | {% katex() %}\gamma = \eta\sqrt{K/2}{% end %} | Definition 33 |
 > | {% katex() %}\gamma_{\text{infl}}{% end %} (Def 63) | CUSUM exploration-rate inflation factor | {% katex() %}\gamma_{\text{infl}} > 1{% end %} | Definition 63 |
+> | \\(\gamma(\sigma)\\) | Semantic convergence factor | [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-1b), Definition 1b | \\(\gamma(\sigma) \in [0,1]\\); measures fleet-wide semantic alignment |
 >
-> The Def 63 inflation factor is renamed {% katex() %}\gamma_{\text{infl}}{% end %} to prevent collision with Def 32's discount factor (\\(\\gamma \\in (0,1)\\) is incompatible with \\(\\gamma > 1\\)).
+> The Def 63 inflation factor is renamed {% katex() %}\gamma_{\text{infl}}{% end %} to prevent collision with Def 32's value-function discount factor (\\(\\gamma_V \\in (0,1)\\) is incompatible with \\(\\gamma > 1\\)).
 
 <span id="def-32"></span>
 
-**Definition 32** (Adversarial Markov Game). An adversarial connectivity game is a 6-tuple {% katex() %}\mathcal{G} = (S, A, B, Q, R, \gamma){% end %} where:
+**Definition 32** (Adversarial Markov Game). An adversarial connectivity game is a 6-tuple {% katex() %}\mathcal{G} = (S, A, B, Q, R, \gamma_V){% end %} where:
 
 - {% katex() %}S = \{C, D, I, N\}{% end %} — connectivity regimes (Definition 2)
 - \\(A\\) — \\(K\\) defender actions (healing responses, bandit arms)
 - \\(B\\) — adversary action set (jamming intensities, timing windows)
 - {% katex() %}Q: A \times B \to{% end %} generator matrices — the CTMC generator when defender plays \\(a \in A\\) and adversary plays \\(b \in B\\)
 - {% katex() %}R: S \times A \times B \to \mathbb{R}{% end %} — per-step mission throughput reward
-- \\(\gamma \in (0,1)\\) — discount factor; adversary plays **adaptive** policy {% katex() %}\tau_t = \tau(h_t){% end %} where \\(h_t\\) is the full defender action history
+- \\(\gamma_V \in (0,1)\\) — discount factor (\\(\gamma_V \in (0,1)\\) is the value-function discount factor; distinct from the EXP3-IX exploration floor \\(\gamma\\) in Definition 33); adversary plays **adaptive** policy {% katex() %}\tau_t = \tau(h_t){% end %} where \\(h_t\\) is the full defender action history
 
 The *security value* is:
 
 {% katex(block=true) %}
-V^* = \max_{\sigma:\, S \to \Delta(A)}\; \min_{\tau}\; \mathbb{E}\!\left[\sum_{t=0}^{\infty} \gamma^t R(s_t, a_t, b_t) \,\Big|\, s_0\right]
+V^* = \max_{\sigma:\, S \to \Delta(A)}\; \min_{\tau}\; \mathbb{E}\!\left[\sum_{t=0}^{\infty} \gamma_V^t R(s_t, a_t, b_t) \,\Big|\, s_0\right]
 {% end %}
 
 where \\(\sigma\\) is the defender's mixed (randomized) policy and \\(\tau\\) ranges over all adaptive adversary strategies. *(Disambiguation: \\(\tau\\) here denotes an adversary strategy mapping; it is distinct from {% katex() %}\tau_{\text{ref}}{% end %} (the adaptive refractory backoff period in [Definition 119](@/blog/2026-01-29/index.md#def-119)) and from \\(\tau(a)\\) (the stochastic transport delay in Definition 62 of this article). Where needed, adversary strategies are written {% katex() %}\tau_{\text{adv}}{% end %}.)*
 
 *(Scope: The adversarial Markov Game model applies during active jamming or sensor-spoofing scenarios where failure is intentional and correlated with defender actions. During normal partition — where failure is environmental rather than intentional — the [cooperative gossip model](@/blog/2026-01-22/index.md) applies and achieves higher utility because nodes benefit from sharing state. The two models are not in conflict: use the adversarial MAB during contested operations, cooperative gossip during uncontested isolation.)*
 
-> **Physical translation**: The security value \\(V^\*\\) is the mission throughput the swarm guarantees regardless of adversary tactics. The max-min structure: the swarm first commits to a randomized policy \\(\sigma\\); the adversary — knowing \\(\sigma\\) — chooses the worst-case response \\(\tau\\). \\(V^\*\\) is what the swarm can deliver *given that the adversary plays optimally against it*. The discount factor \\(\gamma \in (0,1)\\) ensures a swarm that survives 30 days at moderate performance is valued over one that performs perfectly for 3 days and then collapses. For RAVEN, \\(V^\*\\) provides the formal lower bound on mission throughput that EXP3-IX approaches as rounds increase.
+> **Physical translation**: The security value \\(V^\*\\) is the mission throughput the swarm guarantees regardless of adversary tactics. The max-min structure: the swarm first commits to a randomized policy \\(\sigma\\); the adversary — knowing \\(\sigma\\) — chooses the worst-case response \\(\tau\\). \\(V^\*\\) is what the swarm can deliver *given that the adversary plays optimally against it*. The discount factor \\(\gamma_V \in (0,1)\\) ensures a swarm that survives 30 days at moderate performance is valued over one that performs perfectly for 3 days and then collapses. For RAVEN, \\(V^\*\\) provides the formal lower bound on mission throughput that EXP3-IX approaches as rounds increase.
 
 <span id="prop-33"></span>
 
@@ -1094,6 +1114,8 @@ p_i(t) = \frac{w_i(t)}{\sum_{j=1}^K w_j(t)}
 
 No forced exploration floor is required — the implicit \\(\gamma\\) bias in the estimator alone bounds regret. {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} is a drop-in replacement for {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits; maintains permanent randomized exploration with minimax regret O(sqrt(TK ln K)) even against an adversary who adapts to past selections") %}EXP3{% end %}: same weight structure, same selection rule; only the estimator changes.
 
+> **Note on K in this formula.** The relationship \\(\gamma = \eta\sqrt{K/2}\\) uses the **static** K from algorithm initialization (total number of arms). When the effective arm set \\(K_\text{eff}\\) varies dynamically (Definition 97), \\(\gamma\\) remains fixed from initialization to prevent destabilizing weight oscillations. The static K is the upper bound on arm count; \\(K_\text{eff} \leq K\\) at all times.
+
 <span id="prop-34"></span>
 
 **Proposition 34** ({% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} Regret Bound). With optimal \\(\eta\\) and \\(\gamma\\) as in Definition 33:
@@ -1109,6 +1131,8 @@ since {% katex() %}K \leq T \Rightarrow \ln K \leq \ln T{% end %}. This bound ho
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration** (\\(K = 5\\) healing actions, \\(T = 1000\\) decision rounds): \\(\eta \approx 0.018\\), \\(\gamma \approx 0.028\\); minimum arm probability \\(p_i \geq 0.12\\) (no arm collapses to zero). Regret {% katex() %}R_T^{\mathrm{IX}} \leq 180{% end %} rounds — an 18% "cost of unpredictability" — meaning the adversary cannot exploit any recovery window regardless of their observation capability.
 
 > **Physical translation**: {% katex() %}O(\sqrt{TK \ln K}){% end %} regret means: over a 4-hour RAVEN mission with \\(T = 1000\\) decision rounds and \\(K = 5\\) healing actions, the worst-case cumulative regret is bounded at 180 rounds — 18% of decisions are sub-optimal compared to the best fixed action in hindsight. Crucially, this holds even against an adversary who can observe every arm selection and adapt their jamming in response. The \\(\sqrt{T}\\) growth means per-round regret shrinks as \\(1/\sqrt{T}\\) — the swarm keeps improving over the mission, and the adversary's exploitation window closes with every decision round.
+
+> **\\(K = 5\\) design rationale — action classes, not parameter grid points**: The five arms in the RAVEN calibration are \\(k_N\\) shape, gossip fanout, MAPE-K tick rate, anomaly threshold, and cross-cluster priority. Each arm selects a *qualitatively distinct resource allocation profile* — not a point on a continuous scale for a single parameter. Fine-grained parameter tuning (e.g., choosing among 20 values of \\(k_N \in [0.5, 3.0]\\)) would require \\(K \gg 8\\), which at \\(T = 1000\\) rounds would push \\(R_{\text{bandit}} = 2\sqrt{1000 \cdot 20 \cdot \ln 20} \approx 546\\) — a 54% loss rate that makes the bandit undeployable. The regret bound in Proposition 34 (\\(R_T^{\mathrm{IX}} \leq 180\\) at \\(K = 5\\)) is achievable precisely because each arm encodes a coarse qualitative choice with large reward differences between classes. Continuous parameter tuning within a class is delegated to static lookup tables calibrated offline — EXP3-IX selects which *regime* to operate in; the regime's parameter values are pre-optimized. This is the correct division of responsibility at edge-mission horizons.
 
 ---
 
@@ -1128,7 +1152,7 @@ w_i(0;\, q) = \exp\!\bigl(\eta_0 \cdot N_q \cdot \mu_i^{(q)}\bigr)
 
 *where {% katex() %}\eta_0{% end %} is the operational learning rate (Definition 33) and {% katex() %}N_q{% end %} is the number of virtual observations the prior is worth — calibrated offline. This is equivalent to having pre-observed \\(N_q\\) rounds in which arm \\(i\\) produced reward {% katex() %}\mu_i^{(q)}{% end %} per round.*
 
-**RAVEN prior table** (\\(K = 5\\) arms: {% katex() %}k_N{% end %} shape, gossip fanout, MAPE-K tick, anomaly threshold, cross-cluster priority):
+**RAVEN prior table** (\\(K = 5\\) action classes for the MAPE-K parameter bandit: gossip fanout, MAPE-K tick, anomaly threshold, cross-cluster priority, and \\(k_N\\) shape; Weibull shape \\(k_N\\) is tuned by a **separate** partition-model bandit (Definition 67 in *[Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md)*) and is not one of the \\(K\\) arms here — it appears as an arm only in that dedicated Weibull bandit):
 
 | Level | {% katex() %}\mu_1^{(q)}{% end %} | {% katex() %}\mu_2^{(q)}{% end %} | {% katex() %}\mu_3^{(q)}{% end %} | {% katex() %}\mu_4^{(q)}{% end %} | {% katex() %}\mu_5^{(q)}{% end %} | {% katex() %}N_q{% end %} |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -1165,7 +1189,15 @@ Row sums to 1.0; \\(N_q\\) values calibrated from 200 offline RAVEN partition si
 Active arm count {% katex() %}K_{\text{eff}}(t) = |\mathcal{A}(t)|{% end %}: **3 arms** when \\(C(t) \leq 0.25\\) (Denied); **4 arms** when {% katex() %}0.25 < C(t) \leq 0.50{% end %} (Degraded); **5 arms** when {% katex() %}C(t) > 0.50{% end %} (Connected or Intermittent).
 
 - **Context integration**: Combine with Definition 71 by appending the 2-bit \\(b_C(t)\\) field into the context index: the enhanced index is 8 bits (\\(2\\,\text{bits} \times 4\\) variables), giving \\(256\\) contexts \\(\times K\\) arms \\(\times 4\\) bytes = 5 KB for \\(K=8\\) — still MCU-feasible.
-- **Adversarial note**: An adversary who drives \\(C(t)\\) below {% katex() %}0.25{% end %} to freeze arms 2 and 5 cannot improve their regret against the remaining arms \\(\{1,3,4\}\\), since those arms remain active and the adversarial guarantee (Proposition 34) applies within \\(\mathcal{A}(t)\\).
+- **Adversarial note**: An adversary who drives \\(C(t)\\) below {% katex() %}0.25{% end %} to freeze arms 2 and 5 cannot improve their regret against the remaining arms \\(\\{1,3,4\\}\\), since those arms remain active and the adversarial guarantee (Proposition 34) applies within \\(\mathcal{A}(t)\\).
+
+> **Emergency arm set (K_eff floor).** If \\(\mathcal{A}(t) = \emptyset\\) — all arms pruned by the bandwidth constraint — the bandit enters a bandwidth-starved state. In this case the arm set falls back to:
+>
+> {% katex(block=true) %}\mathcal{A}(t) = \{i : b_C(t) \geq \bar{b}_i\} \cup \mathcal{A}_{\text{emergency}}{% end %}
+>
+> where {% katex() %}\mathcal{A}_{\text{emergency}}{% end %} contains the single lowest-bandwidth arm ({% katex() %}\min_i \bar{b}_i{% end %} across all \\(i\\)). This guarantees {% katex() %}K_{\text{eff}} \geq 1{% end %} at all times, preventing division by zero in the EXP3-IX softmax weight normalization.
+>
+> **When does this occur?** Only in AES (Autonomous Emergency State), where \\(b_C(t)\\) has collapsed below even the minimum arm threshold. The emergency arm is typically the most conservative autonomy mode (e.g., OBSERVE-only). The autonomy confidence score \\(\Psi(t)\\) (Proposition 52, [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#prop-52)) should already have triggered AES entry before \\(K_{\text{eff}} = 0\\) is reached; the floor is a belt-and-suspenders guarantee.
 
 <span id="prop-70"></span>
 **Proposition 70** (Warm-Start + Contextual Regret Bound). *Let {% katex() %}\bar{K} = (1/T)\sum_{t=1}^T |\mathcal{A}(t)|{% end %} be the time-averaged active arm count, and let {% katex() %}N_q{% end %} be the warm-start virtual observation count at capability level \\(q\\). The combined regret satisfies:*
@@ -1317,7 +1349,7 @@ The three algorithms above assume reward is observed before the next arm pull. U
 
 <span id="def-69"></span>
 
-**Definition 69** (Delayed-Feedback EXP3-IX). Let the feedback delay for pull at partition onset \\(s\\) be {% katex() %}d_s = T_N^{(s)}{% end %} — the actual partition duration, observed only at partition end. Define batch window {% katex() %}B = \lceil E[T_N] \rceil{% end %} (one expected partition, LUT-approximated per Definition 66). The **pending buffer** \\(\mathcal{P}\\) holds \\((k_s,\\; s)\\) pairs for pulls awaiting reward; capacity is bounded by {% katex() %}|\mathcal{P}| \leq \lfloor Q_{0.95} / T_{\min} \rfloor{% end %} entries (static upper bound; MCU-allocatable). At each partition event \\(s\\):
+**Definition 69** (Delayed-Feedback EXP3-IX). Let the feedback delay for pull at partition onset \\(s\\) be {% katex() %}d_s = T_N^{(s)}{% end %} — the actual partition duration, observed only at partition end. Define batch window {% katex() %}B = \lceil E[T_N] \rceil{% end %} (one expected partition, LUT-approximated per Definition 66). \\(T_N\\) is the partition duration random variable from Definition 66; \\(k_N\\) is the same shape parameter as Definition 67. The **pending buffer** \\(\mathcal{P}\\) holds \\((k_s,\\; s)\\) pairs for pulls awaiting reward; capacity is bounded by {% katex() %}|\mathcal{P}| \leq \lfloor Q_{0.95} / T_{\min} \rfloor{% end %} entries (static upper bound; MCU-allocatable). At each partition event \\(s\\):
 
 1. **Pull**: select arm {% katex() %}k_s \in \{0.3, 0.4, \ldots, 1.0\}{% end %} per {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weights; append \\((k_s,\\; s)\\) to \\(\mathcal{P}\\).
 2. **Receive** (at partition end, time \\(s + d_s\\)): compute true reward {% katex() %}r_s = -\max(0,\; T_{\text{acc}}^{(s)} - E[T_N \mid k_s]) / Q_{0.95}(k_s){% end %} (Definition 67 reward signal); remove \\((k_s,\\; s)\\) from \\(\mathcal{P}\\).
@@ -1332,7 +1364,7 @@ R_T^{\text{delay}} \leq 2\sqrt{T K \ln K} \cdot \sqrt{1 + E[T_N]/B} \leq 2\sqrt{
 {% end %}
 
 - **Use**: Bounds delayed-feedback EXP3-IX regret; heavy-tailed Weibull partition durations add a {% katex() %}\sqrt{1 + E[T_N]/B}{% end %} overhead factor over the instantaneous bound; verify before deployment to avoid applying instantaneous guarantees in delayed-feedback settings where they are too optimistic.
-- **Parameters**: {% katex() %}B = \lceil E[T_N] \rceil{% end %} batch window; CONVOY {% katex() %}k_N=0.62 \to{% end %} overhead factor {% katex() %}\approx 1.41\times{% end %} over the instantaneous bound.
+- **Parameters**: {% katex() %}B = \lceil E[T_N] \rceil{% end %} batch window; CONVOY {% katex() %}k_N=0.62 \to{% end %} overhead factor {% katex() %}\approx 1.41\times{% end %} over the instantaneous bound. \\(E[T_N]\\) is the expected partition duration from Definition 66 (Weibull Partition Duration Model, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-66)); \\(k_N\\) is the same shape parameter as Definition 67.
 - **Field note**: The Weibull assumption keeps the bound finite — verify {% katex() %}k_N > 0{% end %} from real partition data before claiming bounded regret.
 
 The factor \\(\sqrt{2}\\) is a constant independent of \\(k_N\\) or \\(\lambda_N\\) — setting \\(B\\) to the expected partition duration absorbs the delay into a single overhead term. The bound holds for all \\(k_N > 0\\): {% katex() %}E[T_N] = \lambda_N \cdot \Gamma(1 + 1/k_N){% end %} is finite for every Weibull parameter. Contrast Pareto-distributed delays (\\(\alpha \leq 2\\)): \\(E[d] = \infty\\), breaking all standard regret bounds — the selection criterion from Section 2 of the design.
@@ -1364,6 +1396,8 @@ r_{\text{surr}}(t) = -\left[w_1 \frac{\Delta T_{\text{cpu}}}{\Delta T_{\text{max
 
 so {% katex() %}r_{\text{surr}}(t) \in [-1, 0]{% end %}. The surrogate is applied as a fractional Q-update (weight {% katex() %}\beta_{\text{surr}} \in (0,1){% end %}) at each tick. When true reward \\(r_s\\) arrives at partition end, a **bias correction** {% katex() %}\Delta r = r_s - \beta_{\text{surr}} \cdot \bar{r}_{\text{surr}}{% end %} — where {% katex() %}\bar{r}_{\text{surr}}{% end %} is the partition-averaged surrogate — is applied as a one-shot Q-update, preventing surrogate-induced drift from compounding across partitions.
 
+> **Physical translation.** The surrogate reward tells the bandit "how well the system is doing right now" using signals available locally (CPU temperature, battery, MAPE-K loop health, partition accumulator). It is a proxy for the true mission outcome, which will only be known post-mission. The weight vector \\(w\\) encodes which subsystem health matters most; \\(w_\text{battery}\\) high means the bandit conserves power aggressively.
+
 <span id="def-71"></span>
 
 **Definition 71** (Partition Context Discretization). Arm selection is conditioned on three continuous partition-state variables, each quantized to 2 bits for O(1) lookup. Each variable \\(x\\) maps to bucket {% katex() %}b_x = \min(3,\; \lfloor 4x / x_{\max} \rfloor){% end %} via a single integer right-shift:
@@ -1387,6 +1421,8 @@ c(t) = b_{T}(t) \;\Big|\; \bigl(b_{\pi}(t) \ll 2\bigr) \;\Big|\; \bigl(b_{Q}(t) 
 Each context maintains its own {% term(url="#term-exp3", def="Exponential Weights algorithm for adversarial bandits with implicit exploration; achieves minimax regret O(sqrt(TK ln K)) against adaptive adversaries") %}EXP3-IX{% end %} weight vector {% katex() %}\mathbf{w}^{(c)} \in \mathbb{R}^K{% end %}; total memory: \\(64 \times K \times 4\\) bytes (for \\(K = 8\\): 2 KB — MCU-feasible). **{% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} outcome** (100 partition events): contexts \\(b_T \geq 2\\) (long partitions) converge to lower-\\(k\\) arms (\\(k \approx 0.4\\)–\\(0.5\\)); contexts \\(b_T = 0\\) (short partitions) retain higher-\\(k\\) arms (\\(k \approx 0.7\\)–\\(0.8\\)) — the bandit naturally separates near-exponential short partitions from heavy-tailed long ones.
 
 > **Physical translation**: The 64-context table is \\(4 \times 4 \times 4\\) (connectivity states, resource states, time-in-partition states) = 64 distinct situations the bandit tracks separately, each with its own weight vector. Without context: one policy for all partitions, missing that a 10-minute mountain blackout requires different action weights than a 6-hour communications-denied operation. With context: the bandit has separate learned intuitions for "early in a short partition" versus "deep in a catastrophic partition" — encoded in 2 KB total, fitting in MCU SRAM with no dynamic allocation. The 2-bit quantization per dimension is the minimum resolution that separates qualitatively different situations without over-fitting on sparse partition data.
+
+> **k_N stability scope.** The 64 context-specific weight vectors in this definition are indexed against the current Weibull shape parameter \\(k_N\\) (Definition 67, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md)). For deployment: treat \\(k_N\\) as a mission-phase constant — calibrated offline from historical partition logs, frozen during mission execution. In-field adaptation via Definition 67's meta-bandit is a post-mission recalibration step only. If a distributional shift is detected mid-mission that requires \\(k_N\\) to change, reset all 64 context weight vectors to uniform and restart the warm-start procedure from Definition 96 with the new \\(k_N\\). Carrying stale weight vectors forward after a \\(k_N\\) change produces systematically biased action selection.
 
 ---
 
