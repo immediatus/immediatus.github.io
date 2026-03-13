@@ -176,6 +176,10 @@ This is a binary classification under uncertainty:
 In other words, the detector must classify each incoming reading as normal or anomalous using only a fixed-size memory footprint and constant work per sample — ruling out batch methods or model retraining on the fly.
 
 > **Mode-Transition Safety Requirement.** Upon any capability-level transition (Definition 78, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md)), the anomaly detector must immediately recompute both the dynamic threshold \\(\theta^\*(t)\\) and the stability-region lower bound \\(\delta_q\\) using the new mode's parameters (\\(T_\text{tick}(q)\\), Stability Region from Definition 79). Do not carry over \\(\theta^\*(t)\\) from the previous mode; recompute it with the current \\(T_\text{acc}\\) value and the new \\(\delta_q\\) floor. This ensures the detector never operates outside the new mode's Stability Region boundary, as required by the series' mode-switching stability guarantee.
+>
+> **T_acc carry-over.** Since \\(T_\text{acc}\\) does not reset on mode transitions (Definition 68, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-68)), the threshold recomputation uses the **old** \\(T_\text{acc}\\) value with the **new** mode's \\(\delta_q\\) and \\(\gamma_\text{FN}\\). The net effect: entering a more degraded mode mid-partition produces a tighter threshold (the new mode's smaller Stability Region means \\(\delta_q\\) consumes more headroom) applied to the same accumulated partition age.
+>
+> **Simultaneous transition + partition crossing.** When a mode transition and a partition boundary crossing occur in the same MAPE-K tick (e.g., battery drops to L0 while connectivity fails simultaneously): apply the **mode transition first** (compute new \\(\theta^\*(t)\\) using the new mode's \\(\delta_q\\) and current \\(T_\text{acc}\\)), then evaluate partition-dependent triggers (Proposition 92 circuit breaker, threshold tightening). This order ensures the new mode's Stability Region is respected before partition-specific thresholds are applied. Reversing the order would evaluate the circuit breaker against a pre-transition \\(\delta_q\\), potentially firing at the wrong threshold.
 
 <style>
 #tbl_detection + table th:first-of-type { width: 25%; }
@@ -344,6 +348,10 @@ where \\(\theta^\*_0\\) is the static baseline threshold from the likelihood rat
 **{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: With {% katex() %}\gamma_{\mathrm{FN}} = 2.0{% end %} (anomalies during long denied periods cost \\(3\times\\) baseline due to inability to request sensor replacement), the threshold drops from \\(\theta^\*_0 = 2.5\\,\sigma\\) at partition start to {% katex() %}\theta^*_0 / 3 \approx 0.83\,\sigma{% end %} at the P95 boundary. This triggers more sensitive detection of health anomalies precisely when external recovery is least available.
 
 > **Calibration example (RAVEN).** Missed motor degradation costs 1000 J (lost drone); false alarm costs 50 J (wasted diagnostics). Cost ratio \\(C_\text{FN}/C_\text{FP} = 20\\). With \\(P(H_0) = 0.95\\) (nominal operation 95% of flight time), the optimal threshold \\(\theta^\*\\) corresponds to requiring a posterior anomaly probability ≥ 95.2\% — substantially tighter than a naive 50% threshold. In practice, deploy \\(\theta^\* \approx 1.8\hat{\sigma}\\) for this scenario, where \\(\hat{\sigma}\\) is the estimated noise standard deviation from the baseline estimator.
+
+> **Quantified shrinkage.** At \\(T_\text{acc} = Q_{95}\\), the denominator reaches \\((1 + \gamma_\text{FN})\\), so {% katex() %}\theta^*(Q_{95}) = \theta^*_0 / (1 + \gamma_\text{FN}){% end %}. For OUTPOST with \\(\gamma_\text{FN} = 2\\): a threshold initially set at \\(2.5\hat{\sigma}\\) becomes \\(0.83\hat{\sigma}\\) — nearly three times more sensitive. The system becomes progressively trigger-happy as partition age approaches the planning horizon, prioritising missed-fault detection over false-alarm suppression.
+
+> **Circuit breaker interaction.** The threshold tightening in this proposition applies only while \\(T_\text{acc} \leq Q_{95}\\). When \\(T_\text{acc}\\) exceeds \\(Q_{95}\\) (the P95 partition duration from Definition 66), Proposition 92 ([Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-92)) fires — the Weibull circuit breaker suspends all healing actions and halts threshold tightening. The system enters L0 monitoring-only mode regardless of currently detected anomalies. Treat \\(Q_{95}\\) as the hard ceiling on \\(T_\text{acc}\\) for the purposes of this proposition.
 
 *(Notation: \\(\delta\\)-subscripted symbols in this section carry distinct roles: \\(\delta_q\\) is the monitoring guard band (stability margin floor); {% katex() %}\delta_{\text{flat}}{% end %}, {% katex() %}\delta_{\text{noise}}{% end %} are chi-squared test bounds (Proposition 25); {% katex() %}\delta_{\max}{% end %} is the SVM weight-norm bound; {% katex() %}\delta_{\text{crit}}{% end %}, {% katex() %}\delta_{\text{norm}}{% end %} are gossip convergence time parameters. Each is dimensionally distinct; subscripts are the sole disambiguator.)*
 
@@ -764,6 +772,9 @@ For sufficient training samples (\\(n > 100 \cdot K\\)) and well-separated failu
 > | Communication fault | Increase retry window for peer contacts | Assume local isolation; do not propagate stale data |
 > | Power issue | Trigger load shedding (Definition 115) | Enter L1 capability level |
 > | Unknown | Enter Safety Mode (Definition 124) | Freeze actuator outputs; await self-test pass on two consecutive MAPE-K ticks |
+> | Multiple faults simultaneously | Apply highest-severity action from above; defer lower-severity actions to next MAPE-K tick | Priority order: Power issue > Communication fault > Motor degradation > Sensor drift > Unknown. Prevents action thrashing; the highest-priority fault's prescribed action governs the current tick. |
+
+> Safety Mode entry (Unknown fault class) persists until two consecutive MAPE-K ticks pass with all signals within normal thresholds and no new anomalies detected (Definition 124, [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-124)).
 
 **One-Class SVM for Novelty Detection**
 
@@ -1054,13 +1065,15 @@ In other words, every node keeps a score between 0 and 1 for each fleet member, 
 > | Unified Autonomic Header (UAH) | ~20 bytes | Constant per packet |
 > | Dotted Version Vector (DVV) | ~2 bytes × N nodes | Fleet size N |
 >
-> For a RAVEN swarm (N = 47): DVV ≈ 94 bytes, total overhead ≈ 114 bytes. For a 10-byte temperature payload, **protocol efficiency = 10 / (10 + 114) = 8%**. For OUTPOST (N = 127): DVV ≈ 254 bytes, overhead dominates at 4% efficiency for the same payload.
+> For RAVEN (N = 47): DVV ≈ 94 bytes, total overhead ≈ 114 bytes. For a 10-byte temperature payload, **protocol efficiency = 10 / (10 + 114) ≈ 8%**. For OUTPOST (N = 127): DVV ≈ 254 bytes, efficiency drops to ~4% for the same payload.
 >
 > **When overhead becomes the primary cost driver.** In large IoT fleets (N > 500), the DVV alone exceeds typical LoRaWAN/BLE packet MTUs (≤255 bytes), forcing packet fragmentation or DVV compression. Three mitigation strategies:
 >
+> **When to evaluate DVV alternatives.** Consider switching to Bloom-clock or epoch-scoped DVV when: (1) your fleet size N > 100 **and** (2) typical health payload size < 20 bytes (making protocol overhead > 50% of packet size). For RAVEN (N = 47, payload ≈ 30–60 bytes), full DVV is appropriate. For OUTPOST (N = 127, 10-byte temperature readings), evaluate alternatives before deployment.
+>
 > | Strategy | DVV size | Trade-off |
 > |----------|---------|-----------|
-> | Full DVV (correctness-optimal) | 2N bytes | Correct causal ordering; impractical above N~100 |
+> | Full DVV | 2N bytes | Exact causal ordering; impractical above N ≈ 100 |
 > | Bloom-clock (probabilistic) | 16–32 bytes fixed | 0.1–1% false-positive causal violation rate |
 > | Epoch-scoped DVV (partition-local) | 2 × K bytes (K = partition subgroup size) | Exact within partition; requires epoch reconciliation on reconnect |
 >

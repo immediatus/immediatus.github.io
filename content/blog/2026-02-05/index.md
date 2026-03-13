@@ -658,22 +658,28 @@ The clock drift problem cannot be patched within LWW — it requires a structura
 
 <span id="def-98"></span>
 
-**Definition 98** (Clock Trust Window). *Given hardware clock drift rate {% katex() %}\delta_{\max}{% end %} (seconds per second, a constant from the hardware manufacturer's datasheet — not a tunable system parameter) and HLC skew bound {% katex() %}\varepsilon{% end %} from Proposition 41, the Clock Trust Window is:*
+**Definition 98** (Clock Trust Window). *Given hardware clock drift rate {% katex() %}\delta_{\max}{% end %} (fractional drift rate, dimensionless; e.g., 1 ppm = 10⁻⁶ — a constant from the hardware manufacturer's datasheet, not a tunable system parameter) and HLC skew bound {% katex() %}\varepsilon{% end %} from Proposition 41, the Clock Trust Window is:*
 
 {% katex(block=true) %}
 T_{\mathrm{trust}} = \frac{\varepsilon}{\delta_{\max}}
 {% end %}
 
-> **Derivation**: After partition duration \\(T\\), physical clocks diverge by at most {% katex() %}|\Delta l| \leq \varepsilon + \delta_{\text{ppm}} \cdot T{% end %}. The HLC timestamp remains trustworthy while the drift contribution has not dominated the initial uncertainty: {% katex() %}\delta_{\text{ppm}} \cdot T \leq \varepsilon \implies T \leq \varepsilon / \delta_{\text{ppm}} \equiv T_{\text{trust}}{% end %}. Beyond \\(T_{\text{trust}}\\), accumulated drift exceeds the initial uncertainty and the system pivots to pure logical ordering. **Calibration**: crystal oscillator (\\(\delta_{\text{ppm}} = 10^{-4}\\), \\(\varepsilon = 1\\) ms) gives \\(T_{\text{trust}} \approx 2.8\\) h. GPS-denied tactical (\\(\delta_{\text{ppm}} = 10^{-3}\\)) gives \\(T_{\text{trust}} \approx 17\\) min.
+> **Note**: \\(\delta_\text{max}\\) is dimensionless (fractional drift rate, e.g., \\(10^{-6}\\) for a GPS-disciplined oscillator at 1 ppm). The units of \\(T_\text{trust} = \varepsilon / \delta_\text{max}\\) are seconds / dimensionless = seconds.
+>
+> **Derivation.** A clock drifting at fractional rate \\(\delta_\text{max}\\) accumulates an error of \\(\delta_\text{max} \cdot T\\) seconds over a partition of duration \\(T\\). The HLC watermark remains physically trustworthy while this accumulated drift stays below the initial HLC skew bound \\(\varepsilon\\):
+>
+> \\(\delta_\text{max} \cdot T \leq \varepsilon \implies T \leq \varepsilon / \delta_\text{max} = T_\text{trust}\\)
+>
+> Beyond \\(T_\text{trust}\\), the physical component of the HLC timestamp is no longer reliable; the system pivots to logical-only ordering (causal order preserved, but wall-clock alignment lost). **Example**: crystal oscillator (\\(\delta_\text{max} = 10^{-4}\\)), \\(\varepsilon = 1\,\text{s}\\): \\(T_\text{trust} = 10^4\,\text{s} \approx 2.8\,\text{h}\\). GPS-disciplined oscillator (\\(\delta_\text{max} = 10^{-6}\\)): \\(T_\text{trust} \approx 11.6\,\text{days}\\).
 
 *During {% katex() %}T_{\mathrm{acc}} \leq T_{\mathrm{trust}}{% end %}, the HLC physical watermark {% katex() %}l_j{% end %} remains within {% katex() %}\varepsilon{% end %} of true time; full HLC ordering {% katex() %}\prec{% end %} (Definition 40) is used. When {% katex() %}T_{\mathrm{acc}} > T_{\mathrm{trust}}{% end %}, the system pivots to pure logical ordering {% katex() %}\prec_{\mathrm{logic}}{% end %}, comparing only the counter and node-ID components {% katex() %}(c_j, n_j){% end %} and ignoring {% katex() %}l_j{% end %}.*
 
 | Node class | Clock source | {% katex() %}\delta_{\max}{% end %} | {% katex() %}\varepsilon{% end %} (Prop 41) | {% katex() %}T_{\mathrm{trust}}{% end %} | Implication |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| RAVEN drone | GPS-disciplined | {% katex() %}10^{-6}{% end %} s/s (1 ppm) | 1 s | \\(\approx\\) 11.6 days | GPS partition safe through typical mission cycles |
-| CONVOY ECU | TCXO + GPS fallback | {% katex() %}2 \times 10^{-6}{% end %} s/s (2 ppm) | 3 s | \\(\approx\\) 17 days | Safe through most operational deployments |
-| OUTPOST sensor | Crystal oscillator | {% katex() %}10^{-4}{% end %} s/s (100 ppm) | 1 s | \\(\approx\\) 2.8 h | Physical time untrusted after 3 hours of partition |
-| Ultra-L0 beacon | RC oscillator | {% katex() %}10^{-2}{% end %} s/s (10,000 ppm) | 1 s | \\(\approx\\) 100 s | Physical time untrusted within 2 minutes |
+| RAVEN drone | GPS-disciplined | {% katex() %}10^{-6}{% end %} (1 ppm) | 1 s | \\(\approx\\) 11.6 days | GPS partition safe through typical mission cycles |
+| CONVOY ECU | TCXO + GPS fallback | {% katex() %}2 \times 10^{-6}{% end %} (2 ppm) | 3 s | \\(\approx\\) 17 days | Safe through most operational deployments |
+| OUTPOST sensor | Crystal oscillator | {% katex() %}10^{-4}{% end %} (100 ppm) | 1 s | \\(\approx\\) 2.8 h | Physical time untrusted after 3 hours of partition |
+| Ultra-L0 beacon | RC oscillator | {% katex() %}10^{-2}{% end %} (10,000 ppm) | 1 s | \\(\approx\\) 100 s | Physical time untrusted within 2 minutes |
 
 For 30-day partitions ({% katex() %}T_{\mathrm{acc}} = 2{,}592{,}000\,\text{s}{% end %}), only GPS-disciplined nodes with {% katex() %}\delta < 0.39\,\text{ppm}{% end %} remain within {% katex() %}T_{\mathrm{trust}}{% end %}. All crystal-oscillator nodes pivot to {% katex() %}\prec_{\mathrm{logic}}{% end %} automatically.
 
@@ -751,10 +757,10 @@ The update rules are:
 > **DVV scaling and the large-fleet MTU problem.** A full Dotted Version Vector requires one counter per node: at 2 bytes per entry, a 47-node RAVEN swarm uses 94 bytes, and a 500-node IoT mesh uses 1 KB — exceeding the LoRaWAN maximum payload (51–222 bytes) and saturating a single BLE advertisement packet. For fleets above ~100 nodes:
 >
 > - **Bloom-clock**: Replace the DVV with a fixed-size Bloom filter (~32 bytes) encoding causal history with a tunable false-positive rate. At 32 bytes: ~0.3% probability of accepting a causally-violating message. Acceptable for health gossip; unacceptable for authoritative state commits.
-> - **Epoch-scoped DVV**: During partition, each sub-fleet maintains a DVV over its local K members only (K ≤ 20 typically); the full fleet DVV is reconstructed at reconnect by merging epoch records. Exact causal ordering within each partition; O(K) wire cost during the partition (see Definition 31, Delta-Sync).
-> - **Hierarchical DVV**: Authority-tier leaders (Definition 14) maintain a compressed aggregate DVV for their sub-tier; members only carry their tier's DVV. Wire cost O(M) where M = tier size.
+> - **Epoch-scoped DVV**: During partition, each sub-fleet maintains a DVV over its local K members only (K ≤ 20 typically); the full fleet DVV is reconstructed at reconnect by merging epoch records. Exact causal ordering within each partition; \\(O(K)\\) wire cost during the partition (see Definition 31, Delta-Sync).
+> - **Hierarchical DVV**: Authority-tier leaders (Definition 14) maintain a compressed aggregate DVV for their sub-tier; members carry only their tier's DVV. Wire cost \\(O(M)\\) where M = tier size.
 >
-> The causal ordering guarantees in Proposition 14 (Vector Clock Causality) apply to whichever DVV variant is chosen, provided the variant preserves the happens-before relation. Bloom-clock trades a bounded false-positive rate for constant wire cost; evaluate this trade-off before deploying at scale.
+> The causal ordering guarantees in Proposition 14 (Vector Clock Causality) apply to whichever DVV variant is chosen, provided the variant preserves the happens-before relation. Bloom-clock trades a bounded false-positive rate for constant wire cost; evaluate this trade-off explicitly before deploying at scale.
 
 **Mitigation**: Hybrid Logical Clocks add a monotonic counter to wall time to handle NTP skew; see Kulkarni et al. (2014) for the foundational analysis. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, LWW on route decisions is unreliable because a vehicle with a fast clock always wins regardless of information freshness — application semantics require considering intel recency, not just decision timestamp. Def 40–42 below formalize the {% term(url="#def-40", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} structure, the causality-aware merge function, and the re-sync protocol for massively drifted nodes.
 
@@ -852,15 +858,6 @@ The node-ID tiebreaker for concurrent LWW-Register writes gives every node a det
 The LWW-Register merge is then \\(s_1\\) if {% katex() %}(h_2, n_2) \prec_{\text{ext}} (h_1, n_1){% end %}, \\(s_2\\) otherwise — a total order on \\((h, n)\\) pairs requiring no coordination. The three-level comparison subsumes the general \\(h_1 \parallel h_2\\) concurrent case from Definition 41.
 
 **Clock drift bound** (Proposition 41, Property 3): With drift rate \\(\delta_{\text{ppm}}\\) (\\(\delta_{\text{ppm}}\\) denotes fractional clock drift rate; distinct from the compute-to-transmit energy ratio \\(\rho = T_d/T_s\\) in *Why Edge Is Not Cloud Minus Bandwidth*) (fractional; {% katex() %}10^{-4}{% end %} for crystal oscillators, {% katex() %}10^{-3}{% end %} for GPS-denied tactical edge), maximum clock divergence after partition duration \\(T\\) is:
-
-> **Multi-part symbol disambiguation.** Several Greek letters carry different meanings across this series:
->
-> | Symbol | Meaning in this article | Meaning elsewhere |
-> |--------|------------------------|-------------------|
-> | \\(\delta_{\text{ppm}}\\) | Crystal oscillator drift rate (ppm) | Not used elsewhere with this subscript |
-> | \\(\rho\\) | (not used in this article) | Energy ratio \\(T_d/T_s\\) in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md); stability margin \\(\rho_q\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) |
-> | \\(\delta_m^x\\) | Delta-state CRDT mutant (Definition 72) | Distinct from staleness decay \\(\delta(t_{\text{stale}})\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) |
-> | \\(\tau_{\max}\\) | Maximum one-way message delivery time | Staleness time constant renamed \\(\tau_{\text{stale}}^{\max}\\) in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) |
 
 {% katex(block=true) %}
 |\Delta l| \leq \varepsilon + \delta_{\text{ppm}} \cdot T
@@ -1771,23 +1768,21 @@ The three fixes are mutually reinforcing: a receiver seeing `zt_state = 00` (OBS
 - **Parameters**: {% katex() %}\rho_{q,i}{% end %} encoded as unsigned byte (0 = margin 0.0, 255 = margin 1.0); {% katex() %}h_{\mathrm{sfx},i}{% end %} = last 4 bytes of Definition 83 chain; {% katex() %}q_i \in \{0,1,2,3,4\}{% end %} matching L0–L4.
 - **Prevents**: Header proliferation — three independent fixes would grow the fingerprint by 16 B with redundant alignment; the UAH absorbs all three into 20 B with a single 3-byte pad.
 
-> **Scope of the UAH's causal ordering guarantee — 20 bytes cannot hold a 47-node vector clock**: The UAH is not a compressed vector clock. The `c_i` field (2 B) is the HLC sub-second disambiguator: it increments only when two events share the same physical second, and resets to zero at the next clock tick. Under typical MAPE-K operation (5 s/tick), `c_i ∈ {0, 1}` at almost every tick — 2 bytes is not a constraint in practice.
->
-> **The counter-wrap risk lives in `vec{V}_i`, not in the UAH.** Under `≺_logic` (physical clock untrusted, `T_acc > T_trust`), the system discards `l_i` and orders events by `(c_i, n_i)`. Because `c_i` resets every second, this ordering has no cross-second resolution: a day-1 event and a day-29 event can both have `c_i = 0` and be indistinguishable under `≺_logic` alone. The mechanism that provides day-level causal ordering is the vector clock `vec{V}_i` — the separate, variable-size component of the Phase 1 fingerprint, not part of the 20-byte UAH.
->
-> For RAVEN (47 drones), `vec{V}_i` is a 4-byte-per-node integer vector (188 bytes at full size). The bandwidth analysis above shows this exceeds the link budget; the mitigation — dotted version vectors at 8 clusters \\(\times\\) 4-byte counters = 64 bytes — preserves causal ordering at cluster granularity. **Counter-wrap check at mission timescale**: at 200 updates/min from ~6 drones per cluster, the per-cluster sequence number accumulates {% katex() %}200 \times 1{,}440 \times 30 \approx 8.6\,\text{M}{% end %} events over 30 days. A 4-byte counter holds 4.29 B — no wrap for a 30-day mission. If 1-byte counters were erroneously substituted (255 max), the first wrap would occur in 255 / 200 min \\(\approx\\) **77 seconds**, and over 30 days each counter would wrap \\(\approx\\) 33,880 times, producing false causal links on reconnection that could overwrite 30 days of valid data with a stale update that happens to carry a higher wrapped-index.
->
-> **OUTPOST deployment timescale — the Day-497 bug**: RAVEN is mission-bound to 30 days; OUTPOST is a persistent installation operating for months to years. A "hot" sensor node running high-frequency telemetry (100 Hz — plausible for seismic or acoustic threat detection) generates 6,000 events/min. Its per-cluster sequence number wraps at {% katex() %}4{,}294{,}967{,}295 / 6{,}000 \approx 716{,}000\,\text{min}{% end %} \\(\approx\\) **497 days**. On Day 498, the counter wraps to low values. When the fusion node next reconciles, it sees the cluster's sequence number as apparently smaller than its last known value and — without wrap-detection — treats all post-wrap events as causally prior, potentially overwriting 497 days of current state with stale data.
->
-> **Stale Vector Counter (SVC) quarantine**: During Phase 1 fingerprint exchange, apply sequence-number arithmetic (RFC 1323 Sec. 3 — the same technique TCP uses to detect wrapped sequence numbers) to each cluster entry received:
->
-> {% katex(block=true) %}\text{suspect\_wrap}(k) = \bigl(V_{\mathrm{recv}}[k] - V_{\mathrm{last}}[k]\bigr) \bmod 2^{32} > 2^{31}{% end %}
->
-> A received counter that appears to have *decreased* by more than \\(2^{31}\\) modulo the counter width is flagged as a suspected wrap. Response mirrors the Drift-Quarantine Re-sync Protocol (Definition 42): (1) enter read-only mode for node \\(k\\)'s state; (2) broadcast a **counter-epoch request** to peer nodes — any peer whose last-known sequence for \\(k\\) is near \\(2^{32}\\) (within \\(2^{29}\\)) confirms the wrap; (3) if quorum confirms, increment an **epoch counter** \\(e_k\\) stored out-of-band and re-order events as \\((e_k, V[k])\\) tuples — the epoch promotes all post-wrap events above all pre-wrap events; (4) exit quarantine when all local entries are epoch-consistent with the quorum.
->
-> **Deployment decision**: for OUTPOST, either (a) use 8-byte sequence counters in the dotted version vector — wraps at {% katex() %}4.29\text{ B} \times 2^{32} / 6{,}000\,\text{min} \approx 305{,}000\,\text{years}{% end %}, problem eliminated; or (b) deploy the SVC quarantine above with 4-byte counters and accept the minor coordination cost on Day 497. For RAVEN, 4-byte counters are sufficient without quarantine at all mission-relevant timescales.
->
-> The UAH's `trust_flag` and `T_acc` fields signal *which* ordering to use; the vector clock `vec{V}_i` is the ordering mechanism itself. Both are required. The UAH alone, without `vec{V}_i`, provides only within-second causal disambiguation — correct for clock-trust signaling and HLC integration, but insufficient for post-partition reconciliation of multi-day accumulated state.
+**UAH scope**: The UAH is not a compressed vector clock. The `c_i` field (2 B) is the HLC sub-second disambiguator: it increments only when two events share the same physical second and resets to zero at the next clock tick. Under typical MAPE-K operation (5 s/tick), `c_i ∈ {0, 1}` at almost every tick — 2 bytes is not a constraint in practice. The `trust_flag` and `T_acc` fields signal *which* ordering to use; the vector clock `vec{V}_i` is the ordering mechanism itself. Both are required: the UAH alone provides only within-second causal disambiguation, insufficient for post-partition reconciliation of multi-day state.
+
+The counter-wrap risk lives in `vec{V}_i`, not in the UAH. Under `≺_logic` (physical clock untrusted, `T_acc > T_trust`), the system orders events by `(c_i, n_i)`. Because `c_i` resets every second, this has no cross-second resolution — day-1 and day-29 events can both carry `c_i = 0`. Day-level causal ordering is provided by the vector clock `vec{V}_i` — the variable-size Phase 1 fingerprint component, not the 20-byte UAH.
+
+For RAVEN (47 drones), `vec{V}_i` using dotted version vectors at 8 clusters \\(\times\\) 4-byte counters = 64 bytes. At 200 updates/min from ~6 drones per cluster, the per-cluster sequence number accumulates {% katex() %}200 \times 1{,}440 \times 30 \approx 8.6\,\text{M}{% end %} events over 30 days — well within the 4.29 B capacity of a 4-byte counter. No wrap for a 30-day mission. If 1-byte counters were erroneously substituted, the first wrap would occur in 255/200 min \\(\approx\\) 77 seconds, producing false causal links on reconnection.
+
+**The Day-497 bug (OUTPOST).** RAVEN is mission-bound to 30 days; OUTPOST is a persistent installation. A hot sensor node at 100 Hz generates 6,000 events/min. Its per-cluster sequence number wraps at {% katex() %}4{,}294{,}967{,}295 / 6{,}000 \approx 716{,}000\,\text{min}{% end %} \\(\approx\\) 497 days. On Day 498, the counter wraps to low values and the fusion node — without wrap-detection — treats all post-wrap events as causally prior, potentially overwriting 497 days of current state with stale data.
+
+**Stale Vector Counter (SVC) quarantine.** During Phase 1 fingerprint exchange, apply sequence-number arithmetic (RFC 1323 Sec. 3 — the same technique TCP uses) to each cluster entry:
+
+{% katex(block=true) %}\text{suspect\_wrap}(k) = \bigl(V_{\mathrm{recv}}[k] - V_{\mathrm{last}}[k]\bigr) \bmod 2^{32} > 2^{31}{% end %}
+
+A counter that appears to have decreased by more than \\(2^{31}\\) is flagged as a suspected wrap. Response mirrors Definition 42: (1) enter read-only mode for node \\(k\\)'s state; (2) broadcast a counter-epoch request — any peer whose last-known sequence for \\(k\\) is near \\(2^{32}\\) (within \\(2^{29}\\)) confirms the wrap; (3) if quorum confirms, increment epoch counter \\(e_k\\) and re-order events as \\((e_k, V[k])\\) tuples; (4) exit quarantine when all entries are epoch-consistent with the quorum.
+
+**Deployment decision**: for OUTPOST, either (a) use 8-byte sequence counters — wraps at {% katex() %}305{,}000{% end %} years, problem eliminated; or (b) deploy SVC quarantine with 4-byte counters and accept the minor coordination cost on Day 497. For RAVEN, 4-byte counters are sufficient at all mission-relevant timescales.
 
 ### Reconnection Storm Mitigation
 
@@ -2108,55 +2103,20 @@ Return to the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-
 
 ### Reconnection at Mountain Base
 
-Radio contact restored as both groups clear the mountain pass.
+Radio contact restored as both groups clear the mountain pass. Vehicle 1 and Vehicle 6 exchange Merkle roots — mismatch detected immediately. Targeted comparison identifies three divergences: route plan, position, and intel. Forward group shares Route B's successful traverse; rear group reveals the bridge is actually intact; both exchange full threat intel received during partition.
 
-**Phase 1**: Vehicle 1 and Vehicle 6 exchange state summaries.
-- Merkle roots differ
-- Quick comparison shows route divergence
+**Merge**: Intel reconciliation marks bridge status UNCERTAIN (conflicting regional command reports), then updates to INTACT from rear group visual confirmation. Route B marked UNCERTAIN from initial report, then updated to PASSABLE from forward group traverse. Route decisions are physically irreversible — both groups made valid L2 calls. Resolution: accept current positions and converge at km 95 junction.
 
-**Phase 2**: Identify specific divergences.
-- Route decision differs
-- Position differs
-- Intel items differ
-
-**Phase 3**: Exchange divergent data.
-- Forward group shares Route B success
-- Rear group shares bridge status (actually intact!)
-- Both share complete intel received
-
-**Phase 4**: Merge states.
-
-Intel merge reconciles conflicting reports: bridge status marked UNCERTAIN from conflicting regional command intel, but updated to INTACT based on rear group visual confirmation. Route B status marked UNCERTAIN from forward group initial report, but updated to PASSABLE based on forward group successful traverse.
-
-Route decision merge:
-- Both groups made valid L2 decisions
-- Neither can be "undone" (physical positions fixed)
-- Resolution: Accept current positions, plan convergence point
-
-**Phase 5**: Verify consistency.
-- Both groups now have unified intel
-- Both acknowledge divergent routes are fait accompli
-- Both agree on convergence plan
-
-**Phase 6**: Resume coordinated operation.
-- Forward group continues on Route B
-- Rear group continues to bridge
-- Groups converge at km 95 junction
-- Unified convoy from km 95 onward
+Both groups confirm unified intel and acknowledge routes are fait accompli. Forward group continues on Route B; rear group continues to the bridge; convoy reunifies at km 95.
 
 ### Lessons Learned
 
-1. **Intel conflict**: Regional command and forward group gave conflicting information. Neither was fully accurate. Convoy should have intel confidence scores.
+1. **Intel confidence scores**: Regional command and forward group gave conflicting information — neither fully accurate. Assign confidence weights to intel sources.
+2. **Partition routing rules**: Once a route decision executes, it cannot be undone. Pre-agree routing rules for known partition corridors.
+3. **Communication shadow mapped**: km 47–52 is a confirmed radio shadow. Flag for future transits.
+4. **L2 delegation validated**: Vehicles 6–12 operated effectively for 45 minutes under local lead authority.
 
-2. **Route lock**: Once route decisions executed, cannot reverse. Pre-agree routing rules for partition scenarios.
-
-3. **Communication shadow mapped**: km 47-52 is now known radio shadow. Future transits prepare for partition at this location.
-
-4. **Independent operation validated**: Vehicles 6-12 operated successfully for 45 minutes under local lead. Confirms L2 delegation works.
-
-The fleet emerges from partition with improved knowledge, demonstrating that the reconciliation architecture produces state no individual node held before the partition event.
-
-> **Cognitive Map**: CONVOY's reconciliation follows the six-phase protocol in sequence: Merkle root exchange surfaces divergence cheaply; targeted data exchange resolves it efficiently; merge produces a unified view richer than either cluster held alone. Physical commitments (route traveled, resources expended) are accepted and moved forward from — the protocol's goal is knowledge coherence, not history revision. Three actionable improvements emerge: confidence-scored intel, pre-agreed partition routing rules, and mapped communication shadows for future transits.
+The fleet emerges from partition with richer knowledge than either cluster held independently — the protocol's goal is knowledge coherence, not history revision.
 
 ---
 
