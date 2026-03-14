@@ -383,6 +383,88 @@ a.defined-term {
   }
 }
 
+/* ─── Citation reference: teal superscript bracket + tooltip ─── */
+/* Replicates .defined-term tooltip with teal accent strip instead of lavender */
+.cite-ref {
+  font-size: 0.78em;
+  vertical-align: super;
+  line-height: 0;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  background: none;
+  position: relative;
+  cursor: pointer;
+  --tip-nudge: 0px;
+}
+
+.cite-ref::after {
+  content: attr(data-def);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(calc(-50% + var(--tip-nudge))) translateY(6px) scale(0.97);
+  background: rgba(255, 253, 255, 0.97);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  color: #1e1a2e;
+  border: none;
+  box-shadow:
+    inset 3px 0 0 0 #3100ff77,
+    0 0 0 1px #3100ff33,
+    0 8px 24px #0000001a;
+  padding: 0.65em 1.05em 0.65em 1.1em;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.65;
+  letter-spacing: 0.013em;
+  width: max-content;
+  min-width: 160px;
+  max-width: 310px;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.cite-ref::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(calc(-50% + var(--tip-nudge))) translateY(6px);
+  border: 5px solid transparent;
+  border-top-color: #ffffff97;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 101;
+}
+
+.cite-ref:hover::after,
+.cite-ref:hover::before,
+.cite-ref:focus-visible::after,
+.cite-ref:focus-visible::before {
+  opacity: 1;
+  transform: translateX(calc(-50% + var(--tip-nudge))) translateY(0) scale(1);
+}
+
+@media (hover: none) {
+  .cite-ref::after,
+  .cite-ref::before,
+  .cite-ref:focus-visible::after,
+  .cite-ref:focus-visible::before {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
 /* Mobile touch tooltip — slides up from the bottom of the screen */
 #tip-popup {
   display: block;
@@ -475,12 +557,12 @@ a:hover {
 }
 
 /* Content area links with subtle underline */
-#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term) {
+#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):not(.cite-ref) {
   border-bottom: 1px solid var(--lavender);
   opacity: 0.9;
 }
 
-#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):hover {
+#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):not(.cite-ref):hover {
   border-bottom-color: var(--accent);
   opacity: 1;
 }
