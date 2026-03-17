@@ -45,15 +45,15 @@ This article establishes the formal framework for contested connectivity. Each c
 
 > **Physical translation for {% katex() %}\mathbb{E}[\text{Cap}]{% end %}**: Think of this as a weighted sum. Each capability level — anomaly detection, fleet sync, anti-fragility learning — only "pays out" when connectivity is high enough to enable it. If connectivity almost never reaches a threshold, that capability contributes nothing to expected mission performance, no matter how well it's implemented.
 
-This framework extends partition-tolerant systems {{ cites(ref="1", refs="1, 2", title="Brewer (2000) — Towards Robust Distributed Systems; Gilbert & Lynch (2002) — Brewer's Conjecture and CAP") }}, delay-tolerant networking {{ cite(ref="3", title="Fall (2003) — A Delay-Tolerant Network Architecture") }}, and autonomic computing {{ cite(ref="5", title="Kephart & Chess (2003) — The Vision of Autonomic Computing") }}for contested environments where adversarial interference compounds natural connectivity challenges.
+This framework builds on partition-tolerant systems {{ cites(ref="1", refs="1, 2", title="Brewer (2000) — Towards Robust Distributed Systems; Gilbert & Lynch (2002) — Brewer's Conjecture and CAP") }}, delay-tolerant networking {{ cite(ref="3", title="Fall (2003) — A Delay-Tolerant Network Architecture") }}, and autonomic computing {{ cite(ref="5", title="Kephart & Chess (2003) — The Vision of Autonomic Computing") }}. It targets contested environments where adversarial interference compounds natural connectivity challenges.
 
 **Three constraints you must answer before the framework can claim practical validity.** These are introduced here as structural design constraints — not afterthoughts — because each shapes the formal machinery from the ground up:
 
-1. **Clock drift.** Crystal-oscillator nodes drift by seconds per hour and by minutes over 30-day partitions. Last-Write-Wins conflict resolution silently inverts causal order when physical timestamps are untrustworthy. *Constraint: the framework must not assume NTP availability for correctness guarantees.* Answered in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md) by {% term(url="@/blog/2026-02-05/index.md#def-59", def="Clock Trust Window: maximum elapsed partition time before the HLC falls back to pure logical ordering to prevent causal inversions") %}Definition 59{% end %} (Clock Trust Window) and {% term(url="@/blog/2026-02-05/index.md#def-71", def="Causality Header: 8-byte gossip field encoding HLC timestamp and trust-validity bit, enabling causal ordering without NTP in every protocol message") %}Definition 71{% end %} (Causality Header), which pivot from physical HLC ordering to pure logical ordering when the partition accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds the drift tolerance.
+1. **Clock drift.** Crystal-oscillator nodes drift by seconds per hour and by minutes over 30-day partitions. Last-Write-Wins conflict resolution silently inverts causal order when physical timestamps are untrustworthy. *Constraint: the framework must not assume NTP availability for correctness guarantees.* Answered in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md) by {% term(url="@/blog/2026-02-05/index.md#def-59", def="Clock Trust Window: maximum elapsed partition time before the HLC falls back to pure logical ordering to prevent causal inversions") %}Definition 59{% end %} (Clock Trust Window) and {% term(url="@/blog/2026-02-05/index.md#def-71", def="Causality Header: 8-byte gossip field encoding HLC timestamp and trust-validity bit, enabling causal ordering without NTP in every protocol message") %}Definition 71{% end %} (Causality Header). Both pivot from physical HLC ordering to pure logical ordering when the partition accumulator {% katex() %}T_{\mathrm{acc}}{% end %} exceeds the drift tolerance.
 
-2. **Resource floor.** The full autonomic monitoring stack — EWMA, Merkle health tree, gossip table, EXP3-IX weight vector, event queue, vector clock — totals approximately 13 KB of SRAM. A 4 KB MCU has an autonomic ceiling of roughly 800 bytes under {% term(url="@/blog/2026-02-19/index.md#prop-68", def="Autonomic Overhead Bound: total autonomic stack memory must stay below the critical resource threshold; the Zero-Tax tier satisfies this bound for MCUs down to 4 KB SRAM") %}Proposition 68{% end %}. The stack exceeds its own budget by \\(16\\times\\) before a single line of mission code runs. *Constraint: the stack must have a zero-tax tier that fits within 200 bytes.* Answered in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#zero-tax-autonomic) by {% term(url="@/blog/2026-02-19/index.md#def-95", def="Lightweight autonomic constructs enabling zero-overhead autonomy on severely memory-constrained MCUs") %}Definitions 95–97{% end %} (Zero-Tax State Machine, In-Place Hash Chain, Fixed-Point EWMA) and {% term(url="@/blog/2026-02-19/index.md#prop-69", def="Wakeup Latency Bound: Zero-Tax State Machine transitions from DORMANT to ACTIVE in at most 2 MAPE-K ticks after anomaly evidence accumulates above threshold") %}Proposition 69{% end %} (Wakeup Latency Bound).
+2. **Resource floor.** The full autonomic monitoring stack — EWMA, Merkle health tree, gossip table, EXP3-IX weight vector, event queue, vector clock — totals approximately 13 KB of SRAM. A 4 KB MCU has an autonomic ceiling of roughly 800 bytes under {% term(url="@/blog/2026-02-19/index.md#prop-68", def="Autonomic Overhead Bound: total autonomic stack memory must stay below the critical resource threshold; the Zero-Tax tier satisfies this bound for MCUs down to 4 KB SRAM") %}Proposition 68{% end %}. That means the stack exceeds its own budget by \\(16\\times\\) before a single mission byte runs. *Constraint: the stack must have a zero-tax tier that fits within 200 bytes.* Answered in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md#zero-tax-autonomic) by {% term(url="@/blog/2026-02-19/index.md#def-95", def="Lightweight autonomic constructs enabling zero-overhead autonomy on severely memory-constrained MCUs") %}Definitions 95–97{% end %} (Zero-Tax State Machine, In-Place Hash Chain, Fixed-Point EWMA) and {% term(url="@/blog/2026-02-19/index.md#prop-69", def="Wakeup Latency Bound: Zero-Tax State Machine transitions from DORMANT to ACTIVE in at most 2 MAPE-K ticks after anomaly evidence accumulates above threshold") %}Proposition 69{% end %} (Wakeup Latency Bound).
 
-3. **Stability under mode-switching.** {% term(url="@/blog/2026-01-29/index.md#prop-22", def="Closed-Loop Healing Stability: gain must stay below a delay-dependent ceiling; exceeding it causes oscillation rather than convergence") %}Proposition 22{% end %}'s gain bound {% katex() %}K < 1/(1 + \tau/T_{\mathrm{tick}}){% end %} assumes linear, time-invariant plant dynamics. Power-shedding makes {% katex() %}T_{\mathrm{tick}}{% end %} a discrete function of capability level \\(q\\) — the closed loop is a switched linear system that jumps between modes as resources degrade. The LTI stability proof does not transfer across mode boundaries. *Constraint: the stability proof must remain valid under mode transitions, including transitions forced by the resource floor constraint above.* Answered in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) by {% term(url="@/blog/2026-01-29/index.md#prop-25", def="Nonlinear Safety Invariant: safety invariant is preserved across mode transitions if the gain scheduler satisfies the barrier condition at each boundary") %}Proposition 25{% end %} (CBF mode-invariant safety), Theorem PWL (SMJLS mean-square stability), and {% term(url="@/blog/2026-01-29/index.md#prop-31", def="CBF-derived refractory bound: minimum refractory period ensuring the safety condition is maintained between consecutive healing actions") %}Proposition 31{% end %} (CBF-derived refractory bound).
+3. **Stability under mode-switching.** {% term(url="@/blog/2026-01-29/index.md#prop-22", def="Closed-Loop Healing Stability: gain must stay below a delay-dependent ceiling; exceeding it causes oscillation rather than convergence") %}Proposition 22{% end %}'s gain bound {% katex() %}K < 1/(1 + \tau/T_{\mathrm{tick}}){% end %} assumes linear, time-invariant plant dynamics. Power-shedding makes {% katex() %}T_{\mathrm{tick}}{% end %} a discrete function of capability level \\(q\\), turning the closed loop into a switched linear system. The LTI stability proof does not transfer across mode boundaries. *Constraint: the stability proof must remain valid under mode transitions, including transitions forced by the resource floor constraint above.* Answered in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) by {% term(url="@/blog/2026-01-29/index.md#prop-25", def="Nonlinear Safety Invariant: safety invariant is preserved across mode transitions if the gain scheduler satisfies the barrier condition at each boundary") %}Proposition 25{% end %} (CBF mode-invariant safety), Theorem PWL (SMJLS mean-square stability), and {% term(url="@/blog/2026-01-29/index.md#prop-31", def="CBF-derived refractory bound: minimum refractory period ensuring the safety condition is maintained between consecutive healing actions") %}Proposition 31{% end %} (CBF-derived refractory bound).
 
 4. **Health observability without central infrastructure.** This article defines the health vector \\(\mathbf{H}(t)\\) and the resource state \\(R(t)\\), but provides no mechanism for a node to populate those vectors without a central collector. During partition, there is no ground truth: a node can only observe its own sensors and neighbors it can reach. *Constraint: anomaly detection and health propagation must operate locally on partial information.* Answered in [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md) by {% term(url="@/blog/2026-01-22/index.md#def-19", def="Formal measurement and health-propagation constructs: anomaly detection, gossip protocol, staleness, and Byzantine fault tolerance") %}Definitions 19–27{% end %} (Local Anomaly Detection, Gossip Health Protocol, Staleness, Byzantine Node) and {% term(url="@/blog/2026-01-22/index.md#prop-9", def="Optimality and convergence guarantees for local anomaly detection, gossip propagation, staleness bounds, and Byzantine tolerance") %}Propositions 9–20{% end %}.
 
@@ -69,7 +69,7 @@ These six constraints are not independent. The resource floor (Constraint 2) dir
 
 ## Epistemic Positioning and Methodology
 
-Before we build any formal machinery, we need to be precise about what kind of claims this framework makes — and what it doesn't. Misreading a theoretical bound as a measured benchmark is a common failure mode in distributed systems literature.
+Before building any formal machinery, this section is precise about what kind of claims the framework makes — and what it does not. A common mistake is reading a theoretical bound as a measured benchmark; the two are structurally different and must not be conflated.
 
 ### What Kind of Claims Does This Framework Make?
 
@@ -166,7 +166,7 @@ R(t) = \frac{E_{\text{battery}}(t)}{E_{\min}} \cdot w_E + \frac{M_{\text{free}}(
 
 *with weights \\(w_E + w_M + w_C = 1\\). Critical threshold: {% katex() %}R_{\text{crit}} \approx 0.2{% end %} — 20% composite resource availability triggers survival mode regardless of connectivity state.*
 
-- **Use**: Compare {% katex() %}R(t) < R_{\text{crit}}{% end %} at each MAPE-K tick to trigger survival mode; the composite prevents single-dimension blindness — a full-battery node crashing from memory exhaustion reads {% katex() %}R \gg R_{\text{crit}}{% end %} on battery alone but is captured by the \\(w_M\\) term.
+- **Use**: Compare {% katex() %}R(t) < R_{\text{crit}}{% end %} at each MAPE-K [Kephart & Chess, 2003] tick to trigger survival mode; the composite prevents single-dimension blindness — a full-battery node crashing from memory exhaustion reads {% katex() %}R \gg R_{\text{crit}}{% end %} on battery alone but is captured by the \\(w_M\\) term.
 - **Parameters**: RAVEN: {% katex() %}w_E=0.5,\, w_M=0.25,\, w_C=0.25{% end %}; OUTPOST: \\(w_E=0.7\\) (battery-dominated site). Weights are deployment-tuned offline; the structure of \\(R(t)\\) is fixed.
 - **Field note**: Memory is the most-overlooked resource dimension — in OUTPOST, OOM kills caused 40% of node failures that appeared as power events in energy-only monitoring.
 
@@ -223,7 +223,7 @@ The following symbols carry distinct meanings across the series. When in doubt, 
 
 ### Constraint Structure
 
-Three hard constraints govern everything that follows. If any one of them is violated, the architecture fails — not degrades, fails. \\(B(t)\\) is available bandwidth, \\(R(t)\\) is remaining resource budget (power, compute, memory combined), \\(K\\) is control loop gain, and \\(\tau\\) is loop delay. Here \\(\tau\\) means {% katex() %}\tau_{\text{fb}}{% end %}; for all four roles \\(\tau\\) plays across the series see the Notation Legend above.
+Three hard constraints govern everything that follows. Violate any one of them and the architecture fails — not degrades, fails. \\(B(t)\\) is available bandwidth, \\(R(t)\\) is remaining resource budget (power, compute, memory combined), \\(K\\) is control loop gain, and \\(\tau\\) is loop delay. Here \\(\tau\\) means {% katex() %}\tau_{\text{fb}}{% end %}; the Notation Legend above lists all four roles \\(\tau\\) plays across the series.
 
 > **Scope — LTI assumption:** The following constraint is derived under Linear-Time-Invariant dynamics. When power-shedding makes \\(T_\text{tick}\\) mode-dependent, the system becomes a switched linear system and this bound must be tightened by the SMJLS factor established in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md).
 
@@ -425,7 +425,7 @@ Authority tier {% katex() %}\mathcal{Q}_j{% end %} for {% katex() %}j \in \{0,1,
 <span id="term-inversion"></span>
 ## The Inversion Thesis
 
-Fog computing {{ cite(ref="7", title="Bonomi et al. (2012) — Fog Computing and Its Role in the IoT") }}, mobile edge computing {{ cite(ref="8", title="ETSI GS MEC 003 (2019) — MEC Framework and Reference Architecture") }}, and the edge-cloud continuum all share a foundational assumption: connectivity is the baseline state, and disconnection is a degraded exception to recover from. This section inverts that assumption formally. **Partition is the baseline. Connectivity is the opportunity.** The formal derivation below establishes exactly where the crossover happens.
+Fog computing {{ cite(ref="7", title="Bonomi et al. (2012) — Fog Computing and Its Role in the IoT") }}, mobile edge computing {{ cite(ref="8", title="ETSI GS MEC 003 (2019) — MEC Framework and Reference Architecture") }}, and the edge-cloud continuum share one foundational assumption: connectivity is the baseline state, and disconnection is an exception to recover from. This section inverts that assumption formally. **Partition is the baseline. Connectivity is the opportunity.** The derivation below establishes exactly where the crossover happens.
 
 **Cloud architecture** assumes \\(P(C = 0) < 0.01\\) and {% katex() %}\mathbb{E}[T_{\text{partition}}] < 60{% end %} seconds. Partition handling exists but receives minimal optimization effort — it's a fallback, not a design mode.
 
@@ -473,6 +473,24 @@ The table below makes explicit the eight structural assumptions where cloud-nati
 
 *Note on terminology: "Partition" refers to a contiguous duration spent in the Denied regime (C(t) = 0); "Denied regime" (state {% katex() %}\mathcal{N}{% end %}) is the connectivity state itself; "disconnection" is a generic informal term for either. These are used precisely: "partition duration" is always a time interval, never a state label.*
 
+> **Analogy:** A ship's navigator switching from GPS to dead reckoning to compass-only as signal degrades — each mode uses a different accuracy/resource tradeoff, with no guarantee of returning to the previous mode.
+
+**Logic:** The regime process discretizes the continuous link-quality signal \\(C(t)\\) via fixed thresholds; the semi-Markov model ({% term(url="#def-12", def="Connectivity Semi-Markov Process: embedded Markov chain governs which regime follows next; Weibull sojourn times govern how long each regime lasts, capturing heavy-tailed partition risk absent from the memoryless baseline") %}Definition 12{% end %}) governs how long the system stays in each regime and which regime follows next.
+
+{% mermaid() %}
+stateDiagram-v2
+    [*] --> Connected
+    Connected --> Degraded : RTT spike / partial loss
+    Connected --> Denied : total link failure
+    Degraded --> Connected : RTT < tau_low + sync complete
+    Degraded --> Denied : loss_rate > L_max
+    Denied --> Degraded : partial reconnect
+    Denied --> Connected : full reconnect + sync complete
+    Connected --> Connected : normal ops
+    Degraded --> Degraded : adaptive throttling
+    Denied --> Denied : local autonomy
+{% end %}
+
 <span id="prop-2"></span>
 **Proposition 2** ({% term(url="#prop-2", def="The connectivity level below which distributed autonomy outperforms cloud control") %}Inversion Threshold{% end %}). Under assumption set {% katex() %}\mathcal{A}_{inv}{% end %}, there exists a threshold \\(\tau^\*\\) such that cloud-native coordination patterns yield lower expected utility than partition-first patterns when \\(P(C(t) = 0) > \tau^\*\\)
 
@@ -485,6 +503,10 @@ The table below makes explicit the eight structural assumptions where cloud-nati
 > **The Trade-off**: Partition-first architecture pays a reconciliation cost \\(\beta\\) every time connectivity resumes. You are trading per-reconnection overhead for freedom from coordination stalls during partition.
 
 > **What this means in practice**: Once your system is disconnected more than 15% of the time, designing for connectivity as the normal case costs more energy and produces worse outcomes than designing for disconnection as the baseline. Measure your actual disconnection rate before choosing your architecture.
+
+> **Analogy:** A field reporter deciding whether to phone headquarters or make the editorial call on-site — above a certain call cost, you just decide locally. The threshold is not a policy preference; it is the exact break-even point where the retry-queue overhead exceeds the reconciliation cost.
+
+**Logic:** {% term(url="#prop-2", def="Inversion Threshold: the connectivity level below which distributed autonomy outperforms cloud control, derived by equating expected utility of both architectures") %}Proposition 2{% end %} derives \\(\tau^\*\\) by setting \\(U_{\text{cloud}}(p) = U_{\text{edge}}(p)\\) and solving for the crossover; above \\(\tau^\*\\), the \\(1/(1-p)\\) latency blowup on the cloud side dominates the fixed reconciliation cost \\(\beta\\) on the edge side.
 
 *Formal Derivation*:
 
@@ -1506,7 +1528,7 @@ gantt
 ---
 
 <span id="def-13"></span>
-**Definition 13** (Weibull Partition Duration Model). *The sojourn time of the Denied regime {% katex() %}\mathcal{N}{% end %} in Definition 12 is modeled as {% katex() %}T_\mathcal{N} \sim \text{Weibull}(k_\mathcal{N}, \lambda_\mathcal{N}){% end %} with shape {% katex() %}k_\mathcal{N} \in (0, 1){% end %} and scale {% katex() %}\lambda_\mathcal{N} > 0{% end %}. The expected partition duration, variance, and planning quantiles are:*
+**Definition 13** (Weibull Partition Duration Model). *The sojourn time of the Denied regime {% katex() %}\mathcal{N}{% end %} in Definition 12 is modeled as {% katex() %}T_\mathcal{N} \sim \text{Weibull}(k_\mathcal{N}, \lambda_\mathcal{N}){% end %} [Weibull, 1951] with shape {% katex() %}k_\mathcal{N} \in (0, 1){% end %} and scale {% katex() %}\lambda_\mathcal{N} > 0{% end %}. The expected partition duration, variance, and planning quantiles are:*
 
 {% katex(block=true) %}
 \mathbb{E}[T_\mathcal{N}] = \lambda_\mathcal{N}\,\Gamma\!\left(1 + \tfrac{1}{k_\mathcal{N}}\right)
@@ -1546,7 +1568,7 @@ Q_{0.95} = \lambda_\mathcal{N}\,(\ln 20)^{1/k_\mathcal{N}}
 ---
 
 <span id="def-14"></span>
-**Definition 14** (Adaptive Weibull Shape Parameter). *The shape parameter {% katex() %}k_\mathcal{N}{% end %} is not static; it is maintained by an {% term(url="@/blog/2026-02-12/index.md#def-81", def="Adversarial bandit algorithm providing sub-linear regret even under adversarial reward sequences; used for action selection under non-stationary conditions") %}EXP3-IX{% end %} multi-armed bandit (Definition 81) with arms indexed over {% katex() %}k \in \{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0\}{% end %}. The reward signal for arm \\(k\\) at partition end is:*
+**Definition 14** (Adaptive Weibull Shape Parameter). *The shape parameter {% katex() %}k_\mathcal{N}{% end %} is not static; it is maintained by an {% term(url="@/blog/2026-02-12/index.md#def-81", def="Adversarial bandit algorithm providing sub-linear regret even under adversarial reward sequences; used for action selection under non-stationary conditions") %}EXP3-IX{% end %} [Neu, 2015] multi-armed bandit (Definition 81) with arms indexed over {% katex() %}k \in \{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0\}{% end %}. The reward signal for arm \\(k\\) at partition end is:*
 
 {% katex(block=true) %}
 R(t) = w_1 \cdot f_\text{mission}(t) + w_2 \cdot f_\text{stability}(t) + w_3 \cdot f_\text{efficiency}(t)
@@ -1954,7 +1976,7 @@ The connectivity analysis so far has used CONVOY as the worked example. These pr
 
 ### Latency Distribution Analysis
 
-Beyond {% term(url="#def-5", def="Continuous value between zero and one representing the current fraction of nominal bandwidth available; zero means fully denied, one means full connectivity; regime classification discretizes this into four operating modes") %}connectivity state{% end %}, **latency distribution within each regime** determines operational viability. "Connectivity" percentage conceals the fact that p99 latency in Degraded is already \\(10\\times\\) the median — and Intermittent delivers occasional latencies \\(25\\times\\) higher than p95. Designing for median or p95 latency fails for any capability where tail events matter.
+Beyond {% term(url="#def-5", def="Continuous value between zero and one representing the current fraction of nominal bandwidth available; zero means fully denied, one means full connectivity; regime classification discretizes this into four operating modes") %}connectivity state{% end %}, **latency distribution within each regime** determines operational viability. A raw "connectivity" percentage hides the tail: p99 latency in Degraded is already \\(10\\times\\) the median, and Intermittent delivers occasional latencies \\(25\\times\\) higher than p95. Designing for median or p95 latency fails for any capability where tail events matter.
 
 **Representative Latency Distributions by Regime**: The diagram shows how median latency grows from 12 ms in full connectivity to unbounded in the Denied regime; the critical pattern to observe is the extreme tail growth — p99 is already \\(10\times\\) the median in Degraded, making tail-based design mandatory.
 
@@ -2055,9 +2077,9 @@ The **bimodal mixture** captures two partition types:
 
 > **Physical translation.** Short partitions are terrain-driven transients — handle with store-and-forward buffering. Long partitions are equipment failures or extended RF denial — they require full local decision authority. Designing only for the short partition type leaves the system without a plan for 30% of events. The mixture model is the mathematical statement that one architecture cannot serve both; you need layers, with each layer sized for the partition type it must survive.
 
-This has profound architectural implications: systems must handle both brief interruptions (store-and-forward sufficient) and extended autonomy (local decision authority required).
+The two partition types require two different architectures. Store-and-forward handles brief interruptions; full local decision authority is required for extended autonomy.
 
-**Conditional Partition Probability**: Longer dwell in degraded states increases partition probability. Semi-{% term(url="#def-12", def="Continuous-time stochastic model of how a node transitions between connectivity regimes; steady-state probabilities derived from operational telemetry predict partition exposure and architecture requirements") %}Markov model{% end %}s capture this non-Markovian behavior, suggesting proactive measures (state sync, authority delegation) when degraded dwell time exceeds thresholds.
+**Conditional Partition Probability**: Longer dwell in degraded states increases partition probability. Semi-{% term(url="#def-12", def="Continuous-time stochastic model of how a node transitions between connectivity regimes; steady-state probabilities derived from operational telemetry predict partition exposure and architecture requirements") %}Markov model{% end %}s capture this non-Markovian behavior. When degraded dwell time exceeds a threshold, proactive measures — state sync, authority delegation — reduce reconciliation cost at reconnection.
 
 ### Module Placement Strategies
 

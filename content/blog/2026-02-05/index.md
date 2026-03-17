@@ -120,6 +120,10 @@ D(\Sigma_A, \Sigma_B) = \frac{|\Sigma_A \triangle \Sigma_B|}{|\Sigma_A \cup \Sig
 
 In other words, divergence is the fraction of the combined key space on which the two states disagree; zero means byte-for-byte identical, one means no key-value pair is shared.
 
+> **Analogy:** Two navigators using dead reckoning from the same starting point — divergence is how far apart their estimated positions drift after \\(T\\) minutes without comparing notes. The longer they go without communicating, the more their maps disagree.
+
+**Logic:** Under a Poisson update model, \\(D(\tau) = 1 - e^{-\lambda\tau}\\) gives the expected fraction of keys that diverge after partition duration \\(\tau\\). This is a lower bound; burst processes produce higher divergence at burst onset (Proposition 41b).
+
 During partition, state diverges through multiple mechanisms:
 
 **Environmental inputs differ**. Each cluster observes different events. Cluster A sees threat T1 approach from the west. Cluster B, on the other side of the partition, sees nothing. Their threat models diverge.
@@ -251,7 +255,7 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle au
 
 **Problem**: When two clusters reconnect after partition, their states have diverged. A naive merge — last-writer-wins by wall-clock timestamp — is incorrect under clock drift. Arbitrary merge logic can produce inconsistent state that violates application invariants.
 
-**Solution**: Choose data structures (CRDTs) {{ cite(ref="3", title="Shapiro et al. (2011) — Conflict-Free Replicated Data Types") }}whose merge function is provably commutative, associative, and idempotent. These three properties guarantee that any two replicas receiving the same set of updates converge to the same final state, regardless of merge order or network delay.
+**Solution**: Choose data structures (CRDTs) {{ cite(ref="3", title="Shapiro et al. (2011) — Conflict-Free Replicated Data Types") }}whose merge function is provably commutative, associative, and idempotent. These three properties guarantee that any two replicas receiving the same set of updates converge to the same final state — regardless of merge order or network delay.
 
 **Trade-off**: The right CRDT type depends on the state semantics. LWW-Register is simplest but strategically manipulable (favor faster clocks). Intersection is safest for authorization but produces false negatives. The merge function embeds a fairness decision — making it explicit prevents silent design errors.
 
@@ -264,6 +268,27 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle au
 - *Idempotency: \\(m(s, s) = s\\)*
 
 *These properties make \\((S, m)\\) a join-semilattice, guaranteeing convergence regardless of merge order.*
+
+> **Analogy:** Two doctors independently updating the same patient record while the hospital network was down — CRDTs let you combine both records without losing either doctor's updates, because every field has a deterministic winner rule. You don't need to call a meeting; the rules decide.
+
+**Logic:** The three semilattice properties — commutativity \\(m(s_1, s_2) = m(s_2, s_1)\\), associativity, and idempotency \\(m(s, s) = s\\) — guarantee that any merge order produces the same final state once all updates are exchanged.
+
+{% mermaid() %}
+sequenceDiagram
+    participant N1 as Node 1
+    participant N2 as Node 2
+    participant M as Merge Engine
+    Note over N1,N2: Partition — both write independently
+    N1->>N1: write(key=A, val=X, ts=10)
+    N2->>N2: write(key=A, val=Y, ts=12)
+    Note over N1,N2: Reconnection
+    N1->>M: send delta(A=X, ts=10)
+    N2->>M: send delta(A=Y, ts=12)
+    M->>M: LWW rule: max(ts=10,ts=12) keeps Y
+    M->>N1: sync(A=Y)
+    M->>N2: sync confirmed
+    Note over N1,N2: Converged: both see A=Y
+{% end %}
 
 *State schema composition: the concrete state type \\(S\\) for fleet autonomic operation includes three logical layers: (1) mission state fields (coordinates, task assignments, resource levels) using standard CRDT types; (2) health state fields from {% term(url="@/blog/2026-01-29/index.md#def-55", def="Synthetic Health Metric: composite scalar aggregating subsystem health scores for fleet-level coherence voting") %}Synthetic Health Metric{% end %} and observation regime counters, using Last-Write-Wins semantics within a single node's entries; and (3) trust and reputation scores from the Peer-Validation Layer ({% term(url="#def-64", def="Peer-Validation Layer: nodes cross-validate claims against independent physical sensor readings before merging them into shared state, rejecting physically implausible assertions") %}Definition 64{% end %}), using monotonically-increasing counters. Layer 2 weighting rules from [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md) apply unchanged within the CRDT merge function.*
 
@@ -297,6 +322,8 @@ s' = \bigsqcup_{\mathcal{W}}(\mathcal{U}) = \bigsqcup_{s_i \in \text{Admitted}(\
 *Semilattice preservation: the standard CRDT convergence proof ({% term(url="#prop-42", def="CRDT Convergence: all replicas converge to identical state once all updates are exchanged, regardless of merge order or network delay") %}Proposition 42{% end %}) requires the merge function to be associative, commutative, and idempotent. The Byzantine admission gate prepended in this definition must also satisfy these three properties. The gate is designed to be idempotent (applying it twice to the same inputs yields the same result) because it uses deterministic reputation scores. Commutativity and associativity follow because the gate either admits or rejects entries independently of merge order. If a deployment modifies the gate logic to use state-dependent admission (e.g., a threshold that changes during merge), these properties must be re-verified.*
 
 In other words, any two replicas that have received the same set of updates will reach the same final state, regardless of the order in which they applied those updates or exchanged state with each other.
+
+**Compute Profile:** CPU: {% katex() %}O(N \log N){% end %} per merge — LWW-register and GSet merges are {% katex() %}O(N){% end %}, but semantic commit ordering requires a causal sort adding the log factor. Memory: {% katex() %}O(N){% end %} — one entry per CRDT key in the state store. Prefer delta-mutant merges over full-state merges when the state store grows beyond 1,000 entries.
 
 Six standard {% term(url="#def-58", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} types cover the majority of edge state patterns; selecting the right one depends on whether state grows only, shrinks too, or requires last-writer semantics.
 
@@ -780,6 +807,10 @@ V_A \leq V_B \iff \forall i: V_A[i] \leq V_B[i]
 
 In other words, \\(V_A \leq V_B\\) means node A's clock can only have happened before node B's clock; if neither \\(V_A \leq V_B\\) nor \\(V_B \leq V_A\\) holds, the two events occurred concurrently with no causal dependency between them.
 
+> **Analogy:** Postmarks on letters — even without synchronized clocks, you can tell which letter was written in response to which by the sequence numbers. A reply can't reference a letter it hasn't seen. The vector clock is the postmark, one counter per correspondent.
+
+**Logic:** The ordering \\(V_A \leq V_B \iff \forall i: V_A[i] \leq V_B[i]\\) encodes the happens-before relation. When neither vector dominates, the events are concurrent — both carry valid information, and the system must merge rather than discard.
+
 <span id="prop-44"></span>
 **Proposition 44** (Vector Clock Causality). *For events \\(e_1\\) and \\(e_2\\) with vector timestamps \\(V_1\\) and \\(V_2\\):*
 
@@ -843,6 +874,8 @@ c_m + 1            & \text{if } l' = l_m > l_j \\
 {% end %}
 
 *Each {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} operation carries metadata \\((n_j, h_j)\\) where \\(n_j\\) is the node identifier. The pair \\((n_j, h_j)\\) globally and uniquely identifies the operation.*
+
+**Compute Profile:** CPU: {% katex() %}O(1){% end %} per message event with HLC — three scalar comparisons and one conditional increment, versus {% katex() %}O(n){% end %} for a full vector clock over a fleet of {% katex() %}n{% end %} nodes. Memory: {% katex() %}O(1){% end %} per node — one 64-bit HLC timestamp, versus {% katex() %}O(n){% end %} for a full vector clock. HLC is the preferred choice for fleets above {% katex() %}n = 50{% end %} nodes on this basis.
 
 <span id="def-61b"></span>
 **Definition 61b** (Message Delay Bound). *Let {% katex() %}\tau_{\max}(C){% end %} be the maximum expected one-way message delivery time under normal network conditions at connectivity level \\(C\\), measured in physical time units:*
@@ -969,11 +1002,11 @@ Quorum-based quarantine clearance requires the node to be in BOM (Beacon-Only Mo
 3. *Fast-clock neutralization: no reissued operation retains an {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} watermark above the repaired network watermark. The "future writes win" failure mode is eliminated.*
 4. *Slow-clock protection: operations with low {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} watermarks are not silently overwritten; they survive as concurrent when no peer operation is their causal successor.*
 
-*Proof sketch*: Property 1 follows from {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} convergence (Proposition 42): the merged state is the join of all operations, converging regardless of evaluation order. Property 2 follows from Phase 3: every operation is explicitly classified. Properties 3–19 follow from Phase 2 {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} repair: after repair, {% katex() %}l_j = \max(l_j, l_{\mathrm{network}}) \geq l_{\mathrm{network}}{% end %}, neutralizing the fast-clock advantage; concurrent operations survive via \\(\sqcup\\). \\(\square\\)
+*Proof sketch*: Property 1 follows from {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} convergence ({% term(url="#prop-42", def="CRDT Convergence: if all updates eventually propagate and merge satisfies commutativity, associativity, and idempotency, all replicas converge to the same state") %}Proposition 42{% end %}): the merged state is the join of all operations, converging regardless of evaluation order. Property 2 follows from Phase 3: every operation is explicitly classified. Properties 3–19 follow from Phase 2 {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} repair: after repair, {% katex() %}l_j = \max(l_j, l_{\mathrm{network}}) \geq l_{\mathrm{network}}{% end %}, neutralizing the fast-clock advantage; concurrent operations survive via \\(\sqcup\\). \\(\square\\)
 
-**Concrete scenario**: Drone 23 partitioned for 47 minutes; its RTC drifted 12 minutes fast (\\(\Delta_j = +720\\)s). Without {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}: all 847 local writes have {% katex() %}\mathrm{ts}_{\mathrm{local}} > \mathrm{ts}_{\mathrm{network}} + 720{% end %}s, silently overwriting 12 minutes of correct fleet state on rejoin — the fleet loses cohesion. With Definition 63: Drone 23 enters quarantine, Phase 2 repairs \\(l_j\\), Phase 3 classifies all 847 writes as causally concurrent with peer writes in the same time window, and they are merged via OR-Set and RGA join operations — not silently winning. Convergence completes in 3 {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rounds (consistent with Prop 4 on the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} 47-drone topology).
+**Concrete scenario**: Drone 23 partitioned for 47 minutes; its RTC drifted 12 minutes fast (\\(\Delta_j = +720\\)s). Without {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %}: all 847 local writes have {% katex() %}\mathrm{ts}_{\mathrm{local}} > \mathrm{ts}_{\mathrm{network}} + 720{% end %}s, silently overwriting 12 minutes of correct fleet state on rejoin — the fleet loses cohesion. With {% term(url="#def-63", def="Drift-Quarantine Re-sync Protocol: partitioned node rejoins by executing four phases — HLC repair, causality audit, classification, and state propagation — to merge partition writes without silent overwrite") %}Definition 63{% end %}: Drone 23 enters quarantine, Phase 2 repairs \\(l_j\\), Phase 3 classifies all 847 writes as causally concurrent with peer writes in the same time window, and they are merged via OR-Set and RGA join operations — not silently winning. Convergence completes in 3 {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rounds (consistent with Prop 4 on the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} 47-drone topology).
 
-**Phase timeline clarification — 3 gossip rounds vs. \\(O(|P| \times n)\\) audit rounds**: The "3 {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rounds" figure refers to {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state propagation only (Phase 4 of Definition 63: disseminating the merged {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} join to all peers).
+**Phase timeline clarification — 3 gossip rounds vs. \\(O(|P| \times n)\\) audit rounds**: The "3 {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rounds" figure refers to {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} state propagation only (Phase 4 of {% term(url="#def-63", def="Drift-Quarantine Re-sync Protocol: partitioned node rejoins by executing four phases — HLC repair, causality audit, classification, and state propagation — to merge partition writes without silent overwrite") %}Definition 63{% end %}: disseminating the merged {% term(url="#def-58", def="Conflict-free Replicated Data Type; data structure where all concurrent updates merge deterministically without coordination, enabling convergent consistency under partition") %}CRDT{% end %} join to all peers).
 
 The Phase 3 Causality Audit — classifying all 847 partition operations as causally ordered or concurrent — runs asynchronously and takes \\(O(|P| \cdot n)\\) {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rounds, where \\(|P| = 847\\) (partition operations) and \\(n = 47\\) (fleet size). At the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} gossip rate of \\(\lambda = 1\\) Hz and ~10 seconds per round, the full audit requires \\(847 \times 47 \approx 39{,}809\\) audit-exchanges at 1 Hz, completing in approximately 11 hours under continuous connectivity.
 
@@ -983,7 +1016,7 @@ The causality audit is not on the critical path for mission continuation — the
 
 ### Logical Validation: Peer Corroboration and Byzantine-Resilient Quorum
 
-The CRDTs and vector clocks in the previous sections solve *consistency* — ensuring all nodes converge to the same state after partition. They say nothing about *correctness*: a node that merges consistently can still inject false sensor readings into the shared state, and those readings will propagate to the entire fleet with the same convergence guarantees as honest ones. Secure Boot attestation (Phase 0 in the FAC, Def 37) proves a node runs verified firmware — it does not prove its sensors report truthful physical state. A physically compromised node with valid attestation can inject false position, sensor readings, or health data, passing all cryptographic checks while corrupting the fleet's shared state model. The following three definitions address logical validation: truth as what the fleet independently verifies from physics, not what a node asserts. They build in order — first detecting false claims at a single node (Def 43), then weighting voters by track record (Def 44), then requiring a supermajority of high-trust nodes before any irreversible decision (Def 45).
+The CRDTs and vector clocks in the previous sections solve *consistency* — ensuring all nodes converge to the same state after partition. They say nothing about *correctness*. A node that merges consistently can still inject false sensor readings into shared state, and those readings propagate with the same convergence guarantees as honest ones. Secure Boot attestation proves a node runs verified firmware. It does not prove its sensors report truthful physical state. A physically compromised node with valid attestation can inject false position, sensor readings, or health data — passing all cryptographic checks while corrupting the fleet's shared state model. The following three definitions address logical validation: truth as what the fleet independently verifies from physics, not what a node asserts. They build in order — first detecting false claims at a single node (Def 43), then weighting voters by track record (Def 44), then requiring a supermajority of high-trust nodes before any irreversible decision (Def 45).
 
 <span id="def-64"></span>
 **Definition 64** (Peer-Validation Layer). *For claim \\(c = (\tau_c, v, h, \sigma_j)\\) of type \\(\tau_c\\) with value \\(v\\), {% term(url="#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamp \\(h\\), and signature \\(\sigma_j\\) from node \\(j\\), define the physical plausibility predicate at neighbor \\(i\\) as {% katex() %}\phi(c, i) \in \{0, 1\}{% end %}. Per claim type:*
@@ -1229,7 +1262,7 @@ m^*_{\text{Nash}} = \arg\max_{s} \prod_{k \in \{A,B\}} \bigl(U_k(s) - U_k(s_{\te
 
 **Solution**: Classify decisions by scope (node, cluster, fleet, command) and pre-delegate authority for the appropriate tier before partition occurs. Each node knows which decisions it is authorized to make autonomously and which require escalation to a higher tier.
 
-**Trade-off**: Broader pre-delegated authority enables faster autonomous operation during partition but increases the risk of conflicting decisions. The optimal delegation scope minimizes expected reconciliation cost — bounded delegation is always better than either full autonomy or full lockout.
+**Trade-off**: Broader pre-delegated authority enables faster autonomous operation during partition but increases the risk of conflicting decisions. The optimal delegation scope minimizes expected reconciliation cost. Bounded delegation is always better than either full autonomy or full lockout.
 
 ### Decision Scope Classification
 
@@ -1258,7 +1291,7 @@ A node at capability level L1 (low battery) may simultaneously hold authority ti
 
 > **Disambiguation**: Capability level ({% katex() %}\mathcal{L}_0{% end %}–{% katex() %}\mathcal{L}_4{% end %}) governs what the node *can do* given its resources; authority tier ({% katex() %}\mathcal{Q}_j{% end %}) governs what decisions the node *is permitted to make* autonomously. A low-battery L0 node can still hold high Q-tier delegation.
 
-*Gateway nodes and tier assignment: a {% term(url="@/blog/2026-01-29/index.md#def-54", def="Autonomic Gateway: a MAPE-K proxy node that wraps legacy hardware with no native healing APIs into the fleet's autonomic control loop") %}Autonomic Gateway{% end %} (Definition 54) wraps legacy hardware that has no native MAPE-K APIs. Gateway nodes are assigned {% katex() %}\mathcal{Q}_1{% end %} (cluster-scope) authority by default. Healing actions issued through a gateway inherit the gateway's tier ceiling. For actions that would require {% katex() %}\mathcal{Q}_2{% end %} authority, the gateway must escalate the request to a {% katex() %}\mathcal{Q}_2{% end %} node rather than forwarding directly.*
+*Gateway nodes and tier assignment: a {% term(url="@/blog/2026-01-29/index.md#def-54", def="Autonomic Gateway: a MAPE-K proxy node that wraps legacy hardware with no native healing APIs into the fleet's autonomic control loop") %}Autonomic Gateway{% end %} wraps legacy hardware that has no native MAPE-K APIs. Gateway nodes are assigned {% katex() %}\mathcal{Q}_1{% end %} (cluster-scope) authority by default. Healing actions issued through a gateway inherit the gateway's tier ceiling. For actions that would require {% katex() %}\mathcal{Q}_2{% end %} authority, the gateway must escalate the request to a {% katex() %}\mathcal{Q}_2{% end %} node rather than forwarding directly.*
 
 Not all decisions have the same scope. The authority tier hierarchy is defined in {% term(url="#def-68", def="Authority Tier: decision-scope hierarchy from node to cluster to fleet to command; higher tiers require higher connectivity, and partitions trigger delegation to lower tiers") %}Definition 68{% end %} above. During partition: {% katex() %}\mathcal{Q}_0{% end %} and {% katex() %}\mathcal{Q}_1{% end %} decisions continue normally; {% katex() %}\mathcal{Q}_2{% end %} decisions become problematic since fleet-wide coordination is impossible; {% katex() %}\mathcal{Q}_3{% end %} decisions cannot be made and the system must operate within pre-authorized bounds.
 
@@ -1372,9 +1405,9 @@ The delegation optimization addresses *what authority to grant* but not *whether
 
 **Reconciliation Strategy Selection: Formal Problem**
 
-When clusters reconnect, multiple reconciliation strategies {% katex() %}r \in \mathcal{R}{% end %} are available — differing in bandwidth use, latency, and residual divergence — and the objective is to pick the strategy that minimizes total reconciliation cost while staying within coherence and bandwidth constraints.
+When clusters reconnect, multiple reconciliation strategies {% katex() %}r \in \mathcal{R}{% end %} are available, differing in bandwidth use, latency, and residual divergence. The objective is to pick the strategy that minimizes total reconciliation cost while staying within coherence and bandwidth constraints.
 
-**Objective Function**: The optimal strategy \\(r^\*\\) minimizes the weighted sum of reconciliation time {% katex() %}T_{\text{reconcile}}(r){% end %} and residual divergence {% katex() %}D_{\text{residual}}(r){% end %}, where weight \\(w\\) reflects the relative cost of leaving divergence unresolved.
+**Objective Function**: The optimal strategy \\(r^\*\\) minimizes the weighted sum of reconciliation time and residual divergence. Weight \\(w\\) reflects the relative cost of leaving divergence unresolved.
 
 {% katex(block=true) %}
 r^* = \arg\min_{r \in \mathcal{R}} \left[ T_{\text{reconcile}}(r) + w \cdot D_{\text{residual}}(r) \right]
@@ -1382,7 +1415,7 @@ r^* = \arg\min_{r \in \mathcal{R}} \left[ T_{\text{reconcile}}(r) + w \cdot D_{\
 
 Minimize reconciliation time subject to bounded residual divergence.
 
-**Constraint Set**: Three constraints bound the feasible strategies: residual divergence must stay below threshold {% katex() %}D_{\max}{% end %}, bandwidth consumed by the strategy must not exceed what the current {% term(url="@/blog/2026-01-15/index.md#def-5", def="Continuous value between zero and one representing the current fraction of nominal bandwidth available; zero means fully denied, one means full connectivity; regime classification discretizes this into four operating modes") %}connectivity state{% end %} \\(C(t)\\) provides, and any conflict arising from the strategy must be resolvable deterministically (the {% term(url="#def-58", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} property).
+**Constraint Set**: Three constraints bound the feasible strategies. Residual divergence must stay below threshold {% katex() %}D_{\max}{% end %}. Bandwidth consumed must not exceed what the current {% term(url="@/blog/2026-01-15/index.md#def-5", def="Continuous value between zero and one representing the current fraction of nominal bandwidth available; zero means fully denied, one means full connectivity; regime classification discretizes this into four operating modes") %}connectivity state{% end %} \\(C(t)\\) provides. Any conflict must be resolvable deterministically via the {% term(url="#def-58", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} semilattice join.
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -1628,9 +1661,9 @@ For disjoint work regions ({% katex() %}p_{\text{collision}} \approx 0{% end %})
 
 **Problem**: When two clusters reconnect after partition, they may have hours of diverged state. Exchanging the full state is too expensive on bandwidth-constrained links. The protocol must identify only the divergent items, transfer them efficiently, and handle re-partition mid-sync gracefully.
 
-**Solution**: Merkle tree reconciliation identifies the \\(k\\) divergent items in \\(O(k \log(n/k) + k)\\) messages rather than \\(O(n)\\). Delta-Sync then transfers only the changes. HLC timestamps provide causal ordering without NTP, enabling correct LWW resolution under clock drift.
+**Solution**: Merkle tree reconciliation identifies the \\(k\\) divergent items in \\(O(k \log(n/k) + k)\\) messages rather than \\(O(n)\\). Delta-Sync transfers only the changes. HLC timestamps provide causal ordering without NTP, enabling correct LWW resolution under clock drift.
 
-**Trade-off**: Merkle reconciliation is efficient for sparse divergence (small \\(k\\)). When \\(k\\) approaches \\(n\\) (full divergence after a long burst partition), a full state copy is cheaper than Merkle traversal. The burst-corrected divergence model ({% term(url="#prop-41b", def="Divergence growth with semantic component: growth rate adjusted for policy-violation fraction, showing faster-than-linear growth under high conflict rates") %}Proposition 41b{% end %}) determines which regime a given deployment falls in.
+**Trade-off**: Merkle reconciliation is efficient for sparse divergence (small \\(k\\)). When \\(k\\) approaches \\(n\\) — full divergence after a long burst partition — a full state copy is cheaper than Merkle traversal. The burst-corrected divergence model ({% term(url="#prop-41b", def="Divergence growth with semantic component: growth rate adjusted for policy-violation fraction, showing faster-than-linear growth under high conflict rates") %}Proposition 41b{% end %}) determines which regime applies.
 
 ### State Reconciliation Sequence
 
@@ -1755,6 +1788,8 @@ Items are serialized in tier order — all \\(\Delta_1\\) items first, then \\(\
 **Phase 3 — Windowed transmission**: Items from the serialized delta are transmitted in priority order. Transmission halts cleanly at the end of the connectivity window. Because each item is self-contained, a partial sync leaves the recipient in a consistent state — no item is ever half-applied.
 
 > **Physical translation**: Only the state differences are synced — not the full state snapshot. If two CONVOY vehicles have 10,000 shared state entries but only 500 changed during a 6-hour partition, only those 500 entries (plus the 64-byte fingerprint) cross the link. The ratio of changed to total state is the bandwidth reduction factor: 5% update fraction yields \\(20\times\\) less data transferred versus a full-state exchange.
+
+**Compute Profile:** CPU: {% katex() %}O(|\Delta| \log |\Delta|){% end %} per reconnection — Phase 1 Merkle fingerprint {% katex() %}O(n){% end %} over {% katex() %}n{% end %} tiers; Phase 2 delta generation {% katex() %}O(N){% end %} vector clock scan; Phase 3 priority-tier sort {% katex() %}O(|\Delta| \log |\Delta|){% end %}. Memory: {% katex() %}O(|\Delta|){% end %} — delta buffer grows with partition duration; switch to chunked streaming when {% katex() %}|\Delta| > 5{,}000{% end %} entries to avoid linear memory pressure at reconnection.
 
 <span id="prop-52"></span>
 **Proposition 52** (Delta-Sync Coverage Bound). *Given window \\(T_W\\), bandwidth \\(B\\), fingerprint overhead \\(C_F\\), and per-item byte cost \\(b_k\\) at tier \\(k\\), the number of tier-1 items transmitted in a single window is:*
@@ -2599,7 +2634,7 @@ This is engineering judgment, not algorithmic decision. The architect must defin
 
 ## Model Scope and Failure Envelope
 
-Every coherence mechanism in this post relies on assumptions that may be violated in the field — CRDTs require eventual delivery, Merkle reconciliation requires sparse divergence, authority resolution requires available tie-breakers. Knowing the mechanism is not enough; knowing when it breaks is equally important. For each mechanism, this section enumerates the validity domain and failure envelope: for each assumption, the failure mode, how it is detected, and what mitigates it. Treat the summary claim-assumption-failure table as a deployment checklist. Failure envelopes do not disappear — they expand or shift with mitigations. Cryptographic hashes reduce collision probability but add compute; Byzantine CRDTs add correctness guarantees but add overhead. The architect's goal is to push the failure envelope outside the expected operating range, not to make it infinite.
+Every coherence mechanism in this post relies on assumptions that may be violated in the field — CRDTs require eventual delivery, Merkle reconciliation requires sparse divergence, authority resolution requires available tie-breakers. Knowing the mechanism is not enough. Knowing when it breaks is equally important. For each mechanism, this section enumerates the validity domain and failure envelope: for each assumption, the failure mode, how it is detected, and what mitigates it. Treat the summary claim-assumption-failure table as a deployment checklist. Failure envelopes do not disappear — they expand or shift with mitigations. Cryptographic hashes reduce collision probability but add compute; Byzantine CRDTs add correctness guarantees but add overhead. The architect's goal is to push the failure envelope outside the expected operating range, not to eliminate it.
 
 Each mechanism has bounded validity. When assumptions fail, so does the mechanism.
 
