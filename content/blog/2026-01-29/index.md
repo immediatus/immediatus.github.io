@@ -50,13 +50,11 @@ This extends autonomic computing {{ cite(ref="1", title="Kephart & Chess (2003) 
 
 ## Opening Narrative: {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} Drone Down
 
-The {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm of 47 drones is executing surveillance 15km from base, 40% coverage complete. Drone 23 broadcasts: battery critical (3.21V vs 3.40V threshold), 8 minutes flight time, confidence 0.94. The [self-measurement system](@/blog/2026-01-22/index.md) detected the anomaly correctly—lithium cell imbalance from high-current maneuvers.
+The {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm of 47 drones is executing surveillance 15km from base, 40% coverage complete. Drone 23 broadcasts: battery critical (3.21V *(illustrative value)* vs 3.40V *(illustrative value)* threshold), 8 minutes *(illustrative value)* flight time, confidence 0.94 *(illustrative value)*. The [self-measurement system](@/blog/2026-01-22/index.md) detected the anomaly correctly—lithium cell imbalance from high-current maneuvers.
 
-Operations center unreachable. Connectivity \\(C(t) < 0.1\\) for 23 minutes. The swarm cannot request guidance and has 8 minutes to decide and execute. Options considered:
+Operations center unreachable. Connectivity \\(C(t) < 0.1\\) *(illustrative value)* for 23 minutes *(illustrative value)*. The swarm cannot request guidance and has 8 minutes to decide and execute. Options considered:
 
-- **Continue mission**: Drone 23 flies until exhaustion; crash in contested terrain risks data compromise; 92% mission completion.
-- **Return to base**: Drone 23 departs; neighbors expand sectors; reduced eastern coverage; 97% mission completion.
-- **Compress formation**: All drones tighten inward; Drone 23 flies shorter path home; total coverage area reduced; 89% mission completion.
+Continuing mission would fly Drone 23 until exhaustion; a crash in contested terrain risks data compromise at 92% *(illustrative value)* mission completion. Returning to base sends Drone 23 home while neighbors expand sectors, reducing eastern coverage but reaching 97% *(illustrative value)* mission completion. Compressing the formation tightens all drones inward so Drone 23 flies a shorter path home, at the cost of reduced total coverage area and 89% *(illustrative value)* mission completion.
 
 The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop must analyze these options, select a healing action, and coordinate execution—all without human intervention. Self-healing means repairing, reconfiguring, and adapting in response to failures without waiting for someone to tell you what to do.
 
@@ -64,11 +62,11 @@ The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a
 
 ## The Autonomic Control Loop
 
-**Problem**: Detecting a failure with 94% confidence does not tell you what to do about it. In a connected system you call an operator. In a denied environment with 8 minutes until battery exhaustion, the system must select, plan, and execute a recovery action autonomously — without causing new failures in the process. That gap between sensing and centralized decision authority is edge computing's defining constraint {{ cite(ref="4", title="Satyanarayanan (2017) — The Emergence of Edge Computing") }}.
+Detecting a failure with 94% confidence does not tell you what to do about it. In a connected system you call an operator. In a denied environment with 8 minutes until battery exhaustion, the system must select, plan, and execute a recovery action autonomously — without causing new failures in the process. That gap between sensing and centralized decision authority is edge computing's defining constraint {{ cite(ref="4", title="Satyanarayanan (2017) — The Emergence of Edge Computing") }}.
 
-**Solution**: The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop — Monitor, Analyze, Plan, Execute — provides the closed-loop structure. Each phase has a defined output type that feeds the next. The Knowledge Base gives every phase access to current system model, historical effectiveness, and policy constraints.
+The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop — Monitor, Analyze, Plan, Execute — provides the closed-loop structure. Each phase has a defined output type that feeds the next. The Knowledge Base gives every phase access to current system model, historical effectiveness, and policy constraints.
 
-**Trade-off**: Closed-loop control corrects errors but requires feedback latency \\(\tau\\). As feedback slows (connectivity degrades), the stable gain ceiling {% katex() %}K_{\text{ctrl}} < 1/(1+\tau/T_{\text{tick}}){% end %} falls. An aggressive healer in a slow-feedback environment oscillates between over-correction and under-correction. The entire design challenge is matching healing aggressiveness to feedback speed.
+Closed-loop control corrects errors but requires feedback latency \\(\tau\\). As feedback slows (connectivity degrades), the stable gain ceiling {% katex() %}K_{\text{ctrl}} < 1/(1+\tau/T_{\text{tick}}){% end %} falls. An aggressive healer in a slow-feedback environment oscillates between over-correction and under-correction. The entire design challenge is matching healing aggressiveness to feedback speed.
 
 <span id="term-mape-k"></span>
 ### The MAPE-K Model
@@ -126,19 +124,13 @@ graph TD
 
 > **Read the diagram**: The four phases (green Monitor \\(\to\\) blue Analyze \\(\to\\) purple Plan \\(\to\\) orange Execute) form a clockwise feedback loop. The yellow Knowledge Base feeds into all four phases via dashed lines — it provides the policies, historical models, and current state that each phase consults. The Execute\\(\to\\)Monitor feedback arrow is the critical path: without it, the loop cannot know whether its own healing actions worked.
 
-**Monitor**: Observe via sensors and health metrics ([self-measurement infrastructure](@/blog/2026-01-22/index.md)).
-
-**Analyze**: Transform raw metrics into diagnoses. "Battery 3.21V" becomes "Drone 23 fails in 8 min, probability 0.94."
-
-**Plan**: Generate options, select best expected outcome.
-
-**Execute**: Apply remediation, coordinate with affected components, verify success.
+Monitor observes via sensors and health metrics ([self-measurement infrastructure](@/blog/2026-01-22/index.md)). Analyze transforms raw metrics into diagnoses — "Battery 3.21V" becomes "Drone 23 fails in 8 min, probability 0.94." Plan generates options and selects the best expected outcome. Execute applies remediation, coordinates with affected components, and verifies success.
 
 > **Healing action durability contract**: Execute-phase actions that modify shared replicated state are tagged with a causal identifier (HLC timestamp + vector clock epoch; see [*Fleet Coherence Under Partition*](@/blog/2026-02-05/index.md#def-71)). A healing action is **provisional** until confirmed by the next successful delta-sync or quorum check. Conflicting provisional actions from partitioned clusters are resolved by Semantic Commit Order ([*Fleet Coherence Under Partition*](@/blog/2026-02-05/index.md#def-67)); the physical execution of a losing action constitutes an anomaly event that triggers a fresh MAPE-K observation cycle.
 
 *Watch out for*: the provisional/confirmed distinction assumes delta-sync or quorum-check events complete within the MAPE-K tick cycle; during a prolonged partition where no quorum is reachable, a healing action remains provisional indefinitely — it is never promoted to confirmed or retracted, and the anomaly re-trigger from a losing action's physical execution cannot fire because no subsequent observation cycle has access to the ground truth needed to detect the conflict.
 
-**Knowledge**: Distributed state—topology, policies, historical effectiveness, health estimates. Must be eventually consistent and partition-tolerant.
+Knowledge holds distributed state — topology, policies, historical effectiveness, health estimates — and must be eventually consistent and partition-tolerant.
 
 *Implementation note: the Knowledge Base {% katex() %}\mathcal{K}{% end %} is a replicated state store supporting concurrent writes; its merge semantics are established in [*Fleet Coherence Under Partition*](@/blog/2026-02-05/index.md) — each monitored variable is a {% term(url="@/blog/2026-02-05/index.md#def-58", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} register. "Successful Knowledge Base synchronization" means all registers have received at least one {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} update from a quorum of reachable nodes within {% katex() %}\tau_\text{stale}^\text{max}{% end %} ({% term(url="@/blog/2026-01-22/index.md#prop-14", def="Maximum Useful Staleness: bound on gossip record age beyond which stale data increases the false-positive rate faster than fresh gossip would decrease it") %}Proposition 14{% end %}, [Self-Measurement Without Central Observability](@/blog/2026-01-22/index.md)).*
 
@@ -156,7 +148,7 @@ The cycle time—how fast the loop iterates—determines system responsiveness. 
 
 Two control approaches apply to healing:
 
-**Proportional Feedback Law**: Observe outcome, compare to target, adjust. Corrects errors but requires feedback delay {% katex() %}\tau_{\text{feedback}}{% end %}.
+Proportional feedback observes the outcome, compares it to the target, and adjusts. It corrects errors but requires feedback delay {% katex() %}\tau_{\text{feedback}}{% end %}.
 
 The closed-loop control action \\(U_t\\) is proportional to the error between the desired and observed state, scaled by controller gain \\(K_{\text{ctrl}}\\):
 
@@ -168,7 +160,7 @@ U_t = K_{\text{ctrl}} \cdot (X_{\text{desired}} - X_{\text{observed}})
 
 Where \\(U_t\\) is control action, \\(K_{\text{ctrl}}\\) is the controller gain, and the difference is the error signal.
 
-**Open-loop control**: Predetermined response without verification. Execute the action based on input, assume it works.
+Open-loop control uses a predetermined response without verification: execute the action based on input and assume it works.
 
 The open-loop action is a fixed function of the current observation only, with no error correction:
 
@@ -194,15 +186,9 @@ The following table compares the two approaches across four engineering properti
 | Stability | Can oscillate if poorly tuned | Stable but may miss target |
 | Information need | Requires outcome observation | Only requires input |
 
-Edge healing uses a **hybrid approach**:
+Edge healing uses a hybrid approach. When a critical failure is detected, the open-loop phase applies a predetermined emergency response immediately without waiting for feedback. After stabilization, the closed-loop phase observes outcomes and adjusts: escalating if the initial response was insufficient, scaling back if it was excessive.
 
-1. **Open-loop for immediate stabilization**: When a critical failure is detected, apply predetermined emergency response immediately. Don't wait for feedback.
-
-2. **Closed-loop for optimization**: After stabilization, observe outcomes and adjust. If the initial response was insufficient, escalate. If it was excessive, scale back.
-
-Drone 23's battery failure illustrates this hybrid:
-- **Open-loop**: Immediately reduce power consumption (stop non-essential sensors)
-- **Closed-loop**: Monitor voltage response, adjust flight profile, decide on return trajectory based on observed endurance
+Drone 23's battery failure illustrates this hybrid: power consumption is reduced immediately by stopping non-essential sensors (open-loop), then voltage response is monitored, the flight profile adjusted, and the return trajectory decided based on observed endurance (closed-loop).
 
 ### Healing Latency Budget
 
@@ -214,7 +200,7 @@ The total healing time {% katex() %}T_{\text{heal}}{% end %} is the sum of five 
 T_{\text{heal}} = T_{\text{detect}} + T_{\text{analyze}} + T_{\text{plan}} + T_{\text{coordinate}} + T_{\text{execute}}
 {% end %}
 
-> **Physical translation**: Every minute between failure onset and completed healing is a minute the system operates in a degraded or dangerous state. This formula forces you to account for every phase — detection is often the surprise: gossip convergence alone takes 10–69 seconds, and most systems budget 5 seconds for it in their SLA calculations.
+> **Physical translation**: Every minute between failure onset and completed healing is a minute the system operates in a degraded or dangerous state. This formula forces you to account for every phase — detection is often the surprise: gossip convergence alone takes 10–69 seconds *(theoretical bound)*, and most systems budget 5 seconds *(illustrative value)* for it in their SLA calculations.
 
 The formula decomposes total healing latency into explicit sub-budgets for detection, analysis, planning, and execution; for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, {% katex() %}T_{\text{detect}} \leq 10\text{ s}{% end %} *(illustrative value)*, {% katex() %}T_{\text{analyze}} \leq 5\text{ s}{% end %} *(illustrative value)*, {% katex() %}T_{\text{plan}} \leq 5\text{ s}{% end %} *(illustrative value)*, and {% katex() %}T_{\text{execute}} \leq 10\text{ s}{% end %} *(illustrative value)*, with total constrained to {% katex() %}\leq T_{\text{crit}}{% end %}. Detection is the surprise budget-breaker — it must be measured independently in isolation, because execution absorbs all visible slack while detection silently overruns its allocated window.
 
@@ -297,7 +283,7 @@ sequenceDiagram
     end
 {% end %}
 
-> **Read the diagram**: Time flows top to bottom. Each colored box is a MAPE-K phase with its real-world timing. The Monitor phase (green, 5–10 s) ingests battery voltage and current anomaly score. Analyze (blue, 1–6 s) classifies and projects time-to-failure. Plan (purple, 2–24 s) evaluates three options and selects staged response. Execute (orange, 10–35 s) sheds load, notifies the fleet, and navigates to a landing zone. Verify (light green) confirms the outcome and closes the loop. Total elapsed: 45 seconds of autonomous decision-making with no operator.
+> **Read the diagram**: Time flows top to bottom. Each colored box is a MAPE-K phase with its real-world timing. The Monitor phase (green, 5–10 s *(illustrative value)*) ingests battery voltage and current anomaly score. Analyze (blue, 1–6 s *(illustrative value)*) classifies and projects time-to-failure. Plan (purple, 2–24 s *(illustrative value)*) evaluates three options and selects staged response. Execute (orange, 10–35 s *(illustrative value)*) sheds load, notifies the fleet, and navigates to a landing zone. Verify (light green) confirms the outcome and closes the loop. Total elapsed: 45 seconds *(illustrative value)* of autonomous decision-making with no operator.
 
 **State Transition During Healing**:
 
@@ -429,20 +415,17 @@ flowchart TD
 T_{\text{heal}} < T_{\text{crit}} - T_{\text{margin}}
 {% end %}
 
-> **Physical translation**: You must complete healing before the failure becomes irreversible, with a safety buffer remaining. If Drone 23 has 8 minutes ({% katex() %}T_{\text{crit}}{% end %}) and landing requires 2 minutes ({% katex() %}T_{\text{margin}}{% end %}), the healing sequence must finish within 6 minutes. If no available action fits in that window, escalate to a faster but more disruptive response.
+> **Physical translation**: You must complete healing before the failure becomes irreversible, with a safety buffer remaining. If Drone 23 has 8 minutes *(illustrative value)* ({% katex() %}T_{\text{crit}}{% end %}) and landing requires 2 minutes *(illustrative value)* ({% katex() %}T_{\text{margin}}{% end %}), the healing sequence must finish within 6 minutes *(illustrative value)*. If no available action fits in that window, escalate to a faster but more disruptive response.
 
 *where {% katex() %}T_{\text{margin}}{% end %} accounts for execution variance and verification time. If this inequality cannot be satisfied, the healing action must be escalated to a faster (but possibly more costly) intervention.*
 
 In other words, healing must finish early enough to leave a safety buffer before the failure becomes irreversible; if no action fits within that window, the system must escalate to a more disruptive but faster intervention.
 
-For Drone 23, with 8 minutes to battery exhaustion and a 60-second landing margin, the healing window comfortably exceeds the ~45-second healing sequence.
+For Drone 23, with 8 minutes to battery exhaustion and a 60-second *(illustrative value)* landing margin, the healing window comfortably exceeds the ~45-second *(illustrative value)* healing sequence.
 
 > **Empirical status**: The 8-minute time-to-criticality and 60-second margin are {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}-specific values derived from Li-Ion discharge curves and landing kinematics; actual margins depend on battery chemistry, payload, and terrain, and should be measured per platform.
 
-When the healing deadline cannot be met, the system must either:
-1. Execute partial healing (stabilize but not fully recover)
-2. Skip to emergency protocols (bypass normal {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %})
-3. Accept degraded state (capability reduction)
+When the healing deadline cannot be met, the system must execute partial healing to stabilize without full recovery, skip to emergency protocols that bypass normal {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %}, or accept a degraded capability state.
 
 *Watch out for*: the bound assumes \\(T_{\text{crit}}\\) is known precisely at the moment healing begins; in practice \\(T_{\text{crit}}\\) is estimated from state observed at detection time \\(t_{\text{detect}}\\), not at fault onset, so the effective healing window is \\(T_{\text{crit}} - T_{\text{detect}} - T_{\text{margin}}\\) — the detection latency \\(T_{\text{detect}}\\) silently consumes part of the margin, and for {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s gossip-based detection ({% katex() %}\tau_{\text{fb}} \approx 5\,\text{s}{% end %}), this can reduce the available window by over 8% before any healing action has fired.
 
@@ -512,9 +495,9 @@ where \\(\lambda_i\\) is the Weibull scale parameter for node \\(i\\), \\(k_N\\)
 K_{\text{ctrl}} < \frac{1}{1 + \tau_{P\alpha}/T_{\text{tick}}}
 {% end %}
 
-**RAVEN calibration**: {% katex() %}\lambda_i \approx 180\,\mathrm{s}{% end %}, \\(k_N \approx 0.6\\), {% katex() %}T_{\text{tick}} = 5\,\mathrm{s}{% end %}. The P99 quantile is {% katex() %}\tau_{P99} = 180 \cdot (-\ln 0.01)^{1/0.6} \approx 630\,\mathrm{s}{% end %}.
+**RAVEN calibration**: {% katex() %}\lambda_i \approx 180\,\mathrm{s}{% end %} *(illustrative value)*, \\(k_N \approx 0.6\\) *(illustrative value)*, {% katex() %}T_{\text{tick}} = 5\,\mathrm{s}{% end %} *(illustrative value)*. The P99 quantile is {% katex() %}\tau_{P99} = 180 \cdot (-\ln 0.01)^{1/0.6} \approx 630\,\mathrm{s}{% end %} *(illustrative value)*.
 
-This gives a quantile-aware ceiling of {% katex() %}K_{\text{ctrl}} < 1/(1 + 630/5) = 0.0078{% end %} — versus \\(K_{\text{ctrl}} < 0.028\\) from the \\(\mathrm{E}[\tau]\\)-based bound. For Intermittent and Denied regimes, always use \\(\tau_{P99}\\) from {% term(url="#prop-23", def="Robust Gain Scheduling under Stochastic Delay: the scheduled gain derived from the stability margin maintains stability with high probability under Weibull-distributed delays") %}Proposition 23{% end %} rather than the mean delay. (See {% term(url="@/blog/2026-01-15/index.md#def-13", def="Weibull partition duration model and adaptive shape parameter: calibrate scale and shape from partition logs to characterize node-specific disconnection statistics") %}Definitions 13–14{% end %} in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md) for calibration from partition logs.)
+This gives a quantile-aware ceiling of {% katex() %}K_{\text{ctrl}} < 1/(1 + 630/5) = 0.0078{% end %} *(illustrative value)* — versus \\(K_{\text{ctrl}} < 0.028\\) *(illustrative value)* from the \\(\mathrm{E}[\tau]\\)-based bound. For Intermittent and Denied regimes, always use \\(\tau_{P99}\\) from {% term(url="#prop-23", def="Robust Gain Scheduling under Stochastic Delay: the scheduled gain derived from the stability margin maintains stability with high probability under Weibull-distributed delays") %}Proposition 23{% end %} rather than the mean delay. (See {% term(url="@/blog/2026-01-15/index.md#def-13", def="Weibull partition duration model and adaptive shape parameter: calibrate scale and shape from partition logs to characterize node-specific disconnection statistics") %}Definitions 13–14{% end %} in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md) for calibration from partition logs.)
 
 > **Warning**: Using mean feedback delay instead of the P99 quantile produces a gain that is stable for typical partitions but oscillates in the worst 1% of events — precisely when the healing loop is needed most.
 
@@ -724,8 +707,7 @@ T_{\mathrm{stale}} \geq \tau_{\min} \cdot \delta_\text{inst}^{-1/\alpha}
 
 For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} ({% katex() %}\tau_{\min} = 0.2{% end %}s, \\(\alpha = 1.6\\), \\(\delta_\text{inst} = 0.01\\), \\(\mu_f = 0.02\\)/s, {% katex() %}p_{\mathrm{stale}} = 0.20{% end %}):
 
-- **Upper bound** (state-change): {% katex() %}T_{\mathrm{stale}} \leq -\ln(0.80)/0.02 \approx 11.2{% end %} s
-- **Lower bound** (transport): {% katex() %}T_{\mathrm{stale}} \geq 3.16{% end %} s
+The upper bound (state-change rate): {% katex() %}T_{\mathrm{stale}} \leq -\ln(0.80)/0.02 \approx 11.2{% end %} s; the lower bound (transport delay): {% katex() %}T_{\mathrm{stale}} \geq 3.16{% end %} s.
 
 The feasibility window for remote healing actions in Contested {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} is \\([3.16, 11.2]\\) s. Below 3.16 s the action arrives too late with probability above 1%; after 11.2 s the system state has changed with probability above 20%. Outside this window all Severity 2 and above actions are suppressed; only Severity 1 local actions remain valid. In the Degraded regime (\\(\mu_d = 0.8\\)s, \\(\sigma_d = 0.8\\)s): {% katex() %}\tau_{0.99} = e^{0.8 + 2.33 \times 0.8} \approx 14.4{% end %}s, which already exceeds the upper bound — the feasibility window collapses, signaling that remote actions are inadvisable even at Degraded connectivity during high-failure-rate episodes.
 
@@ -805,8 +787,9 @@ Budget at least 20 mW emergency margin in the RAVEN power profile (~11–60% of 
 
 > **Warning**: The dCBF logic cost (\\(<20\\,\mu\text{s}\\)) does not include state estimation. Pre-reserve power for high-rate IMU sampling or the safety certificate becomes void when it is needed most.
 
-- **Model-validity condition**: The condition {% katex() %}h_q(A_q x + B_q u) \geq (1-\gamma_{\text{cbf}})h_q(x){% end %} is conditional on \\(A_q\\) accurately representing the *current* plant dynamics. Under physical damage (motor degradation shifts poles) or sustained RF interference (actuator desaturation changes \\(B_q\\)), the true one-step map {% katex() %}f_{\text{true}}(x,u) \neq A_q x + B_q u{% end %}. A dCBF check that passes against the nominal model may fail against the true model. The guarantee of {% term(url="#prop-25", def="Nonlinear Safety Invariant: safety invariant is preserved across mode transitions if the gain scheduler satisfies the barrier condition at each boundary") %}Proposition 25{% end %} is valid only within the accuracy envelope of \\(A_q\\); see {% term(url="#prop-31", def="CBF-derived refractory bound: minimum refractory period ensuring the safety condition is maintained between consecutive healing actions") %}Proposition 31{% end %} for the recovery-time implication.
-- **Staleness correction under partition**: When state estimate \\(x(t)\\) is stale (partition age {% katex() %}T_{\text{acc}} > \tau_\text{stale}^\text{max}{% end %} from {% term(url="@/blog/2026-01-22/index.md#def-26", def="Staleness: elapsed time since a gossip record was last updated; records older than the maximum useful staleness bound are discarded") %}Definition 26{% end %}), substitute {% katex() %}h_q(x(t)) - \lambda_{\text{decay}} \cdot \Delta t_{\text{stale}}{% end %} in place of \\(h_q(x(t))\\) in the safety check, where \\(\lambda_{\text{decay}}\\) is the staleness decay coefficient from {% term(url="#def-45", def="Staleness Decay Function: time-decaying weight applied to gossip health updates, making older observations contribute less to anomaly threshold estimation") %}Definition 45{% end %}. This makes the check **conservative**: a stale state estimate shows a smaller safety margin, deferring actions rather than falsely approving them.
+The model-validity condition requires that \\(A_q\\) accurately represents the *current* plant dynamics. Under physical damage (motor degradation shifts poles) or sustained RF interference (actuator desaturation changes \\(B_q\\)), the true one-step map {% katex() %}f_{\text{true}}(x,u) \neq A_q x + B_q u{% end %}, so a dCBF check that passes against the nominal model may fail against the true model. The guarantee of {% term(url="#prop-25", def="Nonlinear Safety Invariant: safety invariant is preserved across mode transitions if the gain scheduler satisfies the barrier condition at each boundary") %}Proposition 25{% end %} is valid only within the accuracy envelope of \\(A_q\\); see {% term(url="#prop-31", def="CBF-derived refractory bound: minimum refractory period ensuring the safety condition is maintained between consecutive healing actions") %}Proposition 31{% end %} for the recovery-time implication.
+
+When state estimate \\(x(t)\\) is stale (partition age {% katex() %}T_{\text{acc}} > \tau_\text{stale}^\text{max}{% end %} from {% term(url="@/blog/2026-01-22/index.md#def-26", def="Staleness: elapsed time since a gossip record was last updated; records older than the maximum useful staleness bound are discarded") %}Definition 26{% end %}), substitute {% katex() %}h_q(x(t)) - \lambda_{\text{decay}} \cdot \Delta t_{\text{stale}}{% end %} in place of \\(h_q(x(t))\\) in the safety check, where \\(\lambda_{\text{decay}}\\) is the staleness decay coefficient from {% term(url="#def-45", def="Staleness Decay Function: time-decaying weight applied to gossip health updates, making older observations contribute less to anomaly threshold estimation") %}Definition 45{% end %}. This staleness correction makes the check conservative: a stale state estimate shows a smaller safety margin, deferring actions rather than falsely approving them.
 
 > **Notation.** The staleness decay coefficient \\(\lambda_\text{decay}\\) is the initial slope of the exponential decay curve from {% term(url="#def-45", def="Staleness Decay Function: time-decaying weight applied to gossip health updates, making older observations contribute less to anomaly threshold estimation") %}Definition 45{% end %}: {% katex() %}\lambda_\text{decay} = 1/\tau_\text{stale}^\text{max}{% end %}. Geometrically, it is the rate at which the safety margin shrinks per second of stale data. For the OUTPOST temperature sensor example ({% katex() %}\tau_\text{stale}^\text{max} = 96\,\text{s}{% end %}), {% katex() %}\lambda_\text{decay} = 0.0104\,\text{s}^{-1}{% end %}.
 
@@ -922,39 +905,19 @@ The stability condition {% katex() %}K_{\text{ctrl}} < 1/(1 + \tau/T_{\text{tick
 
 Define regime-specific gains that maintain stability margins across all operating conditions:
 
-**Notation — \\(\alpha\\) symbols in this article**: Multiple scalars named \\(\alpha\\) appear with distinct roles; subscripts are the only disambiguator:
-
-- {% katex() %}\alpha_{\text{EMA}} \approx 0.1{% end %} — EMA smoothing coefficient (Adaptive Gain Scheduling section): each tick moves 10% toward the target gain, completing transitions in ~10 ticks.
-- {% katex() %}\alpha_{\text{margin}} = 0.75{% end %} — gain stability margin (Adaptive Gain Scheduling section): the gain is set to 75% of the theoretical ceiling to maintain robustness against delay estimation errors.
-- {% katex() %}\alpha_{\text{heal}} \approx 0.2{% end %} — resource allocation fraction for healing (Cascade Prevention section): caps total healing resource draw at 20% of available budget.
-- \\(\alpha(R) \in (0,1]\\) / {% katex() %}\alpha_{\text{floor}}{% end %} — MAPE-K throttle coefficient ({% term(url="#prop-36", def="Self-Throttling Law: the node must enter OBSERVE mode when the resource state drops below a threshold that ensures survival to the next gossip round") %}Proposition 36{% end %}): scales MAPE-K frequency by available resource margin.
-- {% katex() %}\alpha_{\text{age}} \leq 0.5{% end %} — priority aging cap (Resource Priority Matrix section): limits how much a waiting action's priority can drift upward.
-- {% katex() %}\alpha_{\text{CBF}}{% end %} — class-K function parameter in the discrete Control Barrier Function ({% term(url="#def-39", def="Discrete Control Barrier Function: function ensuring the system stays within the safe set on every MAPE-K tick via a per-tick contraction condition") %}Definition 39{% end %}): governs how tightly the CBF contraction bound is enforced; {% katex() %}\alpha_\text{CBF} = \gamma_{\text{cbf}} \in (0,1){% end %} in this article's notation.
-- {% katex() %}\alpha_{\text{Lyap}}{% end %} — Lyapunov decay rate per mode \\(q\\) (Theorem PWL, C1 condition): appears as \\(\lambda_q\\) in the LMI; listed here because some references write the per-mode decay as \\(\alpha_q\\).
-- {% katex() %}\alpha_{\text{conf}}{% end %} — confidence threshold scaling factor in the staleness-aware threshold adjustment ({% term(url="#def-45", def="Staleness Decay Time Constant: maximum elapsed time since last Knowledge Base sync before confidence in local observations falls to near zero") %}Definition 45{% end %} section): multiplies the confidence floor when the Knowledge Base is partially stale.
-- {% katex() %}\alpha_{\text{W}}{% end %} — Weibull shape constant role: in Definitions 13–14 the Weibull shape parameter is \\(k_N\\); some literature writes this as \\(\alpha\\). In this article it is always \\(k_N\\).
-- \\(\alpha\\) (bare, {% term(url="#def-37", def="Stochastic Transport Delay Model: models MAPE-K feedback delay as a Weibull random variable, enabling robust gain scheduling under variable latency") %}Definition 37{% end %}) — Pareto tail index for contested-regime delay distribution: a statistical fitting parameter, not a design knob.
-- \\(\alpha\\) (bare, LinUCB) — exploration bonus scale in the contextual bandit gain-selection formula (Cascade Prevention section).
+**Notation — \\(\alpha\\) symbols in this article**: Multiple scalars named \\(\alpha\\) appear with distinct roles; subscripts are the only disambiguator. {% katex() %}\alpha_{\text{EMA}} \approx 0.1{% end %} is the EMA smoothing coefficient (Adaptive Gain Scheduling section): each tick moves 10% toward the target gain, completing transitions in ~10 ticks. {% katex() %}\alpha_{\text{margin}} = 0.75{% end %} is the gain stability margin (Adaptive Gain Scheduling section): the gain is set to 75% of the theoretical ceiling to maintain robustness against delay estimation errors. {% katex() %}\alpha_{\text{heal}} \approx 0.2{% end %} is the resource allocation fraction for healing (Cascade Prevention section): caps total healing resource draw at 20% of available budget. \\(\alpha(R) \in (0,1]\\) / {% katex() %}\alpha_{\text{floor}}{% end %} is the MAPE-K throttle coefficient ({% term(url="#prop-36", def="Self-Throttling Law: the node must enter OBSERVE mode when the resource state drops below a threshold that ensures survival to the next gossip round") %}Proposition 36{% end %}): scales MAPE-K frequency by available resource margin. {% katex() %}\alpha_{\text{age}} \leq 0.5{% end %} is the priority aging cap (Resource Priority Matrix section): limits how much a waiting action's priority can drift upward. {% katex() %}\alpha_{\text{CBF}}{% end %} is the class-K function parameter in the discrete Control Barrier Function ({% term(url="#def-39", def="Discrete Control Barrier Function: function ensuring the system stays within the safe set on every MAPE-K tick via a per-tick contraction condition") %}Definition 39{% end %}): governs how tightly the CBF contraction bound is enforced; {% katex() %}\alpha_\text{CBF} = \gamma_{\text{cbf}} \in (0,1){% end %} in this article's notation. {% katex() %}\alpha_{\text{Lyap}}{% end %} is the Lyapunov decay rate per mode \\(q\\) (Theorem PWL, C1 condition): appears as \\(\lambda_q\\) in the LMI; listed here because some references write the per-mode decay as \\(\alpha_q\\). {% katex() %}\alpha_{\text{conf}}{% end %} is the confidence threshold scaling factor in the staleness-aware threshold adjustment ({% term(url="#def-45", def="Staleness Decay Time Constant: maximum elapsed time since last Knowledge Base sync before confidence in local observations falls to near zero") %}Definition 45{% end %} section): multiplies the confidence floor when the Knowledge Base is partially stale. {% katex() %}\alpha_{\text{W}}{% end %} covers the Weibull shape constant role: in Definitions 13–14 the Weibull shape parameter is \\(k_N\\); some literature writes this as \\(\alpha\\), but in this article it is always \\(k_N\\). Bare \\(\alpha\\) without subscript in {% term(url="#def-37", def="Stochastic Transport Delay Model: models MAPE-K feedback delay as a Weibull random variable, enabling robust gain scheduling under variable latency") %}Definition 37{% end %} is the Pareto tail index for contested-regime delay distribution — a statistical fitting parameter, not a design knob. Bare \\(\alpha\\) in the LinUCB formula is the exploration bonus scale in the contextual bandit gain-selection formula (Cascade Prevention section).
 
 *Bare \\(\alpha\\) without subscript always refers to the EMA smoothing coefficient in this article. Full series notation registry: [Notation Registry](/notation-registry/).*
 
-**Notation — \\(K\\) symbols in this article**: Two distinct quantities use the letter \\(K\\) and must not be confused:
+**Notation — \\(K\\) symbols in this article**: Two distinct quantities use the letter \\(K\\) and must not be confused. \\(K_{\text{ctrl}}\\) is the **controller gain** (stability bound): the scalar parameter in the proportional healing actuator; the stability condition {% katex() %}K_{\text{ctrl}} < 1/(1+\tau/T_{\text{tick}}){% end %} bounds how aggressively the healer may respond to avoid oscillation. \\(K\\) in MAPE-**K** is the **knowledge base**: the fifth element of the tuple \\((M, A, P, E, K)\\) in {% term(url="#def-36", def="Autonomic Control Loop: closed-loop tuple (M,A,P,E,K) where each phase has a defined input and output type for self-managing systems") %}Definition 36{% end %}; a replicated state store that feeds all four phases. \\(K\\) in this role is never a scalar and is never constrained by a stability inequality.
 
-- \\(K_{\text{ctrl}}\\) — **controller gain** (stability bound): the scalar parameter in the proportional healing actuator; the stability condition {% katex() %}K_{\text{ctrl}} < 1/(1+\tau/T_{\text{tick}}){% end %} bounds how aggressively the healer may respond to avoid oscillation.
-- \\(K\\) in MAPE-**K** — **knowledge base**: the fifth element of the tuple \\((M, A, P, E, K)\\) in {% term(url="#def-36", def="Autonomic Control Loop: closed-loop tuple (M,A,P,E,K) where each phase has a defined input and output type for self-managing systems") %}Definition 36{% end %}; a replicated state store that feeds all four phases. \\(K\\) in this role is never a scalar and is never constrained by a stability inequality.
-
-**Notation — \\(\gamma\\) symbols in this article**: Four distinct quantities use \\(\gamma\\) and are disambiguated by subscript:
-
-- {% katex() %}\gamma_{\text{cbf}} \in (0,1){% end %} — **CBF contraction rate**: the class-K function parameter in {% term(url="#def-39", def="Discrete Control Barrier Function: function ensuring the system stays within the safe set on every MAPE-K tick via a per-tick contraction condition") %}Definition 39{% end %} (Discrete Control Barrier Function); governs the per-tick contraction of the safety margin \\(h_q\\). Default \\(\gamma_{\text{cbf}} = 0.05\\) for 5 s MAPE-K ticks.
-- \\(\gamma_{\text{step}}\\) — **threshold step-size**: the increment by which the anomaly detection threshold \\(\theta(t)\\) steps toward the optimal target per adaptation cycle; bounded by \\(|\Delta\theta|\\).
-- \\(\gamma_{\text{damp}}\\) — **derivative dampener rate**: the confidence-derivative threshold in the actuation hold condition; defined as {% katex() %}(\theta_H - \theta_L)/(2w \cdot T_{\text{tick}}){% end %}.
-- {% katex() %}\gamma_{\text{rl}} \in [0,1){% end %} — **RL discount factor**: the temporal discount applied to future rewards in reinforcement-learning and MDP formulations in the action-selection sections.
+**Notation — \\(\gamma\\) symbols in this article**: Four distinct quantities use \\(\gamma\\) and are disambiguated by subscript. {% katex() %}\gamma_{\text{cbf}} \in (0,1){% end %} is the **CBF contraction rate**: the class-K function parameter in {% term(url="#def-39", def="Discrete Control Barrier Function: function ensuring the system stays within the safe set on every MAPE-K tick via a per-tick contraction condition") %}Definition 39{% end %} (Discrete Control Barrier Function); governs the per-tick contraction of the safety margin \\(h_q\\); default \\(\gamma_{\text{cbf}} = 0.05\\) for 5 s MAPE-K ticks. \\(\gamma_{\text{step}}\\) is the **threshold step-size**: the increment by which the anomaly detection threshold \\(\theta(t)\\) steps toward the optimal target per adaptation cycle, bounded by \\(|\Delta\theta|\\). \\(\gamma_{\text{damp}}\\) is the **derivative dampener rate**: the confidence-derivative threshold in the actuation hold condition, defined as {% katex() %}(\theta_H - \theta_L)/(2w \cdot T_{\text{tick}}){% end %}. {% katex() %}\gamma_{\text{rl}} \in [0,1){% end %} is the **RL discount factor**: the temporal discount applied to future rewards in reinforcement-learning and MDP formulations in the action-selection sections.
 
 {% katex(block=true) %}
 K_{\text{regime}} = \frac{\alpha_{\text{margin}}}{1 + \tau_{\text{regime}}/T_{\text{tick}}}
 {% end %}
 
-where {% katex() %}\alpha_{\text{margin}} < 1{% end %} is the stability margin factor ({% katex() %}\alpha_{\text{margin}} = 0.75{% end %} retains 75% of the theoretical gain limit, providing a robust safety margin against delay estimation error).
+where {% katex() %}\alpha_{\text{margin}} < 1{% end %} is the stability margin factor ({% katex() %}\alpha_{\text{margin}} = 0.75{% end %} *(illustrative value)* retains 75% of the theoretical gain limit, providing a robust safety margin against delay estimation error).
 
 The table below translates this formula into concrete gain values for each {% term(url="@/blog/2026-01-15/index.md#def-6", def="Classification of operating mode: Connected, Degraded, Intermittent, or Denied") %}connectivity regime{% end %}, with the Healing Response column describing the behavioral consequence of operating at that gain.
 
@@ -979,12 +942,7 @@ where {% katex() %}\alpha_{\text{EMA}} \approx 0.1{% end %} prevents oscillation
 
 **Bumpless transfer protocol**:
 
-When switching between regime-specific gains, maintain controller output continuity:
-
-1. Compute new gain {% katex() %}K_{\text{ctrl,new}}{% end %} for target regime
-2. Calculate output difference: {% katex() %}\Delta U = (K_{\text{ctrl,new}} - K_{\text{ctrl,old}}) \cdot e(t){% end %}
-3. Spread \\(\Delta U\\) over transition window {% katex() %}T_{\text{transfer}} \approx 3\tau_{\text{old}}{% end %}
-4. Apply gradual change to avoid step discontinuities
+When switching between regime-specific gains, maintain controller output continuity by computing the new gain {% katex() %}K_{\text{ctrl,new}}{% end %} for the target regime, calculating the output difference {% katex() %}\Delta U = (K_{\text{ctrl,new}} - K_{\text{ctrl,old}}) \cdot e(t){% end %}, and spreading \\(\Delta U\\) over a transition window {% katex() %}T_{\text{transfer}} \approx 3\tau_{\text{old}}{% end %} to avoid step discontinuities.
 
 **Proactive gain adjustment**:
 
@@ -1002,15 +960,15 @@ If predicted delay exceeds current regime threshold, preemptively reduce gain be
 
 ### The Watchdog Protocol: Layer-0 Hardware Safety
 
-**Problem**: Self-healing software that crashes has no way to heal itself. A {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop that deadlocks during the Analyze phase cannot Monitor its own deadlock or Plan a recovery — the healer has become the patient. Watchdog timers are a foundational technique in the fault taxonomy of dependable systems {{ cite(ref="10", title="Avizienis et al. (2004) — Basic Concepts and Taxonomy of Dependable Computing") }}.
+Self-healing software that crashes has no way to heal itself. A {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop that deadlocks during the Analyze phase cannot Monitor its own deadlock or Plan a recovery — the healer has become the patient. Watchdog timers are a foundational technique in the fault taxonomy of dependable systems {{ cite(ref="10", title="Avizienis et al. (2004) — Basic Concepts and Taxonomy of Dependable Computing") }}.
 
-**Solution**: Wrap every autonomic loop in a three-layer hardware watchdog. The innermost layer is a hardware timer that fires a reset interrupt if the software loop misses its heartbeat, bypassing the OS entirely. Each outer layer monitors the layer inside it and is strictly simpler than what it monitors.
+The engineering response is to wrap every autonomic loop in a three-layer hardware watchdog. The innermost layer is a hardware timer that fires a reset interrupt if the software loop misses its heartbeat, bypassing the OS entirely. Each outer layer monitors the layer inside it and is strictly simpler than what it monitors.
 
-**Trade-off**: The watchdog adds a mandatory bypass period of up to \\(T_0\\) seconds after any {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} hang. Tighter watchdog periods (smaller \\(T_0\\)) reduce unprotected exposure but require the loop to complete its heartbeat more reliably — making the bypass window less tolerant of occasional slow cycles under load.
+The watchdog adds a mandatory bypass period of up to \\(T_0\\) seconds after any {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} hang. Tighter watchdog periods (smaller \\(T_0\\)) reduce unprotected exposure but require the loop to complete its heartbeat more reliably — making the bypass window less tolerant of occasional slow cycles under load.
 
 {% term(url="#prop-22", def="Closed-Loop Healing Stability: gain must stay below a delay-dependent ceiling; exceeding it causes oscillation rather than convergence") %}Proposition 22{% end %} (LTI bound; SMJLS analysis tightens this under time-varying gain — see proof) guarantees closed-loop stability *when the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} software loop executes correctly*. It provides no guarantee when the loop itself fails: the Monitor thread deadlocks waiting for a {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} response, the Planner enters an infinite loop over a cyclic dependency graph, or the Executor hangs mid-action after a kernel panic. In these cases, the autonomic software that is supposed to heal the system has itself become the patient — with no higher-level authority to call.
 
-The engineering response is a **hardware watchdog timer (WDT)**: a hardware counter that fires a reset interrupt unless software resets it before expiry. The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop "pets" the watchdog at the end of each successful Execute phase. If the loop hangs, the counter expires, the interrupt fires, and control transfers to a pre-certified bypass program that operates entirely without {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} software involvement.
+The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop "pets" the watchdog at the end of each successful Execute phase. If the loop hangs, the counter expires, the interrupt fires, and control transfers to a pre-certified bypass program that operates entirely without {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} software involvement.
 
 <span id="def-41"></span>
 **Definition 41** (Software Watchdog Timer). *A watchdog protocol is a tuple {% katex() %}W = (T_0, T_1, k, \mathbf{B}, \mathcal{R}){% end %} with three concentric monitoring layers:*
@@ -1081,7 +1039,7 @@ graph TD
 
 *Watchdog-refractory interaction: if the Software Watchdog fires while the Healing Dead-Band is in a refractory state, the process restart triggered by the watchdog resets the refractory counter to zero. To prevent the resulting loss of backoff context from causing oscillatory restarts, the node must persist its current refractory cycle count \\(n\\) to non-volatile storage on every refractory increment. After a watchdog-triggered restart, the persisted \\(n\\) is restored and backoff resumes from \\(\tau_\text{ref}(n)\\) rather than \\(\tau_\text{ref}(0)\\).*
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: {% katex() %}T_0 = 100\,\text{ms}{% end %} (maximum tolerable period before attitude control degrades), \\(T_1 = 1\\,\text{s}\\), \\(k = 3\\). Bypass \\(B_0\\): maintain current heading, throttle, and altitude in attitude-hold mode. MTTU gain: {% katex() %}T_{\text{human detect}} \approx 300\,\text{s}{% end %} vs. \\(T_0 = 0.1\\,\text{s}\\) yields \\(3000\times\\) improvement.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: {% katex() %}T_0 = 100\,\text{ms}{% end %} *(illustrative value)* (maximum tolerable period before attitude control degrades), \\(T_1 = 1\\,\text{s}\\) *(illustrative value)*, \\(k = 3\\) *(illustrative value)*. Bypass \\(B_0\\): maintain current heading, throttle, and altitude in attitude-hold mode. MTTU gain: {% katex() %}T_{\text{human detect}} \approx 300\,\text{s}{% end %} *(illustrative value)* vs. \\(T_0 = 0.1\\,\text{s}\\) yields \\(3000\times\\) *(illustrative value)* improvement.
 
 **{% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} calibration**: \\(T_0 = 30\\,\text{s}\\) (Kubernetes liveness probe as Layer-0), \\(T_1 = 5\\,\text{s}\\), \\(k = 2\\). Bypass \\(B_0\\): stop accepting new requests, drain in-flight transactions, hold persistence layer state steady. The bypass action must never forcibly terminate the database layer regardless of {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} state — data integrity takes precedence over healing speed.
 
@@ -1183,13 +1141,7 @@ graph LR
 
 > **Read the diagram**: Arrows point from caller to dependency (left to right). The red Payment Service is the failed node; orange nodes (Fraud Check, ML Scoring) are downstream services whose behavior degrades with the failure. The Load Balancer and API Gateway (upstream) are unaffected. The healing sequence must verify all dependencies of the failed service — Payment DB, Message Queue — before restarting the service itself. A restart that fails immediately due to an unhealthy dependency wastes the healing budget and risks cascading restarts.
 
-The healing sequence respects dependencies:
-1. Verify Payment DB is healthy (no restart needed if healthy)
-2. Verify Message Queue is accepting connections
-3. Restart Payment Service with fresh state
-4. Wait for health check (HTTP 200 on /healthz)
-5. Re-enable traffic via Load Balancer
-6. Verify end-to-end transaction success via synthetic probe
+The healing sequence respects dependencies: first verifying that Payment DB is healthy (no restart needed if healthy), then confirming Message Queue is accepting connections, restarting Payment Service with fresh state, waiting for the health check (HTTP 200 on /healthz), re-enabling traffic via Load Balancer, and finally verifying end-to-end transaction success via synthetic probe.
 
 **Cascade prevention in practice**: During a storage node failure, {% term(url="#scenario-hyperscale", def="Edge data center sites running autonomous MAPE-K healing loops; maintains microservice availability when central orchestration is unreachable") %}HYPERSCALE{% end %} caps the number of simultaneously restarting nodes to one-third of the currently healthy nodes, ensuring at least two-thirds of the cluster remains serving traffic at any moment while healing proceeds.
 
@@ -1280,15 +1232,14 @@ The condition requires \\(\varepsilon = 0.01\\) *(illustrative value)*, {% katex
 
 *Assumption: load vector \\(d_i, d_j\\) and queue depth \\(q_i, q_j\\) remain constant during the healing step interval \\([t, t+1]\\). Under time-varying traffic, the monotone-decrease property holds up to load-induced perturbations — the Lyapunov certificate bounds finite convergence to within one traffic-fluctuation window, not to exact \\(V = 0\\).*
 
-> **Physical translation**: The convergence bound is concrete. For RAVEN (\\(N = 47\\), typical \\(V(S(0)) \approx 5.0\\) under 12-drone battery anomaly, {% katex() %}\eta_{\min} = 0.005{% end %}): at most 1000 healing steps. At one step per gossip period (5 s), full fleet recovery is guaranteed within 83 minutes from any initial fault state — or immediately if faults are addressable in fewer steps. Without HAC, the same scenario produced a 6-node oscillation cycle lasting 22 minutes before manual intervention (100-run simulation).
+> **Physical translation**: The convergence bound is concrete. For RAVEN (\\(N = 47\\), typical \\(V(S(0)) \approx 5.0\\) *(illustrative value)* under 12-drone battery anomaly, {% katex() %}\eta_{\min} = 0.005{% end %} *(illustrative value)*): at most 1000 *(illustrative value)* healing steps. At one step per gossip period (5 s), full fleet recovery is guaranteed within 83 minutes *(illustrative value)* from any initial fault state — or immediately if faults are addressable in fewer steps. Without HAC, the same scenario produced a 6-node oscillation cycle lasting 22 minutes *(illustrative value)* before manual intervention (100-run simulation).
 >
 > *Note: the convergence bound assumes stable load during each healing step. Systems with bursty traffic converge within one load-fluctuation window rather than to exact zero stress — the certificate guarantees forward progress, not instantaneous optimality.*
 
 > **Empirical status**: The convergence bound of 1000 steps (83 minutes) and the 43-step average from 100 simulation runs are specific to the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} parameter set (\\(N=47\\), \\(\eta_{\min}=0.005\\), \\(V(S(0)) \approx 5.0\\)); different fleet sizes, failure rates, or resource distributions will produce different convergence times.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: During simulated 12-drone simultaneous battery anomaly (\\(N = 47\\)):
-- **Without HAC**: healing entered a 6-node A-B-C exchange pattern lasting 22 minutes before manual intervention.
-- **With HAC + probabilistic backoff** ({% katex() %}T_{\mathrm{gossip}} = 5\,\mathrm{s}{% end %} jitter window): oscillation eliminated in all 100 simulation runs. Fleet stress \\(V(S)\\) decreased monotonically to \\(< 0.01 \cdot V(S(0))\\) within 43 steps (3.6 minutes average).
+Without HAC, healing entered a 6-node A-B-C exchange pattern lasting 22 minutes *(illustrative value)* before manual intervention. With HAC plus probabilistic backoff ({% katex() %}T_{\mathrm{gossip}} = 5\,\mathrm{s}{% end %} jitter window), oscillation was eliminated in all 100 simulation runs and fleet stress \\(V(S)\\) decreased monotonically to \\(< 0.01 \cdot V(S(0))\\) within 43 steps *(illustrative value)* (3.6 minutes *(illustrative value)* average).
 
 **Relationship to existing results**: The HAC gate addresses a failure mode orthogonal to those in Definitions 46–49. The refractory period ({% term(url="#def-46", def="Healing Dead-Band and Refractory State: dual-threshold mechanism preventing the healing loop from issuing back-to-back actions faster than the refractory period") %}Definition 46{% end %}, {% term(url="#prop-30", def="Anti-Windup Oscillation Bound: healing dead-band with adaptive refractory backoff prevents integrator windup; oscillation amplitude decays with each refractory cycle") %}Proposition 30{% end %}) prevents a *single node's* loop from firing too frequently; the Schmitt trigger ({% term(url="#def-47", def="Schmitt Trigger Hysteresis: dual threshold with separate trigger and release levels preventing healing loop flapping near a boundary") %}Definition 47{% end %}) prevents threshold chatter on a *single sensor*; the derivative dampener ({% term(url="#def-49", def="Healing Budget Envelope: per-interval cap on total healing action energy expenditure, preventing the healing loop from depleting the survival power reserve") %}Definition 49{% end %}) suppresses transient spikes on a *single signal*. HAC is the first mechanism that constrains *inter-node* healing transfers at the fleet level. The conditions are complementary: a system should enforce all of them in the Execute phase.
 
@@ -1373,11 +1324,7 @@ For crash loops, "scale to 0, then up" has highest {% term(url="@/blog/2026-02-1
 
 **Control plane partition handling**: When an edge site loses connectivity to the central control plane:
 
-1. **Detection** (T+0s): Central API unreachable for 3 consecutive health checks
-2. **Mode transition** (T+15s): Site enters "autonomous mode" with elevated local authority
-3. **State snapshot** (T+20s): Capture current configuration for later reconciliation
-4. **Threshold adjustment** (T+25s): Tighten healing thresholds by 15% (more conservative without central backup)
-5. **Operation logging** (T+continuous): All healing actions logged with causality metadata
+At T+0s detection fires when the central API becomes unreachable for 3 consecutive health checks *(illustrative value)*. At T+15s *(illustrative value)* the site enters "autonomous mode" with elevated local authority. At T+20s *(illustrative value)* the current configuration is snapshotted for later reconciliation. At T+25s *(illustrative value)* healing thresholds are tightened by 15% *(illustrative value)* to be more conservative without central backup. From that point onward, all healing actions are logged with causality metadata.
 
 Upon reconnection, the site uploads its healing log. Central platform reconciles any conflicts (e.g., site promoted a replica to primary that central also promoted elsewhere) using causal ordering with {% term(url="@/blog/2026-02-05/index.md#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} timestamps ({% term(url="#prop-24", def="Stale Data Threshold: maximum gossip staleness above which stale data increases the false-positive rate; equals the Maximum Useful Staleness bound") %}Proposition 24{% end %}) with site-local decisions taking semantic priority ({% term(url="@/blog/2026-02-05/index.md#prop-49", def="NTP-Free Split-Brain Resolution: HLC-based merge correctly resolves split-brain scenarios without physical clock synchronization") %}Proposition 49{% end %}). Wall-clock LWW is unreliable during partition due to clock drift; the NTP-Free Semantic Commit Order of {% term(url="@/blog/2026-02-05/index.md#prop-49", def="NTP-Free Split-Brain Resolution: HLC-based merge correctly resolves split-brain scenarios without physical clock synchronization") %}Proposition 49{% end %} provides the correct causal resolution.
 
@@ -1405,20 +1352,17 @@ With \\(p_s \geq 0.9\\) and \\(k = 3\\): {% katex() %}P(\text{escalate}) \leq 0.
 
 ## Healing Under Uncertainty
 
-**Problem**: A connected system with expert operators can diagnose failures systematically — gather logs, trace root cause, apply targeted fix. A disconnected edge system during partition has none of that: no historical context, no external expertise, and no time to wait for analysis before the failure worsens.
+A connected system with expert operators can diagnose failures systematically — gather logs, trace root cause, apply targeted fix. A disconnected edge system during partition has none of that: no historical context, no external expertise, and no time to wait for analysis before the failure worsens.
 
-**Solution**: Act on observable symptoms using a cost-calibrated confidence threshold. You don't need to know *why* a service is failing to restart it productively. You need to know whether acting's expected value exceeds waiting's expected value. That judgment requires only the confidence level and the relative costs of false positives versus false negatives.
+The alternative is to act on observable symptoms using a cost-calibrated confidence threshold. You don't need to know *why* a service is failing to restart it productively. You need to know whether acting's expected value exceeds waiting's expected value. That judgment requires only the confidence level and the relative costs of false positives versus false negatives.
 
-**Trade-off**: Symptom-based healing can temporarily suppress a worsening root cause. Escalation controls — attempt limits, re-trigger windows, treatment cooldowns — bound this risk without requiring root cause knowledge.
+Symptom-based healing can temporarily suppress a worsening root cause. Escalation controls — attempt limits, re-trigger windows, treatment cooldowns — bound this risk without requiring root cause knowledge.
 
 ### Acting Without Root Cause
 
 Root cause analysis is the gold standard for remediation: understand why the problem occurred, address the underlying cause, prevent recurrence. In well-instrumented cloud environments with centralized logging and expert operators, it is achievable.
 
-At the edge, the requirements for root cause analysis may not be met:
-- **Data**: Limited logging capacity, no access to historical comparisons
-- **Time**: Failure demands immediate response, analysis takes time
-- **Expertise**: No human expert available during partition
+At the edge, the requirements for root cause analysis may not be met: logging capacity is limited with no access to historical comparisons; the failure demands immediate response while analysis takes time; and no human expert is available during partition.
 
 **Symptom-based remediation** addresses this gap. Instead of "if we understand cause C, apply solution S," we use "if we observe symptoms Y, try treatment T."
 
@@ -1433,10 +1377,7 @@ The table below gives four representative symptom-treatment pairings together wi
 
 The risk of symptom-based remediation: **treating symptoms while cause worsens**. If the root cause is hardware failure, restarting the service provides temporary relief but doesn't prevent eventual complete failure.
 
-Mitigations:
-- **Healing attempt limits**: If treatment T fails after N attempts, escalate to more aggressive treatment
-- **Escalation triggers**: If symptoms return within time window, assume treatment was insufficient
-- **Treatment cooldown**: Don't re-apply same treatment too quickly; allow observation time
+Three mitigations bound this risk: if treatment T fails after N attempts, escalate to more aggressive treatment; if symptoms return within a time window, assume treatment was insufficient and escalate; and do not re-apply the same treatment too quickly — allow time for observation before repeating.
 
 ### Confidence Thresholds for Healing Actions
 
@@ -1516,7 +1457,7 @@ For Drone 23:
 <span id="prop-29"></span>
 **Proposition 29** (Optimal Confidence Threshold). *The optimal confidence threshold \\(\theta^\*(a)\\) for healing action \\(a\\) satisfies:*
 
-*When a drone reboot costs ten times less than a missed failure, the system should act at 9% confidence — not the intuitive 90%.*
+*When a drone reboot costs ten times less than a missed failure, the system should act at 9% *(illustrative value)* confidence — not the intuitive 90% *(illustrative value)*.*
 
 {% katex(block=true) %}
 \theta^*(a) = \frac{C_{\text{FP}}(a)}{C_{\text{FP}}(a) + C_{\text{FN}}(a) + V_{\text{heal}}(a)}
@@ -1621,7 +1562,7 @@ Unconstrained adaptation can lead to pathological behavior. The hard bounds belo
 
 **Hysteresis for threshold changes**:
 
-Rapidly fluctuating thresholds cause inconsistent behavior. The hysteresis rule below holds the current threshold fixed if the change demanded by \\(\theta^\*(t)\\) is smaller than the dead-band {% katex() %}\delta_\theta \approx 0.1{% end %}, preventing threshold jitter from triggering spurious mode changes.
+Rapidly fluctuating thresholds cause inconsistent behavior. The hysteresis rule below holds the current threshold fixed if the change demanded by \\(\theta^\*(t)\\) is smaller than the dead-band {% katex() %}\delta_\theta \approx 0.1{% end %} *(illustrative value)*, preventing threshold jitter from triggering spurious mode changes.
 
 {% katex(block=true) %}
 \theta(t) = \begin{cases}
@@ -1630,7 +1571,7 @@ Rapidly fluctuating thresholds cause inconsistent behavior. The hysteresis rule 
 \end{cases}
 {% end %}
 
-where {% katex() %}\delta_{\theta} \approx 0.1{% end %} prevents threshold jitter.
+where {% katex() %}\delta_{\theta} \approx 0.1{% end %} *(illustrative value)* prevents threshold jitter.
 
 **State Transition Model**: The complete threshold state at time \\(t+1\\) is the triple of the updated threshold value and the two effective costs that drive it at that timestep.
 
@@ -1659,7 +1600,7 @@ where {% katex() %}\Delta\theta = \theta^*(t+1) - \theta(t){% end %} and {% kate
 
 *({% katex() %}\delta_\text{stale}(t_{\text{stale}}){% end %} = staleness decay function; \\(\delta_\text{sev}\\) = failure severity scalar in the utility function; \\(\delta_\text{inst}\\) = per-cycle instability probability in {% term(url="#prop-23", def="Robust Gain Scheduling under Stochastic Delay: the scheduled gain derived from the stability margin maintains stability with high probability under Weibull-distributed delays") %}Proposition 23{% end %}. Bare \\(\delta\\) is not used in this article to avoid ambiguity.)*
 
-*where {% katex() %}\tau_\text{stale}^\text{max}{% end %} is the staleness threshold from {% term(url="@/blog/2026-01-22/index.md#prop-14", def="Maximum Useful Staleness: bound on gossip record age beyond which stale data increases the false-positive rate faster than fresh gossip would decrease it") %}Proposition 14{% end %}: {% katex() %}\tau_\text{stale}^\text{max} = (\Delta h / (z_{\alpha/2} \cdot \sigma))^2{% end %}, with \\(\Delta h\\) the acceptable health drift and \\(\sigma\\) measurement noise. At {% katex() %}t_{\text{stale}} = 0{% end %}: \\(\delta_\text{stale} = 0\\) (fully current). At {% katex() %}t_{\text{stale}} = \tau_\text{stale}^\text{max}{% end %}: {% katex() %}\delta_\text{stale} \approx 0.63{% end %}. As {% katex() %}t_{\text{stale}} \to \infty{% end %}: {% katex() %}\delta_\text{stale} \to 1{% end %} (fully stale).*
+*where {% katex() %}\tau_\text{stale}^\text{max}{% end %} is the staleness threshold from {% term(url="@/blog/2026-01-22/index.md#prop-14", def="Maximum Useful Staleness: bound on gossip record age beyond which stale data increases the false-positive rate faster than fresh gossip would decrease it") %}Proposition 14{% end %}: {% katex() %}\tau_\text{stale}^\text{max} = (\Delta h / (z_{\alpha/2} \cdot \sigma))^2{% end %}, with \\(\Delta h\\) the acceptable health drift and \\(\sigma\\) measurement noise. At {% katex() %}t_{\text{stale}} = 0{% end %}: \\(\delta_\text{stale} = 0\\) (fully current). At {% katex() %}t_{\text{stale}} = \tau_\text{stale}^\text{max}{% end %}: {% katex() %}\delta_\text{stale} \approx 0.63{% end %} *(theoretical bound)*. As {% katex() %}t_{\text{stale}} \to \infty{% end %}: {% katex() %}\delta_\text{stale} \to 1{% end %} (fully stale).*
 
 **Staleness-aware threshold**: Let {% katex() %}s(a) = 1 - \theta^*(a) \in [0,1]{% end %} be the severity of action \\(a\\), derived from {% term(url="#prop-29", def="Optimal Confidence Threshold: anomaly classification threshold minimizing expected misclassification cost under time-varying false-negative cost escalation") %}Proposition 29{% end %}'s optimal threshold. High \\(s(a)\\) means missing the failure is expensive (low \\(\theta^\*\\), large {% katex() %}C_{\text{FN}}{% end %}). The staleness-augmented threshold floor raises as the Knowledge Base ages:
 
@@ -1889,9 +1830,7 @@ Three further mechanisms harden the {% term(url="#term-mape-k", def="Monitor-Ana
 
 **Definition 47** (Schmitt Trigger Hysteresis). The dead-band threshold {% katex() %}\varepsilon_{\text{db}}{% end %} of Definition 46 is a single trip-point: the anomaly score \\(z_t^K\\) can cross it in either direction within the same measurement tick. The **Schmitt trigger** replaces this with two thresholds \\(\theta_H > \theta_L\\), where {% katex() %}\varepsilon_{\text{db}} \equiv \theta_H{% end %} (trigger) and \\(\theta_L\\) (release) is new:
 
-- **NOMINAL \\(\to\\) TRIGGERED**: {% katex() %}z_t^K \geq \theta_H{% end %} for {% katex() %}\tau_{\text{confirm}}{% end %} consecutive samples.
-- **TRIGGERED \\(\to\\) NOMINAL**: {% katex() %}z_t^K \leq \theta_L{% end %}.
-- **Interior band** {% katex() %}\theta_L < z_t^K < \theta_H{% end %}: current state is held — no transition in either direction.
+The NOMINAL \\(\to\\) TRIGGERED transition fires when {% katex() %}z_t^K \geq \theta_H{% end %} for {% katex() %}\tau_{\text{confirm}}{% end %} consecutive samples. The TRIGGERED \\(\to\\) NOMINAL transition fires when {% katex() %}z_t^K \leq \theta_L{% end %}. When {% katex() %}\theta_L < z_t^K < \theta_H{% end %} the current state is held — no transition in either direction.
 
 The **flapping-free condition** guarantees that no spurious oscillation can traverse the full band in one confirmation window:
 
@@ -1977,9 +1916,7 @@ The dampener threshold \\(\gamma_{\text{damp}}\\) is the rate at which confidenc
 
 *When the hardware thermal fuse trips on an {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor node, no software path — however urgent — can issue another restart command that would worsen the damage.*
 
-1. **Skip Execute** — the Execute phase is bypassed for this tick; no healing action is issued to component \\(c\\).
-2. **Freeze \\(Q_d\\)** — the demand accumulator ({% term(url="#def-46", def="Healing Dead-Band and Refractory State: dual-threshold mechanism preventing the healing loop from issuing back-to-back actions faster than the refractory period") %}Definition 46{% end %}) is not incremented; no silent backlog builds during the veto period.
-3. **Log** `VETO_ACTIVE` — the Knowledge base \\(K\\) records the veto event, component identifier, and tick timestamp.
+The Execute phase is bypassed for this tick, so no healing action is issued to component \\(c\\). The demand accumulator \\(Q_d\\) ({% term(url="#def-46", def="Healing Dead-Band and Refractory State: dual-threshold mechanism preventing the healing loop from issuing back-to-back actions faster than the refractory period") %}Definition 46{% end %}) is not incremented, so no silent backlog builds during the veto period. The Knowledge base \\(K\\) records a `VETO_ACTIVE` event with the component identifier and tick timestamp.
 
 No retry, no timeout override, no software path to resume execution while \\(v(t) = 1\\). **Veto termination**: \\(v(t) = 0\\) requires physical human action ({% term(url="@/blog/2026-02-19/index.md#def-108", def="L0 Physical Safety Interlock: hardware-enforced safety constraint that cannot be overridden by software; last line of defense when all autonomic layers fail") %}Definition 108{% end %}: non-resettability from software). *Claim*: for any component \\(c\\) and any interval \\([t_1, t_2]\\) with \\(v(t) = 1\\) for all \\(t \in [t_1, t_2]\\):
 
@@ -2007,11 +1944,11 @@ The proposition formally states that no healing action fires on component {% kat
 
 ## Recovery Ordering
 
-**Problem**: When multiple components fail simultaneously, healing them in the wrong order causes immediate re-failure. An application server restarted before its database reconnects fails to initialize. The healing action completes technically but the component stays broken.
+When multiple components fail simultaneously, healing them in the wrong order causes immediate re-failure. An application server restarted before its database reconnects fails to initialize. The healing action completes technically but the component stays broken.
 
-**Solution**: Model dependencies as a directed graph and restart in topological order — each component starts only after all its dependencies are healthy. For circular dependencies and resource-constrained scenarios, stub mode and the Minimum Viable System identify the minimal safe starting set without resolving the cycle.
+The response is to model dependencies as a directed graph and restart in topological order — each component starts only after all its dependencies are healthy. For circular dependencies and resource-constrained scenarios, stub mode and the Minimum Viable System identify the minimal safe starting set without resolving the cycle.
 
-**Trade-off**: Topological ordering requires knowing the dependency graph. At the edge, this graph is often partially known. Conservative assumptions — assume a dependency exists when unknown — produce correct but potentially slower restart sequences.
+Topological ordering requires knowing the dependency graph. At the edge, this graph is often partially known. Conservative assumptions — assume a dependency exists when unknown — produce correct but potentially slower restart sequences.
 
 ### Dependency-Aware Restart Sequences
 
@@ -2039,11 +1976,7 @@ The correct restart sequence is a **topological sort** of \\(G\\): an ordering w
 
 Strategies for incomplete dependency knowledge:
 
-**Static configuration**: Define dependencies at design time, distribute to all nodes. Works for stable systems but doesn't adapt to runtime changes.
-
-**Runtime discovery**: Observe which components communicate with which others during normal operation. Infer dependencies from communication patterns. Risky if observations are incomplete.
-
-**Conservative assumptions**: If dependency unknown, assume it exists. This may result in unnecessary delays but avoids incorrect ordering.
+Static configuration defines dependencies at design time and distributes them to all nodes. It works for stable systems but doesn't adapt to runtime changes. Runtime discovery observes which components communicate with which others during normal operation and infers dependencies from those communication patterns, though it is risky if observations are incomplete. Conservative assumptions treat unknown dependencies as existing, which may result in unnecessary delays but avoids incorrect ordering.
 
 ### Circular Dependency Breaking
 
@@ -2099,11 +2032,7 @@ The definition identifies the smallest component subset that preserves all criti
 
 In other words, the {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm's priority boundary — these components are repaired first") %}MVS{% end %} is the leanest set of components that still keeps the system above the minimum acceptable {% term(url="@/blog/2026-01-15/index.md#term-capability-level", def="Operational capability tier from heartbeat-only survival at the base level to full fleet integration at the top; each level requires minimum connectivity and consumes proportionally more energy") %}capability level{% end %} {% katex() %}\mathcal{L}_1{% end %}; every component outside the {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} is a candidate to remain offline when healing resources are scarce.
 
-For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}:
-- **{% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} components**: Flight controller, collision avoidance, mesh radio, GPS
-- **Non-{% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} components**: High-resolution camera, target classification ML, telemetry detail
-
-When healing resources are scarce, heal {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} components first. Non-{% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} components can remain degraded.
+For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, the {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} comprises flight controller, collision avoidance, mesh radio, and GPS; non-{% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} components — high-resolution camera, target classification ML, and telemetry detail — can remain degraded when healing resources are scarce.
 
 <span id="prop-33"></span>
 **Proposition 33** ({% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} Approximation). *Finding the exact {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} is NP-hard (reduction from set cover). However, a greedy algorithm that iteratively adds the component maximizing capability gain achieves approximation ratio \\(O(\ln |V|)\\).*
@@ -2137,10 +2066,7 @@ The **Shapley value** of node \\(i\\) measures its average marginal contribution
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} application**: When drone 23 fails and coverage must be redistributed, the drones needed to fill the gap have high Shapley values in the coverage {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} game. Allocating healing resources (battery reserve, repositioning priority) proportional to Shapley values is efficient (total mission value maximized) and satisfies the fairness axioms of efficiency, symmetry, and marginality.
 
-**Practical implication**: Pre-compute Shapley values for the {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} game during mission planning. Nodes with Shapley values above a criticality threshold {% katex() %}\phi_i > \phi_{\text{crit}}{% end %} receive:
-- Higher power reserves
-- Priority positions in healing queues
-- Stricter health monitoring thresholds (lower \\(\theta^\*\\))
+**Practical implication**: Pre-compute Shapley values for the {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} game during mission planning. Nodes with Shapley values above a criticality threshold {% katex() %}\phi_i > \phi_{\text{crit}}{% end %} receive higher power reserves, priority positions in healing queues, and stricter health monitoring thresholds (lower \\(\theta^\*\\)).
 
 For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s 47 drones, computing Shapley values over the relevant {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} coalitions (typically 5-10 drones) is tractable at {% katex() %}O(2^{|S_{\text{MVS}}|}){% end %} per mission phase.
 
@@ -2150,11 +2076,11 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surve
 
 ## Dynamic Fidelity Scaling
 
-**Problem**: Every gossip round, every Kalman update, every reputation EWMA is energy subtracted from the mission. At full battery this overhead is negligible; near the survival threshold it competes directly with the functions it was designed to protect.
+Every gossip round, every Kalman update, every reputation EWMA is energy subtracted from the mission. At full battery this overhead is negligible; near the survival threshold it competes directly with the functions it was designed to protect.
 
-**Solution**: Define five observation regimes keyed to battery level. Each regime suspends a specific set of autonomic tasks, with downgrade boundaries set by measured power draws. The monitoring infrastructure throttles itself before the mission payload does.
+The response is to define five observation regimes keyed to battery level. Each regime suspends a specific set of autonomic tasks, with downgrade boundaries set by measured power draws. The monitoring infrastructure throttles itself before the mission payload does.
 
-**Trade-off**: Lower autonomic fidelity means slower anomaly detection and coarser health estimates. The system accepts higher false-negative rates to avoid dying from self-monitoring overhead. This is a deliberate exchange of detection capability for survival time.
+Lower autonomic fidelity means slower anomaly detection and coarser health estimates. The system accepts higher false-negative rates to avoid dying from self-monitoring overhead — a deliberate exchange of detection capability for survival time.
 
 Self-measurement is a parasitic load. Every {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} round, every Kalman update, every reputation EWMA is energy subtracted from the mission. At full battery this overhead is negligible. Near the survival threshold it competes directly with the functions it was designed to protect. Dynamic Fidelity Scaling (DFS) formalizes the feedback loop that throttles autonomic overhead as resources deplete — treating monitoring as a luxury earned only by surplus.
 
@@ -2198,7 +2124,7 @@ For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surve
 
 *Downgrade is immediate on threshold crossing; upgrade requires {% katex() %}R(t) > \theta_k^{\mathrm{dn}} + \delta_{\mathrm{hyst}}{% end %} to prevent oscillation near the boundary.*
 
-> **Physical translation**: Five operating modes ordered from richest to most frugal. The hysteresis band ({% katex() %}\delta_{\text{hyst}} = 0.05{% end %}) prevents the system from bouncing back to a higher regime until the battery has recovered by a full 5% above the downgrade threshold — preventing rapid oscillation near regime boundaries, which would itself consume the power the downgrade was meant to save.
+> **Physical translation**: Five operating modes ordered from richest to most frugal. The hysteresis band ({% katex() %}\delta_{\text{hyst}} = 0.05{% end %} *(illustrative value)*) prevents the system from bouncing back to a higher regime until the battery has recovered by a full 5% *(illustrative value)* above the downgrade threshold — preventing rapid oscillation near regime boundaries, which would itself consume the power the downgrade was meant to save.
 
 **Phase gate prerequisite for L3 tasks (CI-02)**: Regime \\(O_3\\) activates {% term(url="@/blog/2026-02-05/index.md#def-61", def="Hybrid Logical Clock combining physical and logical timestamps; provides causal ordering that survives partition and re-sync without NTP synchronization") %}HLC{% end %} tracking ({% term(url="@/blog/2026-02-05/index.md#def-61", def="Hybrid Logical Clock (HLC): clock combining physical and logical timestamps, advancing on message receipt to maintain causal ordering without NTP") %}Definition 61{% end %}) and BFT peer validation ({% term(url="@/blog/2026-02-05/index.md#def-64", def="Peer-Validation Layer: gossip mechanism where nodes cross-check state updates to detect and reject Byzantine insertions without central authority") %}Definition 64{% end %}) — capabilities belonging to the Phase 2 and Phase 3 certification tiers of the Field Autonomic Certification ({% term(url="@/blog/2026-02-19/index.md#def-104", def="Field Autonomic Certification: process verifying an edge node's autonomic stack meets minimum capability requirements before granting operational authority") %}Definition 104{% end %}).
 
@@ -2350,11 +2276,7 @@ The proposition reduces {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Ex
 
 ## Terminal Safety State
 
-**Problem**: When the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop itself fails — heap exhausted, kernel panic, watchdog chain failure — the autonomic software cannot heal itself. Some response must exist that operates entirely without L1+ software involvement.
-
-**Solution**: Define a fixed terminal safety state selected by L0 firmware as a function of remaining energy alone — no Analysis, no Planning, no Knowledge Base required. Three states (PLM, BOM, HSS) cover the range from weeks of passive listening to immediate hardware shutdown.
-
-**Trade-off**: The terminal state is static and cannot adapt. A drone in BOM can transmit its position but cannot reason about whether that transmission is tactically safe. The price of zero software dependency is zero software intelligence.
+When the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop itself fails — heap exhausted, kernel panic, watchdog chain failure — the autonomic software cannot heal itself, and some response must exist that operates entirely without L1+ software involvement. The answer is a fixed terminal safety state selected by L0 firmware as a function of remaining energy alone — no Analysis, no Planning, no Knowledge Base required. Three states (PLM, BOM, HSS) cover the range from weeks of passive listening to immediate hardware shutdown. The limitation is that the terminal state is static and cannot adapt: a drone in BOM can transmit its position but cannot reason about whether that transmission is tactically safe. The price of zero software dependency is zero software intelligence.
 
 The {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm's priority boundary — these components are repaired first") %}MVS{% end %} is the floor the healing algorithm defends. But the healing algorithm can itself fail — the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop may crash, its knowledge base may become corrupted, or its resource quota ({% katex() %}R_{\text{heal}}{% end %}) may be exhausted. Below {% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} lies the {% term(url="#def-53", def="Operating mode entered when the entire autonomic framework has failed; selected by the base-tier hardware alone based on remaining energy; no higher-level software involvement") %}terminal safety state{% end %}: what the node does when all autonomy has been lost.
 
@@ -2376,19 +2298,7 @@ by L0 firmware as a function of remaining energy \\(E\\) alone:*
 
 The definition maps remaining energy to a deterministic safety state (PLM, BOM, or HSS) at every Execute tick, firing immediately on threshold crossing and pre-empting all other actions to prevent uncontrolled shutdown without state preservation or actuator parking. For {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}: PLM at {% katex() %}\approx 20\%{% end %} battery *(illustrative value)*; BOM at {% katex() %}\approx 10\%{% end %} *(illustrative value)*; HSS below {% katex() %}5\%{% end %} *(illustrative value)*; each threshold carries a {% katex() %}5\%{% end %} *(illustrative value)* hysteresis band. The hysteresis band is structurally necessary: without it, a node oscillating near the HSS threshold cycles in and out of full shutdown — a state sequence more hazardous than remaining in HSS.
 
-*Three concrete states, ordered by endurance:*
-
-- **PLM (Passive Listening Mode)**: Radio in receive-only mode; no transmissions; computation
-  limited to hardware watchdog and energy monitor. Endurance: weeks. The node can receive a
-  recovery command and re-initialize L1+ if the command arrives and power recovers.
-
-- **BOM (Beacon-Only Mode)**: Periodic low-power position and status beacon at fixed interval
-  {% katex() %}T_{\mathrm{beacon}}{% end %}; no processing beyond beacon scheduling. Endurance: days. Enables
-  recovery teams to locate the node.
-
-- **HSS (Hardware Safety Shutdown)**: All software subsystems powered off; only tamper-detection
-  circuit and charge controller remain active. Endurance: battery lifetime. Appropriate when
-  continued operation risks mission security (e.g., radio in a denied zone).
+Three concrete states are ordered by endurance. In PLM (Passive Listening Mode), the radio operates in receive-only mode with no transmissions and computation limited to the hardware watchdog and energy monitor; endurance is weeks, and the node can receive a recovery command and re-initialize L1+ if the command arrives and power recovers. In BOM (Beacon-Only Mode), the node transmits a periodic low-power position and status beacon at interval {% katex() %}T_{\mathrm{beacon}}{% end %} with no processing beyond beacon scheduling; endurance is days, enabling recovery teams to locate the node. In HSS (Hardware Safety Shutdown), all software subsystems are powered off and only the tamper-detection circuit and charge controller remain active; endurance is battery lifetime, and this state is appropriate when continued operation risks mission security (e.g., a radio active in a denied zone).
 
 **Hardware prerequisite and applicability scope**: {% term(url="#def-53", def="Terminal Safety State: stable configuration the system retreats to when all healing actions are exhausted, preserving core hardware from damage") %}Definition 53{% end %} assumes the node has (1) a dedicated battery management IC (BMS IC) that exposes a real-time energy register readable by L0 firmware without L1+ involvement, (2) a hardware-controlled secure flash zeroization circuit triggered by a GPIO line from L0, and (3) a charge controller that can be commanded to cut load power while preserving BMS and tamper-circuit supply. These are standard on modern battery-powered edge nodes (DJI embedded controllers, Raspberry Pi CM4 with UPS HAT, custom tactical compute modules) but absent on most legacy industrial equipment (PLCs, RTUs, SCADA remotes). Applying {% term(url="#def-53", def="Terminal Safety State: stable configuration the system retreats to when all healing actions are exhausted, preserving core hardware from damage") %}Definition 53{% end %} to legacy hardware without these components results in a terminal state machine that cannot reliably reach HSS — the "energy register" does not exist, and "zeroization" requires L1+ firmware. For legacy brownfield systems, the {% term(url="#def-53", def="Operating mode entered when the entire autonomic framework has failed; selected by the base-tier hardware alone based on remaining energy; no higher-level software involvement") %}terminal safety state{% end %} reduces to a physical-layer action (pulling a relay that cuts main power), which is Tier 3 or Tier 4 of the Legacy Recovery Cascade ({% term(url="#def-56", def="Legacy Recovery Cascade: ordered recovery actions applied to a legacy node lacking native MAPE-K capability, executed by its cluster gateway") %}Definition 56{% end %}) rather than an autonomic software action.
 
@@ -2445,12 +2355,6 @@ re-initialization via the BOM command channel. This is exactly the failure mode 
 
 ## Autonomic Gateway
 
-**Problem**: Legacy industrial equipment — 1990s generators, PLCs, motor controllers — predates autonomic APIs. These devices cannot report structured health metrics or accept remote restart commands, yet they must participate in {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} healing.
-
-**Solution**: A software adapter (Autonomic Gateway) presents legacy hardware to the MAPE-K loop as if it were fully observable. It synthesizes health metrics from proxy signals (current draw, temperature, vibration) and maps healing commands onto physical actuation primitives (Modbus register writes, GPIO signals, relay closures).
-
-**Trade-off**: Synthetic health metrics carry irreducible inference error. The MAPE-K Analyze phase must treat {% katex() %}\hat{h}_i \pm k\sigma_i{% end %} as the health estimate, not \\(\hat{h}_i\\) as ground truth — the gateway's uncertainty widens the effective anomaly detection threshold accordingly.
-
 Most engineering analysis in this series assumes the managed hardware presents an observable health telemetry API — a process that responds to queries, emits structured health metrics, and accepts configuration commands. That assumption fails for legacy industrial equipment, embedded controllers, and tactical hardware designed before autonomic systems existed.
 
 A 1990s diesel generator does not report its internal temperature. A legacy motor controller does not export a health vector. A cold-war-era radio does not accept remote restart commands. Yet these devices must participate in the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} healing loop — the system cannot simply exclude them because they lack a modern interface.
@@ -2506,7 +2410,7 @@ where {% katex() %}R_\text{th}{% end %} is thermal resistance, {% katex() %}\tau
 
 *Proof sketch*: If Coverage holds, the Analyze phase operates on a \\(\delta_i\\)-biased estimate, expanding the anomaly detection threshold by \\(k\delta_i\\). If Timeliness holds, the Monitor phase is not stale — inference completes within one monitoring window. If Uncertainty holds, the false-alarm rate of Prop 3 is preserved: substituting {% katex() %}\hat{h}_i \pm \sigma_i{% end %} into the threshold criterion expands the effective threshold by at most \\(k\sigma_i\\), which stays within the design margin when {% katex() %}\sigma_i \leq \sigma_{\text{threshold},i}{% end %}. If any condition fails, monitoring quality for that metric degrades to at most Heartbeat-Only (L0) level. \\(\square\\)
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: At commissioning, the thermal model achieves mean absolute error \\(3.2^\circ\text{C}\\) — below {% katex() %}\delta_T = 5^\circ\text{C}{% end %}. Inference runs in 2ms on the gateway ARM processor — below {% katex() %}T_\text{monitor} = 5\text{s}{% end %}. Cold-start uncertainty (first 30 seconds before {% katex() %}\tau_\text{th}{% end %} stabilizes) produces {% katex() %}\sigma_T = 8^\circ\text{C}{% end %}, exceeding {% katex() %}\sigma_\text{threshold} = 5^\circ\text{C}{% end %}: the gateway signals "thermal state uncertain" and the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop withholds temperature-dependent healing decisions until \\(s(t) > 30\text{s}\\).
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: At commissioning, the thermal model achieves mean absolute error \\(3.2^\circ\text{C}\\) *(illustrative value)* — below {% katex() %}\delta_T = 5^\circ\text{C}{% end %} *(illustrative value)*. Inference runs in 2ms *(illustrative value)* on the gateway ARM processor — below {% katex() %}T_\text{monitor} = 5\text{s}{% end %} *(illustrative value)*. Cold-start uncertainty (first 30 seconds *(illustrative value)* before {% katex() %}\tau_\text{th}{% end %} stabilizes) produces {% katex() %}\sigma_T = 8^\circ\text{C}{% end %} *(illustrative value)*, exceeding {% katex() %}\sigma_\text{threshold} = 5^\circ\text{C}{% end %} *(illustrative value)*: the gateway signals "thermal state uncertain" and the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} loop withholds temperature-dependent healing decisions until \\(s(t) > 30\text{s}\\) *(illustrative value)*.
 
 > **Empirical status**: The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration values ({% katex() %}\delta_T = 5^\circ\text{C}{% end %}, {% katex() %}\sigma_\text{threshold} = 5^\circ\text{C}{% end %}, 30 s cold-start window) are specific to this generator model and commissioning environment; different hardware, fuel composition, or ambient temperature range will produce different thermal time constants and uncertainty profiles requiring re-calibration.
 
@@ -2551,13 +2455,13 @@ The proposition bounds total cascade duration as the sum of wait, convergence, a
 
 *Proof*: By induction on tier index. Base: \\(T_1\\) executes if {% katex() %}\text{pre}_1{% end %} holds and completes in {% katex() %}t_{\text{act},1} + W_1{% end %}. Inductive step: if \\(T_k\\) fails ({% katex() %}\text{post}_k{% end %} is false), the cascade advances to {% katex() %}T_{k+1}{% end %} after cooldown \\(C_k\\). Total elapsed time at tier \\(K^\*\\) is {% katex() %}\sum_{k=1}^{K^*}(t_{\text{act},k} + W_k + C_k){% end %}. Deadline satisfaction follows. The thermal suspension is correct: a hot restart at {% katex() %}\hat{T}_\text{engine} > 90^\circ\text{C}{% end %} risks mechanical seizure, converting a recoverable fault into permanent failure. \\(\square\\)
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} worst case**: {% katex() %}D_\text{recovery} = 90{% end %} min ({% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} requirement: backup power within 90 minutes of primary failure). Attempting \\(T_1 \to T_2 \to T_3\\) in sequence: {% katex() %}(30+60) + (45+300) + (60+900) = 1395\text{s} = 23.25{% end %} min — well within the deadline. If the generator is hot at failure ({% katex() %}\hat{T}_\text{engine} = 92^\circ\text{C}{% end %}), the cascade suspends \\(T_1\\) and \\(T_2\\) until cooling. Using the thermal model, cooldown from \\(92^\circ\text{C}\\) to \\(70^\circ\text{C}\\) at ambient \\(30^\circ\text{C}\\):
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} worst case**: {% katex() %}D_\text{recovery} = 90{% end %} min *(illustrative value)* ({% term(url="#def-50", def="Smallest set of components that must remain operational to sustain the mission-critical survival capability; defines the healing algorithm priority boundary") %}MVS{% end %} requirement: backup power within 90 minutes *(illustrative value)* of primary failure). Attempting \\(T_1 \to T_2 \to T_3\\) in sequence: {% katex() %}(30+60) + (45+300) + (60+900) = 1395\text{s} = 23.25{% end %} min *(illustrative value)* — well within the deadline. If the generator is hot at failure ({% katex() %}\hat{T}_\text{engine} = 92^\circ\text{C}{% end %} *(illustrative value)*), the cascade suspends \\(T_1\\) and \\(T_2\\) until cooling. Using the thermal model, cooldown from \\(92^\circ\text{C}\\) *(illustrative value)* to \\(70^\circ\text{C}\\) *(illustrative value)* at ambient \\(30^\circ\text{C}\\) *(illustrative value)*:
 
 {% katex(block=true) %}
 t_\text{cool} = \tau_\text{th} \cdot \ln\!\left(\frac{92 - 30}{70 - 30}\right) \approx 1800 \cdot \ln(1.55) \approx 756\;\text{s} \approx 12.6\;\text{min}
 {% end %}
 
-Total cascade time with thermal wait: \\(12.6 + 23.25 = 35.85\\) min — still within the 90-minute deadline, but consuming 40% of the available budget, leaving limited margin if \\(T_3\\) also fails.
+Total cascade time with thermal wait: \\(12.6 + 23.25 = 35.85\\) min *(illustrative value)* — still within the 90-minute deadline, but consuming 40% *(illustrative value)* of the available budget, leaving limited margin if \\(T_3\\) also fails.
 
 > **Empirical status**: The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} cascade timing values (\\(W_k\\), \\(C_k\\), thermal cooldown constant {% katex() %}\tau_{\text{th}} = 1800\,\text{s}{% end %}) are specific to this generator hardware and commissioning measurements; each tier's window and cooldown must be validated by fault injection on the actual hardware at operating temperature extremes.
 
@@ -2571,19 +2475,11 @@ Total cascade time with thermal wait: \\(12.6 + 23.25 = 35.85\\) min — still w
 
 ## Cascade Prevention
 
-**Problem**: Healing consumes the same resources — CPU, bandwidth, power — needed for normal operation. When multiple healing actions trigger simultaneously, resource contention prevents any from completing. The system degrades further during healing than before.
-
-**Solution**: Reserve a fixed fraction of resources for healing (quota {% katex() %}\alpha_{\text{heal}} \approx 0.2{% end %}), prioritize by MVS tier and resource efficiency, and spread simultaneous post-partition restarts using random jitter and staged waves.
-
-**Trade-off**: A healing resource quota means some healing actions are queued even when the failure is serious. Queueing bounds the resource spike but adds latency before the queued healing fires — a deliberate exchange of healing speed for system stability.
+Healing consumes the same resources — CPU, bandwidth, power — needed for normal operation, and when multiple healing actions trigger simultaneously, resource contention prevents any from completing, leaving the system worse during healing than before. The solution is to reserve a fixed fraction of resources for healing (quota {% katex() %}\alpha_{\text{heal}} \approx 0.2{% end %}), prioritize by MVS tier and resource efficiency, and spread simultaneous post-partition restarts using random jitter and staged waves. The trade-off is that a healing resource quota means some healing actions are queued even when the failure is serious — queueing bounds the resource spike but adds latency before the queued healing fires, a deliberate exchange of healing speed for system stability.
 
 ### Resource Contention During Recovery
 
-Healing consumes the resources needed for normal operation:
-- **CPU**: {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} analysis, action planning, coordination
-- **Memory**: Healing state, candidate solutions, rollback buffers
-- **Bandwidth**: {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}Gossip{% end %} for healing coordination, status updates
-- **Power**: Additional computation and communication
+Healing consumes the resources needed for normal operation: CPU for {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} analysis, action planning, and coordination; memory for healing state, candidate solutions, and rollback buffers; bandwidth for {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} coordination and status updates; and power for the additional computation and communication.
 
 When multiple healing actions execute simultaneously, resource contention can prevent any from completing. The system becomes worse during healing than before.
 
@@ -2654,16 +2550,7 @@ For \\(k = 3\\) waves, variance reduces by factor of 3, providing tighter bounds
 
 Start with minimal intervention. Escalate only if insufficient.
 
-The **healing escalation ladder**:
-
-1. **Retry**: Wait and retry operation (transient failures)
-2. **Restart**: Restart the specific component
-3. **Reconfigure**: Adjust configuration parameters
-4. **Isolate**: Remove component from active duty
-5. **Replace**: Substitute with backup component
-6. **Abandon**: Remove from fleet entirely
-
-Progress up the ladder only when lower levels fail.
+The **healing escalation ladder** progresses through six levels, advancing only when the lower level fails: retry (wait and retry the operation for transient failures), restart (restart the specific component), reconfigure (adjust configuration parameters), isolate (remove the component from active duty), replace (substitute with a backup component), and abandon (remove from the fleet entirely).
 
 Between each escalation level, the system waits an exponentially increasing observation window: at level \\(k\\) with base wait \\(t_0\\), the wait doubles with each level so that higher-severity interventions receive more time to demonstrate success before further escalation is triggered.
 
@@ -2695,11 +2582,7 @@ Select the action with highest {% term(url="@/blog/2026-02-12/index.md#term-ucb"
 
 ## Model Scope and Failure Envelope
 
-**Problem**: Every analytical guarantee in this post rests on assumptions — linear dynamics, constant delay, stationary reward distributions. Real systems violate these. Deploying these mechanisms without understanding their validity domain produces unexpected failures.
-
-**Solution**: For each mechanism, enumerate its assumptions, the failure mode when each assumption is violated, the observable detection signal, and a concrete mitigation. The validity domain is not a footnote — it is the primary engineering decision.
-
-**Trade-off**: Assumption validation requires measurement infrastructure. The cost of knowing when you are outside the validity domain is instrumentation that itself consumes resources and adds complexity.
+Every analytical guarantee in this post rests on assumptions — linear dynamics, constant delay, stationary reward distributions — and real systems violate these. Deploying these mechanisms without understanding their validity domain produces unexpected failures. For each mechanism, the assumptions, the failure mode when each assumption is violated, the observable detection signal, and a concrete mitigation must be enumerated; the validity domain is not a footnote but the primary engineering decision. The cost of that enumeration is measurement infrastructure: knowing when you are outside the validity domain requires instrumentation that itself consumes resources and adds complexity.
 
 Each mechanism has bounded validity. When assumptions fail, so does the mechanism.
 
@@ -2936,17 +2819,9 @@ L(\theta) = \mathbb{E}\left[\min\left(r_t(\theta) A_t, \text{clip}(r_t(\theta), 
 
 where {% katex() %}r_t(\theta) = \pi_\theta(a_t|s_t) / \pi_{\theta_{\text{old}}}(a_t|s_t){% end %} is the probability ratio and \\(A_t\\) is the advantage estimate.
 
-**Model size for edge**:
-- State embedding: \\(32\times16 = 512\\) parameters
-- LSTM: {% katex() %}4\times(16+32)\times32 = 6{,}144{% end %} parameters
-- Policy head: \\(32\times6 = 192\\) parameters
-- Value head: \\(32\times1 = 32\\) parameters
-- **Total: 6,880 parameters = ~27 KB** (float32)
+**Model size for edge**: state embedding \\(32\times16 = 512\\) parameters; LSTM {% katex() %}4\times(16+32)\times32 = 6{,}144{% end %} parameters; policy head \\(32\times6 = 192\\) parameters; value head \\(32\times1 = 32\\) parameters; total 6,880 parameters *(illustrative value)* ≈ 27 KB (float32).
 
-**Training approach**:
-1. **Simulation pretraining**: Train in simulated environment with synthetic failures
-2. **Deployment fine-tuning**: Continue learning from real failures with reduced learning rate
-3. **Policy distillation**: Compress large trained policy into edge-deployable network
+The training approach follows three phases: simulation pretraining (train in a simulated environment with synthetic failures), deployment fine-tuning (continue learning from real failures with reduced learning rate), and policy distillation (compress the large trained policy into an edge-deployable network).
 
 **Healing Policy Comparison** (theoretical bounds):
 
@@ -3063,9 +2938,7 @@ graph TD
 
 **Transfer from {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} to {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}**:
 
-1. **Shared representation**: State embedding layer transfers (both have connectivity, power, health features)
-2. **Policy adaptation**: Policy head retrained on {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}-specific actions
-3. **Value fine-tuning**: Value function recalibrated for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} reward scale
+Transfer involves three components: the shared representation (the state embedding layer transfers directly since both scenarios share connectivity, power, and health features); policy adaptation (the policy head is retrained on {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}-specific actions); and value fine-tuning (the value function is recalibrated for the {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} reward scale).
 
 **Transfer efficiency bound**:
 
@@ -3099,12 +2972,7 @@ The three training regimes differ in where data comes from, whether unsafe explo
 | Offline RL | Historical logs | Safe (no exploration) | Higher |
 | Hybrid | Offline pretrain + online fine-tune | Balanced | Best |
 
-**Recommended approach for edge healing**:
-1. **Offline phase**: Train on historical healing logs (no risk)
-2. **Simulation phase**: Fine-tune in simulated environment (controlled risk)
-3. **Deployment phase**: Conservative online updates with safety constraints (managed risk)
-
-This progression minimizes risk while enabling continuous improvement from operational experience.
+The recommended approach for edge healing follows three phases that minimize risk while enabling continuous improvement: offline (train on historical healing logs with no exploration risk), simulation (fine-tune in a simulated environment with controlled risk), and deployment (conservative online updates with safety constraints at managed risk).
 
 > **Cognitive Map**: Cascade prevention is the meta-discipline of the healing system: ensuring that the act of healing does not produce new failures. Three mechanisms work in concert — resource quotas cap total healing load at {% katex() %}\alpha \leq 0.2{% end %} of capacity; jittered restarts spread the thundering herd across {% katex() %}T_{\text{jitter}}{% end %}; staged recovery reduces completion-time variance by \\(1/k\\). UCB and contextual bandits then take over from the deterministic policies: as healing episode counts grow, the system learns which action works in which context, progressively refining the probability estimates that underlie {% term(url="#prop-29", def="Optimal Confidence Threshold: anomaly classification threshold minimizing expected misclassification cost under time-varying false-negative cost escalation") %}Proposition 29{% end %}'s confidence threshold. Offline pretraining, simulation fine-tuning, and conservative online updates compose the lowest-risk RL deployment path for edge systems with sparse real failure data.
 
@@ -3112,17 +2980,11 @@ This progression minimizes risk while enabling continuous improvement from opera
 
 ## RAVEN Self-Healing Protocol
 
-**Problem**: Drone 23 has 8 minutes of battery remaining mid-mission in contested airspace. No human operator is available. The 47-drone swarm must decide: compress formation, extract the drone, or continue with reduced coverage — all without central coordination.
-
-**Solution**: The cluster lead evaluates expected mission value for each option subject to a catastrophic-probability constraint, broadcasts the plan within one gossip convergence window, and executes the coordinated maneuver within 8 seconds of acknowledgement.
-
-**Trade-off**: Coverage preservation and asset recovery conflict directly. The framework selects the option that maximizes expected mission value. But that selection depends on the value assigned to the drone relative to the mission — a parameter pre-set by mission planners, not computed at the moment of crisis.
-
 Return to Drone 23's battery failure. How does the {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm heal?
 
 ### Healing Decision Analysis
 
-Drone 23's battery alert propagates via {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %}. Within 15 seconds, all swarm members know Drone 23's status. Each drone's local analyzer assesses impact: Drone 23 will fail in 8 minutes; if it fails in place, a coverage gap opens on the eastern sector with potential crash in contested area; if it returns, neighbors must expand coverage.
+Drone 23's battery alert propagates via {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %}. Within 15 seconds *(illustrative value)*, all swarm members know Drone 23's status. Each drone's local analyzer assesses impact: Drone 23 will fail in 8 minutes *(illustrative value)*; if it fails in place, a coverage gap opens on the eastern sector with potential crash in contested area; if it returns, neighbors must expand coverage.
 
 Cluster lead (Drone 1) selects the optimal action by evaluating expected mission value for each alternative:
 
@@ -3132,7 +2994,7 @@ a^* = \arg\max_a E[V | a] \quad \text{subject to} \quad P(\text{catastrophic} | 
 
 The trade-off is **coverage preservation against asset recovery**. Compression maintains formation integrity but sacrifices coverage area. Return to base preserves the drone but requires neighbor expansion. **Proactive extraction dominates passive observation** when asset value exceeds the coverage loss—get the degraded asset out rather than watching it fail in place.
 
-The cluster lead broadcasts the healing plan. Within one second, neighbors acknowledge sector expansion and Drone 23 acknowledges its return path. Formation adjustment completes in roughly 8 seconds. Drone 23 departs, neighbors restore coverage to {% katex() %}\mathcal{L}_2{% end %}, and twelve minutes later Drone 23 reports safe landing at base.
+The cluster lead broadcasts the healing plan. Within one second *(illustrative value)*, neighbors acknowledge sector expansion and Drone 23 acknowledges its return path. Formation adjustment completes in roughly 8 seconds *(illustrative value)*. Drone 23 departs, neighbors restore coverage to {% katex() %}\mathcal{L}_2{% end %}, and twelve minutes *(illustrative value)* later Drone 23 reports safe landing at base.
 
 ### Healing Coordination Under Partition
 
@@ -3168,17 +3030,11 @@ Drone 23's return route passes through adversarial coverage. Risk of intercept d
 
 Solution: Incorporate threat model into path planning. Choose return route that minimizes {% katex() %}P(\text{intercept}) \cdot C(\text{loss}){% end %}. Accept longer route if safer.
 
-> **Cognitive Map**: RAVEN healing is a live demonstration of every mechanism in this post: gossip propagation delivers Drone 23's status to all 47 nodes within 15 seconds; the cluster lead applies the expected-utility formula subject to catastrophic-probability constraint; confidence thresholds determine whether to act or wait; the joint stability check filters healing plans that would create secondary failures. Partition during healing is handled gracefully — each cluster acts on its local information, logs causally-ordered actions, and reconciles divergences on reconnection. The eastern cluster's independent decision is not a failure of the protocol; it is the protocol working as designed.
+> **Cognitive Map**: RAVEN healing is a live demonstration of every mechanism in this post: gossip propagation delivers Drone 23's status to all 47 nodes within 15 seconds *(illustrative value)*; the cluster lead applies the expected-utility formula subject to catastrophic-probability constraint; confidence thresholds determine whether to act or wait; the joint stability check filters healing plans that would create secondary failures. Partition during healing is handled gracefully — each cluster acts on its local information, logs causally-ordered actions, and reconciles divergences on reconnection. The eastern cluster's independent decision is not a failure of the protocol; it is the protocol working as designed.
 
 ---
 
 ## CONVOY Self-Healing Protocol
-
-**Problem**: Vehicle 4 has engine failure in a mountainous contested zone. Four options are available (repair, bypass, tow, redistribute+abandon) each with different mission, safety, and resource implications. The optimal choice is state-dependent and changes as terrain, threat, and cargo priority evolve.
-
-**Solution**: Model the problem as an MDP with a multi-objective reward function. The optimal policy is computed offline for each combination of convoy state, distance, and threat environment — producing a lookup table of state-dependent decisions rather than requiring online optimization during crisis.
-
-**Trade-off**: The MDP transition probabilities come from operational logs. A novel failure mode with no historical analogues produces unreliable estimates. Conservative defaults should be pre-configured for failure types with fewer than 10 prior observations.
 
 Vehicle 4 experiences engine failure during mountain transit. The {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} healing protocol differs from {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s due to ground vehicle constraints.
 
@@ -3190,38 +3046,13 @@ The failure is partial—vehicle can move but cannot maintain convoy speed.
 
 ### Option Analysis
 
-**Option 1: Stop convoy, repair in field**
-- Estimated repair time: 2-4 hours
-- Risk: Stationary convoy vulnerable
-- Mission delay: Significant
-- Resource cost: Mechanic time, parts
-
-**Option 2: Bypass (leave vehicle 4)**
-- Continue with 11 vehicles
-- Vehicle 4 waits for recovery team
-- Security risk: Isolated vehicle in contested area
-- Mission impact: Minor (cargo distributed among remaining)
-
-**Option 3: Tow vehicle 4**
-- Vehicle 3 tows vehicle 4
-- Convoy speed reduced to 20 km/h
-- Mission delay: Moderate
-- Risk: Increased mechanical stress on vehicle 3
-
-**Option 4: Redistribute and abandon**
-- Transfer critical cargo from vehicle 4 to others
-- Secure/destroy vehicle 4
-- Continue at full speed
-- Loss: One vehicle (significant cost)
+Four options are available: stopping the convoy for field repair (2–4 hours *(illustrative value)*, significant mission delay, but stationary convoy is vulnerable); bypassing — leaving vehicle 4 to await a recovery team with 11 vehicles continuing (minor mission impact, but the isolated vehicle faces security risk in contested terrain); towing vehicle 4 behind vehicle 3 (convoy speed reduced to 20 km/h *(illustrative value)*, moderate delay, increased mechanical stress on vehicle 3); or redistributing critical cargo, securing and destroying vehicle 4, and continuing at full speed (immediate, full-speed continuation, but at the cost of one vehicle).
 
 ### Decision Framework
 
 Model as Markov Decision Process with state-dependent optimal policy:
 
-**State space structure**: {% katex() %}S = \mathcal{C} \times \mathcal{D} \times \mathcal{T}{% end %} where:
-- {% katex() %}\mathcal{C}{% end %} = convoy configuration (intact, degraded, towing, stopped)
-- {% katex() %}\mathcal{D}{% end %} = distance remaining to objective
-- {% katex() %}\mathcal{T}{% end %} = threat environment (permissive, contested, denied)
+**State space structure**: {% katex() %}S = \mathcal{C} \times \mathcal{D} \times \mathcal{T}{% end %} where {% katex() %}\mathcal{C}{% end %} is convoy configuration (intact, degraded, towing, or stopped), {% katex() %}\mathcal{D}{% end %} is distance remaining to objective, and {% katex() %}\mathcal{T}{% end %} is threat environment (permissive, contested, or denied).
 
 **Action space**: {% katex() %}A = \{\text{repair, bypass, tow, abandon}\}{% end %}
 
@@ -3252,10 +3083,7 @@ The optimal value function \\(V^\*(s)\\) satisfies the Bellman equation: the bes
 V^*(s) = \max_a \left[ R(s, a) + \gamma_{\text{rl}} \sum_{s'} P(s' | s, a) V^*(s') \right]
 {% end %}
 
-The optimal policy shows **phase transitions** based on state variables:
-- **Distance-dominated regime** (far from objective): Minimize exposure time, therefore prefer towing
-- **Time-dominated regime** (tight deadline): Prioritize progress, therefore accept asset loss
-- **Asset-dominated regime** (high-value cargo): Preserve assets, therefore accept delays
+The optimal policy shows three phase transitions based on state variables: in the distance-dominated regime (far from the objective), the policy minimizes exposure time and prefers towing; in the time-dominated regime (tight deadline), it prioritizes progress and accepts asset loss; and in the asset-dominated regime (high-value cargo), it preserves assets and accepts delays.
 
 These phase transitions emerge from the MDP structure, not from hand-coded rules. The optimization framework discovers them automatically.
 
@@ -3263,18 +3091,9 @@ These phase transitions emerge from the MDP structure, not from hand-coded rules
 
 Vehicles 1-3 see the situation one way (closer to vehicle 4). Vehicles 5-12 may have different information (further away, may not have received all updates).
 
-Healing protocol ensures consistency:
+The healing protocol ensures consistency through five sequential steps: vehicle 4 broadcasts the failure to all reachable vehicles; the convoy lead (vehicle 1) makes the healing decision; the decision propagates to all vehicles via {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %}; each vehicle confirms receipt and readiness; and the coordinated maneuver executes on the lead's signal.
 
-1. **Broadcast**: Vehicle 4 broadcasts failure to all reachable vehicles
-2. **Lead decision**: Convoy lead (vehicle 1) makes healing decision
-3. **Propagation**: Decision propagates to all vehicles via {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %}
-4. **Confirmation**: Each vehicle confirms receipt and readiness
-5. **Execution**: Coordinated maneuver on lead's signal
-
-If lead is unreachable:
-- Fallback: Nearest cluster lead makes local decision
-- Reachable vehicles execute local plan
-- Unreachable vehicles hold position until contact restored
+If the lead is unreachable, the nearest cluster lead makes the local decision, reachable vehicles execute the local plan, and unreachable vehicles hold position until contact is restored.
 
 > **Cognitive Map**: CONVOY healing illustrates how MDP structure discovers the non-obvious optimal policy. The three phase-transition regimes (distance-dominated \\(\to\\) tow, time-dominated \\(\to\\) abandon, asset-dominated \\(\to\\) delay) emerge from the Bellman equation without being hand-coded — they are consequences of the multi-objective reward weights and transition probabilities. The coordination protocol (broadcast \\(\to\\) lead decision \\(\to\\) gossip propagation \\(\to\\) confirmation \\(\to\\) execution) is the MAPE-K sequence instantiated for ground convoy constraints. When the convoy lead is unreachable, the fallback to nearest cluster lead is the same authority-tier degradation structure seen throughout the series.
 
@@ -3284,15 +3103,15 @@ If lead is unreachable:
 
 The resolution sequence is fully determined by the framework:
 
-1. **Drift detected first** (fastest feedback loop): The Schmitt trigger hysteresis ({% term(url="#def-47", def="Schmitt Trigger Hysteresis: dual threshold with separate trigger and release levels preventing healing loop flapping near a boundary") %}Definition 47{% end %}) fires when drift exceeds \\(\theta_H\\), but the derivative confidence dampener ({% term(url="#def-49", def="Healing Budget Envelope: per-interval cap on total healing action energy expenditure, preventing the healing loop from depleting the survival power reserve") %}Definition 49{% end %}) holds the decision while the slope is still falling — preventing a false healing action on a still-worsening signal. {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} enters read-only mode for the affected sensor.
+Drift is detected first (fastest feedback loop): the Schmitt trigger hysteresis ({% term(url="#def-47", def="Schmitt Trigger Hysteresis: dual threshold with separate trigger and release levels preventing healing loop flapping near a boundary") %}Definition 47{% end %}) fires when drift exceeds \\(\theta_H\\), but the derivative confidence dampener ({% term(url="#def-49", def="Healing Budget Envelope: per-interval cap on total healing action energy expenditure, preventing the healing loop from depleting the survival power reserve") %}Definition 49{% end %}) holds the decision while the slope is still falling — preventing a false healing action on a still-worsening signal — and {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} enters read-only mode for the affected sensor.
 
-2. **Power failure triggers regime downgrade** ({% term(url="#def-52", def="Observation Regime Schedule: adaptive polling schedule reducing sensor sampling rate as battery drops, extending the survivable observation window") %}Definition 52{% end %}, Observation Regime Schedule): Battery drop to \\(O_1\\) (alert) halves measurement frequency. The {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} self-throttling law ({% term(url="#prop-36", def="Self-Throttling Law: the node must enter OBSERVE mode when the resource state drops below a threshold that ensures survival to the next gossip round") %}Proposition 36{% end %}) reduces {% katex() %}f_{\text{MAPE-K}}{% end %} to conserve CPU margin. The \\(\alpha(R)\\) throttle coefficient begins reducing loop aggressiveness.
+Power failure triggers regime downgrade ({% term(url="#def-52", def="Observation Regime Schedule: adaptive polling schedule reducing sensor sampling rate as battery drops, extending the survivable observation window") %}Definition 52{% end %}, Observation Regime Schedule): the battery drop to \\(O_1\\) (alert) halves measurement frequency, the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} self-throttling law ({% term(url="#prop-36", def="Self-Throttling Law: the node must enter OBSERVE mode when the resource state drops below a threshold that ensures survival to the next gossip round") %}Proposition 36{% end %}) reduces {% katex() %}f_{\text{MAPE-K}}{% end %} to conserve CPU margin, and the \\(\alpha(R)\\) throttle coefficient begins reducing loop aggressiveness.
 
-3. **Partition triggers circuit breaker** ({% term(url="#prop-37", def="Weibull Circuit Breaker: base-tier gate fires when the partition accumulator exceeds the 95th-percentile partition duration, triggering controlled shutdown before resources are exhausted") %}Proposition 37{% end %}): When {% katex() %}T_{\text{acc}} \geq Q_{0.95}{% end %}, all five transitions fire: (1) capability drops to {% katex() %}\mathcal{L}_0{% end %}, (2) {% katex() %}f_{\text{MAPE-K}}{% end %} floors at {% katex() %}f_{\min}{% end %}, (3) {% katex() %}k_\mathcal{N}{% end %} shifts heavier-tail, (4) {% katex() %}T_{\text{acc}}{% end %} resets on partition end, (5) \\(K\\) drops to {% katex() %}\alpha_{\text{margin}}/(1 + \tau_{\text{circuit}}/T_{\text{tick}}){% end %}. The HAC authority check ensures ECU-4 does not issue healing actions it lacks {% katex() %}Q_{\text{effective}}{% end %} authority for.
+Partition triggers the circuit breaker ({% term(url="#prop-37", def="Weibull Circuit Breaker: base-tier gate fires when the partition accumulator exceeds the 95th-percentile partition duration, triggering controlled shutdown before resources are exhausted") %}Proposition 37{% end %}): when {% katex() %}T_{\text{acc}} \geq Q_{0.95}{% end %}, all five transitions fire — capability drops to {% katex() %}\mathcal{L}_0{% end %}, {% katex() %}f_{\text{MAPE-K}}{% end %} floors at {% katex() %}f_{\min}{% end %}, {% katex() %}k_\mathcal{N}{% end %} shifts heavier-tail, {% katex() %}T_{\text{acc}}{% end %} resets on partition end, and \\(K\\) drops to {% katex() %}\alpha_{\text{margin}}/(1 + \tau_{\text{circuit}}/T_{\text{tick}}){% end %} — and the HAC authority check ensures ECU-4 does not issue healing actions it lacks {% katex() %}Q_{\text{effective}}{% end %} authority for.
 
-4. **Combined state at stabilization**: ECU-4 operates at {% katex() %}\mathcal{L}_0{% end %} (survival only), \\(O_2\\) (conservative monitoring), with sensor reads via dead-band only ({% term(url="#def-38", def="MAPE-K Predictive Dead-Band: region around setpoint where the MAPE-K controller takes no action to prevent chattering under stochastic delay") %}Definition 38{% end %}). The hardware watchdog ({% term(url="#def-41", def="Software Watchdog Timer: hardware-backed countdown triggering a safe-state transition if the autonomic control loop fails to check in within its configured timeout") %}Definition 41{% end %}) independently monitors the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} heartbeat — if the throttled loop stops responding, the hardware resets it without software cooperation.
+At stabilization, ECU-4 operates at {% katex() %}\mathcal{L}_0{% end %} (survival only) and \\(O_2\\) (conservative monitoring), with sensor reads via dead-band only ({% term(url="#def-38", def="MAPE-K Predictive Dead-Band: region around setpoint where the MAPE-K controller takes no action to prevent chattering under stochastic delay") %}Definition 38{% end %}); the hardware watchdog ({% term(url="#def-41", def="Software Watchdog Timer: hardware-backed countdown triggering a safe-state transition if the autonomic control loop fails to check in within its configured timeout") %}Definition 41{% end %}) independently monitors the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} heartbeat, and resets the throttled loop without software cooperation if it stops responding.
 
-5. **Recovery order**: Partition ends first ({% katex() %}T_{\text{acc}}{% end %} resets, capability ladder re-entry via {% katex() %}\mathcal{L}_0 \to \mathcal{L}_1{% end %}). Power recovers second (regime upgrades via {% term(url="#def-52", def="Observation Regime Schedule: adaptive polling schedule reducing sensor sampling rate as battery drops, extending the survivable observation window") %}Definition 52{% end %} hysteresis band — requires 5% battery margin above threshold before upgrade). Drift corrects last (requires calibration convergence confirmed by three consecutive readings within \\(\theta_L\\)). Each recovery is independent; the system does not require simultaneous recovery of all three to restore normal operation.
+Recovery follows a fixed order: partition ends first ({% katex() %}T_{\text{acc}}{% end %} resets, capability ladder re-entry via {% katex() %}\mathcal{L}_0 \to \mathcal{L}_1{% end %}); power recovers second (regime upgrades via {% term(url="#def-52", def="Observation Regime Schedule: adaptive polling schedule reducing sensor sampling rate as battery drops, extending the survivable observation window") %}Definition 52{% end %} hysteresis band — requires 5% battery margin above threshold before upgrade); drift corrects last (requiring calibration convergence confirmed by three consecutive readings within \\(\theta_L\\)). Each recovery is independent; the system does not require simultaneous recovery of all three to restore normal operation.
 
 > **Key insight**: The three failure modes have different recovery timescales (seconds for partition, minutes for battery, hours for calibration drift) and different recovery mechanisms (protocol, hardware, physical). Designing for independence — not simultaneity — is the architectural property that makes autonomous recovery tractable.
 
@@ -3300,11 +3119,7 @@ The resolution sequence is fully determined by the framework:
 
 ## OUTPOST Self-Healing
 
-**Problem**: 127 sensor nodes in a remote perimeter mesh — no physical access, ultra-low power budgets, and sustained jamming. Physical intervention is infeasible; healing actions must not consume more energy than they restore capability.
-
-**Solution**: Each failure mode has a matched low-energy healing action (frequency hop, recalibration, firmware restart). Energy-efficient scheduling prioritizes by value-restored per joule spent. Mesh reconfiguration extends neighbor sensitivity to partially cover gaps from permanent sensor loss.
-
-**Trade-off**: Coverage extension from neighbor sensitivity increase raises false positive rates (more sensitivity means more noise detections). The OUTPOST mesh accepts a higher false-alarm rate in the coverage-gap zone as the cost of maintaining any detection at all.
+The OUTPOST mesh has 127 sensor nodes in a remote perimeter with no physical access, ultra-low power budgets, and sustained jamming, making physical intervention infeasible — healing actions must not consume more energy than they restore capability. Each failure mode is matched to a low-energy healing action (frequency hop, recalibration, firmware restart), with energy-efficient scheduling prioritizing by value restored per joule spent and mesh reconfiguration extending neighbor sensitivity to partially cover gaps from permanent sensor loss. The trade-off is that coverage extension from increased neighbor sensitivity raises false positive rates — the OUTPOST mesh accepts a higher false-alarm rate in the coverage-gap zone as the cost of maintaining any detection at all.
 
 The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor mesh faces unique healing challenges: remote locations preclude physical intervention, and ultra-low power budgets constrain healing actions.
 
@@ -3392,11 +3207,7 @@ graph TD
 
 **Healing protocol for permanent sensor loss**:
 
-1. **Detection**: Neighbor sensors detect missing heartbeats
-2. **Confirmation**: Multiple neighbors confirm (avoid false positive)
-3. **Reporting**: Fusion node logs loss, estimates coverage gap
-4. **Adaptation**: Neighbors adjust sensitivity to partially cover gap
-5. **Alerting**: Flag for physical replacement when connectivity allows
+The healing protocol for permanent sensor loss proceeds in five steps: neighbor sensors detect missing heartbeats; multiple neighbors confirm to avoid a false positive; the fusion node logs the loss and estimates the coverage gap; neighbors adjust sensitivity to partially cover the gap; and the node is flagged for physical replacement when connectivity allows.
 
 **Neighbor coverage extension**:
 
@@ -3417,9 +3228,7 @@ Full coverage is rarely achievable—the goal is minimizing the detection gap.
 
 If a fusion node fails, its sensor cluster must find an alternative:
 
-**Primary**: Route through alternate fusion node (if reachable)
-**Secondary**: Peer-to-peer mesh among sensors, with one sensor acting as temporary aggregator
-**Tertiary**: Each sensor operates independently with local decision authority
+The primary path routes through an alternate fusion node when reachable; the secondary path forms a peer-to-peer mesh among sensors with one sensor acting as temporary aggregator; and the tertiary path has each sensor operating independently with local decision authority.
 
 The fusion state at time \\(t\\) is determined by a priority cascade: use the primary fusion node while reachable, fall back to the alternate fusion node if primary is lost, and revert to fully autonomous per-sensor operation only when both are unreachable.
 
@@ -3440,12 +3249,6 @@ Each state has different {% term(url="@/blog/2026-01-15/index.md#term-capability
 <span id="scenario-smartbldg"></span>
 
 ## Commercial Application: {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} Building Automation
-
-**Problem**: A 52-floor commercial tower with thousands of HVAC, lighting, and access control actuators — all coordinated by a central BMS server. When that server fails, occupants must stay comfortable and fire safety must remain inviolable, with no manual intervention possible for the first several hours.
-
-**Solution**: Distribute MAPE-K loops across four tiers (building \\(\to\\) floor \\(\to\\) zone \\(\to\\) device). Each tier runs its own local loop so that zone controllers remain fully autonomous when higher tiers are unreachable. Fire and life safety systems operate on a separate dedicated network that the HVAC healing loop never touches.
-
-**Trade-off**: Distributed autonomy requires consistent setpoints without central coordination. The solution — cached weekly schedules plus {% katex() %}2^\circ\text{F}{% end %} deadband widening — accepts suboptimal energy efficiency for up to 8 hours in exchange for full comfort maintenance without BMS access.
 
 {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} manages building automation for commercial high-rise towers. Systems controlled: HVAC, lighting, access control, and fire safety. When the BMS server fails or loses connectivity, subsystems must heal autonomously while maintaining occupant safety and comfort.
 
@@ -3519,17 +3322,11 @@ The table maps each building failure type to its normal and disconnected healing
 
 The zone controller implements a minimal {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} loop:
 
-**Monitor** (every 30 seconds): Read temperature, CO2, occupancy sensors. Compute rolling average and deviation. Memory cost: 200 bytes for 5-minute history.
+**Monitor** (every 30 seconds *(illustrative value)*): Read temperature, CO2, occupancy sensors. Compute rolling average and deviation. Memory cost: 200 bytes *(illustrative value)* for 5-minute *(illustrative value)* history.
 
-**Analyze** (event-triggered): Compare readings against setpoints and learned patterns. Flag anomalies:
-- Temperature deviation > \\(2^\circ\\)F for > 5 minutes
-- CO2 > 1000 ppm (indicates poor ventilation)
-- Occupancy detected but HVAC in unoccupied mode
+**Analyze** (event-triggered): Compare readings against setpoints and learned patterns. Flag anomalies when temperature deviates by more than \\(2^\circ\\)F for more than 5 minutes, when CO2 exceeds 1000 ppm (indicating poor ventilation), or when occupancy is detected while HVAC is in unoccupied mode.
 
-**Plan** (on anomaly): Select from predefined healing actions:
-1. Adjust VAV damper position (primary response)
-2. Request help from floor controller
-3. Override to failsafe (full cooling)
+**Plan** (on anomaly): Select from predefined healing actions: adjusting the VAV damper position as the primary response, requesting help from the floor controller if damper adjustment is insufficient, or overriding to failsafe (full cooling) for emergencies.
 
 **Execute** (immediate): Send BACnet commands to actuators. Log action for later upload.
 
@@ -3541,9 +3338,9 @@ The zone controller implements a minimal {% term(url="#term-mape-k", def="Monito
 \text{Healing cost} = C_{\text{actuator cycles}} \cdot \text{expected cycles}(a)
 {% end %}
 
-VAV dampers are rated for 100,000 cycles. Excessive hunting (oscillating between positions) accelerates wear. The healing policy limits damper adjustments to once per 5 minutes except for safety overrides.
+VAV dampers are rated for 100,000 cycles *(illustrative value)*. Excessive hunting (oscillating between positions) accelerates wear. The healing policy limits damper adjustments to once per 5 minutes *(illustrative value)* except for safety overrides.
 
-**Cascade prevention during chiller failure**: When a chiller fails on a \\(95^\circ\\)F day, 52 floor controllers simultaneously demand maximum cooling from remaining chillers. Without coordination, this cascades to remaining chiller overload.
+**Cascade prevention during chiller failure**: When a chiller fails on a \\(95^\circ\\)F *(illustrative value)* day, 52 *(illustrative value)* floor controllers simultaneously demand maximum cooling from remaining chillers. Without coordination, this cascades to remaining chiller overload.
 
 {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %} prevents cascade by allocating the available cooling capacity {% katex() %}Q_{\text{available}}{% end %} proportionally: each floor receives a share weighted by its priority factor and current occupancy, normalized across all floors.
 
@@ -3551,24 +3348,15 @@ VAV dampers are rated for 100,000 cycles. Excessive hunting (oscillating between
 \text{Cooling allocation to floor } f = \frac{Q_{\text{available}} \cdot \text{Priority}_f \cdot \text{Occupancy}_f}{\sum_i \text{Priority}_i \cdot \text{Occupancy}_i}
 {% end %}
 
-Priority factors:
-- Data center floors: 2.0 (equipment damage risk)
-- Occupied offices: 1.0
-- Unoccupied floors: 0.3
-- Storage/mechanical: 0.1
+Priority factors are 2.0 *(illustrative value)* for data center floors (equipment damage risk), 1.0 *(illustrative value)* for occupied offices, 0.3 *(illustrative value)* for unoccupied floors, and 0.1 *(illustrative value)* for storage and mechanical spaces.
 
 This weighted allocation ensures critical spaces get cooling while preventing cascade. Floor controllers receive their allocation and independently manage distribution to zones.
 
 **BMS server failure healing protocol**:
 
-1. **Detection** (T+0s): Floor controllers detect BMS heartbeat timeout (30s threshold)
-2. **Local mode activation** (T+30s): Each floor controller activates "standalone" mode
-3. **Schedule fallback** (T+35s): Use cached weekly schedule (last sync from BMS)
-4. **Peer discovery** (T+60s): Floor controllers discover neighbors via BACnet broadcast
-5. **Distributed coordination** (T+90s): Elect temporary coordinator for inter-floor decisions
-6. **Setpoint adjustment** (T+120s): Widen temperature deadbands by \\(2^\circ\\)F (reduce hunting without BMS optimization)
+At T+0s, floor controllers detect the BMS heartbeat timeout (30s *(illustrative value)* threshold). At T+30s *(illustrative value)*, each floor controller activates standalone mode. At T+35s *(illustrative value)*, controllers fall back to the cached weekly schedule (last sync from BMS). At T+60s *(illustrative value)*, floor controllers discover neighbors via BACnet broadcast. At T+90s *(illustrative value)*, they elect a temporary coordinator for inter-floor decisions. At T+120s *(illustrative value)*, temperature deadbands are widened by \\(2^\circ\\)F *(illustrative value)* to reduce hunting without BMS optimization.
 
-**Building remains comfortable for 8+ hours** in standalone mode. Occupants rarely notice BMS outages because floor controllers maintain local comfort.
+**Building remains comfortable for 8+ hours** *(illustrative value)* in standalone mode. Occupants rarely notice BMS outages because floor controllers maintain local comfort.
 
 **Fire safety independence**: Critical insight—fire and life safety systems operate on dedicated networks with independent controllers. {% term(url="#scenario-smartbldg", def="Commercial high-rise building automation (HVAC, lighting, access control, fire safety); zone controllers maintain occupant safety autonomously when the BMS server fails") %}SMARTBLDG{% end %}'s {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} for HVAC/lighting never interferes with fire safety. When a fire alarm is active, the HVAC mode switches according to fire condition, overriding any comfort-oriented healing decision in progress.
 
@@ -3590,18 +3378,11 @@ This safety override supersedes all comfort-oriented healing. The healing hierar
 
 ## The Limits of Self-Healing
 
-**Problem**: Every mechanism in this post has a boundary condition. Physical destruction, healing-loop corruption, adversarial exploitation, and irresolvably ambiguous diagnoses all define situations where autonomous healing must stop and either degrade gracefully or await human judgment.
-
-**Solution**: Recognize the limit explicitly — formalize when to stop trying, how to log state for later analysis, and how to stabilize in the least-risky configuration while waiting for human input.
-
-**Trade-off**: Stopping autonomous healing prematurely wastes the system's capacity to self-recover. Stopping too late allows a failing healer to worsen the damage. The judgment horizon (when to hand off) is mission-specific and cannot be derived analytically — it requires explicit design-time specification from mission planners.
+Every mechanism in this post has a boundary condition. Physical destruction, healing-loop corruption, adversarial exploitation, and irresolvably ambiguous diagnoses all define situations where autonomous healing must stop and either degrade gracefully or await human judgment. The required response is to recognize the limit explicitly — formalize when to stop trying, how to log state for later analysis, and how to stabilize in the least-risky configuration while waiting for human input. The fundamental tension is that stopping autonomous healing prematurely wastes the system's self-recovery capacity, while stopping too late allows a failing healer to worsen the damage. The judgment horizon is mission-specific and cannot be derived analytically; it requires explicit design-time specification from mission planners.
 
 ### Damage Beyond Repair Capacity
 
-Some failures cannot be healed autonomously:
-- Physical destruction ({% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone collision)
-- Critical component failure without redundancy
-- Environmental damage (waterlogged {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor)
+Some failures cannot be healed autonomously: physical destruction ({% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone collision), critical component failure without redundancy, and environmental damage (waterlogged {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} sensor).
 
 Self-healing must recognize when to stop trying. The system should abandon autonomous repair and defer to graceful degradation once the expected value recovered by healing falls below the expected cost — resource drain, risk of worsening the failure, and opportunity cost — of attempting it.
 
@@ -3613,51 +3394,27 @@ At this point, [graceful degradation](@/blog/2026-01-15/index.md) takes over. Th
 
 ### Failures That Corrupt Healing Logic
 
-If the failure affects the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} components themselves, healing may not be possible:
-- Monitor fails: Can't detect problems
-- Analyze fails: Can't interpret observations
-- Plan fails: Can't generate solutions
-- Execute fails: Can't apply solutions
-- Knowledge corrupted: Wrong information drives wrong actions
+If the failure affects the {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} components themselves, healing may not be possible: a failed Monitor cannot detect problems; a failed Analyzer cannot interpret observations; a failed Planner cannot generate solutions; a failed Executor cannot apply solutions; and a corrupted Knowledge base drives wrong actions from wrong information.
 
 Defense: Redundant {% term(url="#term-mape-k", def="Monitor-Analyze-Plan-Execute loop sharing a Knowledge base for autonomous control") %}MAPE-K{% end %} instances. {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} maintains simplified healing logic in each drone's flight controller, independent of main processing unit. If main unit fails, flight controller can still execute basic healing (return to base, emergency land).
 
 ### Adversary Exploiting Healing Predictability
 
-If healing behavior is predictable, adversary can exploit it:
-- Trigger healing to consume resources (denial of service)
-- Time attacks for when healing is in progress (vulnerability window)
-- Craft failures that healing makes worse (adversarial input)
+If healing behavior is predictable, an adversary can exploit it by triggering healing to consume resources (denial of service), timing attacks for when healing is in progress to exploit the vulnerability window, or crafting failures that healing makes worse through adversarial input.
 
-Mitigations:
-- Randomize healing parameters (backoff times, thresholds)
-- Rate-limit healing actions
-- Detect unusual healing patterns as potential attack
+Mitigations include randomizing healing parameters (backoff times, thresholds), rate-limiting healing actions, and detecting unusual healing patterns as a potential attack signature.
 
 ### The Judgment Horizon
 
 When should the system stop attempting autonomous healing and wait for human intervention?
 
-Indicators that human judgment is needed:
-- Healing attempts exhausted without resolution
-- Multiple conflicting diagnoses with similar confidence
-- Potential healing actions cross ethical or mission boundaries
-- Situation matches no known healing pattern
+Human judgment is needed when healing attempts have been exhausted without resolution, when multiple conflicting diagnoses have similar confidence, when potential healing actions would cross ethical or mission boundaries, or when the situation matches no known healing pattern.
 
-At the {% term(url="@/blog/2026-02-12/index.md#def-91", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}, the system should:
-1. Stabilize in safest configuration
-2. Log complete state for later analysis
-3. Await human input when connectivity allows
-4. Avoid irreversible actions
+At the {% term(url="@/blog/2026-02-12/index.md#def-91", def="Time window J over which the system evaluates stress outcomes before adapting; shorter J enables faster adaptation but higher variance in parameter estimates") %}judgment horizon{% end %}, the system stabilizes in the safest available configuration, logs complete state for later analysis, awaits human input when connectivity allows, and avoids irreversible actions until guidance is received.
 
 ### Anti-Fragile Learning
 
-Each healing episode generates data:
-- What failure was detected?
-- What healing action was attempted?
-- Did it succeed?
-- How long did it take?
-- What were the side effects?
+Each healing episode generates data on which failure was detected, which healing action was attempted, whether it succeeded, how long it took, and what side effects it produced.
 
 This data improves future healing. Healing policies adapt based on observed effectiveness. Actions that consistently fail are deprioritized. Actions that work in specific contexts are preferentially selected.
 
@@ -3673,12 +3430,9 @@ P_{\text{success}}(a | \text{context}) = \frac{\text{successes of } a \text{ in 
 \mathbb{E}[P_{\text{success}}(t+1) \mid \text{failure}_t] > \mathbb{E}[P_{\text{success}}(t)]
 {% end %}
 
-This holds when:
-1. Failure provides information gain: {% katex() %}I(\text{context} ; \text{outcome}) > 0{% end %}
-2. Policy update incorporates observation: {% katex() %}\theta_{t+1} = \theta_t + \eta \nabla_\theta \log P(\text{outcome} \mid a, \theta){% end %}
-3. Failure mode is within learning distribution: {% katex() %}P(\text{failure type seen before}) > 0{% end %}
+This holds when failure provides information gain ({% katex() %}I(\text{context} ; \text{outcome}) > 0{% end %}), the policy update incorporates the observation ({% katex() %}\theta_{t+1} = \theta_t + \eta \nabla_\theta \log P(\text{outcome} \mid a, \theta){% end %}), and the failure mode is within the learning distribution ({% katex() %}P(\text{failure type seen before}) > 0{% end %}).
 
-*Uncertainty bound*: {% katex() %}P(\text{improvement} \mid \text{failure}) \in [0.6, 0.9]{% end %} depending on novelty of failure mode. Novel failures outside training distribution may not yield improvement.
+*Uncertainty bound*: {% katex() %}P(\text{improvement} \mid \text{failure}) \in [0.6, 0.9]{% end %} *(illustrative value)* depending on novelty of failure mode. Novel failures outside training distribution may not yield improvement.
 
 > **Cognitive Map**: Self-healing has four hard boundaries. Physical destruction is beyond any software response — the terminal safety state handles it by acknowledging the loss and stabilizing. Healing-loop corruption requires the watchdog hierarchy (Section 2) to detect and bypass. Adversarial exploitation requires second-order defenses: rate-limiting, randomized parameters, and pattern detection on the healing pattern itself. The judgment horizon — when to stop trying — is the only limit that cannot be computed from first principles; it is a mission design input. Anti-fragile learning is the positive counterpart: every failure episode inside the learning distribution improves the next response, provided the failure mode is one the policy has seen before.
 
