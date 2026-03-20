@@ -61,7 +61,7 @@ This framework builds on partition-tolerant systems {{ cites(ref="1", refs="1, 2
 
 6. **Decision quality under sustained uncertainty.** The capability hierarchy {% katex() %}\mathcal{L}_0{% end %}–{% katex() %}\mathcal{L}_4{% end %} specifies *what* to run at each connectivity level, but says nothing about *how* to improve decision quality over time. A system that degrades gracefully but never learns from partition events is structurally correct but operationally stagnant. *Constraint: the system must improve its decisions after stress events, not merely survive them.* Answered in [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md) by {% term(url="@/blog/2026-02-12/index.md#def-79", def="Anti-Fragility: system property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters") %}Definition 79{% end %} (Anti-Fragility), {% term(url="@/blog/2026-02-12/index.md#prop-57", def="Regret bounds and safety invariants for adversarial bandit algorithms, contextual arm selection, and survival-constrained decision-making") %}Propositions 57–65{% end %}, and the EXP3-IX / UCB bandit framework.
 
-These six constraints are not independent. The resource floor (Constraint 2) directly tightens the mode-switching envelope (Constraint 3): a node entering OBSERVE state deactivates MAPE-K, rendering the healing stability proof vacuously satisfied but also providing zero healing coverage. The clock drift (Constraint 1) interacts with mode-switching: an OUTPOST crystal-oscillator node exceeds {% katex() %}T_{\mathrm{trust}}{% end %} in under three hours, meaning the causal pivot fires before most fault scenarios escalate. The first three fixes compose into a single 20-byte field — the [Unified Autonomic Header](@/blog/2026-02-05/index.md#def-72-uah) ({% term(url="@/blog/2026-02-05/index.md#def-72-uah", def="Unified Autonomic Header: 20-byte gossip field carrying clock-fix, stability flag, and resource-tier signal without increasing per-item MTU") %}Definition 72{% end %} in Fleet Coherence Under Partition) — that carries the clock fix, stability flag, and resource-tier signal in every gossip exchange without increasing per-item MTU. Constraints 4–26 are addressed independently in their respective articles but share the same gossip transport and state-vector substrate.
+These six constraints are not independent. The resource floor (Constraint 2) directly tightens the mode-switching envelope (Constraint 3): a node entering OBSERVE state deactivates MAPE-K, rendering the healing stability proof vacuously satisfied but also providing zero healing coverage. The clock drift (Constraint 1) interacts with mode-switching: an {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} crystal-oscillator node exceeds {% katex() %}T_{\mathrm{trust}}{% end %} in under three hours, meaning the causal pivot fires before most fault scenarios escalate. The first three fixes compose into a single 20-byte field — the [Unified Autonomic Header](@/blog/2026-02-05/index.md#def-72-uah) ({% term(url="@/blog/2026-02-05/index.md#def-72-uah", def="Unified Autonomic Header: 20-byte gossip field carrying clock-fix, stability flag, and resource-tier signal without increasing per-item MTU") %}Definition 72{% end %} in Fleet Coherence Under Partition) — that carries the clock fix, stability flag, and resource-tier signal in every gossip exchange without increasing per-item MTU. Constraints 4–26 are addressed independently in their respective articles but share the same gossip transport and state-vector substrate.
 
 > **Applicability note.** These solutions apply when the deployment satisfies the {% term(url="#prop-2", def="The connectivity level below which distributed autonomy outperforms cloud control") %}Inversion Threshold{% end %} condition ({% term(url="#prop-2", def="Inversion Threshold: partition-first architecture yields higher expected utility than cloud-native patterns when disconnection probability exceeds the threshold") %}Proposition 2{% end %}): \\(P(C(t) = 0) > \tau^\*\\). If partition probability is below \\(\tau^\*\\), cloud-connected diagnostics may be more cost-effective than the local autonomy stack developed across this series.
 
@@ -166,10 +166,6 @@ R(t) = \frac{E_{\text{battery}}(t)}{E_{\min}} \cdot w_E + \frac{M_{\text{free}}(
 
 *with weights \\(w_E + w_M + w_C = 1\\). Critical threshold: {% katex() %}R_{\text{crit}} \approx 0.2{% end %} — 20% composite resource availability triggers survival mode regardless of connectivity state.*
 
-- **Use**: Compare {% katex() %}R(t) < R_{\text{crit}}{% end %} at each MAPE-K [Kephart & Chess, 2003] tick to trigger survival mode; the composite prevents single-dimension blindness — a full-battery node crashing from memory exhaustion reads {% katex() %}R \gg R_{\text{crit}}{% end %} on battery alone but is captured by the \\(w_M\\) term.
-- **Parameters**: RAVEN: {% katex() %}w_E=0.5,\, w_M=0.25,\, w_C=0.25{% end %}; OUTPOST: \\(w_E=0.7\\) (battery-dominated site). Weights are deployment-tuned offline; the structure of \\(R(t)\\) is fixed.
-- **Field note**: Memory is the most-overlooked resource dimension — in OUTPOST, OOM kills caused 40% of node failures that appeared as power events in energy-only monitoring.
-
 The constraint sequence article uses 'Denied' for \\(0 < C \leq 0.3\\) and 'Emergency' for \\(C = 0\\) as an illustrative simplification of the Intermittent/None boundary; the authoritative label for complete disconnection remains {% katex() %}\mathcal{N}{% end %} (None) as defined here.
 
 ### Notation Legend
@@ -216,14 +212,14 @@ The following symbols carry distinct meanings across the series. When in doubt, 
 | \\(\\beta\\) | Reconciliation cost (Proposition 2) | Holt-Winters trend coefficient; bandwidth asymmetry \\(B_{\\text{backhaul}}/B_{\\text{local}}\\); Gamma prior rate | Subscript always disambiguates |
 | \\(\\tau^*\\) | Inversion threshold (partition probability) | \\(\\theta^*\\): anomaly classification threshold | *Self-Measurement Without Central Observability*, Definition 19 |
 | **H**(t) | Per-component health vector for one node | **H** = fleet-wide health vector over \\(n\\) nodes | *Self-Measurement Without Central Observability*, Definition 24 |
-| \\(K\\) | EXP3-IX arm count | \\(k_N\\): Weibull shape parameter (separate bandit) | Definition 14 (this article) vs. Definition 81 (*Anti-Fragile Decision-Making at the Edge*) |
+| \\(K\\) | Control loop gain (Constraint Structure; Definitions 3–4) | EXP3-IX arm count in [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md) (Definition 81); \\(k_\mathcal{N}\\) = Weibull shape (subscript always present, never a gain) | Lines 222, 230, 239 and Definition 3 (control gain) vs. Definition 81, Part 5 (arm count) |
 | L0–L4 | Capability levels (functional service tier) | Authority tier \\(\\mathcal{Q}_j\\): decision-scope hierarchy | Definition 3 (capability) vs. Definition 68 in *Fleet Coherence Under Partition* (authority) |
 
 *The complete series notation registry is maintained at [Notation Registry](/notation-registry/).*
 
 ### Constraint Structure
 
-Three hard constraints govern everything that follows. Violate any one of them and the architecture fails — not degrades, fails. \\(B(t)\\) is available bandwidth, \\(R(t)\\) is remaining resource budget (power, compute, memory combined), \\(K\\) is control loop gain, and \\(\tau\\) is loop delay. Here \\(\tau\\) means {% katex() %}\tau_{\text{fb}}{% end %}; the Notation Legend above lists all four roles \\(\tau\\) plays across the series.
+Three hard constraints govern everything that follows. Violate any one of them and the architecture fails — not degrades, fails. \\(B(t)\\) is available bandwidth, \\(R(t)\\) is remaining resource budget (power, compute, memory combined), \\(K\\) is control loop gain throughout this article (the EXP3-IX arm count in [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md) uses the same letter; context always resolves the role), and \\(\tau\\) is loop delay. Here \\(\tau\\) means {% katex() %}\tau_{\text{fb}}{% end %}; the Notation Legend above lists all four roles \\(\tau\\) plays across the series.
 
 > **Scope — LTI assumption:** The following constraint is derived under Linear-Time-Invariant dynamics. When power-shedding makes \\(T_\text{tick}\\) mode-dependent, the system becomes a switched linear system and this bound must be tightened by the SMJLS factor established in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md).
 
@@ -257,10 +253,6 @@ T_s / T_d \gg 1 \quad \text{(radio dominates the energy budget)}
 \mathcal{E}(a,\,C) = n_c(a)\cdot T_d \;+\; n_s(a,\,C)\cdot T_s
 {% end %}
 
-- **Use**: Computes Joules per decision as {% katex() %}(n_c \cdot T_d) + (n_s \cdot T_s){% end %}; check before executing any action to catch energy-wasteful transmissions that silently drain battery before {% katex() %}T_{\text{surv}}{% end %}.
-- **Parameters**: {% katex() %}T_d = 10\text{--}100\,\mu\text{J}{% end %} (compute); {% katex() %}T_s = 1\text{--}10\,\text{mJ}{% end %} (radio); {% katex() %}T_s/T_d \approx 1000{% end %} in practice, so radio dominates.
-- **Field note**: One radio packet costs {% katex() %}\approx 1000{% end %} compute steps — batch aggressively or the energy budget never closes.
-
 *where \\(n_c(a)\\) is the number of local compute cycles required, \\(n_s(a, C)\\) is the number of radio packets required (zero when \\(C = 0\\)), \\(T_d\\) is joules per compute operation, and \\(T_s\\) is joules per transmitted packet.*
 
 This metric reframes every architectural choice as an energy budget problem. Sending one {% term(url="@/blog/2026-01-22/index.md#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} packet costs the same as running {% katex() %}T_s/T_d \approx 10^3{% end %} local inference cycles. The system that offloads decisions to the cloud to "save compute" actually spends orders of magnitude more energy on the radio link than it saves on silicon.
@@ -274,19 +266,17 @@ This metric reframes every architectural choice as an energy budget problem. Sen
 \mathcal{E}(a,\,C > 0) < \mathcal{E}(a,\,C = 0) \iff n_c(a) < \frac{1}{\rho_{\text{energy}}} = \frac{T_s}{T_d}
 {% end %}
 
-> **Physical translation**: Running a decision locally is cheaper than transmitting it whenever the local compute footprint is less than \\(T_s/T_d \approx 1000\\) cycles — a hardware constant, not a policy choice.
+> **Physical translation**: Running a decision locally is cheaper than transmitting it whenever the local compute footprint is less than \\(T_s/T_d \approx 1000\\) cycles *(illustrative value)* — a hardware constant, not a policy choice.
 
-The "send everything to the cloud" model carries a hidden energy penalty: on most edge hardware, running a local inference pass costs less than transmitting a single sensor packet. Any algorithm with fewer than ~1,000 operations should run locally — unconditionally, regardless of connectivity — because the radio link costs more energy than the silicon. This only becomes visible when both sides of the comparison are instrumented.
+The "send everything to the cloud" model carries a hidden energy penalty: on most edge hardware, running a local inference pass costs less than transmitting a single sensor packet. Any algorithm with fewer than ~1,000 *(illustrative value)* operations should run locally — unconditionally, regardless of connectivity — because the radio link costs more energy than the silicon. This only becomes visible when both sides of the comparison are instrumented.
 
-- **Use**: Gives the compute-count threshold below which one radio packet costs more than all local work; use it to decide whether local batching or per-reading transmission is the energy-efficient choice.
-- **Parameters**: {% katex() %}\rho_{\text{energy}} = T_d/T_s{% end %} compute-to-transmit energy ratio (0.001–0.01); threshold {% katex() %}= 1/\rho_{\text{energy}} = T_s/T_d{% end %}, about 100–1000 compute cycles per packet.
-- **Field note**: Buffer at least 200 local operations per packet — anything less puts you in transmit-dominated territory regardless of algorithm efficiency.
+> **Empirical status**: The threshold {% katex() %}1/\rho_{\text{energy}} \approx 100\text{–}1000{% end %} cycles *(illustrative value)* is derived from order-of-magnitude datasheet estimates for representative hardware classes; actual \\(T_d\\) and \\(T_s\\) values vary by \\(2{-}5\\times\\) *(illustrative value)* across specific MCU and radio combinations and must be measured on the target platform before using this threshold for design decisions.
 
-> **Empirical status**: The threshold {% katex() %}1/\rho_{\text{energy}} \approx 100\text{–}1000{% end %} cycles is derived from order-of-magnitude datasheet estimates for representative hardware classes; actual \\(T_d\\) and \\(T_s\\) values vary by \\(2{-}5\\times\\) across specific MCU and radio combinations and must be measured on the target platform before using this threshold for design decisions.
-
-*For {% katex() %}\rho_{\text{energy}} = 10^{-3}{% end %} (tactical radio): any decision requiring fewer than 1,000 local compute cycles is cheaper to run locally than to transmit — even when connectivity is available.*
+*For {% katex() %}\rho_{\text{energy}} = 10^{-3}{% end %} (tactical radio): any decision requiring fewer than 1,000 *(illustrative value)* local compute cycles is cheaper to run locally than to transmit — even when connectivity is available.*
 
 **Design consequence**: The {% term(url="#term-inversion", def="Availability threshold above which partition-first architecture outperforms cloud-first; derived from the edge-utility equals cloud-utility crossover condition") %}inversion threshold{% end %} \\(\tau^\*\\) from {% term(url="#prop-2", def="Inversion Threshold: partition-first architecture yields higher expected utility than cloud-native patterns when disconnection probability exceeds the threshold") %}Proposition 2{% end %} has an energy analog. Even when \\(C(t) > \tau^\*\\) and distributed autonomy does not strictly dominate cloud control on latency or capability grounds, it may still dominate on energy grounds if {% katex() %}n_c < 1/\rho_{\text{energy}}{% end %}. At the edge, physics — not just connectivity — mandates local compute.
+
+*Watch out for*: \\(T_d\\) and \\(T_s\\) must be measured on the actual hardware at operating temperature; if \\(\rho_{\text{energy}}\\) is estimated from datasheets, thermal throttling at high CPU load can double \\(T_d\\), halving the dominance threshold and reclassifying algorithms from local-dominant to radio-optimal.
 
 **Illustrative hardware parameters** (order-of-magnitude estimates consistent with representative datasheets for each platform class; not measured values — calibrate \\(T_d\\) and \\(T_s\\) for the target hardware):
 
@@ -369,11 +359,7 @@ State resets are **absent**: the error history \\(x\\) is continuous across mode
 
 > **Physical translation**: {% katex() %}\mathcal{R}_q{% end %} is the safety envelope for the healing loop at capability level \\(q\\). When the error state \\(x(t)\\) stays inside this ellipse, healing converges. When it exits — \\(\rho_q < 0\\) — the loop diverges and must be suspended. The ellipse **shrinks** as the node degrades.
 
-- **Use**: Log \\(\rho_q(t)\\) every MAPE-K tick as a mission telemetry signal — a value consistently below 0.3 predicts healing-loop instability before oscillation becomes visible in behavior.
-- **Parameters**: \\(\rho_q = 1\\) at equilibrium (\\(x = 0\\)); \\(\rho_q = 0\\) at the safe-set boundary; \\(\rho_q < 0\\) means the error state has exited {% katex() %}\mathcal{R}_q{% end %} — suspend healing immediately.
-- **Field note**: Unlike the LTI stability condition (binary pass/fail), \\(\rho_q(t)\\) is continuous and loggable. Treat it as a stability fuel gauge, not a circuit breaker.
-
-**The shrinking stability envelope.** Computed from the LMI solution for RAVEN parameters ({% katex() %}\tau_{\text{fb}} = 5\,\text{s}{% end %}, P99 delay \\(= 25\\,\text{s}\\), Weibull \\(k_N = 0.62\\) — {% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}, below):
+**The shrinking stability envelope.** Computed from the LMI solution for {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} parameters ({% katex() %}\tau_{\text{fb}} = 5\,\text{s}{% end %}, P99 delay \\(= 25\\,\text{s}\\), Weibull \\(k_N = 0.62\\) — {% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}, below):
 
 | Mode \\(q\\) | {% katex() %}T_{\text{tick}}(q){% end %} | {% katex() %}K_{\max}^{\mathrm{LTI}}(q){% end %} | {% katex() %}K_{\mathrm{gs}}{% end %} at \\(\rho = 0.5\\) | \\(\mathcal{R}_q\\) diameter |
 | :--- | :--- | :--- | :--- | :--- |
@@ -494,15 +480,11 @@ stateDiagram-v2
 <span id="prop-2"></span>
 **Proposition 2** ({% term(url="#prop-2", def="The connectivity level below which distributed autonomy outperforms cloud control") %}Inversion Threshold{% end %}). Under assumption set {% katex() %}\mathcal{A}_{inv}{% end %}, there exists a threshold \\(\tau^\*\\) such that cloud-native coordination patterns yield lower expected utility than partition-first patterns when \\(P(C(t) = 0) > \tau^\*\\)
 
-*When disconnection exceeds a critical fraction — roughly 15% for CONVOY — building for partition beats assuming connectivity, because retry-storm latency grows faster than reconciliation cost.* {{ cites(ref="1", refs="1, 2", title="Brewer (2000) — Towards Robust Distributed Systems; Gilbert & Lynch (2002) — Brewer's Conjecture and CAP") }}.
+*When disconnection exceeds a critical fraction — roughly 15% *(illustrative value)* for {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} — building for partition beats assuming connectivity, because retry-storm latency grows faster than reconciliation cost.* {{ cites(ref="1", refs="1, 2", title="Brewer (2000) — Towards Robust Distributed Systems; Gilbert & Lynch (2002) — Brewer's Conjecture and CAP") }}.
 
-> **The Problem**: Cloud-native systems wait for connectivity to make decisions. When the link is down 15–61% of the time, that wait compounds into unbounded latency — coordination overhead grows superlinearly as partition probability approaches the retry-storm regime.
->
-> **The Solution**: Compute \\(\tau^\*\\) explicitly from your system's cost parameters and field-measured retry behavior. If your deployment's \\(P(C=0)\\) exceeds \\(\tau^\*\\), switch to partition-first architecture.
+> **The Problem**: Cloud-native systems wait for connectivity to make decisions. When the link is down 15–61% *(illustrative value)* of the time, that wait compounds into unbounded latency — coordination overhead grows superlinearly as partition probability approaches the retry-storm regime.
 >
 > **The Trade-off**: Partition-first architecture pays a reconciliation cost \\(\beta\\) every time connectivity resumes. You are trading per-reconnection overhead for freedom from coordination stalls during partition.
-
-> **What this means in practice**: Once your system is disconnected more than 15% of the time, designing for connectivity as the normal case costs more energy and produces worse outcomes than designing for disconnection as the baseline. Measure your actual disconnection rate before choosing your architecture.
 
 > **Analogy:** A field reporter deciding whether to phone headquarters or make the editorial call on-site — above a certain call cost, you just decide locally. The threshold is not a policy preference; it is the exact break-even point where the retry-queue overhead exceeds the reconciliation cost.
 
@@ -520,7 +502,7 @@ Let {% katex() %}U_{\text{cloud}}(p){% end %} denote expected utility under clou
 \mathbb{E}[T_{\text{cloud}}] = T_s \cdot \frac{1}{1-p} + \rho \cdot \frac{p}{1-p}
 {% end %}
 
-> **Physical translation**: The \\(1/(1-p)\\) factor is the geometric series of retry attempts. At \\(p = 0.5\\), expected latency doubles. At \\(p = 0.9\\), it is \\(10\\times\\) nominal — the system spends most of its time in the retry queue, not executing decisions.
+> **Physical translation**: The \\(1/(1-p)\\) factor is the geometric series of retry attempts. At \\(p = 0.5\\) *(illustrative value)*, expected latency doubles *(illustrative value)*. At \\(p = 0.9\\) *(illustrative value)*, it is \\(10\\times\\) nominal *(illustrative value)* — the system spends most of its time in the retry queue, not executing decisions.
 
 {% katex(block=true) %}
 U_{\text{cloud}}(p) = U_0 - \alpha \cdot \mathbb{E}[T_{\text{cloud}}] = U_0 - \alpha T_s \cdot \frac{1 + \rho/T_s \cdot p}{1-p}
@@ -546,13 +528,9 @@ To make the dimensional analysis explicit: \\(\delta_s = E_s \cdot T_s\\) is the
 
 > **Physical translation**: \\(\tau^\*\\) is the break-even disconnection rate. Below it, cloud coordination is cheaper; above it, local autonomy wins. The numerator is the savings from avoiding cloud sync (\\(T_s - T_d\\)) minus the amortized reconnection cost (\\(\beta/\alpha\\)). The denominator normalizes by the full retry-inclusive sync burden. Plug in your field-measured \\(P(C=0)\\): if it exceeds \\(\tau^\*\\), cloud-native architecture is provably suboptimal for your deployment.
 
-The inversion threshold is the exact partition probability at which the energy math switches sides. Below \\(\tau^\*\\), transmitting to the cloud costs less than computing locally; above it, the reverse holds. This single number determines the entire architectural regime for a given deployment — a system with \\(\tau^\* = 0.3\\) is cloud-first under 30% denial probability but must be edge-first above it.
+The inversion threshold is the exact partition probability at which the energy math switches sides. Below \\(\tau^\*\\), transmitting to the cloud costs less than computing locally; above it, the reverse holds. This single number determines the entire architectural regime for a given deployment — a system with \\(\tau^\* = 0.3\\) *(illustrative value)* is cloud-first under 30% *(illustrative value)* denial probability but must be edge-first above it.
 
 *Exceeding this bound causes control actions to compound across ticks faster than the plant dynamics settle, producing sustained oscillation or divergence — \\(\tau^\*\\) is the minimum fraction of time that must be spent in partition-first mode to avoid this.*
-
-- **Use**: Computes {% katex() %}\tau^*{% end %}, the connectivity crossover below which edge-first architecture has lower expected cost than cloud-first; apply at design time using empirical connectivity probability from field trials to avoid over-building cloud dependency into systems that spend most of their time disconnected.
-- **Parameters**: {% katex() %}\alpha{% end %} = loss-cost slope; {% katex() %}\beta{% end %} = disconnection overhead per unit; {% katex() %}\rho = T_s/T_d{% end %} ratio.
-- **Field note**: Most tactical sites measure {% katex() %}\tau < 0.7{% end %} in field trials — nearly all are already past the inversion point before architecture is chosen.
 
 For systems where \\(T_s = kT_d\\) with \\(k \geq 5\\) (synchronization slower than decisions) and \\(\rho \approx T_s\\), {% katex() %}\beta/\alpha \ll T_s{% end %}:
 
@@ -562,11 +540,11 @@ For systems where \\(T_s = kT_d\\) with \\(k \geq 5\\) (synchronization slower t
 
 *(where \\(k = \delta_s/\delta_d\\) is the sync-to-decision time ratio)*
 
-For \\(k = 5\\): \\(\tau^\* = 0.4\\). Including retry storms (\\(\rho\\) increases superlinearly with \\(p\\)), the effective threshold drops to \\(\tau^\* \in [0.12, 0.18]\\).
+For \\(k = 5\\) *(illustrative value)*: \\(\tau^\* = 0.4\\) *(theoretical bound)*. Including retry storms (\\(\rho\\) increases superlinearly with \\(p\\)), the effective threshold drops to \\(\tau^\* \in [0.12, 0.18]\\) *(theoretical bound under illustrative retry parameters)*.
 
 The retry storm correction is derived as follows. Under TCP-like congestion collapse, each retry attempt contends with active retries: {% katex() %}\rho(p) \approx \rho_0/(1-p){% end %} (linear in availability pressure).
 
-Substituting into the \\(\tau^\*\\) formula with \\(k=5\\) and solving {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically: at \\(\rho_0 = T_s\\) (retry cost equals one sync period), the crossover shifts from \\(p = 0.40\\) to \\(p \approx 0.17\\); at \\(\rho_0 = 2T_s\\), it shifts to \\(p \approx 0.13\\). The range \\([0.12, 0.18]\\) corresponds to \\(\rho_0 \in [T_s, 2T_s]\\) — one to two sync periods of retry overhead, consistent with measured backoff behavior on contested tactical links.
+Substituting into the \\(\tau^\*\\) formula with \\(k=5\\) *(illustrative value)* and solving {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically: at \\(\rho_0 = T_s\\) (retry cost equals one sync period), the crossover shifts from \\(p = 0.40\\) *(illustrative value)* to \\(p \approx 0.17\\) *(illustrative value)*; at \\(\rho_0 = 2T_s\\), it shifts to \\(p \approx 0.13\\) *(illustrative value)*. The range \\([0.12, 0.18]\\) *(theoretical bound under illustrative retry parameters)* corresponds to \\(\rho_0 \in [T_s, 2T_s]\\) — one to two sync periods of retry overhead, consistent with measured backoff behavior on contested tactical links.
 
 **Uniqueness caveat**: The derivation assumes \\(\rho(p)\\) is monotonically increasing, which guarantees at most one zero crossing — a unique \\(\tau^\*\\). When \\(\rho_0\\) is itself correlated with \\(p\\) (e.g., load-dependent exponential backoff), the effective retry cost becomes nonlinear and can produce two crossover points: a lower {% katex() %}\tau^*_1{% end %} where partition-first becomes preferable, and an upper {% katex() %}\tau^*_2{% end %} where extreme availability loss reverses the advantage. In such cases, solve {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically and verify only one root exists in \\([0, 1]\\) before applying the threshold.
 
@@ -582,11 +560,11 @@ Substituting into the \\(\tau^\*\\) formula with \\(k=5\\) and solving {% katex(
 | TCP-like linear congestion | \\(\rho_0/(1-p)\\) | AIMD; each retry competes with concurrent retries | 1 | ~0.12–0.18 |
 | Hard channel saturation | {% katex() %}\rho_0/(1-p/p_{\max}){% end %}, {% katex() %}p_{\max} < 1{% end %} | Frequency-limited tactical net; no retry above {% katex() %}p_{\max}{% end %} | 1 to \\(\infty\\) near {% katex() %}p_{\max}{% end %} | Below 0.12 near {% katex() %}p_{\max}{% end %} |
 
-**Robust bound (model-agnostic)**: For any \\(\rho(p)\\) with {% katex() %}\eta_\rho \geq 0{% end %} — retry overhead non-decreasing in \\(p\\) — the threshold satisfies {% katex() %}\tau^* \leq \tau^*_{\text{fixed}} \approx 0.40{% end %}. No physically realistic MAC protocol with non-negative congestion response can produce a \\(\tau^\*\\) above 0.40.
+**Robust bound (model-agnostic)**: For any \\(\rho(p)\\) with {% katex() %}\eta_\rho \geq 0{% end %} — retry overhead non-decreasing in \\(p\\) — the threshold satisfies {% katex() %}\tau^* \leq \tau^*_{\text{fixed}} \approx 0.40{% end %} *(theoretical bound)*. No physically realistic MAC protocol with non-negative congestion response can produce a \\(\tau^\*\\) above 0.40 *(theoretical bound)*.
 
-The MAC protocol, not the synchronization ratio \\(k\\), drives most of the variation — systems with identical \\(k\\) values but different protocols can differ in \\(\tau^\*\\) by a factor of 3–19.
+The MAC protocol, not the synchronization ratio \\(k\\), drives most of the variation — systems with identical \\(k\\) values but different protocols can differ in \\(\tau^\*\\) by a factor of 3–19 *(illustrative value)*.
 
-**Empirical calibration**: Measure mean per-attempt retry cost at \\(p_1 = 0.10\\) (light jamming) and \\(p_2 = 0.30\\) (moderate jamming). Estimate {% term(url="#def-retry-elasticity", def="Retry elasticity η_ρ(p): fractional change in retry cost per fractional change in partition rate; η_ρ=0 means fixed overhead, η_ρ=1 means linearly congestion-dependent") %}retry elasticity{% end %}:
+Retry elasticity is estimated by measuring mean per-attempt retry cost at \\(p_1 = 0.10\\) (light jamming) and \\(p_2 = 0.30\\) (moderate jamming). The {% term(url="#def-retry-elasticity", def="Retry elasticity η_ρ(p): fractional change in retry cost per fractional change in partition rate; η_ρ=0 means fixed overhead, η_ρ=1 means linearly congestion-dependent") %}retry elasticity{% end %} estimate is:
 
 {% katex(block=true) %}
 \hat{\eta}_\rho = \frac{\ln\bigl(\hat{\rho}(0.30) / \hat{\rho}(0.10)\bigr)}{\ln 3}
@@ -594,11 +572,11 @@ The MAC protocol, not the synchronization ratio \\(k\\), drives most of the vari
 
 The three regimes of retry elasticity determine the threshold range to use:
 
-- {% katex() %}\hat{\eta}_\rho < 0.3{% end %} (near-fixed overhead): use {% katex() %}\tau^* \in [0.35, 0.40]{% end %}.
-- {% katex() %}0.3 \leq \hat{\eta}_\rho \leq 1.2{% end %} (TCP-like congestion response): use {% katex() %}\tau^* \in [0.12, 0.30]{% end %}.
-- {% katex() %}\hat{\eta}_\rho > 1.2{% end %} (super-linear congestion): solve {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically and use \\(\tau^* = 0.10\\) as a conservative threshold pending that solution.
+- {% katex() %}\hat{\eta}_\rho < 0.3{% end %} *(threshold)*: use {% katex() %}\tau^* \in [0.35, 0.40]{% end %} *(theoretical bound)*.
+- {% katex() %}0.3 \leq \hat{\eta}_\rho \leq 1.2{% end %} *(threshold)* (TCP-like congestion response): use {% katex() %}\tau^* \in [0.12, 0.30]{% end %} *(theoretical bound)*.
+- {% katex() %}\hat{\eta}_\rho > 1.2{% end %} *(threshold)* (super-linear congestion): solve {% katex() %}U_{\text{cloud}} = U_{\text{edge}}{% end %} numerically and use \\(\tau^* = 0.10\\) *(illustrative value)* as a conservative threshold pending that solution.
 
-{% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s measured {% katex() %}\hat{\rho}{% end %} at two jamming intensities placed it in the {% katex() %}\hat{\eta}_\rho \in [0.9, 1.1]{% end %} range, justifying the TCP-like model and the \\([0.12, 0.18]\\) threshold.
+{% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s measured {% katex() %}\hat{\rho}{% end %} at two jamming intensities placed it in the {% katex() %}\hat{\eta}_\rho \in [0.9, 1.1]{% end %} *(illustrative value)* range, justifying the TCP-like model and the \\([0.12, 0.18]\\) *(theoretical bound under illustrative TCP-like retry parameters)* threshold.
 
 **Utility gain from switching to partition-first**:
 
@@ -609,7 +587,7 @@ The three regimes of retry elasticity determine the threshold range to use:
 {% katex() %}\text{sign}(\Delta U) > 0{% end %} when \\(p > \tau^\*\\) because the coordination delay term grows as \\(O(1/(1-p))\\) while reconciliation cost grows only as \\(O(1-p)\\).
 
 **Validity domain** — this derivation holds when:
-- \\(T_s / T_d \geq 5\\) (synchronization substantially slower than local decisions)
+- \\(T_s / T_d \geq 5\\) *(threshold)* (synchronization substantially slower than local decisions)
 - \\(\rho > 0\\) (retries have non-zero cost)
 - \\(\beta < \alpha T_s\\) (reconciliation cheaper than prolonged waiting)
 - **Conflict rate bounded**: {% katex() %}|\text{conflicts}| / \tau_{\text{partition}} < \kappa{% end %} for some threshold \\(\kappa\\). When clusters make incompatible decisions, the actual reconciliation cost decomposes into data and semantic components:
@@ -627,9 +605,9 @@ The three regimes of retry elasticity determine the threshold range to use:
 \tau^*_{\mathrm{HT}} \leq \tau^* \quad \text{with equality only when } k_\mathcal{N} = 1
 {% end %}
 
-For {% katex() %}k_\mathcal{N} = 0.62{% end %} (CONVOY calibration): {% katex() %}\tau^*_{\mathrm{HT}} \approx 0.85\,\tau^*{% end %}. Systems near \\(\tau^\*\\) under the exponential assumption should re-evaluate — they may already be past the inversion point.
+For {% katex() %}k_\mathcal{N} = 0.62{% end %} *(illustrative value)* ({% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration): {% katex() %}\tau^*_{\mathrm{HT}} \approx 0.85\,\tau^*{% end %} *(theoretical bound under illustrative Weibull parameters)*. Systems near \\(\tau^\*\\) under the exponential assumption should re-evaluate — they may already be past the inversion point.
 
-> **Empirical status**: The \\(\tau^\* \approx 0.15\\) figure derives from TCP-like retry elasticity {% katex() %}\eta_\rho \in [0.9, 1.1]{% end %} measured on {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s contested link; deployments with different MAC protocols (TDMA, CSMA/CA) may place \\(\tau^\*\\) anywhere in \\([0.10, 0.40]\\) — measure retry elasticity at two jamming intensities before using a fixed threshold.
+> **Empirical status**: The \\(\tau^\* \approx 0.15\\) *(illustrative value)* figure derives from TCP-like retry elasticity {% katex() %}\eta_\rho \in [0.9, 1.1]{% end %} *(illustrative value)* measured on {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s contested link; deployments with different MAC protocols (TDMA, CSMA/CA) may place \\(\tau^\*\\) anywhere in \\([0.10, 0.40]\\) *(theoretical bound)* — measure retry elasticity at two jamming intensities before using a fixed threshold.
 
 <span id="def-5b"></span>
 **Definition 5b** (Semantic Convergence Factor). Let {% katex() %}S_{\text{merged}}{% end %} be the set of all state items produced by a reconciliation event, and {% katex() %}S_{\text{merged}}^{\text{consistent}} \subseteq S_{\text{merged}}{% end %} the subset with no policy violations after merge. The semantic convergence factor is:
@@ -646,9 +624,11 @@ For {% katex() %}k_\mathcal{N} = 0.62{% end %} (CONVOY calibration): {% katex() 
 
 **When the inversion fails** — two counter-scenarios worth stress-testing against your deployment:
 
-1. **Short partitions, tolerant latency**: A system with \\(P(C = 0) = 0.20\\) but mean partition duration of 5 seconds and \\(T_d > 30\\) seconds. Store-and-forward suffices; partition-first architecture adds unnecessary complexity. The inversion threshold assumes partitions are long enough to matter.
+1. **Short partitions, tolerant latency**: A system with \\(P(C = 0) = 0.20\\) *(illustrative value)* but mean partition duration of 5 seconds *(illustrative value)* and \\(T_d > 30\\) seconds *(illustrative value)*. Store-and-forward suffices; partition-first architecture adds unnecessary complexity. The inversion threshold assumes partitions are long enough to matter.
 
 2. **Conflict cascade**: Two clusters independently allocate the same exclusive resource. Upon reconnection, one allocation must be revoked — potentially cascading to dependent decisions. When {% katex() %}|\text{conflicts}| \cdot C_{\text{revoke}} > \beta_{\text{assumed}}{% end %}, partition-first yields *lower* utility than blocking. The \\(\beta\\) estimate must account for semantic conflict cost, not just data merge cost.
+
+*Watch out for*: \\(\tau^\*\\) is derived under the assumption that \\(\rho(p)\\) is monotonically increasing — if the MAC protocol has a saturation regime where heavy jamming briefly reduces contention (e.g., TDMA collapses cleanly rather than thrashing), the utility crossing may be non-unique and the single-threshold model will underestimate the true crossover, leaving the system in cloud-native architecture past the actual inversion point.
 
 ### Game-Theoretic Extension: Adversarial Inversion Threshold
 
@@ -684,7 +664,7 @@ U_D^*(\text{cloud}) = U_0 - \alpha T_s \cdot \frac{1 + \rho\bar{p}/T_s}{1-\bar{p
 
 > **Physical translation**: The partition-first guarantee is a constant — it does not depend on how hard the adversary jams. The cloud-native guarantee collapses as {% katex() %}\bar{p} \to 1{% end %}; it diverges to \\(-\infty\\) because the \\(1/(1-\bar{p})\\) term blows up. An adversary with access to heavy jamming can make cloud-native architecture arbitrarily bad; they cannot do the same to a partition-first system.
 
-The game-theoretic threshold {% katex() %}\tau^*_{GT}{% end %} (where {% katex() %}U_D^*(\text{edge}) = U_D^*(\text{cloud}){% end %}) satisfies {% katex() %}\tau^*_{GT} < \tau^*{% end %}. Systems in the hybrid zone \\(0.3 \leq E < 0.6\\) of the Edge-ness Score should be reassessed: an adversary can push them past \\(\tau^\*\\) at will, but cannot degrade a partition-first system below its adversarially-robust guarantee.
+The game-theoretic threshold {% katex() %}\tau^*_{GT}{% end %} (where {% katex() %}U_D^*(\text{edge}) = U_D^*(\text{cloud}){% end %}) satisfies {% katex() %}\tau^*_{GT} < \tau^*{% end %}. Systems in the hybrid zone \\(0.3 \leq E < 0.6\\) *(threshold)* of the Edge-ness Score should be reassessed: an adversary can push them past \\(\tau^\*\\) at will, but cannot degrade a partition-first system below its adversarially-robust guarantee.
 
 **Practical implication**: For contested deployments, evaluate the {% term(url="#prop-2", def="The connectivity level below which distributed autonomy outperforms cloud control") %}inversion threshold{% end %} using \\(\bar{p}\\) — maximum feasible jamming given the threat model — rather than expected \\(p\\). Partition-first architecture is strategically dominant against jamming adversaries. This property does not appear in the expected-utility analysis of {% term(url="#prop-2", def="Inversion Threshold: partition-first architecture yields higher expected utility than cloud-native patterns when disconnection probability exceeds the threshold") %}Proposition 2{% end %} and only emerges from the game-theoretic formulation.
 
@@ -707,12 +687,12 @@ e^{-\lambda_c \Delta} & \text{Tactical (exponential continuous decay)} \\
 {% end %}
 
 - **Soft** (\\(\lambda_c \to 0\\)): diagnostic telemetry, audit logs, configuration hashes. Value degrades uniformly. The original {% term(url="#prop-2", def="Inversion Threshold: partition-first architecture yields higher expected utility than cloud-native patterns when disconnection probability exceeds the threshold") %}Proposition 2{% end %} model uses {% katex() %}v(\Delta) = 1 - \alpha\Delta/U_0{% end %}, which is the linear tier.
-- **Tactical** ({% katex() %}\lambda_c \in [0.01, 1]\,\text{s}^{-1}{% end %}): position fixes, sensor readings, threat alerts. Value decays continuously; half-life {% katex() %}\tau_{1/2} = \ln 2 / \lambda_c{% end %} characterizes urgency.
+- **Tactical** ({% katex() %}\lambda_c \in [0.01, 1]\,\text{s}^{-1}{% end %} *(illustrative value)*): position fixes, sensor readings, threat alerts. Value decays continuously; half-life {% katex() %}\tau_{1/2} = \ln 2 / \lambda_c{% end %} characterizes urgency.
 - **Safety-critical** (\\(D_c\\) in milliseconds to seconds): fire control solutions, collision avoidance vectors, defibrillator timing windows, weapon release authorization. Full value before \\(D_c\\); zero value after. There is no meaningful "slightly late" state.
 
 *Note*: \\(\lambda_c\\) here is the per-class information decay rate in s{% katex() %}{}^{-1}{% end %}; distinct from the gossip fanout rate \\(\lambda\\) of {% term(url="@/blog/2026-01-22/index.md#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %} and from the connectivity-regime rate {% katex() %}\lambda_{\text{drift}}{% end %} of {% term(url="@/blog/2026-01-22/index.md#def-20", def="Adaptive Baseline Estimator: Kalman-filter EWMA that adjusts its noise model as capability level changes, preventing false alarms during mode transitions") %}Definition 20{% end %}. Subscript \\(c\\) selects data class.
 
-> **Physical translation**: A configuration update (soft tier, \\(\lambda_c \approx 0\\)) sent 10 minutes late costs 10% of baseline utility if the linear model fits. A drone position fix (tactical tier, {% katex() %}\lambda_c = 0.14\,\text{s}^{-1}{% end %}) sent 10 seconds late retains only {% katex() %}e^{-1.4} \approx 25\%{% end %} of its value — the remaining 75% is lost regardless of how efficiently it eventually arrives. A fire control solution (safety-critical tier, \\(D_c = 2\\,\text{s}\\)) sent 3 seconds late has zero utility. The linear model conflates all three into the same slope \\(\alpha\\); the error is not a rounding problem, it is a structural misrepresentation.
+> **Physical translation**: A configuration update (soft tier, \\(\lambda_c \approx 0\\)) sent 10 minutes late *(illustrative value)* costs 10% *(illustrative value)* of baseline utility if the linear model fits. A drone position fix (tactical tier, {% katex() %}\lambda_c = 0.14\,\text{s}^{-1}{% end %} *(illustrative value)*) sent 10 seconds late *(illustrative value)* retains only {% katex() %}e^{-1.4} \approx 25\%{% end %} *(illustrative value)* of its value — the remaining 75% *(illustrative value)* is lost regardless of how efficiently it eventually arrives. A fire control solution (safety-critical tier, \\(D_c = 2\\,\text{s}\\) *(illustrative value)*) sent 3 seconds late *(illustrative value)* has zero utility. The linear model conflates all three into the same slope \\(\alpha\\); the error is not a rounding problem, it is a structural misrepresentation.
 
 #### AoI-Corrected Utility Functions
 
@@ -730,7 +710,7 @@ using the probability generating function of the geometric distribution {% katex
 U_{\text{cloud}}^{\mathrm{AoI}}(p) = U_0 \cdot \frac{(1-p)\,r_c}{1 - p\,r_c}
 {% end %}
 
-> **Physical translation**: As \\(p \to 1\\), {% katex() %}U_{\text{cloud}}^{\mathrm{AoI}} \to 0{% end %} — the information is worthless by the time connectivity is restored, regardless of how little reconciliation costs. At \\(r_c = 0.5\\) (half-life equals one sync period), a 50% partition probability reduces cloud utility to {% katex() %}U_0 \times 0.5/(1-0.5\times0.5) = U_0/1.5 \approx 0.33U_0{% end %} — a 67% utility reduction, not the 50% the linear model would predict.
+> **Physical translation**: As \\(p \to 1\\), {% katex() %}U_{\text{cloud}}^{\mathrm{AoI}} \to 0{% end %} — the information is worthless by the time connectivity is restored, regardless of how little reconciliation costs. At \\(r_c = 0.5\\) *(illustrative value)* (half-life equals one sync period), a 50% *(illustrative value)* partition probability reduces cloud utility to {% katex() %}U_0 \times 0.5/(1-0.5\times0.5) = U_0/1.5 \approx 0.33U_0{% end %} *(illustrative value)* — a 67% *(illustrative value)* utility reduction, not the 50% *(illustrative value)* the linear model would predict.
 
 The edge decision executes immediately at local latency \\(T_d\\); the AoI-corrected edge utility becomes:
 
@@ -786,7 +766,7 @@ The edge advantage at \\(p = 0\\) (always connected) — the cloud's best-case �
 \Delta U|_{p=0} = U_{\text{edge}}^{\mathrm{AoI}}(0) - U_{\text{cloud}}^{\mathrm{AoI}}(0) = (U_0 - \beta) - U_0\,r_c = U_0(1-r_c) - \beta
 {% end %}
 
-For \\(\beta/U_0 = 0.05\\) and \\(r_c = 0.50\\) (RAVEN position): {% katex() %}\Delta U = U_0(0.50 - 0.05) = 0.45\,U_0{% end %}. Edge-first delivers 45% more utility even when cloud connectivity is perfect — the data expires during the sync period itself.
+For \\(\beta/U_0 = 0.05\\) *(illustrative value)* and \\(r_c = 0.50\\) *(illustrative value)* ({% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} position): {% katex() %}\Delta U = U_0(0.50 - 0.05) = 0.45\,U_0{% end %} *(illustrative value)*. Edge-first delivers 45% *(illustrative value)* more utility even when cloud connectivity is perfect — the data expires during the sync period itself.
 
 **Case B — hard deadline** (safety-critical tier {% katex() %}v_c = \mathbf{1}_{\Delta \leq D_c}{% end %}): When the deadline \\(D_c < T_s\\) (deadline shorter than a single sync period), only the *first attempt* can succeed within the window. The cloud utility collapses to:
 
@@ -800,11 +780,11 @@ Setting {% katex() %}U_{\text{cloud}}^{\mathrm{hard}} = U_{\text{edge}}^{\mathrm
 \tau^*_{\mathrm{hard}} = \frac{\beta}{U_0 + \beta}
 {% end %}
 
-For \\(\beta/U_0 = 0.05\\): {% katex() %}\tau^*_{\mathrm{hard}} = 0.048{% end %} — the inversion crosses at less than **5% partition probability**.
+For \\(\beta/U_0 = 0.05\\) *(illustrative value)*: {% katex() %}\tau^*_{\mathrm{hard}} = 0.048{% end %} *(theoretical bound under illustrative parameters)* — the inversion crosses at less than 5% *(illustrative value)* partition probability.
 
 *Proof sketch (Case B)*: From \\(U_0(1-p) = U_0 - \beta(1-p)\\): \\((1-p)(U_0 + \beta) = U_0\\), giving \\(p = \beta/(U_0+\beta)\\). For \\(n\\) sync periods available before deadline (\\(D_c = nT_s\\)), {% katex() %}U_{\text{cloud}}^{\mathrm{hard}} = U_0(1 - p^n){% end %}; the threshold satisfies {% katex() %}\beta(1-p) = U_0 p^n{% end %}, which converges to 1 as \\(n \to \infty\\) — confirming that only *tight* deadlines drive the threshold below the linear result. \\(\square\\)
 
-**Threshold existence table**: The following shows whether a valid {% katex() %}\tau^*_{\mathrm{NL}}{% end %} exists by data class (\\(T_s = 5\\,\text{s}\\), \\(\beta/U_0 = 0.05\\)); if none, the edge-advantage at \\(p=0\\) (best-case cloud) quantifies how unconditionally edge-first wins.
+**Threshold existence table**: The following shows whether a valid {% katex() %}\tau^*_{\mathrm{NL}}{% end %} exists by data class (\\(T_s = 5\\,\text{s}\\) *(illustrative value)*, \\(\beta/U_0 = 0.05\\) *(illustrative value)*); if none, the edge-advantage at \\(p=0\\) (best-case cloud) quantifies how unconditionally edge-first wins.
 
 <style>
 #tbl_tau_nl + table th:first-of-type { width: 22%; }
@@ -823,7 +803,7 @@ For \\(\beta/U_0 = 0.05\\): {% katex() %}\tau^*_{\mathrm{hard}} = 0.048{% end %}
 | {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} position / collision | 0.14 | 0.50 | **No** — \\(U_0(1-r_c) \gg \beta\\) | Edge advantage at \\(p=0\\): \\(+45\\%\\,U_0\\). Always use edge-first |
 | Threat alert / fire control | 1.00 | 0.993 | **No** — nearly all value lost per period | Edge advantage at \\(p=0\\): \\(+94\\%\\,U_0\\). Cloud-native is architecturally incoherent for this class |
 
-> **Physical translation**: The correct question is not "what threshold drives the switch to edge-first?" — it is "does a threshold even exist for this data class?" For RAVEN collision-avoidance data, cloud-native delivers 45% less utility than local autonomy even when connectivity is perfect (\\(p=0\\)), because the data expires during the sync period itself. A system designer who uses the linear \\(\tau^\* = 0.40\\) threshold to justify cloud-native coordination for position tracking is not near the boundary — they are off the map entirely. The inversion is unconditional for any data with \\(1 - r_c > \beta/U_0\\), which is true of every tactical real-time data class.
+> **Physical translation**: The correct question is not "what threshold drives the switch to edge-first?" — it is "does a threshold even exist for this data class?" For {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} collision-avoidance data, cloud-native delivers 45% *(illustrative value)* less utility than local autonomy even when connectivity is perfect (\\(p=0\\)), because the data expires during the sync period itself. A system designer who uses the linear \\(\tau^\* = 0.40\\) *(theoretical bound)* threshold to justify cloud-native coordination for position tracking is not near the boundary — they are off the map entirely. The inversion is unconditional for any data with \\(1 - r_c > \beta/U_0\\), which is true of every tactical real-time data class.
 
 **Revised validity condition**: The linear model's condition \\(\beta < \alpha T_s\\) ("reconciliation cheaper than prolonged waiting") generalizes under exponential decay to:
 
@@ -833,7 +813,9 @@ For \\(\beta/U_0 = 0.05\\): {% katex() %}\tau^*_{\mathrm{hard}} = 0.048{% end %}
 
 As \\(r_c \to 0\\): the bound approaches \\(U_0\\) — almost any reconciliation cost is acceptable because the stale data being reconciled has negligible value anyway. As \\(r_c \to 1\\) (slow decay): the bound approaches {% katex() %}\beta < U_0/2 \approx \alpha T_s / 2{% end %} — stricter than the original condition by a factor of 2 in the slow-decay limit, due to the geometric compounding of sync latency.
 
-> **Empirical status**: The decay rates \\(\lambda_c\\) (0.07 for {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} position, 0.14 for {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} collision) and the \\(\beta/U_0 = 0.05\\) reconciliation ratio are calibrated from scenario-specific field estimates; actual values are system-dependent and should be measured from reconnection logs before concluding that a threshold exists or does not exist for a given data class.
+> **Empirical status**: The decay rates \\(\lambda_c\\) (0.07 *(illustrative value)* for {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} position, 0.14 *(illustrative value)* for {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} collision) and the \\(\beta/U_0 = 0.05\\) *(illustrative value)* reconciliation ratio are calibrated from scenario-specific field estimates; actual values are system-dependent and should be measured from reconnection logs before concluding that a threshold exists or does not exist for a given data class.
+
+*Watch out for*: \\(\lambda_c\\) must be calibrated from observed value loss in the field rather than from design specifications; if a data class is assigned a lower \\(\lambda_c\\) than its true decay rate warrants, the threshold-existence condition \\(\beta \geq U_0(1-r_c)\\) may be satisfied on paper while the actual AoI behavior places the system in the unconditional edge-first regime — and the mistaken threshold will delay the switch past the true inversion point.
 
 #### Value-Density Routing
 
@@ -847,9 +829,6 @@ As \\(r_c \to 0\\): the bound approaches \\(U_0\\) — almost any reconciliation
 
 where {% katex() %}\mathrm{size}(m){% end %} is the transmission size in bytes. At generation time (\\(\Delta_m = 0\\)): {% katex() %}\nu(m,0) = V_0(m)\lambda_c / \mathrm{size}(m){% end %}. Value density equals the marginal rate of value loss per byte of channel capacity consumed.
 
-- **Use**: Rank queued messages by \\(\nu(m, \Delta_m)\\) at each transmission opportunity; transmit the highest-density message first. Re-rank at each opportunity as AoI evolves.
-- **Field note**: A message whose value density has decayed below the value density of new messages in the queue should yield channel access — it is less valuable per byte *and* getting worse.
-
 <span id="prop-4"></span>
 
 **Proposition 4** (AoI-Optimal Routing Priority). *Among all non-preemptive transmission schedules with bounded channel capacity \\(B\\) bytes/s and a queue of \\(n\\) messages with independent exponential decay, the schedule minimizing total value lost in \\([0, T]\\) is the greedy schedule that transmits messages in decreasing order of \\(\nu(m, \Delta_m)\\) at each decision epoch.*
@@ -861,6 +840,8 @@ where {% katex() %}\mathrm{size}(m){% end %} is the transmission size in bytes. 
 > **Physical translation**: Transmit the message that is losing value fastest *per byte of bandwidth it consumes*. A brief high-urgency alert (small, fast-decaying) should always preempt a large low-urgency diagnostic bundle. This is the operational implementation of the non-linear inversion insight: data classes with high \\(\lambda_c\\) must move first, not just because they are important, but because their value-per-byte ratio deteriorates faster than any other resource cost.
 
 **Multi-class implementation**: Partition messages into priority classes {% katex() %}\mathcal{C}_{\mathrm{hard}} \succ \mathcal{C}_{\mathrm{tactical}} \succ \mathcal{C}_{\mathrm{soft}}{% end %} using static \\(\lambda_c\\) thresholds. Within each class, sort by \\(\nu(m, \Delta_m)\\). Head-of-line blocking rules: {% katex() %}\mathcal{C}_{\mathrm{hard}}{% end %} messages with \\(\Delta_m > D_c/2\\) pre-empt any lower class unconditionally — the deadline is approaching and no soft-class transmission can recover the lost value.
+
+*Watch out for*: the proposition assumes independent value decay for each message; when messages form bundles where a correction or context packet has no value without its anchor (a position fix without its associated reference frame, for instance), greedy single-message ordering can transmit the high-\\(\lambda_c\\) correction while the low-\\(\lambda_c\\) anchor is deferred, delivering a useless message at the cost of a useful one.
 
 #### Criticality-Aware TTL
 
@@ -874,12 +855,7 @@ D_c^{\mathrm{TTL}} = \frac{\ln(V_0/V_{\min})}{\lambda_c}
 
 A message that has not been reconciled (applied to state, forwarded, or acknowledged) by {% katex() %}\Delta_m = D_c^{\mathrm{TTL}}{% end %} is self-deleted from the queue. Delivery after this point consumes channel bandwidth without delivering operationally useful information.
 
-- **Parameters**: Default {% katex() %}V_{\min}/V_0 = 0.01{% end %} (1% floor) gives {% katex() %}D_c^{\mathrm{TTL}} = 4.61/\lambda_c{% end %}.
-- **Field note**: Setting {% katex() %}V_{\min}/V_0 = 0.01{% end %} is conservative — operational experience in contested environments often warrants {% katex() %}V_{\min}/V_0 = 0.05{% end %} ({% katex() %}D_c^{\mathrm{TTL}} = 3.0/\lambda_c{% end %}) to prevent the channel from filling with barely-useful stale updates during reconnection storms.
-
-> **Clock-drift correction**: In practice, onboard clocks drift at 10–100 ppm relative to GPS time. After a partition of duration \\(T_p\\), the effective TTL should be reduced by {% katex() %}\delta_{\text{drift}} = \rho_{\text{drift}} \cdot T_p{% end %} where {% katex() %}\rho_{\text{drift}}{% end %} is the measured drift rate. For a 48-hour partition at 100 ppm drift, this adds a 17-second correction — negligible for most applications but material for tight synchronization requirements.
-
-**TTL calibration table**:
+> **Clock-drift correction**: In practice, onboard clocks drift at 10–100 ppm *(illustrative value)* relative to GPS time. After a partition of duration \\(T_p\\), the effective TTL should be reduced by {% katex() %}\delta_{\text{drift}} = \rho_{\text{drift}} \cdot T_p{% end %} where {% katex() %}\rho_{\text{drift}}{% end %} is the measured drift rate. For a 48-hour *(illustrative value)* partition at 100 ppm *(illustrative value)* drift, this adds a 17-second *(illustrative value)* correction — negligible for most applications but material for tight synchronization requirements.
 
 <style>
 #tbl_ttl_cal + table th:first-of-type { width: 26%; }
@@ -900,11 +876,11 @@ A message that has not been reconciled (applied to state, forwarded, or acknowle
 
 > **Physical translation**: The TTL is the inverse of urgency. Do not transmit a fire control solution that was generated 10 seconds ago — it is worse than sending nothing, because it consumes bandwidth needed for the current solution. The reconnection storm after a long partition should *not* retransmit every queued message: only messages with {% katex() %}\Delta_m < D_c^{\mathrm{TTL}}{% end %} carry residual value. Transmitting the rest is channel pollution.
 
-**Reconnection storm TTL filter**: When connectivity resumes after a partition of duration {% katex() %}T_{\mathrm{acc}}{% end %}, apply a TTL pre-filter before reconciliation ({% term(url="@/blog/2026-02-05/index.md#def-70", def="Delta-Sync Protocol: gossip protocol transmitting only state deltas rather than full state, reducing sync bandwidth proportionally per round") %}Definition 70{% end %} in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-70)): discard all queued messages with {% katex() %}D_c^{\mathrm{TTL}} < T_{\mathrm{acc}}{% end %}. These messages have already expired by the time the reconnection window opens. For RAVEN with {% katex() %}T_{\mathrm{acc}} = 5\,\text{min}{% end %}: every position fix and collision-avoidance vector in the queue is discarded — the fleet must re-acquire current position from fresh sensor readings, not from stale gossip.
+**Reconnection storm TTL filter**: When connectivity resumes after a partition of duration {% katex() %}T_{\mathrm{acc}}{% end %}, apply a TTL pre-filter before reconciliation ({% term(url="@/blog/2026-02-05/index.md#def-70", def="Delta-Sync Protocol: gossip protocol transmitting only state deltas rather than full state, reducing sync bandwidth proportionally per round") %}Definition 70{% end %} in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md#def-70)): discard all queued messages with {% katex() %}D_c^{\mathrm{TTL}} < T_{\mathrm{acc}}{% end %}. These messages have already expired by the time the reconnection window opens. For {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} with {% katex() %}T_{\mathrm{acc}} = 5\,\text{min}{% end %}: every position fix and collision-avoidance vector in the queue is discarded — the fleet must re-acquire current position from fresh sensor readings, not from stale gossip.
 
-**{% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} calibration**: 47 drones, position update rate 1 Hz, message size 48 bytes. Without value-density routing, position fixes ({% katex() %}\nu = 0.14 \times V_{\mathrm{pos}} / 48{% end %}) compete equally with diagnostic telemetry ({% katex() %}\nu = 0.001 \times V_{\mathrm{diag}} / 200{% end %}). With value-density routing, position fixes have \\(\nu\\) ratio \\(140\times\\) higher per byte — they clear the queue first on every reconnection.
+For the {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} swarm — 47 drones at 1 Hz position update rate and 48-byte message size — without value-density routing, position fixes ({% katex() %}\nu = 0.14 \times V_{\mathrm{pos}} / 48{% end %}) compete equally with diagnostic telemetry ({% katex() %}\nu = 0.001 \times V_{\mathrm{diag}} / 200{% end %}). With value-density routing, position fixes carry a \\(\nu\\) ratio \\(140\times\\) higher per byte — they clear the queue first on every reconnection.
 
-**{% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} calibration** at 250 kbps uplink: with 15 stale position fixes queued ({% katex() %}T_{\mathrm{acc}} = 90\,\text{s} > D_{\mathrm{pos}}^{\mathrm{TTL}} = 66\,\text{s}{% end %}), the TTL filter discards all 15 before transmission, freeing the channel for the 3 messages with residual value (config updates, still within their 77-minute TTL).
+At a 250 kbps uplink — representative of {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} — with 15 stale position fixes queued ({% katex() %}T_{\mathrm{acc}} = 90\,\text{s} > D_{\mathrm{pos}}^{\mathrm{TTL}} = 66\,\text{s}{% end %}), the TTL filter discards all 15 before transmission, freeing the channel for the 3 messages with residual value (config updates, still within their 77-minute TTL).
 
 **Causal Ordering Hazard in Physical-Time TTL Filtering**
 
@@ -949,8 +925,6 @@ The consequence is **causal inversion**: effects arrive at the reconciling node 
 2. *Check HLC ordering: if DVV does not resolve the order (concurrent events, neither is an ancestor of the other), use {% katex() %}(pt_{m_1}, c_{m_1}) < (pt_{m_2}, c_{m_2}){% end %} as the tiebreaker (lexicographic HLC comparison).*
 3. *If \\(m_2\\)'s DVV references a dot that is not yet in the local event log (a missing predecessor), hold \\(m_2\\) in a **pending buffer** until the predecessor arrives or the causal dependency times out.*
 
-- **Parameters**: {% katex() %}\varepsilon{% end %} is the GPS-denied clock drift bound — for OUTPOST sensors without NTP, {% katex() %}\varepsilon = 500\,\text{ms}{% end %} over a 10-minute partition (50 ppm TCXO); for CONVOY units with periodic GPS fixes, {% katex() %}\varepsilon = 50\,\text{ms}{% end %}.
-
 <span id="prop-5"></span>
 **Proposition 5** (Causal Anti-Inversion Guarantee). *Under Definition 10 stamps and Definition 11 uncertainty windows, if event {% katex() %}E_1{% end %} (Target Detection) causally precedes event {% katex() %}E_2{% end %} (Target Neutralized) — i.e., {% katex() %}\mathrm{dot}(E_1) \in \mathrm{dvv}(E_2){% end %} — then at every node in the fleet, {% katex() %}E_1{% end %} is applied to state before {% katex() %}E_2{% end %}, regardless of clock drift {% katex() %}\varepsilon \leq \varepsilon_{\max}{% end %}.*
 
@@ -962,7 +936,7 @@ The consequence is **causal inversion**: effects arrive at the reconciling node 
 
 > **Empirical status**: The \\(\varepsilon = 500\\) ms drift bound is calibrated to {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s TCXO oscillator (50 ppm over 10 minutes); deployments using cheaper oscillators or longer partitions will see larger drift, requiring a proportionally wider uncertainty window and tighter TTL budget.
 
-**Three-Node OUTPOST Scenario: 500ms Drift**
+**Three-Node {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} Scenario: 500ms Drift**
 
 Nodes A (sensor, +500ms fast clock), B (actuator, accurate clock), C (command, accurate clock). Drift bound {% katex() %}\varepsilon = 500\,\text{ms}{% end %}. Fire control TTL {% katex() %}D_{\mathrm{fire}}^{\mathrm{TTL}} = 4.6\,\text{s}{% end %}.
 
@@ -986,6 +960,8 @@ Nodes A (sensor, +500ms fast clock), B (actuator, accurate clock), C (command, a
 7. C applies \\(E_1\\) then \\(E_2\\): **Target Detected then Target Neutralized**. \\(\square\\)
 
 The 500ms clock error on Node A is entirely absorbed by the HLC's {% katex() %}\max{% end %} rule: B's HLC advances to match A's, making \\(E_2\\)'s HLC timestamp strictly greater than \\(E_1\\)'s. Physical-time inversion is impossible under this construction for any {% katex() %}\varepsilon \leq D_{\mathrm{fire}}^{\mathrm{TTL}}/2 = 2.3\,\text{s}{% end %} — drift bound is not 500ms but over two seconds for fire control events.
+
+*Watch out for*: the guarantee requires the DVV dependency to be explicitly recorded at the time the causal event is generated; if a node emits \\(E_2\\) before receiving acknowledgment that \\(E_1\\) was applied — for instance, under a concurrent-write optimization that skips DVV population when the predecessor is "assumed delivered" — the pending buffer has no entry to wait on, and causal inversion is not prevented.
 
 ### Architectural Response: Hierarchical Edge Tiers
 
@@ -1090,7 +1066,7 @@ A **Nash-stable partition** is one where no node prefers to join a different coa
 
 *This formula requires {% katex() %}\mathbb{E}[T_\text{partition}]{% end %} from the Weibull partition duration model; see the formal definition later in this article. The derivation here proceeds with {% katex() %}\mathbb{E}[T_\text{partition}]{% end %} as a parameter; its computation is addressed when the model is introduced.*
 
-> **Physical translation:** The optimal coalition size trades coordination cost against the cost of idle redundancy. Longer expected partitions justify larger, self-sufficient coalitions — a CONVOY vehicle should cluster with 3–4 neighbors for a 30-minute mountain blackout, but only 1–2 for a 5-minute tunnel pass. The formula balances these costs at the crossover point.
+> **Physical translation:** The optimal coalition size trades coordination cost against the cost of idle redundancy. Longer expected partitions justify larger, self-sufficient coalitions — a {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} vehicle should cluster with 3–4 neighbors for a 30-minute mountain blackout, but only 1–2 for a 5-minute tunnel pass. The formula balances these costs at the crossover point.
 
 **Practical implication**: When partition duration forecasts predict a short partition, preserve existing clusters. When they predict extended isolation, allow cluster fragmentation into smaller self-sufficient units. The formal fragmentation criterion: fragment if and only if any sub-coalition satisfies {% katex() %}v_i(S_{\text{sub}}) > v_i(S_{\text{full}}){% end %} for a majority of members.
 
@@ -1309,7 +1285,7 @@ E_{\text{AUTOHAULER}} = 0.35 \cdot \frac{0.13}{0.3} + 0.25 \cdot \frac{0.75}{0.8
 E_{\text{GRIDEDGE}} = 0.35 \cdot \frac{0.16}{0.3} + 0.25 \cdot \frac{0.9}{0.8} + 0.25 \cdot 0.02 + 0.15 \cdot \frac{0.02}{0.5} = 0.48
 {% end %}
 
-\\(E = 0.48\\) — hybrid zone, but driven by an unusual combination. Partition probability alone would classify it cloud-viable; irreversibility and timing mismatch override it. This is why all four dimensions must be evaluated — single-metric classification would misclassify GRIDEDGE.
+\\(E = 0.48\\) — hybrid zone, but driven by an unusual combination. Partition probability alone would classify it cloud-viable; irreversibility and timing mismatch override it. This is why all four dimensions must be evaluated — single-metric classification would misclassify {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %}.
 
 ---
 
@@ -1361,7 +1337,7 @@ The stationary distribution of the semi-Markov process is:
 \pi_i^{\mathrm{SM}} = \frac{\pi_i^{\mathrm{emb}}\,\mathbb{E}[T_i]}{\displaystyle\sum_{j} \pi_j^{\mathrm{emb}}\,\mathbb{E}[T_j]}
 {% end %}
 
-> **Plain English.** Each regime's share of total time equals its "frequency of visits" times its "average stay." A regime that is visited rarely but lasts a long time can still dominate the stationary distribution. This is why Denied — though not the most common destination — accounts for 21% of CONVOY's operating time: partitions last much longer than transitions suggest.
+> **Plain English.** Each regime's share of total time equals its "frequency of visits" times its "average stay." A regime that is visited rarely but lasts a long time can still dominate the stationary distribution. This is why Denied — though not the most common destination — accounts for 21% of {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s operating time: partitions last much longer than transitions suggest.
 
 where {% katex() %}\pi^{\mathrm{emb}}{% end %} satisfies {% katex() %}\pi^{\mathrm{emb}} P = \pi^{\mathrm{emb}}{% end %}. **Special case**: when \\(k_i = 1\\) for all \\(i\\), each {% katex() %}T_i \sim \text{Exp}(q_i){% end %}, {% katex() %}P_{ij} = q_{ij}/q_i{% end %}, and {% katex() %}\pi^{\mathrm{SM}} = \pi^{\mathrm{CTMC}}{% end %} exactly — the original continuous-time Markov chain is recovered.
 
@@ -1522,7 +1498,7 @@ gantt
 
 {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} experiences two partition events totaling 120 minutes (25% of mission time in Denied state). The architecture handles authority transitions, state buffering, and reconciliation — automatically, without human intervention.
 
-> **Cognitive Map — Section 11.** Connectivity regimes (Table) \\(\to\\) Semi-Markov model separating transition probabilities from sojourn durations ({% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}) \\(\to\\) Weibull captures heavy tails that exponential misses \\(\to\\) Stationary distribution shows CONVOY is Denied 21% of the time \\(\to\\) P95 underestimate (20 hr vs. 27 hr) drives the self-sufficiency design target.
+> **Cognitive Map — Section 11.** Connectivity regimes (Table) \\(\to\\) Semi-Markov model separating transition probabilities from sojourn durations ({% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}) \\(\to\\) Weibull captures heavy tails that exponential misses \\(\to\\) Stationary distribution shows {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} is Denied 21% of the time \\(\to\\) P95 underestimate (20 hr vs. 27 hr) drives the self-sufficiency design target.
 
 
 ---
@@ -1545,10 +1521,6 @@ Q_{0.95} = \lambda_\mathcal{N}\,(\ln 20)^{1/k_\mathcal{N}}
 {% end %}
 
 > **Physical translation**: The 95th-percentile partition duration — how long 95 in 100 blackouts will last. With Weibull shape k < 1 (heavy-tailed, typical in contested environments), this value is far larger than the mean duration. Exponential models catastrophically underestimate it; the Weibull shape parameter k is the difference between "probably back in 5 minutes" and "plan for 2 hours."
-
-- **Use**: Computes the p-th percentile of partition duration from the fitted Weibull model; use {% katex() %}Q_{0.95}{% end %} as the {% katex() %}T_{\text{acc}}{% end %} ceiling for the circuit breaker in {% term(url="@/blog/2026-01-29/index.md#prop-37", def="Weibull Circuit Breaker: base-tier gate fires when the partition accumulator exceeds the 95th-percentile partition duration, triggering controlled shutdown before resources are exhausted") %}Proposition 37{% end %} to catch heavy-tailed outages that an exponential ({% katex() %}k=1{% end %}) model underestimates by 2–5x.
-- **Parameters**: {% katex() %}k_N < 1{% end %} for heavy-tailed environments (RAVEN {% katex() %}k \approx 0.62{% end %}); {% katex() %}\lambda_N{% end %} = scale in hours; fit both from real partition logs.
-- **Field note**: Actual {% katex() %}k_N{% end %} differs from spec by 2–3x routinely — never assume the exponential default; always fit from field data.
 
 **MCU implementation**: \\(\Gamma(1 + 1/k)\\) and \\(\Gamma(1 + 2/k)\\) are pre-computed offline and stored in a static 8-entry look-up table (LUT) for {% katex() %}k \in \{0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0\}{% end %}; values between table entries are linearly interpolated. The {% katex() %}Q_{0.95}{% end %} formula requires one `pow()` call on the constant \\(\ln 20 \approx 2.996\\) — the only floating-point primitive needed at runtime.
 
@@ -1580,15 +1552,11 @@ where \\(f_\text{mission}(t)\\) is mission-progress score, \\(f_\text{stability}
 r(k,\, t_{\mathrm{end}}) = -\max\!\left(0,\; T_{\mathrm{acc}}(t_{\mathrm{end}}) - \mathbb{E}[T_\mathcal{N} \mid k]\right) \Big/ Q_{0.95}(k)
 {% end %}
 
-- **Use**: Computes a scalar EXP3-IX reward combining mission progress, link quality, and battery cost at each partition end; include the battery term to prevent the bandit from reward-hacking toward high-transmission arms that maximize mission score but deplete the battery.
-- **Parameters**: {% katex() %}w_1 + w_2 + w_3 = 1{% end %}; RAVEN: {% katex() %}w_1=0.5,\, w_2=0.3,\, w_3=0.2{% end %}; tune weights to operational priority before deployment.
-- **Field note**: Battery weight {% katex() %}w_3{% end %} is a physical regularizer — omit it and the bandit converges to arms that eventually kill the device.
-
 > **Physical translation:** The reward function is a weighted scoreboard: mission progress, stability, and energy efficiency each contribute. Setting \\(w_3 = 0.5\\) for a power-constrained deployment tells the bandit that energy efficiency is worth as much as mission and stability combined — the system will voluntarily accept slower mission progress to avoid running out of power.
 
 *A partition shorter than {% katex() %}\mathbb{E}[T_\mathcal{N} | k]{% end %} gives \\(r = 0\\); one longer than expected gives a negative reward proportional to the normalized excess. Arms with smaller \\(k\\) (heavier tails) are penalized less by unexpectedly long partitions, so the bandit shifts {% katex() %}k_\mathcal{N}{% end %} downward as the node accumulates evidence of heavy-tail behavior — **mathematically bracing itself for longer, deeper denied periods**.*
 
-*Prior: {% katex() %}k_\mathcal{N} = 0.7{% end %} for tactical environments (RAVEN, CONVOY, OUTPOST); {% katex() %}k_\mathcal{N} = 1.0{% end %} for commercial environments (AUTOHAULER, GRIDEDGE). Bandit requires \\(\approx 18\\) partition events to converge; {% katex() %}k_\mathcal{N}{% end %} is frozen at the prior during warm-up.*
+*Prior: {% katex() %}k_\mathcal{N} = 0.7{% end %} for tactical environments ({% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}, {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}); {% katex() %}k_\mathcal{N} = 1.0{% end %} for commercial environments ({% term(url="#scenario-autohauler", def="34 autonomous haul trucks in an open-pit copper mine; RF shadows and tunnel blackouts of 2–79 min require edge-local collision avoidance") %}AUTOHAULER{% end %}, {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %}). Bandit requires \\(\approx 18\\) partition events to converge; {% katex() %}k_\mathcal{N}{% end %} is frozen at the prior during warm-up.*
 
 ---
 
@@ -1604,10 +1572,6 @@ T_{\mathrm{acc}}(t) = \int_0^t \mathbf{1}[\Xi(s) = \mathcal{N}]\,ds
 {% katex(block=true) %}
 T_{\mathrm{acc}}[n+1] = T_{\mathrm{acc}}[n] + T_{\mathrm{tick}} \cdot \mathbf{1}[\Xi[n] = \mathcal{N}]
 {% end %}
-
-- **Use**: Tracks continuous disconnection time in seconds, resetting to zero on each reconnection; feeds the Weibull circuit breaker and time-varying anomaly threshold at each MAPE-K tick, making brief flaps and sustained blackouts distinguishable rather than identical.
-- **Parameters**: {% katex() %}T_{\text{tick}}{% end %} = MAPE-K cycle period (e.g., 5 s); accumulator ceiling {% katex() %}Q_{0.95}{% end %} triggers protective state transitions.
-- **Field note**: Reset-on-reconnect is essential — without it, a 30-second blip accumulates the same weight as a 4-hour outage.
 
 *Reset condition: {% katex() %}T_{\mathrm{acc}} \leftarrow 0{% end %} when \\(\Xi\\) transitions out of {% katex() %}\mathcal{N}{% end %} (partition ends). The accumulator is the input to both the time-varying anomaly threshold ({% term(url="@/blog/2026-01-22/index.md#prop-9", def="Optimal Anomaly Threshold: minimizes total misclassification cost by balancing false-positive and false-negative penalties") %}Proposition 9{% end %} in the self-measurement article) and the circuit breaker ({% term(url="@/blog/2026-01-29/index.md#prop-37", def="Weibull Circuit Breaker: base-tier gate fires when the partition accumulator exceeds the 95th-percentile partition duration, triggering controlled shutdown before resources are exhausted") %}Proposition 37{% end %}).*
 
@@ -1636,10 +1600,7 @@ C(t) = \frac{1}{W} \sum_{\tau=t-W+1}^{t} \bigl(1 - \mathrm{loss}(\tau)\bigr)
 
 where {% katex() %}\mathrm{loss}(\tau) \in \{0, 1\}{% end %} is the packet loss indicator at slot \\(\tau\\). The GE model operates at millisecond-to-second packet timescale; \\(C(t)\\) smoothed over \\(W\\) feeds into the regime-transition process of {% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}, which operates at minutes-to-hours timescale. This two-timescale coupling preserves the semi-Markov structure of {% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %} while capturing bursty loss patterns that a memoryless Markov chain cannot represent.
 
-- **Parameters**: {% katex() %}p_{\text{burst}} \in (0,\, 0.05]{% end %} (burst onset), {% katex() %}r \in [0.1,\, 1){% end %} (recovery); stationary Bad-state fraction {% katex() %}\pi_{\mathcal{B}} = p_{\text{burst}}/(p_{\text{burst}}+r){% end %}; mean burst length {% katex() %}1/r{% end %} packets.
-- **CONVOY calibration**: {% katex() %}p_{\text{burst}} = 0.02{% end %}, {% katex() %}r = 0.15{% end %} (mean burst = 6.7 packets; {% katex() %}\pi_{\mathcal{B}} \approx 0.12{% end %}); window {% katex() %}W = 200{% end %} packets at 10 ms/packet gives 2-second smoothing before \\(C(t)\\) is presented to the regime model.
-
-> **Physical translation:** The Good state models a clear radio channel with occasional dropped packets; the Bad state models active jamming or severe multipath fading where almost nothing gets through. The transition rates between states are calibrated to the environment — RAVEN's contested airspace has more frequent Bad-state entry and shorter Good-state dwell than OUTPOST's static mesh.
+> **Physical translation:** The Good state models a clear radio channel with occasional dropped packets; the Bad state models active jamming or severe multipath fading where almost nothing gets through. The transition rates between states are calibrated to the environment — {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s contested airspace has more frequent Bad-state entry and shorter Good-state dwell than {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s static mesh.
 
 ---
 
@@ -1660,10 +1621,8 @@ f_N(t) = \frac{\bigl|\{j \in \mathcal{N}_i : \Xi_j(t) \in \{\mathcal{D},\, \math
 \tilde{q}_{\mathcal{N} \to i}(t) = \frac{q_{\mathcal{N} \to i}}{1 + \rho_J \cdot f_N(t)}
 {% end %}
 
-*When {% katex() %}\rho_J = 0{% end %} the model reduces to the spatially independent case ({% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}). When {% katex() %}\rho_J = 1{% end %} and all neighbors are denied, the denial onset rate doubles and the recovery rate halves — modeling coordinated area-denial jamming where a node's own survival probability is strongly coupled to its neighbors' fates.*
+*When {% katex() %}\rho_J = 0{% end %} the model reduces to the spatially independent case ({% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}); {% katex() %}\rho_J = 0.5{% end %} models partial area denial; {% katex() %}\rho_J = 1{% end %} models full coordinated jamming where a node's own survival probability is strongly coupled to its neighbors' fates — denial onset rate doubles and recovery rate halves.*
 
-- **{% katex() %}\rho_J{% end %} calibration**: {% katex() %}\rho_J = 0{% end %} (independent Rayleigh fading), {% katex() %}\rho_J = 0.5{% end %} (partial area denial), {% katex() %}\rho_J = 1{% end %} (full coordinated jamming).
-- **RAVEN calibration**: {% katex() %}\rho_J = 0.8{% end %} for the 47-drone swarm under coordinated RF jamming; {% katex() %}f_N(t){% end %} is computed from the gossip state table ({% term(url="@/blog/2026-01-22/index.md#def-24", def="Gossip Health Protocol: epidemic dissemination where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds") %}Definition 24{% end %}) refreshed every MAPE-K tick.
 - **Interaction with {% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}**: The modified rates \\(\tilde{q}\\) replace the static \\(q\\) values in the embedded chain, making the semi-Markov process time-inhomogeneous. The Weibull sojourn distributions ({% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}) remain; only the jump probabilities change with \\(f_N(t)\\).
 
 ---
@@ -1689,10 +1648,11 @@ f_N(t) = \frac{\bigl|\{j \in \mathcal{N}_i : \Xi_j(t) \in \{\mathcal{D},\, \math
 
 *Reasoning*: The dead band absorbs transient \\(C(t)\\) dips without triggering architectural mode changes. The refractory lockout ({% term(url="@/blog/2026-01-29/index.md#def-46", def="Healing Dead-Band and Refractory State: dual-threshold mechanism preventing the healing loop from issuing back-to-back actions faster than the refractory period") %}Definition 46{% end %}) ensures that even a sustained boundary-straddling signal cannot produce unbounded transition chatter; combined, these two mechanisms bound the switching rate independently of jamming intensity.
 
-- **CONVOY calibration**: {% katex() %}\delta_h = 0.08{% end %} for the {% katex() %}\mathcal{C}/\mathcal{D}{% end %} boundary (nominal {% katex() %}\theta = 0.70{% end %}); {% katex() %}\delta_h = 0.05{% end %} for the {% katex() %}\mathcal{D}/\mathcal{I}{% end %} boundary (nominal {% katex() %}\theta = 0.40{% end %}). With {% katex() %}\pi_{\mathcal{B}} = 0.12{% end %} and mean burst 6.7 packets, the corollary condition is satisfied at both boundaries.
 - **Interaction with {% term(url="@/blog/2026-01-29/index.md#def-47", def="Schmitt Trigger Hysteresis: dual threshold with separate trigger and release levels preventing healing loop flapping near a boundary") %}Definition 47{% end %}**: The Schmitt-trigger hysteresis here operates on regime-level \\(C(t)\\) at minutes timescale; {% term(url="@/blog/2026-01-29/index.md#def-47", def="Schmitt Trigger Hysteresis: dual threshold with separate trigger and release levels preventing healing loop flapping near a boundary") %}Definition 47{% end %} operates on sensor-level MAPE-K thresholds at seconds timescale. They are complementary, not redundant.
 
-> **Empirical status**: The hysteresis half-widths \\(\delta_h = 0.08\\) and \\(\delta_h = 0.05\\) and the burst fraction \\(\pi_B = 0.12\\) are calibrated from {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} field measurements; deployments with different burst statistics or regime boundary positions require recalibration — set \\(\delta_h \\geq\\) measured \\(\pi_B\\) at each boundary.
+> **Empirical status**: The hysteresis half-widths \\(\delta_h = 0.08\\) *(illustrative value)* and \\(\delta_h = 0.05\\) *(illustrative value)* and the burst fraction \\(\pi_B = 0.12\\) *(illustrative value)* are calibrated from {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} field measurements; deployments with different burst statistics or regime boundary positions require recalibration — set \\(\delta_h \\geq\\) measured \\(\pi_B\\) at each boundary.
+
+*Watch out for*: \\(\delta_h\\) is calibrated under the assumption that burst statistics are stationary; if an adversary shifts from random jamming to correlated burst patterns, the measured \\(\pi_B\\) from peacetime telemetry underestimates the effective burst fraction during attack, and transitions that the dead band should absorb will cross the downward threshold, producing mode-switching during the exact scenario the hysteresis was designed to prevent.
 
 ---
 
@@ -1709,11 +1669,13 @@ f_N(t) = \frac{\bigl|\{j \in \mathcal{N}_i : \Xi_j(t) \in \{\mathcal{D},\, \math
 
 *Reasoning*: Boundary (i) follows from coordination message complexity analysis - centralized protocols require \\(O(n)\\) messages per decision, achievable only when coordinator reachability is high. Boundary (ii) follows from decision latency constraints - waiting for central authority when denial probability exceeds 10% increases expected decision delay. Boundary (iii) derives from sync window analysis - intermittent connectivity above 25% makes scheduled synchronization less reliable.
 
-**Uncertainty note**: These boundaries are approximate. The actual transition points depend on specific system parameters (message complexity, latency tolerance, sync period). Use as heuristics, not hard rules. Systems near boundaries warrant empirical evaluation. The specific fractions (0.8, 0.1, 0.25) are derived from CONVOY's message-complexity profile and may shift by \\(\\pm 0.10{-}0.15\\) for systems with different coordination overhead — calibrate from your own connectivity telemetry.
+**Uncertainty note**: These boundaries are approximate. The actual transition points depend on specific system parameters (message complexity, latency tolerance, sync period). Use as heuristics, not hard rules. Systems near boundaries warrant empirical evaluation. The specific fractions (0.8 *(threshold)*, 0.1 *(threshold)*, 0.25 *(threshold)*) are derived from {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s message-complexity profile and may shift by \\(\\pm 0.10{-}0.15\\) *(illustrative value)* for systems with different coordination overhead — calibrate from your own connectivity telemetry.
 
-**Corollary 1**. *{% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} with \\(\pi = (0.32, 0.25, 0.22, 0.21)\\) falls decisively in the contested edge regime: {% katex() %}\pi_{\mathcal{C}} + \pi_{\mathcal{D}} = 0.57 < 0.8{% end %} precludes centralized coordination, and {% katex() %}\pi_{\mathcal{N}} = 0.21 > 0.1{% end %} mandates local decision authority.*
+**Corollary 1**. *{% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} with \\(\pi = (0.32, 0.25, 0.22, 0.21)\\) *(illustrative value)* falls decisively in the contested edge regime: {% katex() %}\pi_{\mathcal{C}} + \pi_{\mathcal{D}} = 0.57 < 0.8{% end %} *(illustrative value)* precludes centralized coordination, and {% katex() %}\pi_{\mathcal{N}} = 0.21 > 0.1{% end %} *(illustrative value)* mandates local decision authority.*
 
-*Under the Weibull semi-Markov model ({% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}), {% katex() %}\pi^{\mathrm{SM}}{% end %} is computed via the stationary formula; for CONVOY with {% katex() %}k_\mathcal{N} = 0.62{% end %} calibrated to preserve {% katex() %}\mathbb{E}[T_\mathcal{N}]{% end %}, the regime fractions are unchanged. However, the P95 self-sufficiency requirement extends from 20 hr to 27.1 hr ({% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}) — this must be reflected in resource buffer sizing even though the boundary conditions themselves remain satisfied.*
+*Under the Weibull semi-Markov model ({% term(url="#def-12", def="Connectivity Markov Chain: semi-Markov model with Weibull sojourn times for each connectivity regime (Connected/Degraded/Intermittent/None)") %}Definition 12{% end %}), {% katex() %}\pi^{\mathrm{SM}}{% end %} is computed via the stationary formula; for {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} with {% katex() %}k_\mathcal{N} = 0.62{% end %} *(illustrative value)* calibrated to preserve {% katex() %}\mathbb{E}[T_\mathcal{N}]{% end %}, the regime fractions are unchanged. However, the P95 self-sufficiency requirement extends from 20 hr *(illustrative value)* to 27.1 hr *(theoretical bound under illustrative Weibull parameters)* ({% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}) — this must be reflected in resource buffer sizing even though the boundary conditions themselves remain satisfied.*
+
+*Watch out for*: \\(\pi\\) is estimated as the long-run stationary distribution, which requires the connectivity process to be ergodic over the observation window; if the environment has a diurnal or seasonal cycle (e.g., terrain masking that varies with convoy route), a short observation period will yield a biased \\(\pi\\) that overstates one regime and understates another, placing the architecture in the wrong tier.
 
 ### Architectural Response: Fog Computing Layers
 
@@ -1780,7 +1742,7 @@ where \\(r_i < 1\\) is the reduction ratio at layer \\(i\\). For {% term(url="#s
 
 A \\(100\times\\) reduction makes satellite backhaul feasible even during Degraded regime. But each reduction stage must preserve information sufficient for its downstream consumers. The fog layer discards raw pixels but preserves detection events. The edge layer discards individual detections but preserves track hypotheses.
 
-> **Physical translation.** Multiply all the reduction ratios together to find what fraction of raw data reaches the cloud. RAVEN's two-stage \\(10\\times\\) reduction at fog and edge leaves 1% of source bandwidth — 24 Mbps from 2.4 Gbps — which fits a satellite uplink. Losing a layer means losing the decisions that depended on it: if the fog node fails, 2.4 Gbps arrives at the edge with no preprocessing budget to absorb it.
+> **Physical translation.** Multiply all the reduction ratios together to find what fraction of raw data reaches the cloud. {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s two-stage \\(10\\times\\) reduction at fog and edge leaves 1% of source bandwidth — 24 Mbps from 2.4 Gbps — which fits a satellite uplink. Losing a layer means losing the decisions that depended on it: if the fog node fails, 2.4 Gbps arrives at the edge with no preprocessing budget to absorb it.
 
 **Fog processing pipeline**:
 
@@ -1817,7 +1779,7 @@ Solving \\(\pi Q = 0\\) for {% term(url="#scenario-gridedge", def="Power distrib
 
 {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} spends 46% of time in Full connectivity — substantially better than tactical environments, but still insufficient for cloud-dependent architecture.
 
-> **What this tells you.** GRIDEDGE looks connected on average. But the 19% Denied fraction coincides with the highest-consequence decisions: fault isolation, load shedding, and protective relay coordination. The fog architecture must be designed for the 19%, not sized for the 46%.
+> **What this tells you.** {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} looks connected on average. But the 19% Denied fraction coincides with the highest-consequence decisions: fault isolation, load shedding, and protective relay coordination. The fog architecture must be designed for the 19%, not sized for the 46%.
 
 The fog computing architecture for {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} implements hierarchical protection. The diagram below shows data and command flows between each layer; dashed arrows indicate SCADA polling that may be unavailable during a storm, while solid arrows carry protection commands that must always succeed.
 
@@ -1913,7 +1875,7 @@ For {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in 
 - **Intermittent ({% katex() %}\mathcal{I}{% end %})**: Weibull with \\(k = 1.5\\), \\(\lambda = 2.0\\) (jamming burst patterns)
 - **Denied ({% katex() %}\mathcal{N}{% end %})**: Pareto with \\(\alpha = 1.2\\), \\(x_m = 0.5\\) (heavy-tailed adversarial denial) (empirically calibrated to adversarial denial durations measured in {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} red-team exercises; the heavy tail captures coordinated jamming events where denial periods cluster at multiples of base duration)
 
-> *Note: The Pareto model here is an illustrative fit for adversarially-constrained denial scenarios (extended jamming). The authoritative analytical model for CONVOY's Denied regime is Weibull(\\(k=0.62\\), \\(\lambda=4.62\\)) per {% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}. The Pareto and bimodal-mixture models in this section serve as sensitivity examples for heavy-tailed conditions; they do not replace {% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %} as the canonical representation.*
+> *Note: The Pareto model here is an illustrative fit for adversarially-constrained denial scenarios (extended jamming). The authoritative analytical model for {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s Denied regime is Weibull(\\(k=0.62\\), \\(\lambda=4.62\\)) per {% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}. The Pareto and bimodal-mixture models in this section serve as sensitivity examples for heavy-tailed conditions; they do not replace {% term(url="#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %} as the canonical representation.*
 
 The semi-Markov stationary distribution {% katex() %}\pi^{SM}{% end %} weights each state by how long the system actually stays there, not just how often it visits: a state visited rarely but for long periods gets more probability mass than a state visited often but briefly.
 
@@ -1955,14 +1917,14 @@ This assumption is incompatible with an adaptive adversary. In the adversarial M
 
 The adversarial indicators above are the operational bridge: they signal when to switch from the CTMC regime assumption to the adversarial game regime.
 
-> **Cognitive Map — Section 12.** Connectivity spectrum \\(\to\\) fog computing places computation at the earliest viable layer \\(\to\\) four-layer architecture with \\(100\\times\\) bandwidth reduction \\(\to\\) GRIDEDGE shows commercial fog: 500 ms budget forces fog-layer protection logic \\(\to\\) stationary distribution (19% Denied) drives design to the tail, not the mean \\(\to\\) Bayesian online learning updates Q as conditions change \\(\to\\) adversarial adaptation detection signals when to switch from CTMC to game-theoretic analysis.
+> **Cognitive Map — Section 12.** Connectivity spectrum \\(\to\\) fog computing places computation at the earliest viable layer \\(\to\\) four-layer architecture with \\(100\\times\\) bandwidth reduction \\(\to\\) {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} shows commercial fog: 500 ms budget forces fog-layer protection logic \\(\to\\) stationary distribution (19% Denied) drives design to the tail, not the mean \\(\to\\) Bayesian online learning updates Q as conditions change \\(\to\\) adversarial adaptation detection signals when to switch from CTMC to game-theoretic analysis.
 
 
 ---
 
 ## Illustrative Connectivity Profiles
 
-The connectivity analysis so far has used CONVOY as the worked example. These profiles extend the same framework to commercial environments — confirming that the inversion thesis is not a tactical anomaly, and extracting design rules that apply across environments.
+The connectivity analysis so far has used {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} as the worked example. These profiles extend the same framework to commercial environments — confirming that the inversion thesis is not a tactical anomaly, and extracting design rules that apply across environments.
 
 ### Representative Parameterizations by Environment
 
@@ -2463,7 +2425,7 @@ Irreversibility adds regret cost to the decision function. The formula below exp
 
 where {% katex() %}\text{regret\_bound}(d){% end %} is the worst-case loss from decision \\(d\\) if it cannot be undone and proves incorrect.
 
-> **Physical translation.** For a reversible decision (\\(R = 1\\)), regret cost disappears — if you're wrong, you can undo it. For an irreversible decision (\\(R = 0\\)), you carry the full worst-case loss regardless of outcome. A RAVEN drone committing to a target track (\\(R \approx 0.1\\)) cannot be given the same decision budget as a mobile app saving a draft (\\(R \approx 1\\)). The formula forces this asymmetry to be explicit in system design: high-regret decisions require higher confidence thresholds before acting.
+> **Physical translation.** For a reversible decision (\\(R = 1\\)), regret cost disappears — if you're wrong, you can undo it. For an irreversible decision (\\(R = 0\\)), you carry the full worst-case loss regardless of outcome. A {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone committing to a target track (\\(R \approx 0.1\\)) cannot be given the same decision budget as a mobile app saving a draft (\\(R \approx 1\\)). The formula forces this asymmetry to be explicit in system design: high-regret decisions require higher confidence thresholds before acting.
 
 ### Adversarial Environment
 
@@ -2580,7 +2542,7 @@ where \\(g_c(\alpha)\\) is the error correction coding gain and {% katex() %}L_{
 
 The optimal operating point depends on mission requirements. For {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} alert distribution, reliability dominates (\\(\alpha \rightarrow 1\\)). For {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} sensor streaming, bandwidth dominates (\\(\alpha \rightarrow 0\\)). For {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} coordination, latency dominates (minimize \\(L\\) subject to {% katex() %}R \geq R_{\min}{% end %}).
 
-> **Physical translation.** At \\(\alpha = 0\\) (no FEC), OUTPOST transmits at maximum rate but accepts 1% bit errors — fine for sensor telemetry where occasional bad readings are tolerable. At \\(\alpha = 1\\) (maximum reliability), OUTPOST achieves near-perfect delivery but carries zero payload — useful only for presence beacons. The operational setting sits between: alerts near \\(\alpha = 0.5\\) (near-perfect delivery, acceptable latency), sensor streams near \\(\alpha = 0.1\\) (high throughput, tolerable error rate).
+> **Physical translation.** At \\(\alpha = 0\\) (no FEC), {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} transmits at maximum rate but accepts 1% bit errors — fine for sensor telemetry where occasional bad readings are tolerable. At \\(\alpha = 1\\) (maximum reliability), {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} achieves near-perfect delivery but carries zero payload — useful only for presence beacons. The operational setting sits between: alerts near \\(\alpha = 0.5\\) (near-perfect delivery, acceptable latency), sensor streams near \\(\alpha = 0.1\\) (high throughput, tolerable error rate).
 
 ### Architectural Response: Distributed Proxy Mesh
 
@@ -2690,7 +2652,7 @@ where \\(w_i\\) are importance weights and \\(L_i\\) is latency for channel \\(i
 
 **Model limits**: Reliability estimates \\(R_i\\) assume steady-state. An adversary observing {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}'s allocation can adapt — jamming relied-upon channels, backing off abandoned ones. The system must periodically *test* channel assumptions, not merely optimize on stale estimates.
 
-> **Cognitive Map — Section 15.** Three constraints form a triangle: bandwidth \\(\leftrightarrow\\) reliability \\(\leftrightarrow\\) latency \\(\to\\) improving one degrades at least one other \\(\to\\) Shannon bound formalizes bandwidth-reliability \\(\to\\) ARQ formalizes latency-reliability \\(\to\\) Pareto frontier parameterized by \\(\alpha\\) lets each message class pick its optimal point \\(\to\\) proxy mesh makes per-class switching feasible at runtime \\(\to\\) OUTPOST applies the full framework: three channels, three mission functions, optimization assigns each function to its best corner.
+> **Cognitive Map — Section 15.** Three constraints form a triangle: bandwidth \\(\leftrightarrow\\) reliability \\(\leftrightarrow\\) latency \\(\to\\) improving one degrades at least one other \\(\to\\) Shannon bound formalizes bandwidth-reliability \\(\to\\) ARQ formalizes latency-reliability \\(\to\\) Pareto frontier parameterized by \\(\alpha\\) lets each message class pick its optimal point \\(\to\\) proxy mesh makes per-class switching feasible at runtime \\(\to\\) {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} applies the full framework: three channels, three mission functions, optimization assigns each function to its best corner.
 
 
 ---
@@ -2717,7 +2679,7 @@ For {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backh
 T_O = T_{\text{sense}} + T_{\text{process}} + T_{\text{coordinate}} + T_{\text{act}}
 {% end %}
 
-> **Physical translation.** Sensor acquisition and local classification are fixed by hardware physics — they cannot be optimized in software. Coordinated response time is fixed by formation geometry. **Only swarm notification is architecture-controllable.** The entire communication architecture of RAVEN exists to minimize a single variable: {% katex() %}T_{\text{coordinate}}{% end %}.
+> **Physical translation.** Sensor acquisition and local classification are fixed by hardware physics — they cannot be optimized in software. Coordinated response time is fixed by formation geometry. **Only swarm notification is architecture-controllable.** The entire communication architecture of {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} exists to minimize a single variable: {% katex() %}T_{\text{coordinate}}{% end %}.
 
 <style>
 #tbl_raven_latency + table th:first-of-type { width: 25%; }
@@ -2836,7 +2798,7 @@ The **crossover condition** determines when distributed coordination becomes mor
 
 The crossover is independent of fleet size \\(n\\) — it depends only on reachability and fault tolerance. For {% term(url="@/blog/2026-01-22/index.md#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} fault tolerance requiring \\(f = 3\\) replicas (to tolerate 1 {% term(url="@/blog/2026-01-22/index.md#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} failure per the \\(3f+1\\) bound), the threshold is {% katex() %}p_{r} < 2/3 \approx 67\%{% end %}. Derivation: P99 agreement requires \\(n \geq 3f + 1\\), so with \\(f = 1\\) tolerated failure, we need \\(n \geq 4\\) replicas and \\(f = 3\\) in our cost formula. Thus distributed coordination dominates when coordinator reachability falls below \\(2/3\\).
 
-> **Physical translation.** The crossover point is 67% reachability — independent of how many nodes are in the fleet. A 12-vehicle CONVOY and a 127-sensor OUTPOST both switch to distributed coordination at the same threshold. In contested environments where \\(p_r\\) ranges 0.3–0.5, you are already far below crossover. **Design for distributed coordination as primary mode, with centralized coordination as an optimization when high reachability is sustained.**
+> **Physical translation.** The crossover point is 67% reachability — independent of how many nodes are in the fleet. A 12-vehicle {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} and a 127-sensor {% term(url="#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} both switch to distributed coordination at the same threshold. In contested environments where \\(p_r\\) ranges 0.3–0.5, you are already far below crossover. **Design for distributed coordination as primary mode, with centralized coordination as an optimization when high reachability is sustained.**
 
 ### Hysteresis-Based Coordination Mode Selection
 
@@ -2877,7 +2839,7 @@ C_{\text{transition}} = C_{\text{state\_sync}} + C_{\text{leadership\_election}}
 
 For {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}, {% katex() %}C_{\text{transition}} \approx 8{% end %} seconds of reduced capability. The algorithm only switches when expected benefit exceeds this cost over a planning horizon (typically 5 minutes).
 
-> **Cognitive Map — Section 17.** Three failure modes for central coordinators (unreachable, compromised, overloaded) \\(\to\\) cost analysis shows centralized has \\(2n/p_r\\) expected message cost \\(\to\\) crossover at \\(p_r < 2/f\\) is fleet-size independent \\(\to\\) for Byzantine tolerance with \\(f = 3\\), threshold is 67% — well above typical contested \\(p_r\\) \\(\to\\) design primary mode as distributed \\(\to\\) hysteresis prevents oscillation at the crossover point \\(\to\\) transition cost (8s for CONVOY) further penalizes frequent mode switching.
+> **Cognitive Map — Section 17.** Three failure modes for central coordinators (unreachable, compromised, overloaded) \\(\to\\) cost analysis shows centralized has \\(2n/p_r\\) expected message cost \\(\to\\) crossover at \\(p_r < 2/f\\) is fleet-size independent \\(\to\\) for Byzantine tolerance with \\(f = 3\\), threshold is 67% — well above typical contested \\(p_r\\) \\(\to\\) design primary mode as distributed \\(\to\\) hysteresis prevents oscillation at the crossover point \\(\to\\) transition cost (8s for {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}) further penalizes frequent mode switching.
 
 
 ---
@@ -2890,7 +2852,7 @@ The inversion thesis implies that architects should optimize explicitly for the 
 \max_{\pi} \mathbb{E}[\mathcal{L}(t) \mid \Xi(t) = \mathcal{N}] \quad \text{subject to} \quad \mathcal{L} \geq \mathcal{L}_1
 {% end %}
 
-> **Physical translation.** This is not "design for failure." It is "design for the primary mode." When 43% of CONVOY's operating time is Intermittent or Denied, the Denied regime is not an edge case — it is a first-class operating mode that must be optimized on its own terms. The objective says: maximize what you can do when disconnected, not just how gracefully you degrade.
+> **Physical translation.** This is not "design for failure." It is "design for the primary mode." When 43% of {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s operating time is Intermittent or Denied, the Denied regime is not an edge case — it is a first-class operating mode that must be optimized on its own terms. The objective says: maximize what you can do when disconnected, not just how gracefully you degrade.
 
 When {% katex() %}P(\Xi \in \{\mathcal{I}, \mathcal{N}\}) > 0.5{% end %}, "degraded" is the primary operating mode.
 
@@ -2988,6 +2950,8 @@ degraded, L0 could not re-initialize because its required allocator was in a cra
 
 **Multi-failure note**: When power degradation (L0), connectivity partition ({% katex() %}\Xi = \mathcal{N}{% end %}), and clock drift coincide simultaneously, {% term(url="#prop-8", def="Hardened Hierarchy Fail-Down: when an authority tier fails, control automatically delegates to the next lower tier without service interruption") %}Proposition 8{% end %} applies in sequence: the hardware veto ({% term(url="@/blog/2026-02-19/index.md#def-108", def="L0 Physical Safety Interlock: hardware-enforced safety constraint that cannot be overridden by software; last line of defense when all autonomic layers fail") %}Definition 108{% end %} in [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md)) fires first, freezing all actuator commands; the MAPE-K loop then operates in read-only diagnostic mode until power recovers above L1 threshold.
 
+*Watch out for*: the proposition requires that dependency isolation is verified statically at link time; if any L0 component uses dynamic dispatch — function pointers resolved at runtime, vtables, or plugin interfaces — the static symbol-dependency graph cannot confirm the absence of upward references, and the fail-down guarantee is unverifiable regardless of whether the code actually contains an upward dependency.
+
 ### Expected Capability Under Contested Connectivity
 
 The expected capability under the stationary connectivity distribution takes the form:
@@ -2998,7 +2962,7 @@ E[\text{Capability}] = \sum_{i=0}^{n} P(C(t) \geq \theta_i) \cdot \Delta V_i
 
 Expected capability is the convolution of connectivity distribution \\(\pi\\) (environment-determined) with capability thresholds \\(\theta_i\\) (design-determined). The architect controls \\(\theta_i\\) but not \\(\pi\\).
 
-For {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s stationary distribution \\(\pi = (0.32, 0.25, 0.22, 0.21)\\), we compute expected capability by mapping states to connectivity thresholds. Full connectivity (F) exceeds all thresholds; Degraded (D) exceeds \\(\theta_2 = 0.3\\) but not \\(\theta_3 = 0.8\\); Intermittent (I) and Denied (N) exceed only \\(\theta_0 = 0\\):
+For {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %}'s stationary distribution \\(\pi = (0.32, 0.25, 0.22, 0.21)\\) *(illustrative value)*, we compute expected capability by mapping states to connectivity thresholds. Full connectivity (F) exceeds all thresholds; Degraded (D) exceeds \\(\theta_2 = 0.3\\) *(illustrative value)* but not \\(\theta_3 = 0.8\\) *(illustrative value)*; Intermittent (I) and Denied (N) exceed only \\(\theta_0 = 0\\):
 
 {% katex(block=true) %}
 \begin{aligned}
@@ -3008,7 +2972,7 @@ E[\text{Capability}] &= 1.0 \cdot (1.0 + 2.5) + (\pi_F + \pi_D) \cdot 4.0 + \pi_
 \end{aligned}
 {% end %}
 
-> **What 48% means operationally.** CONVOY achieves L4 (full integration) only 32% of the time — when in the Connected regime. L3 is available 57% of the time (Connected + Degraded). L0 and L1 are always available. The capability gap is not a defect; it is the mathematical consequence of a contested environment. The architect's job is to maximize mission effectiveness within that gap — not to eliminate it.
+> **What 48% means operationally.** {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} achieves L4 (full integration) only 32% *(illustrative value)* of the time — when in the Connected regime. L3 is available 57% *(illustrative value)* of the time (Connected + Degraded). L0 and L1 are always available. The capability gap is not a defect; it is the mathematical consequence of a contested environment. The architect's job is to maximize mission effectiveness within that gap — not to eliminate it.
 
 **Commercial System Capability Hierarchies** (domain-specific instantiation of framework):
 
@@ -3049,7 +3013,7 @@ Optimal threshold placement depends on the connectivity CDF derivative. Place th
 
 **{% term(url="@/blog/2026-02-12/index.md#def-79", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}Anti-fragility{% end %} through threshold learning**: A system that learns to lower its thresholds under degraded connectivity becomes *more capable* under stress. Adapting \\(\theta_i\\) based on operational experience yields measurable capability gains — a manifestation of positive {% term(url="@/blog/2026-02-12/index.md#def-79", def="System property where performance improves after stress exposure rather than merely recovering; each failure event yields better-calibrated parameters — the system at day 30 outperforms the system at day 1") %}anti-fragility{% end %} expressed as a *performance improvement ratio after stress exposure* (formally defined as Anti-Fragility in {% term(url="@/blog/2026-02-12/index.md#def-79", def="Anti-Fragility: property of a system that gains capability or robustness from stress events rather than merely surviving them") %}Definition 79{% end %}, [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md)).
 
-> **Cognitive Map — Section 18.** Partition is the primary mode, not an edge case \\(\to\\) capability hierarchy L0–L4 defines what's achievable at each connectivity threshold \\(\to\\) dependency isolation requirement ({% term(url="#def-18", def="Dependency Isolation Requirement: each autonomic capability layer must fail independently without propagating failures to lower capability layers") %}Definition 18{% end %}) guarantees lower levels survive upper-level failures — statically verifiable \\(\to\\) expected capability formula convolves environment (connectivity distribution) with design choices (thresholds) \\(\to\\) CONVOY achieves 48% of theoretical max: the gap is the environment's cost, not a design failure \\(\to\\) threshold optimization balances capability gain against implementation cost \\(\to\\) anti-fragile systems lower thresholds through operational learning, improving under stress.
+> **Cognitive Map — Section 18.** Partition is the primary mode, not an edge case \\(\to\\) capability hierarchy L0–L4 defines what's achievable at each connectivity threshold \\(\to\\) dependency isolation requirement ({% term(url="#def-18", def="Dependency Isolation Requirement: each autonomic capability layer must fail independently without propagating failures to lower capability layers") %}Definition 18{% end %}) guarantees lower levels survive upper-level failures — statically verifiable \\(\to\\) expected capability formula convolves environment (connectivity distribution) with design choices (thresholds) \\(\to\\) {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} achieves 48% of theoretical max: the gap is the environment's cost, not a design failure \\(\to\\) threshold optimization balances capability gain against implementation cost \\(\to\\) anti-fragile systems lower thresholds through operational learning, improving under stress.
 
 
 ---
@@ -3153,7 +3117,7 @@ Before trusting model predictions, we must continuously validate that model assu
 H_M = \frac{1}{4}\left( H_{\text{Markov}} + H_{\text{stationary}} + H_{\text{independence}} + H_{\text{coverage}} \right)
 {% end %}
 
-> **Physical translation:** A model health score below 0.5 means the anomaly detector's outputs should be treated as advisory only. A RAVEN drone acting on a 0.3-score detector is flying on a compass with a known deviation it has not corrected for — useful for rough orientation, not for precision maneuvering.
+> **Physical translation:** A model health score below 0.5 means the anomaly detector's outputs should be treated as advisory only. A {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} drone acting on a 0.3-score detector is flying on a compass with a known deviation it has not corrected for — useful for rough orientation, not for precision maneuvering.
 
 > **Physical translation.** Each component tests a different model assumption. {% katex() %}H_{\text{Markov}}{% end %} tests whether history still doesn't matter. {% katex() %}H_{\text{stationary}}{% end %} tests whether the environment is still the same. {% katex() %}H_{\text{independence}}{% end %} tests whether failures are still uncorrelated. {% katex() %}H_{\text{coverage}}{% end %} tests whether rare states are still being observed. When any component drops below threshold, the model's predictions in that dimension are unreliable — fall back to conservative modes rather than trusting stale estimates.
 
@@ -3451,7 +3415,7 @@ No design eliminates these tensions. The architect selects a point on each Paret
 
 Constraint surface: {% katex() %}U_{\text{coordination}} \leq f(1 - U_{\text{autonomy}}) - \alpha \cdot C_{\text{complexity}}{% end %}
 
-> **Physical translation.** The table gives the crossover point: when \\(P(C=0) > 0.20\\), the coordination efficiency you sacrifice for autonomy is smaller than the coordination you would lose to connectivity failures anyway. CONVOY at {% katex() %}\pi_\mathcal{N} = 0.21{% end %} sits just above the crossover — partition-first is the correct choice, not a preference.
+> **Physical translation.** The table gives the crossover point: when \\(P(C=0) > 0.20\\), the coordination efficiency you sacrifice for autonomy is smaller than the coordination you would lose to connectivity failures anyway. {% term(url="#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} at {% katex() %}\pi_\mathcal{N} = 0.21{% end %} sits just above the crossover — partition-first is the correct choice, not a preference.
 
 ### Trade-off 2: Responsiveness vs. Consistency (CAP)
 
@@ -3484,7 +3448,7 @@ The shadow price {% katex() %}\zeta_i = \partial \mathcal{L} / \partial g_i{% en
 | Battery/Power | 12.00/kWh | 4.50/kWh | N/A | Extended operation |
 | Latency | 0.50/ms | 0.30/ms | 25.00/ms | Response speed |
 
-*(Shadow prices in normalized cost units (c.u.) — illustrative relative values; ratios between rows convey resource scarcity ordering. GRIDEDGE compute (0.05 c.u./GFLOP) is the smallest unit; all others express how many times more valuable that resource is per unit. Calibrate to platform-specific costs.)*
+*(Shadow prices in normalized cost units (c.u.) — illustrative relative values; ratios between rows convey resource scarcity ordering. {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %} compute (0.05 c.u./GFLOP) is the smallest unit; all others express how many times more valuable that resource is per unit. Calibrate to platform-specific costs.)*
 
 **Investment implication**: High shadow price indicates binding constraint where investment yields highest returns. {% term(url="#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %}'s high bandwidth shadow price justifies compression and priority queuing investment. {% term(url="#scenario-gridedge", def="Power distribution grid with protective relays; 500 ms fault-isolation mandate (60x faster than SCADA polling) requires full local decision authority") %}GRIDEDGE{% end %}'s extreme latency shadow price justifies sub-cycle response hardware.
 

@@ -34,9 +34,9 @@ The state variables \\(\Sigma(t)\\) and \\(\mathbf{H}(t)\\) defined in [Why Edge
 
 ---
 
-> **Memory budget prerequisite.** All definitions and propositions in this article assume the zero-tax autonomic tier ({% term(url="@/blog/2026-02-19/index.md#def-95", def="Lightweight autonomic constructs enabling zero-overhead autonomy on severely memory-constrained MCUs") %}Definitions 95–97{% end %}, [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md)) is active, providing a ~200-byte baseline for health tracking. On platforms where the full measurement stack cannot fit (< 4 KB SRAM), the definitions below cannot activate and the system degrades to heartbeat-only L0 observation. Verify your platform's memory budget against the constraint sequence before implementing any definition in this article.
+> **Memory budget prerequisite.** All definitions and propositions in this article assume the zero-tax autonomic tier ({% term(url="@/blog/2026-02-19/index.md#def-95", def="Lightweight autonomic constructs enabling zero-overhead autonomy on severely memory-constrained MCUs") %}Definitions 95–97{% end %}, [The Constraint Sequence and the Handover Boundary](@/blog/2026-02-19/index.md)) is active, providing a ~200-byte baseline for health tracking. On platforms where the full measurement stack cannot fit (< 4 KB SRAM), the definitions below cannot activate and the system degrades to heartbeat-only L0 observation.
 
-> **Architectural prerequisite.** This article assumes the Inversion Threshold condition ({% term(url="@/blog/2026-01-15/index.md#prop-2", def="Inversion Threshold: partition-first architecture yields higher expected utility than cloud-native patterns when the disconnection probability exceeds the threshold") %}Proposition 2{% end %}, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#prop-2)) is satisfied: \\(P(C(t) = 0) > \tau^\*\\) for your deployment. If partition probability is below \\(\tau^\*\\), cloud-connected diagnostics dominate and the autonomy stack in this article is over-engineered for your environment.
+> **Architectural prerequisite.** This article assumes the Inversion Threshold condition ({% term(url="@/blog/2026-01-15/index.md#prop-2", def="Inversion Threshold: partition-first architecture yields higher expected utility than cloud-native patterns when the disconnection probability exceeds the threshold") %}Proposition 2{% end %}, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#prop-2)) is satisfied: \\(P(C(t) = 0) > \tau^\*\\). When partition probability falls below \\(\tau^\*\\), cloud-connected diagnostics dominate and the local autonomy stack described here is over-engineered for that deployment profile.
 
 ## Overview
 
@@ -50,7 +50,7 @@ Self-measurement lets autonomous systems know their own state without external i
 | **Byzantine Tolerance** | {% katex() %}\sum_{\text{Byz}} T_i < \frac{1}{3}\sum_{\text{all}} T_i{% end %} | Trust-weight nodes to bound adversarial influence |
 
 > **Decoding the overview table.**
-> - **Anomaly detection threshold**: Set your detection trigger at the ratio of false-positive cost to total error cost. If missing a failure costs \\(10\\times\\) more than a false alarm, detect at \\(\geq 91\\%\\) posterior probability, not 50%.
+> - **Anomaly detection threshold**: The detection trigger equals the ratio of false-positive cost to total error cost. When missing a failure costs \\(10\\times\\) more than a false alarm, the optimal threshold is \\(\geq 91\\%\\) posterior probability, not 50%.
 > - **Gossip convergence {% katex() %}O(\ln n / f_g){% end %}**: Fleet-wide health state propagates in logarithmic time. A 127-node OUTPOST mesh converges in ~5 gossip rounds at a 0.5/s fanout rate — under 15 seconds.
 > - **Maximum staleness bound**: Observation age has a hard ceiling: beyond {% katex() %}\tau_{\max}{% end %}, the estimate has drifted so far that acting on it is worse than having no data.
 > - **Byzantine bound**: If compromised nodes control more than one-third of aggregate trust weight, the fleet's health picture can be corrupted. Design trust weighting to enforce this ceiling even under adversarial enrollment.
@@ -142,7 +142,7 @@ The table below shows how every dimension of the observability problem differs b
 
 **Analysis must happen locally, and alerting must be autonomous.** Waiting for human operators or external services is not an option. The system must detect, diagnose, and decide within the constraints of local compute and memory.
 
-> **Physical translation.** The asymmetry in the cost column is the design driver. A false positive triggers an unnecessary healing action — wasteful but recoverable. A false negative leaves a failure undetected — potentially cascading in environments where one missed sensor failure enables adversarial exploitation of the coverage gap. This asymmetry should set your detection threshold before you write a single line of code.
+> **Physical translation.** The asymmetry in the cost column is the design driver. A false positive triggers an unnecessary healing action — wasteful but recoverable. A false negative leaves a failure undetected — potentially cascading in environments where one missed sensor failure enables adversarial exploitation of the coverage gap. This asymmetry determines the detection threshold — the cost model drives the architecture.
 
 > **Cognitive Map — Section 1.** Three results from [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md) motivate self-measurement: Denied regime eliminates external observability, capability hierarchy requires accurate health to trigger recovery, inversion thesis requires measurement to function in complete isolation \\(\to\\) cloud observability pipeline has six network dependencies, all failing together \\(\to\\) edge local loop has zero external dependencies \\(\to\\) false-negative cost asymmetry drives detection threshold design.
 
@@ -248,9 +248,7 @@ The simplest effective approach. The two equations below update the running mean
 
 > **Physical translation**: \\(\mu_t\\) is a weighted average that remembers recent readings at weight \\(\alpha\\) and forgets old ones at rate \\((1 - \alpha)\\). {% katex() %}\sigma_t^2{% end %} tracks how much the signal bounces around its own recent mean. Together they define "what normal looks like right now" — updating in two multiply-adds per observation tick.
 
-- **Use**: Computes an exponentially weighted moving average baseline for metric {% katex() %}x{% end %}; apply at every MAPE-K monitor tick to maintain an adaptive baseline and prevent stale-mean drift from flooding false anomaly alerts during normal load ramp-up.
-- **Parameters**: {% katex() %}\alpha = 0.05\text{--}0.3{% end %}; {% katex() %}\alpha = 0.1{% end %} gives {% katex() %}\approx 10{% end %}-sample effective window; larger {% katex() %}\alpha{% end %} reacts faster but produces noisier baselines.
-- **Field note**: Match {% katex() %}\alpha{% end %} to your metric's ramp-up time constant — the window should cover 2–12 full ramp cycles.
+- **Parameters**: {% katex() %}\alpha = 0.05\text{--}0.3{% end %} *(threshold — not a theoretical bound; the right value depends on the noise variance observed in the target metric)*; {% katex() %}\alpha = 0.1{% end %} gives {% katex() %}\approx 10{% end %}-sample effective window; larger {% katex() %}\alpha{% end %} reacts faster but produces noisier baselines.
 
 **Mode-indexed smoothing — the stability-region coupling.** When {% katex() %}T_{\text{tick}}{% end %} changes across capability levels ({% term(url="@/blog/2026-01-15/index.md#def-3", def="Hybrid Capability Automaton: models the edge node as a hybrid automaton with discrete capability modes and continuous error-state dynamics") %}Definition 3{% end %} in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-3)), a fixed \\(\alpha\\) produces windows of different physical duration. At L1 with {% katex() %}T_{\text{tick}}{% end %} doubled, \\(\alpha = 0.1\\) tracks a 100-second window instead of 50 seconds, halving baseline responsiveness exactly when the system's Stability Region ({% term(url="@/blog/2026-01-15/index.md#def-4", def="Stability Region: maximal forward-invariant region under the current mode dynamics; error states outside this region cause the healing loop to diverge") %}Definition 4{% end %} in [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-4)) is smallest.
 
@@ -293,9 +291,6 @@ z_t = \frac{|x_t - \mu_{t-1}|}{\sigma_{t-1}}
 
 > **Physical translation**: Divide the current reading's distance from the running mean by the running standard deviation. A result of 2.5 means this observation is 2.5 standard deviations from what the sensor has been reporting recently — statistically unlikely under a normal distribution regardless of the signal's units or absolute scale.
 
-- **Use**: Computes the Z-score of each reading against the adaptive EWMA baseline in standard deviations; compare against threshold from {% term(url="#prop-9", def="Optimal Anomaly Threshold: minimizes total misclassification cost by balancing false-positive and false-negative penalties") %}Proposition 9{% end %} at every monitor tick to catch anomalies while preventing absolute-threshold brittleness when metric scale shifts after reconfiguration.
-- **Parameters**: Uses EWMA variance; enforce {% katex() %}\sigma_{\min} \approx 0.01 \cdot \bar{x}{% end %} to prevent divide-by-zero on constant-output sensors.
-- **Field note**: Always set {% katex() %}\sigma_{\min}{% end %} — a constant-reading sensor causes silent division-by-zero that disables the entire anomaly detector.
 
 **Anomaly Classification Decision Problem**:
 
@@ -319,9 +314,6 @@ The system flags an observation as anomalous when {% katex() %}z_t > \theta^*{% 
 
 > **Physical translation**: \\(\theta^\*\\) shifts the alarm boundary based on how bad each type of mistake is. If missing a fault costs ten times more than raising a false alarm ({% katex() %}C_{\text{FN}}/C_{\text{FP}} = 10{% end %}), the detector triggers on weaker signals, accepting more false alarms to avoid catastrophic misses. When both costs are equal, the formula reduces to the standard 50th-percentile boundary.
 
-- **Use**: Computes the Gaussian-optimal detection threshold balancing FP and FN costs; use during integration testing with labeled fault-injection data to prevent symmetric-cost miscalibration that underweights the mission cost of missed faults.
-- **Parameters**: {% katex() %}C_{\text{FN}}/C_{\text{FP}}{% end %} ratio = 3–10 for critical systems; larger ratio lowers the threshold (act sooner on weaker signals).
-- **Field note**: Most mission systems need {% katex() %}C_{\text{FN}}/C_{\text{FP}} \geq 5{% end %} — operators consistently underestimate missed-fault cost until a real incident occurs.
 
 <span id="prop-9"></span>
 **Proposition 9** (Optimal Anomaly Threshold). *Applies the anomaly classification problem of {% term(url="#def-19", def="Per-observation test that classifies sensor readings as normal or anomalous in constant time, running locally on the edge controller without requiring cloud connectivity") %}Definition 19{% end %} to derive: given asymmetric error costs {% katex() %}C_{\text{FP}}{% end %} for false positives and {% katex() %}C_{\text{FN}}{% end %} for false negatives, the optimal detection threshold \\(\theta^\*\\) satisfies the likelihood ratio condition:*
@@ -372,23 +364,22 @@ where {% katex() %}\gamma_{\mathrm{FN}} \geq 0{% end %} is the false-negative co
 
 > **Physical translation**: At partition start, {% katex() %}\theta^*(t) = \theta^*_0{% end %} — baseline sensitivity. As partition age approaches the P95 planning horizon {% katex() %}Q_{0.95}{% end %}, the alarm threshold shrinks by a factor of {% katex() %}(1 + \gamma_{\text{FN}}){% end %}. When help is farthest away, the detector is most alert.
 
-- **Use**: Tightens the anomaly detection threshold as {% katex() %}T_{\text{acc}}{% end %} approaches {% katex() %}Q_{0.95}{% end %} during sustained partition; replaces the static threshold at each MAPE-K tick to prevent the miss surge that occurs when the system normalizes to a degraded state.
-- **Parameters**: Initial threshold {% katex() %}\theta^*_0 = 2\text{--}3\sigma{% end %}; {% katex() %}\gamma_{\mathrm{FN}}{% end %} tunes tightening rate; calibrate so {% katex() %}\theta^*(Q_{0.95}) \approx 0.5 \cdot \theta^*_0{% end %}.
-- **Field note**: Inject faults at {% katex() %}T_{\text{acc}} > Q_{0.95}{% end %} in integration testing — this corner case is routinely skipped and routinely fails in field deployments.
 
 where {% katex() %}\theta^*_0{% end %} is the static baseline threshold from the likelihood ratio condition above.
 
 *Interpretation*: As {% katex() %}T_{\mathrm{acc}} \to 0{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0{% end %} (partition just started, baseline sensitivity). As {% katex() %}T_{\mathrm{acc}} \to Q_{0.95}{% end %}, {% katex() %}\theta^*(t) \to \theta^*_0 / (1 + \gamma_{\mathrm{FN}}){% end %} — the detector becomes {% katex() %}(1 + \gamma_{\mathrm{FN}}){% end %} times more sensitive. For {% katex() %}T_{\mathrm{acc}} > Q_{0.95}{% end %}: the circuit breaker ({% term(url="@/blog/2026-01-29/index.md#prop-37", def="Weibull Circuit Breaker: base-tier gate fires when the partition accumulator exceeds the 95th-percentile partition duration, triggering controlled shutdown before resources are exhausted") %}Proposition 37{% end %}) fires, the system enters L0, and \\(\theta^\*(t)\\) is frozen at its current value — further threshold drift is irrelevant since healing actions are suspended.
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: With {% katex() %}\gamma_{\mathrm{FN}} = 2.0{% end %} (anomalies during long denied periods cost \\(3\times\\) baseline due to inability to request sensor replacement), the threshold drops from {% katex() %}\theta^*_0 = 2.5\,\sigma{% end %} at partition start to {% katex() %}\theta^*_0 / 3 \approx 0.83\,\sigma{% end %} at the P95 boundary. This triggers more sensitive detection of health anomalies precisely when external recovery is least available.
+The numbers in this calibration block are illustrative values chosen for the {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} scenario; they are not theoretical bounds.
 
-**Calibration example (RAVEN).** Missed motor degradation costs 1000 J (lost drone); false alarm costs 50 J (wasted diagnostics). Cost ratio \\(C_\text{FN}/C_\text{FP} = 20\\). With \\(P(H_0) = 0.95\\) (nominal operation 95% of flight time), the optimal threshold \\(\theta^\*\\) requires a posterior anomaly probability \\(\geq 95.2\\%\\) — substantially tighter than a naive 50% threshold. In practice, deploy {% katex() %}\theta^* \approx 1.8\hat{\sigma}{% end %} for this scenario, where \\(\hat{\sigma}\\) is the estimated noise standard deviation from the baseline estimator.
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: With {% katex() %}\gamma_{\mathrm{FN}} = 2.0{% end %} *(example value — replace with your measured figure)*, the threshold drops from {% katex() %}\theta^*_0 = 2.5\,\sigma{% end %} *(example value)* at partition start to {% katex() %}\theta^*_0 / 3 \approx 0.83\,\sigma{% end %} *(theoretical bound given the example values above)* at the P95 boundary. This triggers more sensitive detection of health anomalies precisely when external recovery is least available.
 
-As partition age grows toward \\(Q_{95}\\), the denominator reaches \\((1 + \gamma_\text{FN})\\): {% katex() %}\theta^*(Q_{95}) = \theta^*_0 / (1 + \gamma_\text{FN}){% end %}. For OUTPOST with \\(\gamma_\text{FN} = 2\\), a threshold initially set at \\(2.5\hat{\sigma}\\) becomes \\(0.83\hat{\sigma}\\) — nearly three times more sensitive. The system grows progressively trigger-happy as partition age approaches the planning horizon, prioritising missed-fault detection over false-alarm suppression.
+**Calibration example ({% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm operating over contested territory; no external communications once airborne") %}RAVEN{% end %}).** Missed motor degradation costs 1000 J (lost drone); false alarm costs 50 J (wasted diagnostics). Cost ratio \\(C_\text{FN}/C_\text{FP} = 20\\) *(illustrative value)*. With \\(P(H_0) = 0.95\\) *(illustrative value)* (nominal operation 95% of flight time), the optimal threshold \\(\theta^\*\\) requires a posterior anomaly probability \\(\geq 95.2\\%\\) — substantially tighter than a naive 50% threshold. The cost-ratio condition yields {% katex() %}\theta^* \approx 1.8\hat{\sigma}{% end %} *(illustrative value — derived from the \\(C_\text{FN}/C_\text{FP} = 20\\) and \\(P(H_0) = 0.95\\) choices above)*, where \\(\hat{\sigma}\\) is the estimated noise standard deviation from the baseline estimator.
+
+As partition age grows toward \\(Q_{95}\\), the denominator reaches \\((1 + \gamma_\text{FN})\\): {% katex() %}\theta^*(Q_{95}) = \theta^*_0 / (1 + \gamma_\text{FN}){% end %}. For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} with \\(\gamma_\text{FN} = 2\\) *(illustrative value)*, a threshold initially set at \\(2.5\hat{\sigma}\\) *(illustrative value)* becomes \\(0.83\hat{\sigma}\\) *(theoretical bound given the illustrative inputs above)* — nearly three times more sensitive. The system grows progressively trigger-happy as partition age approaches the planning horizon, prioritising missed-fault detection over false-alarm suppression.
 
 **Circuit breaker interaction.** The threshold tightening in this proposition applies only while \\(T_\text{acc} \leq Q_{95}\\). When \\(T_\text{acc}\\) exceeds \\(Q_{95}\\) (the P95 partition duration from {% term(url="@/blog/2026-01-15/index.md#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}), {% term(url="@/blog/2026-01-29/index.md#prop-37", def="Weibull Circuit Breaker: base-tier gate fires when the partition accumulator exceeds the 95th-percentile partition duration, triggering controlled shutdown before resources are exhausted") %}Proposition 37{% end %} ([Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#prop-37)) fires — the Weibull circuit breaker suspends all healing actions and halts threshold tightening. The system enters L0 monitoring-only mode regardless of currently detected anomalies. Treat \\(Q_{95}\\) as the hard ceiling on \\(T_\text{acc}\\) for the purposes of this proposition.
 
-**Worked example — OUTPOST with n = 127 sensors.** For OUTPOST Weibull parameters \\(k = 1.4\\) (shape) and \\(\lambda_W = 14400\\,\text{s}\\) (scale, 4 h), the P95 partition duration is {% katex() %}Q_{0.95} \approx 32{,}400\,\text{s}{% end %} (about 9 hours). With {% katex() %}\theta^*_0 = 2.5\sigma{% end %} and \\(\gamma_\text{FN} = 2.0\\):
+**Worked example — {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} with n = 127 sensors.** For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} Weibull parameters \\(k = 1.4\\) *(illustrative value)* (shape) and \\(\lambda_W = 14400\\,\text{s}\\) *(illustrative value)* (scale, 4 h), the P95 partition duration is {% katex() %}Q_{0.95} \approx 32{,}400\,\text{s}{% end %} *(theoretical bound under the illustrative Weibull parameters above)* (about 9 hours). With {% katex() %}\theta^*_0 = 2.5\sigma{% end %} *(illustrative value)* and \\(\gamma_\text{FN} = 2.0\\) *(illustrative value)*:
 
 - At partition onset (\\(T_\text{acc} = 0\\)): \\(\theta^\*(0) = 2.5\sigma\\) — baseline sensitivity, one alarm per ~80 healthy observations.
 - At the circuit-breaker boundary (\\(T_\text{acc} = Q_{0.95}\\)): {% katex() %}\theta^*(Q_{0.95}) \approx 0.83\sigma{% end %} — nearly three times more sensitive, one alarm per ~3 healthy observations.
@@ -419,13 +410,13 @@ where {% katex() %}\kappa_{\text{recover}}{% end %} is a decay constant (default
 
 where \\(\delta_q\\) is the **monitoring guard band** for mode \\(q\\), {% katex() %}\lambda_{\max}(P_q){% end %} is the largest eigenvalue of the Lyapunov matrix, and \\(\varepsilon > 0\\) is a small margin. Tightening \\(\theta^\*(t)\\) past \\(\delta_q\\) pushes the initial error state toward {% katex() %}\partial \mathcal{R}_q{% end %} before any healing action fires — the detector becomes a destabilizing input. In practice, for RAVEN L3 parameters, {% katex() %}\delta_{L3} \approx 0.6\sigma{% end %}, and for L1 thermal throttle, {% katex() %}\delta_{L1} \approx 0.9\sigma{% end %} — the guard band is tighter exactly when the stability region is smaller.
 
-**Local Observability During Partition**: The threshold behavior above is only verifiable after the fact — central telemetry is unavailable while {% katex() %}\Xi = \mathcal{N}{% end %}. Each node must maintain a compact ring buffer (depth \\(\geq 1{,}024\\) ticks) of five scalar metrics per {% term(url="@/blog/2026-01-29/index.md#term-mape-k", def="Monitor-Analyze-Plan-Execute with Knowledge Base; the four-phase autonomic control loop enabling self-healing without central coordination") %}MAPE-K{% end %} tick: (i) {% katex() %}T_{\mathrm{acc}}{% end %}; (ii) \\(\theta^\*(t)\\); (iii) outbound queue depth; (iv) 60-second rolling battery drain rate; (v) MAPE-K execution count since partition start. These five scalars are the minimum evidence required to validate chaos scenario pass/fail criteria after connectivity resumes.
-
-> **What this means in practice**: The optimal detection threshold is not a tuning knob — it's determined by the cost ratio between wrong action types. If a false positive (acting on noise) costs 10x less than a missed detection (ignoring a real failure), the threshold should be set low to favor sensitivity. If the opposite, set it high. Measure C_FP and C_FN from your actual deployment data; don't guess.
+> **What this means in practice**: The optimal detection threshold is not a tuning knob — it is determined by the cost ratio between wrong action types. If a false positive costs \\(10\times\\) less than a missed detection, the boundary shifts toward sensitivity; if costs are equal, it reduces to the 50% posterior threshold.
 
 > **Analogy:** A smoke detector vs. a fire — set too sensitive, every burnt piece of toast triggers it; set too lenient, real fires go undetected. The threshold is calibrated from the relative cost of each error type, not from an arbitrary sensitivity preference.
 
 **Logic:** {% term(url="#prop-9", def="Optimal Anomaly Threshold: minimizes total misclassification cost by balancing false-positive and false-negative penalties via the Neyman-Pearson likelihood ratio condition") %}Proposition 9{% end %} derives \\(\theta^\*\\) via the Neyman-Pearson likelihood ratio condition: flag when \\(f_1(\theta)/f_0(\theta) = C_{\text{FP}}/C_{\text{FN}}\\), shifting the boundary toward sensitivity as the missed-detection cost grows relative to false-alarm cost.
+
+*Watch out for*: the likelihood-ratio formula assumes both \\(H_0\\) and \\(H_1\\) are Gaussian; heavy-tailed sensor noise (vibration transients, electromagnetic interference) shifts the optimal boundary beyond what the Gaussian derivation predicts, so the actual false-negative rate exceeds what the cost ratio implies.
 
 **Constraint Set**: Any algorithm implementing the optimal decision rule must satisfy these three resource limits; they rule out batch-processing and unbounded-memory approaches that would otherwise be valid statistical choices.
 
@@ -449,12 +440,12 @@ g_3: && \theta &\in [\theta_{\min}, \theta_{\max}] && \text{(threshold bounds)}
 
 **Holt-Winters for Seasonal Patterns**
 
-For signals with periodic structure (day/night cycles, shift patterns), Holt-Winters captures level, trend, and seasonality. The three equations below update, respectively, the deseasonalized level \\(L_t\\), the local trend \\(T_t\\), and the seasonal correction \\(S_t\\), each controlled by its own smoothing coefficient (\\(\alpha\\), \\(\beta\\), {% katex() %}s_{\text{hw}}{% end %}) and a period length \\(p\\).
+For signals with periodic structure (day/night cycles, shift patterns), Holt-Winters captures level, trend, and seasonality. The three equations below update, respectively, the deseasonalized level \\(L_t\\), the local trend \\(T_t\\), and the seasonal correction \\(S_t\\), each controlled by its own smoothing coefficient (\\(\alpha\\), {% katex() %}\beta_{\text{hw}}{% end %}, {% katex() %}s_{\text{hw}}{% end %}) and a period length \\(p\\). (We write \\(\beta_{\text{hw}}\\) for the trend coefficient rather than bare \\(\beta\\) to distinguish it from the bandwidth asymmetry ratio \\(\beta = B_b/B_l\\) used in the ingress filter later in this article.)
 
 {% katex(block=true) %}
 \begin{aligned}
 L_t &= \alpha (x_t - S_{t-p}) + (1 - \alpha)(L_{t-1} + T_{t-1}) \\
-T_t &= \beta (L_t - L_{t-1}) + (1 - \beta) T_{t-1} \\
+T_t &= \beta_{\text{hw}} (L_t - L_{t-1}) + (1 - \beta_{\text{hw}}) T_{t-1} \\
 S_t &= s_{\mathrm{hw}} (x_t - L_t) + (1 - s_{\mathrm{hw}}) S_{t-p}
 \end{aligned}
 {% end %}
@@ -518,9 +509,6 @@ S_t = \max(0, S_{t-1} + x_t - \mu_0 - k)
 
 > **Physical translation**: \\(S_t\\) accumulates evidence of a persistent upward shift. Each sample contributes \\(x_t - \mu_0 - k\\): negative when the reading is within the allowable slack \\(k\\), positive when it consistently exceeds it. The \\(\max(0, \cdot)\\) reset forgets evidence when readings return to normal, so CUSUM only alarms when the shift is *sustained* — not just occasional — making it ideal for catching slow-onset degradation that EWMA adapts to and misses.
 
-- **Use**: Accumulates evidence of a sustained mean shift above allowable drift {% katex() %}k{% end %}; run in parallel with EWMA z-score and alarm when {% katex() %}S_t > h{% end %} to catch slow drift that {% katex() %}z_t{% end %} misses because EWMA adapts to gradual changes.
-- **Parameters**: {% katex() %}k{% end %} = allowable slack ({% katex() %}0.5\text{--}1\sigma{% end %}); {% katex() %}h{% end %} = alarm threshold ({% katex() %}4\text{--}5\sigma \cdot n{% end %}); reset {% katex() %}S_t{% end %} to 0 after each alarm.
-- **Field note**: CUSUM and EWMA together cover both spike and slow-drift fault modes — alarm on either, not both.
 
 where \\(\mu_0\\) is the nominal mean and \\(k\\) is the allowable slack. Alarm when \\(S_t > h\\).
 
@@ -615,9 +603,7 @@ z_t^K = \frac{x_t - \hat{\mu}_{t-1}}{\sqrt{\hat{P}_{t|t-1} + R}}
 P_\infty = \frac{-Q + \sqrt{Q^2 + 4QR}}{2}, \qquad K_\infty = \frac{P_\infty + Q}{P_\infty + Q + R}
 {% end %}
 
-- **Use**: Computes the steady-state Kalman gain that minimizes MSE between noisy sensor readings and the true baseline; replace EWMA on high-noise sensors (vibration probes, IMUs) where {% katex() %}Q_{\text{proc}}/R_{\text{obs}}{% end %} can be estimated, preventing noise-dominated baselines that EWMA cannot correct.
 - **Parameters**: {% katex() %}Q_{\text{proc}}{% end %} = process noise variance; {% katex() %}R_{\text{obs}}{% end %} = sensor noise variance; larger {% katex() %}Q_{\text{proc}}/R_{\text{obs}}{% end %} gives gain closer to 1 (fast tracking).
-- **Field note**: {% katex() %}r_{QR} = Q/R{% end %} is the only tuning knob — calibrate it from 5–10 minutes of stationary field data before first deployment.
 
 *For small drift {% katex() %}r_{QR} = Q/R \ll 1{% end %}: {% katex() %}K_\infty \approx \sqrt{r_{QR}}{% end %} — the steady-state gain scales as the square root of the process-to-noise ratio. Convergence to \\(K_\infty\\) is geometric with rate {% katex() %}(1 - K_\infty)^t{% end %} from any initial \\(P_0\\), reaching steady state in approximately \\(1/K_\infty\\) samples.*
 
@@ -625,19 +611,15 @@ P_\infty = \frac{-Q + \sqrt{Q^2 + 4QR}}{2}, \qquad K_\infty = \frac{P_\infty + Q
 
 **Design consequence**: After a transient of approximately \\(1/K_\infty\\) samples, the false positive rate for the Kalman anomaly score is *exactly* \\(2\Phi(-\theta^\*)\\) — not an approximation. The EWMA-based score with fixed \\(\alpha\\) is only asymptotically calibrated and may carry excess false-alarm rate during the warm-up period.
 
-**Validity condition — white noise assumption**: The Kalman gain convergence (Prop 24) and the \\(H_0\\) distribution {% katex() %}z_t^K \sim N(0,1){% end %} both require measurement noise \\(v_t\\) to be approximately i.i.d. Gaussian with stationary variance \\(R\\). Real MEMS sensors violate this: \\(1/f\\) noise dominates below ~1 Hz; variance is temperature-correlated ({% katex() %}R(T) \approx R_0(1 + \beta \cdot \Delta T){% end %} for thermistors); aging causes slow \\(R\\) drift.
-
-Practical remediation:
-
-1. Estimate \\(R\\) from a stationary calibration sequence at deployment temperature before each mission.
-2. Run a chi-squared test on the rolling innovation variance — if {% katex() %}\mathrm{Var}[z_t^K]/1.0{% end %} exceeds 1.5 over a 5-minute window, \\(R\\) is miscalibrated and must be re-estimated.
-3. If temperature correlation is strong ({% katex() %}\beta \cdot \Delta T_{\max} > 0.3{% end %}), use an adaptive-\\(R\\) Kalman (Sage-Husa estimator).
+**Validity condition — white noise assumption**: The Kalman gain convergence (Prop 24) and the \\(H_0\\) distribution {% katex() %}z_t^K \sim N(0,1){% end %} both require measurement noise \\(v_t\\) to be approximately i.i.d. Gaussian with stationary variance \\(R\\). Real MEMS sensors violate this: \\(1/f\\) noise dominates below ~1 Hz; variance is temperature-correlated ({% katex() %}R(T) \approx R_0(1 + \beta_T \cdot \Delta T){% end %} for thermistors, where \\(\beta_T\\) is the temperature sensitivity coefficient — distinct from the Holt-Winters trend coefficient \\(\beta_{\text{hw}}\\) above and the bandwidth asymmetry ratio \\(\beta\\) later in this article); aging causes slow \\(R\\) drift.
 
 The false-alarm guarantee is void if \\(R\\) is off by more than 50% — the actual false-alarm rate scales as {% katex() %}P(|N(0,1)| > \theta \cdot \sqrt{R_{\text{assumed}}/R_{\text{actual}}}){% end %}.
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration**: Temperature sensors drift at {% katex() %}\approx 1\,^\circ\text{C}\,\text{day}^{-1}{% end %} with sensor noise {% katex() %}\sigma_{\text{sens}} = 0.1\,^\circ\text{C}{% end %}. At {% katex() %}f_s = 1\,\text{Hz}{% end %} (sensor sampling rate): {% katex() %}Q = (1/86400)^2 \approx 1.3 \times 10^{-10}\,\text{K}^2/\text{sample}{% end %}, \\(R = 0.01\\,\text{K}^2\\), giving {% katex() %}r_{QR} \approx 1.3 \times 10^{-8}{% end %} and {% katex() %}K_\infty \approx 1.1 \times 10^{-4}{% end %}. Baseline adapts on a timescale of {% katex() %}1/K_\infty \approx 9000\,\text{s} \approx 2.5\,\text{h}{% end %} — slow enough to track seasonal drift without following measurement noise.
 
 > **Empirical status**: The steady-state formulas for \\(P_\infty\\) and \\(K_\infty\\) are exact given \\(Q\\) and \\(R\\). The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} drift figure of {% katex() %}1\,^\circ\text{C}\,\text{day}^{-1}{% end %} and \\(R = 0.01\\,\text{K}^2\\) are representative sensor-datasheet values; actual calibration requires pre-deployment measurement. The "50% \\(R\\) misestimation voids the false-alarm guarantee" bound is analytically derived, not empirically measured.
+
+*Watch out for*: \\(K_\infty\\) and the \\((1-K_\infty)^t\\) convergence rate both assume stationary measurement variance \\(R\\); if temperature or aging drives \\(R\\) beyond 50% of its calibrated value, the steady-state gain is miscalibrated and the false-alarm rate guarantee from the Design Consequence paragraph does not hold until \\(R\\) is re-estimated.
 
 <span id="def-21"></span>
 **Definition 21** (Bayesian Surprise Metric). *The Bayesian Surprise statistic {% katex() %}S_t^K{% end %} is the adaptive-baseline generalization of CUSUM, accumulating Kalman log-likelihood ratios:*
@@ -652,13 +634,9 @@ S_t^K = \max\!\left(0,\; S_{t-1}^K + \Lambda_t^K - \kappa\right)
 \Lambda_t^K = \delta \cdot z_t^K - \frac{\delta^2}{2}
 {% end %}
 
-- **Use**: Scores each Kalman innovation as a log-likelihood ratio against the baseline model; use as a complementary anomaly signal to catch distribution-shape changes (bimodal fault signatures) that EWMA and CUSUM miss because they only track the mean.
-- **Parameters**: {% katex() %}\delta{% end %} = effect size from historical fault events; scores above 3 nats consistently warrant investigation.
-- **Field note**: Bimodal sensor signatures (normal vs. failed state) produce large surprise scores even when the mean appears unchanged.
-
 *and \\(\kappa > 0\\) is the allowance that prevents indefinite accumulation. Alert condition: {% katex() %}S_t^K > h{% end %} for threshold \\(h\\).*
 
-*In practice, this means: when the Kalman filter tracks a drifting baseline, each day's {% katex() %}\Lambda_t^K{% end %} stays near zero even as the raw sensor mean climbs — the accumulator only fires when a genuine anomaly diverges from the tracked trend, not when the trend itself shifts. Tune \\(\kappa\\) (the leak rate) to match your mission's decision latency: a small \\(\kappa\\) detects slow subtle changes but takes longer to reset after a false alarm clears.*
+When the Kalman filter tracks a drifting baseline, each day's {% katex() %}\Lambda_t^K{% end %} stays near zero even as the raw sensor mean climbs — the accumulator only fires when a genuine anomaly diverges from the tracked trend, not when the trend itself shifts.
 
 **Difference from static CUSUM**: The static form {% katex() %}S_t = \max(0, S_{t-1} + x_t - \mu_0 - k){% end %} uses a fixed \\(\mu_0\\). {% term(url="#def-21", def="Bayesian Surprise Metric: per-reading surprise score measuring deviation from the adaptive baseline in standard-deviation units") %}Definition 21{% end %} replaces \\(x_t - \mu_0\\) with {% katex() %}\Lambda_t^K{% end %}, computed from the Kalman innovation {% katex() %}z_t^K{% end %} normalized by the current innovation variance {% katex() %}\hat{P}_{t|t-1} + R{% end %}. When the baseline drifts by \\(5\\,^\circ\text{C}\\) over a season, {% katex() %}\Lambda_t^K \approx 0{% end %} throughout (the Kalman filter tracks the drift), while the static form accumulates \\(S_t \propto 5/\sigma\\) — triggering continuous false alarms.
 
@@ -696,6 +674,8 @@ S_t^K = \max\!\left(0,\; S_{t-1}^K + \Lambda_t^K - \kappa\right)
 **{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} scenario**: In the 127-sensor perimeter mesh, flatline and noise deaths were the two most common hardware failure modes in field trials, making this chi-squared override the primary health guard for sensor trust decisions.
 
 > **Empirical status**: The thresholds {% katex() %}\delta_{\text{flat}} = 0.1{% end %} and {% katex() %}\delta_{\text{noise}} = 10{% end %} and window \\(w = 30\\) are analytically justified by chi-squared tail probabilities (\\(<10^{-10}\\) false-override rate). The claim that flatline and noise deaths dominate {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} failure modes is a scenario illustration, not a measured failure-mode frequency from field data.
+
+*Watch out for*: the chi-squared tail probabilities in the proof assume \\(z_t^K \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)\\), which holds only after the Kalman gain has converged (Proposition 10); during warm-up, the chi-squared statistic is inflated, so the override fires with higher probability than the \\(<10^{-10}\\) bound implies.
 
 The minimum viable sensor set required for continued operation and the transition to reduced capability mode under growing P_CRITICAL count are addressed in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-50) ({% term(url="@/blog/2026-01-29/index.md#def-50", def="Minimum Viable System: smallest subset of components sustaining mission-critical survival capability; defines the healing algorithm's priority boundary") %}Definition 121{% end %}, {% term(url="@/blog/2026-01-29/index.md#def-50", def="Minimum Viable System: reduced service set guaranteeing safe operation under severe resource constraints") %}Minimum Viable System{% end %}).
 
@@ -806,13 +786,7 @@ The anomaly score for input \\(x\\) is the squared reconstruction error \\(\|x -
 
 where {% katex() %}\hat{x} = \text{Decoder}(\text{Encoder}(x)){% end %} and {% katex() %}\sigma^2_{\text{baseline}}{% end %} is computed from validation data.
 
-**Training methodology for edge autoencoders**:
-
-1. **Offline training**: Train on cloud with historical normal data (exclude known anomalies)
-2. **Quantization-aware training**: Use INT8 quantization during training to avoid accuracy loss at deployment
-3. **Validation**: Test on held-out anomalies to verify detection capability
-4. **Deployment**: Export quantized weights to edge device
-5. **Threshold calibration**: Compute threshold on-device from first 1000 observations
+The edge autoencoder is trained offline on historical normal data with INT8 quantization-aware training to avoid accuracy loss under fixed-point arithmetic. Detection threshold calibration occurs on-device from the first 1000 observations after the model is active — this is an operational constant, not a design parameter, because the ambient noise floor and sensor characteristics are only fully observable in-deployment.
 
 **Performance bounds** (derived from model capacity analysis): Under assumption set {% katex() %}\mathcal{A}_{perf}{% end %} — anomaly distribution \\(P_1\\) separable from normal \\(P_0\\) with overlap \\(\epsilon\\), model capacity \\(C_m\\), sample complexity \\(n\\) — the table below gives worst-case precision and recall bounds, per-inference computational complexity, memory footprint, and drift protection mechanism for each edge-viable detector family.
 
@@ -845,7 +819,7 @@ P(\text{failure\_type} | \text{anomaly\_vector}) = \text{softmax}(W_2 \cdot \tex
 - Architecture: {% katex() %}8 \to 6 \to 5{% end %} classes (motor degradation, sensor drift, communication fault, power issue, unknown)
 - Parameters: {% katex() %}8\times6 + 6\times5 = 78{% end %} weights = **78 bytes** INT8
 
-**Classification accuracy bound**: The bound below gives the minimum guaranteed classification accuracy as a function of the number of classes \\(K\\), the VC dimension of the hidden layer {% katex() %}\text{VC}(h){% end %}, the training sample count \\(n\\), and the confidence parameter \\(\delta\\).
+**Classification accuracy bound**: The bound below gives the minimum guaranteed classification accuracy as a function of the number of fault classes \\(K\\) (distinct from the Kalman gain \\(K_t\\) in this article and from the EXP3-IX arm count \\(K\\) in Anti-Fragile Decision-Making at the Edge), the VC dimension of the hidden layer {% katex() %}\text{VC}(h){% end %}, the training sample count \\(n\\), and the confidence parameter \\(\delta\\).
 
 {% katex(block=true) %}
 \text{Accuracy} \geq 1 - \frac{K \cdot \text{VC}(h)}{n} - \sqrt{\frac{\ln(1/\delta)}{2n}}
@@ -870,7 +844,7 @@ For sufficient training samples (\\(n > 100 \cdot K\\)) and well-separated failu
 
 **One-Class SVM for Novelty Detection**
 
-When anomalies are rare and diverse, one-class SVM learns the boundary of normal behavior. The objective below finds the weight vector \\(w\\) and margin \\(\rho\\) that enclose the training data as tightly as possible, with the hyperparameter \\(\nu \in (0,1)\\) bounding the fraction of training points allowed outside the boundary and \\(\phi(x_i)\\) the feature mapping for point \\(x_i\\).
+When anomalies are rare and diverse, one-class SVM learns the boundary of normal behavior. The objective below finds the weight vector \\(w\\) and margin \\(\rho\\) that enclose the training data as tightly as possible, with the hyperparameter \\(\nu \in (0,1)\\) bounding the fraction of training points allowed outside the boundary and \\(\phi(x_i)\\) the feature mapping for point \\(x_i\\). (\\(\rho\\) here is the SVM margin hyperparameter. Later in this article \\(\rho(\cdot)\\) denotes spectral radius of the weight-update Jacobian, \\(\rho_i[j]\\) denotes the gossip observation-age tracker, and \\(\rho_{\text{max}}\\) denotes the anti-flood rate ceiling — subscripts and function notation differentiate all four at every occurrence.)
 
 {% katex(block=true) %}
 \min_{w, \rho} \frac{1}{2}\|w\|^2 - \rho + \frac{1}{\nu n} \sum_{i=1}^{n} \max(0, \rho - w^T \phi(x_i))
@@ -901,7 +875,7 @@ where {% katex() %}\lambda_{\text{reg}} = \alpha \cdot \|x_t - x_{t-1}\|^2{% end
 \rho(\mathbf{J}_w) = \max_i \lvert\lambda_i(\mathbf{J}_w)\rvert = \max_i \lvert 1 - \eta\,\lambda_i(H_{\text{reg}})\rvert < 1
 {% end %}
 
-*(Notation: \\(\\rho(\\cdot)\\) here denotes spectral radius. This is distinct from the SVM margin hyperparameter \\(\\rho\\) in the one-class SVM objective, from the {% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} observation-age tracker \\(\\rho_i[j]\\) used in the staleness model, and from the per-source critical-message rate ceiling {% katex() %}\rho_{\text{max}}{% end %} in the anti-flood protocol. Subscripts and function notation differentiate the four in all occurrences. For \\(\\lambda\\) disambiguation — gossip contact rate, Weibull scale, L2 regularization, distributional shift, eigenvalue, and shadow price — see the \\(\\lambda\\) notation legend in the Notation note above.)*
+*(\\(\rho(\cdot)\\) here is the spectral radius — see the \\(\rho\\) notation note at the one-class SVM objective above for the full disambiguation. For \\(\lambda\\) disambiguation — gossip contact rate, Weibull scale, L2 regularization, distributional shift, eigenvalue, and shadow price — see the \\(\lambda\\) notation legend in the Notation note above.)*
 
 If {% katex() %}\rho(\mathbf{J}_w) > 1 + \varepsilon{% end %}, weights are diverging and the SVM must be recalibrated or reverted to \\(w_0\\). For edge deployment with limited compute, estimate the dominant eigenvalue via power iteration:
 
@@ -1153,7 +1127,7 @@ Individual nodes detect local anomalies. Fleet-wide health requires aggregation 
 
 In other words, every node keeps a score between 0 and 1 for each fleet member, periodically swaps that list with a random neighbor, and combines the two copies using a merge rule that discounts older entries via the {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} function \\(T\\).
 
-> **Algebraic contract on M.** For gossip to converge regardless of message ordering, the merge function must be commutative, associative, and idempotent. Simple averaging and last-write-wins both fail at least one property under out-of-order delivery — verify your implementation before deployment.
+> **Algebraic contract on M.** For gossip to converge regardless of message ordering, the merge function must be commutative, associative, and idempotent. Simple averaging and last-write-wins both fail at least one property under out-of-order delivery.
 
 **Required properties of the merge function M.** Conservative merge \\(M(h_a, h_b) = \max(h_a, h_b)\\) satisfies all three. Staleness-weighted blend {% katex() %}M_\tau(h_a, h_b) = (w_a h_a + w_b h_b)/(w_a + w_b){% end %} with {% katex() %}w_i = e^{-\gamma_s \tau_i}{% end %} is idempotent only when both observations carry equal staleness weights.
 
@@ -1163,9 +1137,9 @@ In other words, every node keeps a score between 0 and 1 for each fleet member, 
 | **Associativity** | \\(M(H_a, M(H_b, H_c)) = M(M(H_a, H_b), H_c)\\) | Three messages that cross mid-network resolve to the same state regardless of arrival order |
 | **Idempotence** | \\(M(H, H) = H\\) | Duplicate messages from gossip fan-out do not shift the estimate |
 
-**Metadata overhead analysis.** Each gossip packet carries two mandatory overhead fields: a Unified Autonomic Header (UAH, ~20 bytes, constant per packet) and a Dotted Version Vector (DVV, ~2 bytes × N nodes, scaling with fleet size). For RAVEN (N = 47), total overhead is ~114 bytes; a 10-byte temperature payload achieves only ~8% protocol efficiency. For OUTPOST (N = 127), efficiency drops to ~4%.
+**Metadata overhead analysis.** Each gossip packet carries two mandatory overhead fields: a Unified Autonomic Header (UAH, ~20 bytes, constant per packet) and a Dotted Version Vector (DVV, \\(2 \times N\\) bytes, scaling with fleet size). For RAVEN (N = 47), total overhead is ~114 bytes; a 10-byte temperature payload achieves only ~8% protocol efficiency. For OUTPOST (N = 127), efficiency drops to ~4%.
 
-> **DVV scaling warning.** Above N ≈ 100, the DVV alone can exceed LoRaWAN/BLE MTUs (≤ 255 bytes). Evaluate Bloom-clock or epoch-scoped DVV when fleet size N > 100 and typical health payload size < 20 bytes. The autonomic detection logic is independent of this choice; the overhead affects *transport*, not *detection*.
+> **DVV scaling warning.** Above \\(N \approx 100\\), the DVV alone can exceed LoRaWAN/BLE MTUs (\\(\leq 255\\) bytes). Evaluate Bloom-clock or epoch-scoped DVV when fleet size N > 100 and typical health payload size < 20 bytes. The autonomic detection logic is independent of this choice; the overhead affects *transport*, not *detection*.
 
 **DVV strategy comparison.**
 
@@ -1190,7 +1164,7 @@ H_{\text{proxy}}(t) = w_I \cdot I_{\text{norm}}(t) + w_V \cdot V_{\text{norm}}(t
 - {% katex() %}I_{\text{norm}}(t) = \operatorname{clamp}\!\left(\frac{\text{current\_draw}(t) - I_{\min}}{I_{\max} - I_{\min}},\, 0,\, 1\right){% end %} — normalized current draw (0 = overcurrent/short, 1 = nominal)
 - {% katex() %}V_{\text{norm}}(t) = 1 - \operatorname{clamp}\!\left(\frac{\text{vibration}(t)}{V_{\max}},\, 0,\, 1\right){% end %} — inverted vibration index (0 = excessive, 1 = nominal)
 - {% katex() %}H_{\text{norm}}(t) = e^{-t_{\text{silence}} / T_{\text{heartbeat}}}{% end %} — heartbeat freshness (decays exponentially with silence duration {% katex() %}t_{\text{silence}}{% end %})
-- \\(w_I + w_V + w_H = 1\\), with defaults {% katex() %}w_I = 0.5,\, w_V = 0.3,\, w_H = 0.2{% end %}
+- \\(w_I + w_V + w_H = 1\\), with defaults {% katex() %}w_I = 0.5,\, w_V = 0.3,\, w_H = 0.2{% end %} *(illustrative defaults)*
 
 *The proxy confidence bound is {% katex() %}C_{\text{proxy}}(t) = 1 - \sigma_{\text{proxy}} / H_{\text{proxy}}(t){% end %} where {% katex() %}\sigma_{\text{proxy}}{% end %} is estimated from calibration measurements. The legacy device is admitted to the autonomic fleet when {% katex() %}C_{\text{proxy}}(t) \geq C_{\text{threshold}}{% end %} and {% katex() %}H_{\text{proxy}}(t) \geq H_{\min}{% end %}, establishing Phase 0 (Hardware Trust) without requiring a native self-health API.*
 
@@ -1272,6 +1246,8 @@ The lossless fully-connected model of {% term(url="#prop-12", def="Gossip Conver
 
 > **Empirical status**: The \\(O(\ln n / f_g)\\) bound is a mathematically proven result for fully-connected lossless networks. The {% term(url="@/blog/2026-01-15/index.md#scenario-raven", def="47-drone surveillance swarm; loses backhaul mid-mission and must maintain coordinated operations without command authority") %}RAVEN{% end %} figure of adding ~3.5 s for 47 additional drones at \\(f_g = 0.2\\,\text{Hz}\\) is a direct application of the formula, not a measurement. Actual gossip convergence in field deployments depends on radio topology and interference — treat this as a lower bound.
 
+*Watch out for*: the \\(O(\ln n / f_g)\\) bound assumes a fully-connected topology with no packet loss; in contested meshes with diameter \\(D > 1\\) and loss probability \\(p_{\text{loss}} > 0\\), the correct bound is \\(O(D \ln n / (f_g(1-p_{\text{loss}})))\\) (Proposition 13), which can be larger by orders of magnitude — using the fully-connected bound for a sparse contested topology produces dangerously optimistic convergence estimates.
+
 <span id="prop-13"></span>
 **Proposition 13** ({% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}Gossip{% end %} Convergence on Lossy Sparse Mesh). *Let \\(G = (V, E)\\) be a connected graph with \\(n\\) nodes and edge conductance:*
 
@@ -1322,9 +1298,11 @@ P\!\left(T_{\text{convergence}} > (1 + \delta)\,\mathbb{E}[T]\right) \leq \exp\!
 | Grid ({% katex() %}\sqrt{n} \times \sqrt{n}{% end %}), lossless | {% katex() %}\Omega(1/\sqrt{n}){% end %} | {% katex() %}O(\sqrt{n}\ln n / f_g){% end %} |
 | OUTPOST mesh (\\(D=8\\), {% katex() %}p_{\text{loss}}=0.35{% end %}) | \\(\geq 1/8\\) | {% katex() %}\leq 2 \cdot 8 \cdot \ln(127)/(f_g \cdot 0.65) \approx 119/f_g\,\text{s}{% end %} |
 
-**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration gap**: At {% katex() %}f_g = 0.5\,\text{Hz}{% end %}, {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %} predicts \\(T \approx 9.7\\,\text{s}\\); {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %} predicts {% katex() %}T \leq 238\,\text{s} \approx 4\,\text{min}{% end %} under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap. The correct design response is to either increase \\(\lambda\\) (higher energy cost from {% term(url="@/blog/2026-01-15/index.md#def-2", def="Energy-per-Decision Metric: total energy cost combines compute and transmit costs; one radio packet costs roughly one thousand times a local compute operation") %}Definition 2{% end %}), decrease \\(D\\) by adding mesh relay nodes, or build decision logic that tolerates 4-minute-stale health data (increasing {% katex() %}\tau_{\max}{% end %} from {% term(url="#prop-14", def="Maximum Useful Staleness: bound on gossip record age beyond which stale data increases the false-positive rate faster than fresh gossip would decrease it") %}Proposition 14{% end %} accordingly).
+**{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} calibration gap**: At {% katex() %}f_g = 0.5\,\text{Hz}{% end %}, {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %} predicts \\(T \approx 9.7\\,\text{s}\\); {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %} predicts {% katex() %}T \leq 238\,\text{s} \approx 4\,\text{min}{% end %} *(theoretical bound under the illustrative \\(D=8\\), \\(p_\text{loss}=0.35\\) parameters)* under jamming. Designing for 10-second health awareness and receiving 4-minute convergence is a mission-critical gap — the two propositions formalize the cost of contested topology: every doubling of diameter or packet loss fraction drives the bound linearly wider.
 
-> **Physical translation — {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %} vs. {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %}.** In a lab environment (full mesh, negligible packet loss), health converges in \\(O(\ln n / f_g)\\) seconds per {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %}. In field conditions (contested mesh, jamming, sparse links), convergence is {% katex() %}O(D \cdot \ln n / (\lambda \cdot (1 - p_\text{loss}))){% end %} per {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %}, where \\(D\\) is mesh diameter. OUTPOST example: \\(D = 8\\) hops, \\(p_\text{loss} = 0.35\\), \\(\lambda = 0.5\\) Hz transforms {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %}'s predicted 9.7 s into {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %}'s observed 238 s (4 minutes). **Always use {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %} for deployment planning.**
+> **Physical translation — {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %} vs. {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %}.** In a lab environment (full mesh, negligible packet loss), health converges in \\(O(\ln n / f_g)\\) seconds per {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %}. In field conditions (contested mesh, jamming, sparse links), convergence is {% katex() %}O(D \cdot \ln n / (\lambda \cdot (1 - p_\text{loss}))){% end %} per {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %}, where \\(D\\) is mesh diameter. {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} example: \\(D = 8\\) hops *(illustrative value)*, \\(p_\text{loss} = 0.35\\) *(illustrative value)*, \\(\lambda = 0.5\\) Hz transforms {% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %}'s predicted 9.7 s into {% term(url="#prop-13", def="Gossip Convergence on Lossy Sparse Mesh: convergence time bound for gossip when packet loss stays below fifty percent; degrades gracefully with increasing loss") %}Proposition 13{% end %}'s theoretical bound of 238 s *(theoretical bound under the illustrative parameters above)* (4 minutes).
+
+*Watch out for*: the bound assumes independent Bernoulli packet loss at each edge; correlated loss events — burst jamming or synchronized interference that silences multiple edges simultaneously — violate the independence assumption underlying the conductance argument, causing actual convergence time to exceed the diameter formula.
 
 **Corollary 3** (Loss-Rate {% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}Gossip{% end %} Budget). *To maintain convergence within target time \\(T^\*\\) under loss probability {% katex() %}p_{\text{loss}}{% end %} on a diameter-\\(D\\) mesh, the minimum {% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rate is:*
 
@@ -1387,7 +1365,7 @@ The {% term(url="#def-24", def="Peer-to-peer protocol where each node periodical
 
 **Incentive-compatible allocation**: Replace proportional allocation with a **Groves mechanism** for healing priority: each node reports health and the mechanism allocates healing proportional to the *marginal value of healing* (not reported sickness). Truthful reporting becomes a dominant strategy when the node's healing benefit is fully internalized.
 
-**Practical implication**: Implement comparative health reporting - nodes rank their own health relative to neighbors rather than reporting absolute values. Rank-based reports are harder to manipulate strategically and preserve the ordering needed for healing priority assignment while reducing the incentive for absolute-value inflation.
+Comparative health reporting — where nodes rank their own health relative to neighbors rather than reporting absolute values — resists strategic manipulation and preserves the ordering needed for healing priority assignment while removing the incentive for absolute-value inflation.
 
 #### Gossip as a Public Goods Game
 
@@ -1556,9 +1534,7 @@ where \\(B_b\\) is backhaul bandwidth (radio uplink) and \\(B_l\\) is local bus 
 \end{cases}
 {% end %}
 
-- **Use**: Caps the ingress data rate at the maximum a node can process within one MAPE-K tick; apply before the Monitor phase on high-rate sensor nodes to prevent monitor-phase overload from sensor bursts that stale the entire MAPE-K cycle.
 - **Parameters**: {% katex() %}C_{\text{proc}}{% end %} = local processing capacity (bytes/s); filter drops input beyond {% katex() %}C_{\text{proc}} \cdot T_{\text{tick}}{% end %} bytes per window.
-- **Field note**: OUTPOST meshes produce 10–100x burst spikes over sustained rate — size the filter for peak burst, not average throughput.
 
 > **Physical translation**: On a severely bandwidth-constrained uplink ({% katex() %}\beta = 10^{-4}{% end %}), only a metric that has changed by more than 10% of its full operating range is worth transmitting — anything smaller is noise relative to the channel's information capacity. The filter enforces this automatically: safety-critical events always get through ({% katex() %}P_{\text{CRITICAL}}{% end %} override), stale readings are forced through at {% katex() %}\tau_{\max}{% end %} to keep the MAPE-K loop alive, and everything else is silenced until the change is large enough to be actionable. The result is a 100,000-fold reduction in radio transmissions on a 72-hour mission with no loss of decision-relevant information.
 
@@ -1700,11 +1676,11 @@ Different decisions have different horizons. Safety-critical decisions with narr
 
 For sensors with temperature-correlated variance, substitute {% katex() %}\sigma_{\max} = \max_{T \in \text{operating range}} \sigma(T){% end %} as a conservative upper bound on {% katex() %}\tau_{\max}{% end %}. This produces a shorter, conservative staleness limit.
 
-To run the bound dynamically: update \\(\sigma\\) using the Kalman steady-state innovation covariance {% katex() %}\sqrt{P_\infty + R}{% end %} and recompute {% katex() %}\tau_{\max}{% end %} at each measurement cycle. Decision systems with narrow operating envelopes ({% katex() %}\Delta h < 0.1\,{^\circ}\text{C}{% end %}) will find {% katex() %}\tau_{\max}{% end %} below 10 seconds in cold conditions — requiring far higher {% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rates than lab calibration suggests.
-
-> **What this means in practice**: After this time threshold, a gossip update is more likely to mislead the receiver than inform them. For fast-moving edge deployments (drone swarms, autonomous vehicles), this bound is surprisingly tight — often under 10 seconds for critical health signals. Design your gossip rate to ensure updates arrive before staleness renders them useless.
+Decision systems with narrow operating envelopes ({% katex() %}\Delta h < 0.1\,{^\circ}\text{C}{% end %}) will find {% katex() %}\tau_{\max}{% end %} below 10 seconds in cold conditions — requiring far higher {% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} rates than a lab-temperature calibration implies.
 
 > **Empirical status**: The {% katex() %}\tau_{\text{max}}{% end %} formula is exact given the Brownian diffusion model and the parameters \\(\sigma\\), \\(\Delta h\\), \\(\alpha\\). The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} temperature-variance model {% katex() %}\sigma(T) \approx 0.05 + 0.003|T - T_{\text{ref}}|{% end %} is a representative sensor-datasheet curve; actual values vary by manufacturer and operating history. The "under 10 seconds" characterization for fast-moving deployments is an illustration, not a measured bound.
+
+*Watch out for*: the Brownian diffusion model captures gradual drift but not abrupt failures; a sensor that jumps discontinuously to a failed state exceeds \\(\Delta h\\) in a single tick regardless of \\(\tau_{\max}\\), so the staleness bound does not constrain step-function fault modes.
 
 ### Byzantine-Tolerant Health Aggregation
 
@@ -1720,7 +1696,7 @@ In other words, a {% term(url="#def-27", def="Node that may deviate arbitrarily 
 
 *Scope: this threat model applies within a single partition epoch — specifically to gossip health aggregation while nodes are co-partitioned and can observe each other's messages. Post-reconnection Byzantine treatment (reputation-weighted CRDT admission, quorum-gated state merge) builds on this foundation but introduces additional per-epoch mechanisms addressed in [Fleet Coherence Under Partition](@/blog/2026-02-05/index.md).*
 
-**Compute Profile:** CPU: {% katex() %}O(n \log n){% end %} per aggregation round — trust-weighted trimmed mean requires sorting {% katex() %}n{% end %} reporters by trust weight before trimming. Memory: {% katex() %}O(n \cdot W){% end %} — consistency-history buffer of {% katex() %}W{% end %} rounds × {% katex() %}n{% end %} nodes; this buffer becomes the binding constraint above {% katex() %}n = 200{% end %} nodes.
+**Compute Profile:** CPU: {% katex() %}O(n \log n){% end %} per aggregation round — trust-weighted trimmed mean requires sorting {% katex() %}n{% end %} reporters by trust weight before trimming. Memory: {% katex() %}O(n \cdot W){% end %} — consistency-history buffer of {% katex() %}W{% end %} rounds and {% katex() %}n{% end %} nodes; this buffer becomes the binding constraint above {% katex() %}n = 200{% end %} nodes.
 
 The aggregation function uses a trust-weighted trimmed mean: the bottom and top \\(f/n\\) weight fractions are excluded before computing the weighted average. This makes the aggregate robust to up to \\(f\\) {% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} contributors.
 
@@ -1754,7 +1730,7 @@ Repeated suspicious reports decrease trust score for node \\(i\\).
 <span id="prop-15"></span>
 **Proposition 15** ({% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} Tolerance Bound). *With trust-weighted aggregation, correct health estimation is maintained if the total {% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} trust weight is bounded {{ cites(ref="7", refs="7, 8", title="Lamport, Shostak, Pease (1982) — The Byzantine Generals Problem; Castro & Liskov (1999) — Practical Byzantine Fault Tolerance") }}:*
 
-*Correct consensus holds as long as compromised nodes collectively carry less than one-third of total trust weight.*
+*Correct consensus holds as long as compromised nodes collectively carry less than one-third of total trust weight* *(theoretical bound — derived from the structure of trust-weighted BFT aggregation; not an empirical measurement)*.
 
 {% katex(block=true) %}
 \sum_{\text{Byzantine}} T_i < \frac{1}{3} \sum_{\text{all}} T_i
@@ -1762,7 +1738,7 @@ Repeated suspicious reports decrease trust score for node \\(i\\).
 
 *This generalizes the classical \\(f < n/3\\) bound: with uniform trust weights \\(T_i = 1\\), this reduces to \\(f < n/3\\) (fewer than one third of nodes are {% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %}). With trust decay on suspicious nodes, {% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} influence decreases over time, allowing tolerance of more compromised nodes provided their accumulated trust is low.*
 
-*In practice, this means: design your trust-weight initialization so that a node enrolled at zero reputation cannot cast a meaningful vote — equal initial weights give an attacker a free \\(1/n\\) share of influence from the first gossip round, while a hardware-attested enrollment delays that influence until the device earns it through observed behavior.*
+Equal initial weights give an attacker a free \\(1/n\\) share of influence from the first gossip round; hardware-attested enrollment delays that influence until the device earns it through observed behavior.
 
 This is not foolproof - a sophisticated adversary who understands the aggregation mechanism can craft attacks that pass consistency checks. {% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} tolerance provides defense in depth, not absolute security.
 
@@ -1772,15 +1748,11 @@ The operational implication: trust weight initialization requires a hardware roo
 
 **Trust accumulation attack**: The \\(f < n/3\\) bound is *instantaneous*. An adversary can compromise nodes gradually, with each behaving honestly until sufficient trust accumulates. When {% katex() %}\sum_{\text{compromised}} T_i{% end %} approaches {% katex() %}\frac{1}{3} \sum_{\text{all}} T_i{% end %}, coordinated {% term(url="#def-27", def="Node that deviates arbitrarily from the protocol — sends false data, drops messages, or colludes with other compromised nodes to corrupt shared state") %}Byzantine{% end %} behavior can dominate aggregation before detection triggers trust decay.
 
-**Countermeasure**: Implement trust budget decay — total system trust {% katex() %}\sum_i T_i{% end %} should decrease over time unless re-earned through verified behavior:
+**Trust budget decay** bounds the maximum trust any coalition can accumulate: total system trust {% katex() %}\sum_i T_i{% end %} decreases over time unless re-earned through verified behavior:
 
 {% katex(block=true) %}
 T_{\text{budget}}(t+1) = T_{\text{budget}}(t) \cdot (1 - \epsilon) + T_{\text{earned}}(t), \quad \epsilon \ll \gamma_{\text{recover}}
 {% end %}
-
-This bounds the maximum trust any coalition can accumulate.
-
-> **Aggregation strategy selection.** Start with weighted voting; upgrade to reputation filtering only when nodes accumulate inconsistent behavioral fingerprints ({% term(url="#def-28", def="Behavioral Fingerprint: compact hash of a node's recent sensor distribution used to detect Byzantine nodes whose readings are statistically inconsistent with neighbors") %}Definition 28{% end %}) over three or more gossip epochs.
 
 | Condition | Strategy | Complexity | Byzantine tolerance |
 |-----------|----------|------------|---------------------|
@@ -1788,7 +1760,9 @@ This bounds the maximum trust any coalition can accumulate.
 | > 10 nodes, mixed trust history | Trust-weighted trimmed mean + reputation | \\(O(n \log n)\\) | \\(f < n/3\\), adaptive over ~20 rounds |
 | Adversarial enrollment suspected | Reputation filter + behavioral fingerprint consistency check | \\(O(n) + O(w)\\) window | \\(f < n/3\\) guaranteed after consistency filter |
 
-> **Empirical status**: The \\(f < n/3\\) bound is a proven impossibility result (Lamport-Shostak-Pease). The trust-weighted generalization is analytically derived. The parameters {% katex() %}\gamma_{\text{decay}} \approx 0.1{% end %}, {% katex() %}\gamma_{\text{recover}} \approx 0.01{% end %}, {% katex() %}\theta_{\text{recovery}} \approx 0.95{% end %}, and the 20-round warm-up figure are engineering design choices, not empirically validated values — treat as starting points requiring per-deployment calibration.
+> **Empirical status**: The \\(f < n/3\\) bound is a proven impossibility result (Lamport-Shostak-Pease). The trust-weighted generalization is analytically derived. The parameters {% katex() %}\gamma_{\text{decay}} \approx 0.1{% end %} *(illustrative value)*, {% katex() %}\gamma_{\text{recover}} \approx 0.01{% end %} *(illustrative value)*, {% katex() %}\theta_{\text{recovery}} \approx 0.95{% end %}, and the 20-round warm-up figure are engineering design choices, not empirically validated values.
+
+*Watch out for*: the bound is instantaneous — it holds only while Byzantine trust weight remains below \\(1/3\\) at every moment; if trust weights are not updated continuously, a slow accumulation attack can cross the one-third threshold before the decay mechanism responds.
 
 ### Optional: Game-Theoretic Extension — Byzantine Reporting as a Signaling Game
 
@@ -1827,7 +1801,7 @@ T_i(t) + \gamma_{\text{recover}} \cdot (T_{\text{max}} - T_i(t)) & \text{if cons
 \end{cases}
 {% end %}
 
-where {% katex() %}\gamma_{\text{decay}} \approx 0.1{% end %} (fast decay) and {% katex() %}\gamma_{\text{recover}} \approx 0.01{% end %} (slow recovery). The asymmetry ensures that building trust takes longer than losing it - appropriate for contested environments.
+where {% katex() %}\gamma_{\text{decay}} \approx 0.1{% end %} *(illustrative value)* (fast decay) and {% katex() %}\gamma_{\text{recover}} \approx 0.01{% end %} *(illustrative value)* (slow recovery). The asymmetry ensures that building trust takes longer than losing it — appropriate for contested environments.
 
 **Recovery conditions**:
 
@@ -1986,10 +1960,10 @@ where {% katex() %}S_t \subseteq \{1, ..., K\}{% end %} is the set of participat
 2. **Staleness tolerance**: Nodes may contribute gradients computed from stale global models. The {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %}-discounted weight \\(w_k\\) below reduces a node's contribution exponentially with the number of rounds \\(\tau_k\\) elapsed since its last synchronization.
 
 {% katex(block=true) %}
-w_k = \frac{n_k}{n} \cdot \gamma^{\tau_k}
+w_k = \frac{n_k}{n} \cdot \gamma_{\text{fed}}^{\tau_k}
 {% end %}
 
-where \\(\tau_k\\) is the model {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} (rounds since last sync) and \\(\gamma \in (0.9, 0.99)\\) is the {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} discount.
+where \\(\tau_k\\) is the model {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} (rounds since last sync) and \\(\gamma_{\text{fed}} \in (0.9, 0.99)\\) is the per-round staleness discount for federated gradient aggregation. (We write \\(\gamma_{\text{fed}}\\) rather than bare \\(\gamma\\) to distinguish from \\(\gamma_s\\), the staleness decay rate in the gossip weight formula, and from the Holt-Winters seasonal coefficient \\(s_{\text{hw}}\\).)
 
 3. **Hierarchical aggregation**: For large fleets, two-level aggregation reduces coordination. During partition, each connected cluster performs intra-cluster aggregation independently; cross-cluster aggregation resumes upon reconnection with {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} weighting. The diagram below shows the two-level structure: individual nodes feed cluster aggregators, which in turn feed a fleet-level aggregator that produces the global model \\(\theta^\*\\).
 
@@ -2146,17 +2120,17 @@ graph LR
 
 **Convergence Guarantees Under Partition**:
 
-The bound below gives the expected squared gradient norm after \\(T\\) rounds of asynchronous federated learning as a function of the participation rate \\(p\\) and maximum {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} {% katex() %}\tau_{\max}{% end %}; both terms decrease with \\(T\\), confirming that convergence is guaranteed whenever {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is bounded.
+The bound below gives the expected squared gradient norm after \\(T\\) rounds of asynchronous federated learning as a function of the participation rate \\(p\\) and maximum {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} \\(\tau_{\text{rounds}}\\) — written \\(\tau_{\text{rounds}}\\) rather than \\(\tau_{\max}\\) to distinguish it from the maximum useful staleness bound in physical seconds ({% term(url="#prop-14", def="Maximum Useful Staleness: the maximum age τ_max beyond which a health observation loses all actionable value, derived from gossip convergence time and decay rate") %}Proposition 14{% end %}), which counts wall-clock seconds rather than synchronization rounds; both terms decrease with \\(T\\), confirming that convergence is guaranteed whenever {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is bounded.
 
 {% katex(block=true) %}
-\mathbb{E}[\|\nabla F(\theta^{(T)})\|^2] \leq O\left(\frac{1}{\sqrt{pT}} + \frac{\tau_{\max}^2}{T}\right)
+\mathbb{E}[\|\nabla F(\theta^{(T)})\|^2] \leq O\left(\frac{1}{\sqrt{pT}} + \frac{\tau_{\text{rounds}}^2}{T}\right)
 {% end %}
 
-Key insight: convergence slows but is still guaranteed if {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is bounded. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} with {% katex() %}\tau_{\max} = 5{% end %} rounds and \\(p = 0.6\\), convergence to \\(\epsilon = 0.05\\) gradient norm requires \\(T \approx 30\\) rounds - achievable within one operational month.
+Key insight: convergence slows but is still guaranteed if {% term(url="#def-26", def="Age of the most recent observation from a remote node; anomaly confidence is discounted proportionally as staleness grows, preventing stale data from triggering healing decisions") %}staleness{% end %} is bounded. For {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} with \\(\tau_{\text{rounds}} = 5\\) rounds *(illustrative value)* and \\(p = 0.6\\), convergence to \\(\epsilon = 0.05\\) gradient norm requires \\(T \approx 30\\) rounds — achievable within one operational month.
 
-*Under the Weibull connectivity model ({% term(url="@/blog/2026-01-15/index.md#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-13)), the expected participation rate is {% katex() %}p \approx 1 - F_W(T_\text{tick}){% end %} where \\(F_W\\) is the Weibull CDF at the tick interval, and maximum staleness \\(\tau_\\text{max}\\) is bounded by the Weibull P95 partition duration. Denser connectivity (lower \\(T_\\text{acc}\\)) yields higher \\(p\\) and lower \\(\tau_\\text{max}\\), improving convergence.*
+*Under the Weibull connectivity model ({% term(url="@/blog/2026-01-15/index.md#def-13", def="Weibull Partition Duration Model: replaces the memoryless Markov model with Weibull-distributed sojourn times to capture the heavy tail of long blackouts") %}Definition 13{% end %}, [Why Edge Is Not Cloud Minus Bandwidth](@/blog/2026-01-15/index.md#def-13)), the expected participation rate is {% katex() %}p \approx 1 - F_W(T_\text{tick}){% end %} where \\(F_W\\) is the Weibull CDF at the tick interval, and maximum round-staleness \\(\tau_{\text{rounds}}\\) is bounded by the Weibull P95 partition duration expressed in synchronization rounds. Denser connectivity (lower \\(T_{\text{acc}}\\)) yields higher \\(p\\) and lower \\(\tau_{\text{rounds}}\\), improving convergence.*
 
-> **Cognitive Map**: Gossip is the protocol that turns per-node anomaly scores into fleet-wide health awareness — without any central server. The convergence guarantee degrades gracefully from {% katex() %}O(\ln n / f_g){% end %} in ideal meshes to {% katex() %}O(D \ln n / f_g(1-p_{\text{loss}})){% end %} in contested sparse ones. Staleness imposes a hard deadline {% katex() %}\tau_{\max}{% end %} on every health observation; Byzantine tolerance requires the compromised fraction of trust weight to stay below \\(1/3\\). Federated learning completes the picture: nodes improve their local detectors together without sharing raw telemetry. Next: what measurements matter most, and in what order, when resources are scarce.
+> **Cognitive Map**: Gossip is the protocol that turns per-node anomaly scores into fleet-wide health awareness — without any central server. The convergence guarantee degrades gracefully from {% katex() %}O(\ln n / f_g){% end %} in ideal meshes to {% katex() %}O(D \ln n / f_g(1-p_{\text{loss}})){% end %} in contested sparse ones. Staleness imposes a hard deadline \\(\tau_{\max}\\) on every health observation (physical seconds; {% term(url="#prop-14", def="Maximum Useful Staleness: the maximum age τ_max beyond which a health observation loses all actionable value, derived from gossip convergence time and decay rate") %}Proposition 14{% end %}); Byzantine tolerance requires the compromised fraction of trust weight to stay below \\(1/3\\). Federated learning completes the picture: nodes improve their local detectors together without sharing raw telemetry. Next: what measurements matter most, and in what order, when resources are scarce.
 
 ---
 
@@ -2527,19 +2501,13 @@ Each sensor node continuously monitors with minimal power:
 
 *where \\(I(m_t)\\) is the information gain from measurement at time \\(t\\) and {% katex() %}E_{\text{reserve}}{% end %} is the required energy reserve.*
 
-In practice, this means scheduling high-power measurements (radar, active sensors) during peak solar hours and relying on low-power passive measurements during night and low-light periods.
+A greedy heuristic — sort measurements by information-gain-per-watt ratio \\(I(m)/C_m\\) and schedule in decreasing order until the power budget is exhausted — achieves \\(O(n \log n)\\) computation complexity. The gap to the optimal schedule depends on environmental correlation structure.
 
-*Greedy heuristic*: Sort measurements by information-gain-per-watt ratio \\(I(m)/C_m\\). Schedule in order until power budget exhausted. For {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %}, this yields:
-1. Passive seismic (0.1W, high info): Always on
-2. Passive acoustic (0.2W, medium info): Always on
-3. Active IR scan (2W, high info): Peak solar only (10am-2pm)
-4. Radar ping (5W, very high info): Midday only (11am-1pm), battery > 80%
+> **Physical translation**: A sensor reading carries value only if the energy budget allows it to be processed before the battery forces a downgrade. The proposition computes the exact measurement rate that maximizes information gain within the energy envelope — measuring faster when power is abundant and slowing to a trickle in survival mode rather than stopping completely, which would blind the healing loop entirely.
 
-This heuristic achieves \\(O(n \log n)\\) computation complexity, suitable for embedded deployment. The gap to optimal depends on environmental correlation structure.
+> **Empirical status**: The optimization formulation is exact given the solar profile {% katex() %}P_{\text{solar}}(t){% end %} and cost model \\(C_m\\). The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} greedy prioritization (passive seismic through radar) is an illustrative ordering, not derived from a measured information-gain-per-watt experiment. Solar profiles vary by geography, season, and panel orientation.
 
-> **Physical translation**: Don't measure things you can't act on. A sensor reading is only worth taking if it can be transmitted, stored, or acted upon before the battery budget forces a downgrade. Prop 7 computes the exact measurement rate that maximizes information gain within the energy envelope — measuring faster when power is abundant and slowing to a trickle in survival mode rather than stopping completely (which would blind the healing loop entirely).
-
-> **Empirical status**: The optimization formulation is exact given the solar profile {% katex() %}P_{\text{solar}}(t){% end %} and cost model \\(C_m\\). The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} scheduling heuristic (passive seismic always-on through radar at midday) is an illustrative prioritization, not derived from a measured information-gain-per-watt experiment. Solar profiles vary by geography, season, and panel orientation — calibrate {% katex() %}P_{\text{solar}}(t){% end %} from at least 48 hours of deployment-site data before first use.
+*Watch out for*: the schedule is optimal given the forecast solar profile \\(P_{\text{solar}}(t)\\); forecast error shifts the schedule against the available energy budget, and the positive-energy-margin constraint can be violated mid-mission if actual irradiance falls below the predicted profile.
 
 ### Observer Parsimony: The Overhead Budget Constraint
 
@@ -2595,7 +2563,9 @@ The budgets are monotone: {% katex() %}\pi_0 \leq \pi_1 \leq \ldots \leq \pi_4{%
 
 **{% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} scenario**: At {% katex() %}\mathcal{L}_3{% end %}, the full Self-Measurement stack consumes approximately 2% of the 64 MHz Cortex-M4 core; violating parsimony near the 80% CPU threshold would trigger immediate cascade to survival mode.
 
-> **Empirical status**: The parsimony condition is analytically exact. The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} figure of ~2% CPU for the Self-Measurement stack at {% katex() %}\mathcal{L}_3{% end %} and the 80% downgrade threshold are design parameters, not measured CPU profiles; actual overhead depends on MCU clock speed, compiler optimization, and workload mix. Validate \\(\pi_q\\) values with cycle-accurate profiling before deployment.
+> **Empirical status**: The parsimony condition is analytically exact. The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} figure of ~2% CPU for the Self-Measurement stack at {% katex() %}\mathcal{L}_3{% end %} and the 80% downgrade threshold are design parameters, not measured CPU profiles; actual overhead depends on MCU clock speed, compiler optimization, and workload mix.
+
+*Watch out for*: the parsimony condition is evaluated at a point in time; if CPU utilization \\(u(t)\\) is measured by a procedure that itself consumes overhead \\(\pi_q\\), the condition becomes circular — measuring whether you can observe consumes the headroom it is trying to protect.
 
 **Switched-Mode Stability Extension: Limit-Cycle Prevention**
 
@@ -2693,7 +2663,9 @@ The dwell-time requirement is always met by waiting **one tick** at the lower le
 
 *The error converges to zero exponentially regardless of the path {% katex() %}q_0 \to \cdots \to q_\infty{% end %} and regardless of how many times {% katex() %}T_{\text{tick}}{% end %} changed along the way. The convergence exponent \\(\alpha\\) is a hardware characteristic of the MCU's workload dissipation, not a function of {% katex() %}T_{\text{tick}}{% end %}.*
 
-> **Empirical status**: The Lyapunov stability result for individual modes is mathematically exact given the linear model. The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} dwell-time table (\\(\alpha = 0.80\\), {% katex() %}\delta_{\text{hyst}} = 0.02{% end %}) uses illustrative design parameters; actual convergence rate \\(\alpha\\) must be measured from the specific MCU workload profile, not assumed. The "one tick is sufficient" result holds only when the tick floor exactly equals the computed {% katex() %}\Delta t_{\text{dwell}}{% end %} — verify equality at each capability level before deployment.
+> **Empirical status**: The Lyapunov stability result for individual modes is mathematically exact given the linear model. The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} dwell-time table (\\(\alpha = 0.80\\) *(illustrative value)*, {% katex() %}\delta_{\text{hyst}} = 0.02{% end %} *(illustrative value)*) uses illustrative design parameters; the actual convergence rate \\(\alpha\\) is a property of the MCU workload profile. The "one tick is sufficient" result holds only when the tick floor exactly equals the computed {% katex() %}\Delta t_{\text{dwell}}{% end %}.
+
+*Watch out for*: the dwell-time bound is derived under the assumption that mode transitions respect the minimum inter-switch interval; if the healing loop triggers successive transitions faster than \\(\Delta t_{\text{dwell}}\\) allows, the CLF value at each new mode entry has not decreased by the required amount, and the Lyapunov stability argument fails.
 
 #### Fixed-Point Algorithm Tier ({% katex() %}\mathcal{L}_0{% end %}–{% katex() %}\mathcal{L}_1{% end %})
 
@@ -2723,10 +2695,10 @@ where {% katex() %}\alpha_q^{(15)} = \lfloor \alpha_q \cdot 32768 \rfloor{% end 
 
 <span id="def-32"></span>
 
-**Definition 32** (Variable-Fidelity Monitor Schedule). The MAPE-K Monitor phase at level \\(q\\) selects an algorithm tier {% katex() %}\tau \in \{0, 1, 2, 3\}{% end %} based on current CPU availability \\(1 - u(t)\\) (where \\(u(t)\\) is CPU utilization as in Proposition 17), independently of the capability level transition threshold:
+**Definition 32** (Variable-Fidelity Monitor Schedule). The MAPE-K Monitor phase at level \\(q\\) selects an algorithm tier {% katex() %}\ell_{\text{tier}} \in \{0, 1, 2, 3\}{% end %} based on current CPU availability \\(1 - u(t)\\) (where \\(u(t)\\) is CPU utilization as in Proposition 17), independently of the capability level transition threshold. (We write \\(\ell_{\text{tier}}\\) rather than \\(\tau\\) because \\(\tau\\) is reserved for time-valued staleness quantities throughout this article.)
 
 {% katex(block=true) %}
-\tau(t) = \begin{cases}
+\ell_{\text{tier}}(t) = \begin{cases}
 0 & 1 - u(t) < \varepsilon_0 \quad \text{(heartbeat only)} \\
 1 & \varepsilon_0 \leq 1 - u(t) < \varepsilon_1 \quad \text{(Q15 EWMA + CUSUM)} \\
 2 & \varepsilon_1 \leq 1 - u(t) < \varepsilon_2 \quad \text{(FP EWMA + Holt-Winters)} \\
@@ -2734,7 +2706,7 @@ where {% katex() %}\alpha_q^{(15)} = \lfloor \alpha_q \cdot 32768 \rfloor{% end 
 \end{cases}
 {% end %}
 
-Default thresholds: {% katex() %}\varepsilon_0 = 0.05,\ \varepsilon_1 = 0.30,\ \varepsilon_2 = 0.70{% end %}. Tier \\(\tau(t)\\) is re-evaluated at each MAPE-K tick before the Monitor phase executes — the manager is itself autonomic, scaling its own cost to the available margin. Tier selection takes 2 integer comparisons (\\(<10\\) cycles) and precedes all other Monitor work.
+Default thresholds: {% katex() %}\varepsilon_0 = 0.05,\ \varepsilon_1 = 0.30,\ \varepsilon_2 = 0.70{% end %}. Tier \\(\ell_{\text{tier}}(t)\\) is re-evaluated at each MAPE-K tick before the Monitor phase executes — the manager is itself autonomic, scaling its own cost to the available margin. Tier selection takes 2 integer comparisons (\\(<10\\) cycles) and precedes all other Monitor work.
 
 - **Field note**: The variable-fidelity schedule operates at finer granularity than capability level transitions. A node at {% katex() %}\mathcal{L}_3{% end %} running a temporary burst computation drops to tier 1 during the burst without triggering a level transition — preserving detection coverage at minimal cost rather than either suspending detection or forcing a premature downgrade.
 - **Hysteresis**: Apply a dead-band of {% katex() %}\pm \varepsilon_{\text{hyst}} = 0.05{% end %} to tier transitions (Schmitt Trigger, {% term(url="@/blog/2026-01-29/index.md#def-47", def="Schmitt Trigger Hysteresis: dual threshold with separate trigger and release levels preventing healing loop flapping near a boundary") %}Definition 47{% end %} in [Self-Healing Without Connectivity](@/blog/2026-01-29/index.md#def-47)) to prevent oscillation between tiers during CPU load ramps.
@@ -2745,7 +2717,7 @@ Default thresholds: {% katex() %}\varepsilon_0 = 0.05,\ \varepsilon_1 = 0.30,\ \
 
 The MAPE-K Monitor tick fires at fixed interval {% katex() %}T_{\text{tick}}{% end %} (polling). At {% katex() %}\mathcal{L}_0{% end %} with {% katex() %}T_{\text{tick}} = 60\,\text{s}{% end %}, this already achieves near-optimal power on ARM Cortex-M by keeping the CPU in WFI between ticks. One further refinement eliminates the tick entirely for sensors whose readings remain in the normal band: **hardware ADC threshold interrupts**.
 
-Configure the ADC comparator peripheral to fire an interrupt when the sampled voltage crosses {% katex() %}\theta^*_{L0}{% end %}. The CPU stays in WFI until the interrupt fires; the ISR updates the Q15 CUSUM accumulator and checks the alarm condition in 12 cycles, then returns to WFI. For sensors that are healthy (98% of observations at L0 fall in-band), the expected CPU activity is:
+Under hardware-interrupt-driven sampling — where the CPU remains in wait-for-interrupt sleep until a threshold crossing is detected — the expected CPU activity for sensors that remain in-band (the typical case at \\(\mathcal{L}_0\\)) is:
 
 {% katex(block=true) %}
 \bar{c}_{L0} = f_s \cdot \pi_1 \cdot C_{\text{ISR}} + \frac{C_{\text{tick}}}{T_{\text{tick}}}
@@ -2755,7 +2727,7 @@ where \\(f_s\\) is ADC sampling rate, \\(\pi_1 \approx 0.02\\) is the anomalous-
 
 > **Physical translation**: At 1 Hz ADC sampling with 2% anomalous fraction, the interrupt-driven ISR runs 1.2 times per minute — 12 cycles each — consuming {% katex() %}12 \times 1.2 / (64 \times 10^6 \times 60) \approx 3.8 \times 10^{-9}{% end %} CPU fraction, or roughly **0.000000038% CPU**. The 0.1% {% katex() %}\mathcal{L}_0{% end %} budget is larger by a factor of \\(2.6 \times 10^6\\). The autonomic layer at {% katex() %}\mathcal{L}_0{% end %} is, in every practical sense, invisible to the host application.
 
-**DMA-assisted ADC ring buffer**: Configure the ADC DMA controller to fill a 64-sample ring buffer autonomously. The CPU-facing API is a single pointer read to the ring buffer tail — one load instruction. The DMA engine performs all ADC-to-memory transfers without CPU involvement. This separates sampling (hardware-driven, zero CPU) from analysis (software, triggered by timer or threshold interrupt).
+**DMA-assisted ADC ring buffer**: Under DMA-driven sampling, the transfer engine fills a ring buffer autonomously while the CPU reads only the tail pointer — one load instruction. This separates sampling (hardware-driven, zero CPU) from analysis (software-triggered by timer or threshold interrupt), allowing the CPU budget for the \\(\mathcal{L}_0\\) monitor to approach its theoretical floor.
 
 #### Per-Algorithm Complexity Audit
 
@@ -2786,7 +2758,7 @@ The table below audits each algorithm in this article against the {% term(url="#
 - "Skip" means the algorithm is neither run nor approximated at that level — its contribution to health assessment is omitted until the node recovers to a higher level.
 - Gossip suspension at {% katex() %}\mathcal{L}_0{% end %} is consistent with the Denied connectivity regime ({% katex() %}\Xi = \mathcal{N}{% end %}, {% term(url="@/blog/2026-01-15/index.md#def-6", def="Connectivity Regime: cloud regime requires high average connectivity and near-zero disconnection probability; contested edge regime has low average connectivity and frequent disconnections") %}Definition 6{% end %}): gossip has no peers to reach and consumes power transmitting into silence. The trust-root anchor ({% term(url="#def-35", def="Trust-Root Anchor: cryptographically-signed capability certificate a node presents to re-enter the fleet after partition-induced ejection") %}Definition 35{% end %}) provides frozen peer weights that remain valid until reconnection.
 - Welford estimator freeze at {% katex() %}\mathcal{L}_0{% end %} is already handled by {% term(url="#def-35", def="Trust-Root Anchor: cryptographically-signed capability certificate a node presents to re-enter the fleet after partition-induced ejection") %}Definition 35{% end %}'s Phase-0 seeding mechanism; no additional design change is required.
-- The Isolation Forest sketch requires {% katex() %}t \cdot d_{\max} \cdot d \cdot 4{% end %} bytes (19.2 KB for CONVOY parameters). This exceeds the {% katex() %}\mathcal{L}_1{% end %} 64 KB budget only when combined with other algorithm state — verify total footprint against \\(M_q\\) at integration time.
+- The Isolation Forest sketch requires {% katex() %}t \cdot d_{\max} \cdot d \cdot 4{% end %} bytes (19.2 KB for {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} parameters). This exceeds the {% katex() %}\mathcal{L}_1{% end %} 64 KB budget only when combined with other algorithm state; the total footprint must be verified against \\(M_q\\) before combining with other algorithm state.
 
 **Fleet-level complexity**: Gossip convergence is \\(O(\ln n / \lambda)\\) ({% term(url="#prop-12", def="Gossip Convergence: all nodes reach consistent health state in logarithmically many rounds under the Gossip Health Protocol") %}Proposition 12{% end %}). Per-node gossip state is \\(O(n)\\) — the Welford estimator ({% term(url="#def-33", def="Divergence Sanity Bound: maximum acceptable state divergence before a node must enter quarantine mode, preventing reconciliation storms at reconnection") %}Definition 33{% end %}) requires \\(24\\,\text{bytes} \times n\\) peers. For OUTPOST (\\(n=127\\)): \\(127 \times 24 = 3{,}048\\) bytes at {% katex() %}\mathcal{L}_3{% end %}, frozen at 0 bytes at {% katex() %}\mathcal{L}_0{% end %}. The \\(O(n)\\) growth is bounded by fleet size, which is a fixed deployment parameter — not a runtime variable. Fleet size does not affect per-observation compute complexity (which remains \\(O(1)\\)) and only affects the static RAM allocation.
 
@@ -3174,7 +3146,7 @@ M_{2,j} &\leftarrow M_{2,j} + \delta_1 \cdot \delta_2 \\
 \end{aligned}
 {% end %}
 
-*Cold-start handling: when \\(n_j < 2\\), the variance term is undefined. For the first observation, initialize {% katex() %}\hat{\sigma}_j^2 = \sigma_\text{prior}^2{% end %} where \\(\\sigma_\\text{prior}\\) is the deployment-configured prior standard deviation (default: the sensor's datasheet noise floor). The ejection gate is suppressed entirely for \\(n_j = 0\\); for \\(n_j = 1\\), the prior variance is used.*
+*Cold-start handling: when \\(n_j < 2\\), the variance term is undefined. For the first observation, a prior variance \\(\sigma_\text{prior}^2\\) is substituted; the ejection gate is suppressed entirely for \\(n_j = 0\\), and the prior variance is used for \\(n_j = 1\\).*
 
 Observation \\(d\\) is *flagged anomalous* if {% katex() %}d > \mu_j + k \cdot \sigma_j{% end %}, where \\(k\\) is a fleet-wide policy parameter (\\(k = 3\\) for standard operation; \\(k = 4\\) for high-safety contexts). The estimator is seeded from the Phase-0 attestation window ({% term(url="#def-35", def="Trust-Root Anchor: cryptographically-signed capability certificate a node presents to re-enter the fleet after partition-induced ejection") %}Definition 35{% end %}), not from cold-start zeros. \\(D_j(t)\\) is the per-node scalar approximation of {% term(url="@/blog/2026-02-05/index.md#def-57", def="State Divergence: how far a node's local state has drifted from fleet consensus during disconnection; grows during partition, resolved at reconnection") %}Definition 57{% end %}'s pairwise divergence metric, computed against the last-known fleet consensus snapshot received via {% term(url="#def-24", def="Epidemic dissemination protocol where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds by Proposition 12") %}gossip{% end %} ({% term(url="#def-24", def="Gossip Health Protocol: epidemic dissemination where each node contacts random neighbors to propagate state; convergence guaranteed in logarithmic rounds") %}Definition 24{% end %}).
 
@@ -3200,7 +3172,7 @@ where \\(\Phi\\) is the standard normal CDF. At \\(k = 3, m = 5\\): {% katex() %
 
 > **Physical translation**: With a 3-sigma threshold and requiring 5 consecutive flags to eject, the probability that a normally-behaving peer gets wrongly kicked out is so small that it would not be expected to happen once in the lifetime of any conceivable fleet deployment. The requirement for five *consecutive* flags (not just five total) is the key: a single clean observation resets the counter to zero, so transient sensor noise cannot accumulate into a false ejection.
 
-> **Scope — distributional assumption:** This bound holds under the assumption of Gaussian divergence residuals with approximately independent peers. In denied-regime deployments where \\(T_\\text{acc}\\) exceeds the Weibull P95 partition threshold, the independence and Gaussianity assumptions are violated by temporal autocorrelation. For such deployments, apply a conservative factor of \\(\\kappa \\geq 3\\) to the stated false-ejection probability, pending a tighter bound for correlated residuals.
+*Watch out for*: this bound holds under the assumption of Gaussian divergence residuals with approximately independent peers; in the Denied regime where \\(T_{\text{acc}}\\) exceeds the Weibull P95 partition threshold, temporal autocorrelation violates both the Gaussianity and independence assumptions, causing actual false-ejection rates to exceed the stated bound.
 
 *Proof sketch.* A false ejection requires \\(m\\) consecutive anomalous flags on an honest peer. Under Gaussian residuals, each flag occurs independently with probability \\(1 - \Phi(k)\\). The \\(m\\)-consecutive-flag probability is \\((1 - \Phi(k))^m\\); a union bound over \\(T\\) possible streak-ending positions gives the stated result. \\(\square\\)
 
@@ -3250,6 +3222,8 @@ At hour 72, sustained jamming drives {% term(url="@/blog/2026-01-15/index.md#sce
 | {% katex() %}P(\text{false eject}){% end %} per \\(10^6\\) steps | {% katex() %}4.5 \times 10^{-9}{% end %} | {% katex() %}< 10^{-16}{% end %} |
 
 > **Empirical status**: The drift bound {% katex() %}|\hat{w}_j(\tau) - w_j(0)| \leq (w_0/L_{\text{P0}})\cdot\tau{% end %} is analytically derived under the stationary-divergence assumption. The {% term(url="@/blog/2026-01-15/index.md#scenario-outpost", def="127-sensor perimeter mesh at a forward base; sustains autonomous threat detection under sustained jamming and denied external communications") %}OUTPOST{% end %} illustration values (\\(\mu \approx 0.04\\), {% katex() %}\mu + 3\sigma \approx 0.09{% end %}) are scenario parameters, not measured fleet divergence statistics. The assumption of stationary divergence during partition may not hold if the physical environment changes significantly during an 18-hour blackout.
+
+*Watch out for*: the bound assumes the operational environment remains stationary during isolation; if the environment shifts sharply during a partition — a new failure mode appears or ambient conditions change — the model drift can exceed \\(\varepsilon_{\text{drift}} \cdot \tau\\) independently of isolation duration, since the Brownian bound does not cover non-stationary divergence statistics.
 
 ---
 
