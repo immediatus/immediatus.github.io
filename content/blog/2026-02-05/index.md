@@ -104,7 +104,7 @@ Edge architecture must find the balance: enough rules for critical coherence, en
 D(\Sigma_A, \Sigma_B) = \frac{|\Sigma_A \triangle \Sigma_B|}{|\Sigma_A \cup \Sigma_B|}
 {% end %}
 
-> **Physical translation**: {% katex() %}|\Sigma_A \triangle \Sigma_B|{% end %} counts the key-value pairs that differ between the two states — entries present in one but not the other, or present in both but with different values. Dividing by the total combined key space normalizes to \\([0,1]\\). At \\(D = 0\\) the replicas are byte-for-byte identical; at \\(D = 1\\) they share no information at all. In practice, \\(D\\) between 0.05 and 0.15 after a short partition is common for tactical edge systems.
+> **Physical translation**: {% katex() %}|\Sigma_A \triangle \Sigma_B|{% end %} counts the key-value pairs that differ between the two states — entries present in one but not the other, or present in both but with different values. Dividing by the total combined key space normalizes to \\([0,1]\\). At \\(D = 0\\) the replicas are byte-for-byte identical; at \\(D = 1\\) they share no information at all. In practice, \\(D\\) between 0.05 *(illustrative value)* and 0.15 *(illustrative value)* after a short partition is common for tactical edge systems.
 
 A single fleet-wide \\(D\\) value hides safety-critical divergence: \\(D\\) must be tracked separately per object class (\\(D_{\max} \approx 0.1\\) for safety-critical objects; \\(\approx 0.3\\) for operational data stores) since a low aggregate can mask full divergence on a critical subset.
 
@@ -122,7 +122,7 @@ First, environmental inputs differ: each cluster observes different events. Clus
 
 Second, decisions are made independently. [Self-healing](@/blog/2026-01-29/index.md) requires local decisions. Cluster A decides to redistribute workload after node failure. Cluster B, unaware of the failure, continues assuming the failed node is operational. Their understanding of fleet configuration diverges.
 
-Third, time drift occurs without network time synchronization. After 6 hours of partition at 100ppm drift, clocks differ by 2 seconds. Timestamps become unreliable for ordering events.
+Third, time drift occurs without network time synchronization. After 6 hours *(illustrative value)* of partition at 100ppm *(illustrative value)* drift, clocks differ by 2 seconds *(illustrative value)*. Timestamps become unreliable for ordering events.
 
 Fourth, message loss during the establishment of the partition affects propagation: some {% term(url="@/blog/2026-01-22/index.md#def-24", def="Peer-to-peer protocol where each node periodically exchanges state with random neighbors; health information spreads fleet-wide with mathematically bounded delay and no central coordinator") %}gossip{% end %} messages {{ cite(ref="6", title="Demers et al. (1987) — Epidemic Algorithms for Replicated Database") }} reach some nodes before the partition fully severs. The partial propagation creates uneven knowledge — Node A heard about event E, Node B did not. Their histories diverge.
 
@@ -139,6 +139,8 @@ Fourth, message loss during the establishment of the partition affects propagati
 | CONVOY | 10 s | 600 s | 12 |
 
 *Fano factor {% katex() %}F = \mathrm{Var}[N(t)] / \mathbb{E}[N(t)]{% end %} measured from operational logs.*
+
+The burst and quiet phase durations in this table are illustrative values calibrated from CONVOY and RAVEN exercise logs and should be remeasured for any new deployment.
 
 **Why Poisson fails for tactical edge**: Operational update streams alternate between burst and quiet phases ({% term(url="#def-57b", def="Extended State Divergence with semantic component: divergence metric capturing both data and policy-level inconsistencies accumulated during partition") %}Definition 57b{% end %}). The Fano factor {% katex() %}F = \mathrm{Var}[\text{updates}] / \mathbb{E}[\text{updates}]{% end %} for tactical edge systems is 3–79 *(illustrative value)* (measured on {% term(url="@/blog/2026-01-15/index.md#scenario-convoy", def="12-vehicle autonomous ground convoy in contested mountainous terrain; active electronic warfare requires autonomous operation at every command level") %}CONVOY{% end %} exercises), not \\(F = 1.0\\) as Poisson assumes. Burst events cluster temporally — contact events, terrain transitions, and threat detections arrive in correlated waves, followed by extended quiet periods. A uniform Poisson rate collapses this structure: it underestimates divergence at burst onset and overestimates it during quiet, making it unreliable for buffer sizing in either regime. The Poisson result below ({% term(url="#prop-41", def="Divergence Growth Rate (Poisson Lower Bound): expected divergence after partition duration scales with update rate; use for theoretical baseline only") %}Proposition 41{% end %}) serves as a lower bound; use {% term(url="#prop-41b", def="Burst-Averaged Divergence: expected divergence accounting for alternating burst and quiet update phases, giving a higher bound than Poisson at burst onset") %}Proposition 41b{% end %} for all design calculations.
 
@@ -312,7 +314,7 @@ s' = \bigsqcup_{\mathcal{W}}(\mathcal{U}) = \bigsqcup_{s_i \in \text{Admitted}(\
 
 In other words, any two replicas that have received the same set of updates will reach the same final state, regardless of the order in which they applied those updates or exchanged state with each other.
 
-**Compute Profile:** CPU: {% katex() %}O(N \log N){% end %} per merge — LWW-register and GSet merges are {% katex() %}O(N){% end %}, but semantic commit ordering requires a causal sort adding the log factor. Memory: {% katex() %}O(N){% end %} — one entry per CRDT key in the state store. Prefer delta-mutant merges over full-state merges when the state store grows beyond 1,000 entries.
+**Compute Profile:** CPU: {% katex() %}O(N \log N){% end %} per merge — LWW-register and GSet merges are {% katex() %}O(N){% end %}, but semantic commit ordering requires a causal sort adding the log factor. Memory: {% katex() %}O(N){% end %} — one entry per CRDT key in the state store. Prefer delta-mutant merges over full-state merges when the state store grows beyond 1,000 entries *(illustrative value)*.
 
 Six standard {% term(url="#def-58", def="Conflict-free Replicated Data Type; merge is commutative, associative, and idempotent — guaranteeing eventual consistency without coordination regardless of update order or network delay") %}CRDT{% end %} types cover the majority of edge state patterns; selecting the right one depends on whether state grows only, shrinks too, or requires last-writer semantics.
 
