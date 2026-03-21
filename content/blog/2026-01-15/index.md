@@ -282,7 +282,7 @@ The "send everything to the cloud" model carries a hidden energy penalty: on mos
 
 | System | \\(T_d\\) | \\(T_s\\) | \\(\rho_{\text{energy}}\\) | Local-dominant threshold |
 | :--- | :--- | :--- | :--- | :--- |
-| RAVEN drone MCU | \\(50\\,\mu\text{J}\\) | {% katex() %}5\,\text{mJ}{% end %} | {% katex() %}10^{-2}{% end %} | \\(<100\\) compute cycles |
+| RAVEN drone MCU | \\(50\\,\mu\text{J}\\) *(illustrative value)* | {% katex() %}5\,\text{mJ}{% end %} *(illustrative value)* | {% katex() %}10^{-2}{% end %} | \\(<100\\) compute cycles |
 | CONVOY vehicle ECU | \\(20\\,\mu\text{J}\\) | {% katex() %}8\,\text{mJ}{% end %} | {% katex() %}2.5\times10^{-3}{% end %} | \\(<400\\) compute cycles |
 | OUTPOST sensor node | \\(10\\,\mu\text{J}\\) | {% katex() %}10\,\text{mJ}{% end %} | {% katex() %}10^{-3}{% end %} | \\(<1000\\) compute cycles |
 
