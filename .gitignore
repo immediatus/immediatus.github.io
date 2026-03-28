@@ -8,8 +8,8 @@ worktrees/
 # Build output
 **/public/**
 
+# Materil used to prepare posts
+**/docs/**
+
 # Other files
 **/.claude/**
-
-# Drafts
-**/.drafts/**

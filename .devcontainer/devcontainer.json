@@ -1,31 +1,15 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/universal
 {
-	"name": "Default Linux Universal",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/universal:2-linux",
-	"features": {
-		"ghcr.io/devcontainers-extra/features/zsh-plugins:0": {}
-	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"google.geminicodeassist",
-				"yzhang.markdown-all-in-one",
-				"GitHub.copilot",
-				"GitHub.copilot-chat",
-				"saoudrizwan.claude-dev",
-				"ms-azuretools.vscode-containers"
-			]
-		}
-	},
-	"mounts": [
-    	"source=/home/yuriy/code/devcontainer,target=/workspaces/shared,type=bind,consistency=cached"
-  	],
-	"postCreateCommand": [
-		"git config --global user.name 'Yuriy' && git config --global user.email 'immediatus@gmail.com'"
-	],
-	"build": {
-		"dockerfile": "Dockerfile"
-	}
+    "name": "Claude Code Sandbox",
+    "build": { "dockerfile": "Dockerfile" },
+    "remoteUser": "yuriy",
+    "updateRemoteUserUID": true,
+    "containerEnv": {
+        "TZ": "America/Los_Angeles"
+    },
+    "mounts": [
+        "source=${localEnv:HOME}/.claude,target=/home/yuriy/.claude,type=bind,Z",
+        "source=${localEnv:HOME}/.claude.json,target=/home/yuriy/.claude.json,type=bind,Z",
+        "source=${localEnv:HOME}/.local/bin/claude,target=/usr/local/bin/claude,type=bind,Z",
+    ]
 }
+

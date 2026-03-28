@@ -752,6 +752,8 @@ U_0\,(1 - r_c) = \beta\,(1-p)\,(1 - p\,r_c)
 
 *When the condition fails — i.e., \\(\beta < U_0(1-r_c)\\) — there is no crossover: edge-first is unconditionally preferred regardless of partition probability \\(p\\).*
 
+*The multiplicative structure — \\(U_0\\) scaled by residual value \\(r_c\\), not added to a connectivity penalty — is what makes this failure non-local: as information freshness tightens (\\(r_c \to 0\\)), the edge advantage \\(U_0(1-r_c) \to U_0\\) grows stronger, not weaker. An additive cost model of the form \\(\alpha T + \beta E + \gamma C\\) cannot reproduce this behaviour, because any such model produces a threshold that eases as connectivity improves, rather than one that hardens as information value decays.*
+
 *Two tractable special cases illustrate the boundary:*
 
 **Case A — fast decay** (\\(r_c \ll 1\\), i.e., \\(\lambda_c T_s \gg 1\\)): Cloud utility collapses because information expires before connectivity resumes. The threshold-existence condition becomes \\(\beta \geq U_0\\) — reconciliation cost must be at least as large as the total information value. For typical deployments with \\(\beta \ll U_0\\), no valid threshold exists:
