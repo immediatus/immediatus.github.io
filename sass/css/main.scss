@@ -678,20 +678,25 @@ blockquote cite {
 table {
   width: 100%;
   max-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: var(--space-4) 0;
   font-size: 0.938rem;
-  border: 2px solid var(--text-secondary);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  overflow: hidden;
   line-height: 1.6;
   background: var(--surface);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
+
+thead tr:first-child th:first-child { border-radius: calc(var(--radius-md) - 2px) 0 0 0; }
+thead tr:first-child th:last-child  { border-radius: 0 calc(var(--radius-md) - 2px) 0 0; }
+tbody tr:last-child td:first-child  { border-radius: 0 0 0 calc(var(--radius-md) - 2px); }
+tbody tr:last-child td:last-child   { border-radius: 0 0 calc(var(--radius-md) - 2px) 0; }
 
 thead {
   background: var(--accent-subtle);
-  border-bottom: 2px solid var(--text-secondary);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 th {
@@ -2450,6 +2455,94 @@ figcaption {
   color: var(--text-secondary);
   font-style: italic;
   text-align: center;
+}
+
+/* ============================================
+   Details / Summary
+   ============================================ */
+
+details {
+  margin: var(--space-3) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-base), background var(--transition-base);
+}
+
+/* Folded: highlighted summary row */
+details:not([open]) {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+details:not([open]) > summary {
+  color: var(--text-secondary);
+  font-style: italic;
+  border-radius: calc(var(--radius-md) - 1px);
+}
+
+details:not([open]) > summary::before {
+  color: var(--accent);
+}
+
+/* Open state */
+details[open] {
+  background: var(--bg-subtle);
+  border-color: rgba(30, 90, 180, 0.18);
+}
+
+details[open] > summary {
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(30, 90, 180, 0.12);
+}
+
+details[open] > summary::before {
+  color: var(--accent);
+}
+
+details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-15) var(--space-2);
+  font-size: 0.875rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+  user-select: none;
+  border-radius: calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px) 0 0;
+  transition: color var(--transition-fast);
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: "▸";
+  font-size: 0.75rem;
+  color: var(--border-strong);
+  transition: transform var(--transition-base), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+details > summary:hover {
+  color: var(--text-secondary);
+}
+
+details > summary:hover::before {
+  color: var(--accent);
+}
+
+details > *:not(summary) {
+  padding: var(--space-1) var(--space-3) var(--space-2) calc(var(--space-3) + 0.75rem);
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* ============================================

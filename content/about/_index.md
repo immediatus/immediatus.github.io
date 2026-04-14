@@ -1,5 +1,7 @@
 +++
 title = "About"
+
+description = "About author (Yuriy Polyulya) and blog's writing philosophy"
 +++
 
 Engineering is not just about writing code. It is about *how you think* when systems become large, constraints conflict, and trade‑offs are permanent.
@@ -15,9 +17,9 @@ The goal of this site is simple: to make complex systems thinking understandable
 <aside>
     {{ image(url_min="about/author.jpeg", no_hover=true, full=true) }}
     <div style="display: flex;justify-content: space-between;margin: 10px 20px;">
-        <a href="https://www.linkedin.com/in/polyulya/">{{ ico(name="linkedin")}}</a>
-        <a href="https://twitter.com/polyulya">{{ ico(name = "twitter")}}</a>
-        <a href="https://github.com/immediatus">{{ ico(name = "github")}}</a>
+        <a href="https://www.linkedin.com/in/polyulya/" aria-label="Yuriy Polyulya LinkedIn" >{{ ico(name="linkedin")}}</a>
+        <a href="https://twitter.com/polyulya" aria-label="Yuriy Polyulya X" >{{ ico(name = "twitter")}}</a>
+        <a href="https://github.com/immediatus" aria-label="Yuriy Polyulya Github" >{{ ico(name = "github")}}</a>
     </div>
 </aside>
 
@@ -27,7 +29,7 @@ In practice, my work revolves around building **self-optimizing systems**, often
 
 Over the years, I have worked across product companies and R&D organizations, in different countries and engineering cultures, moving between hands-on system design and cross-organizational technical leadership. Alongside industry work, I have been actively involved in the engineering community - speaking at conferences and meetups on topics ranging from functional programming and type-driven design to large-scale refactoring and compositional architectures.
 
-#### My Conferences materials:
+### My Conferences materials:
 <sup>[1]</sup> *JavaDays 2013*: [Functional refactoring in Scala](https://e-mindset.space/presentations/items/scala-functional-refactoring/)
 
 <sup>[2]</sup> *JavaDays 2013*: [How to be polymorphic in Scala](https://e-mindset.space/presentations/items/scala-polymorphism/)
