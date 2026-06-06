@@ -1,7 +1,7 @@
 {
     "name": "Claude Code Sandbox",
     "build": { "dockerfile": "Dockerfile" },
-    "remoteUser": "yuriy",
+    "remoteUser": "developer",
     "updateRemoteUserUID": true,
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "runArgs": [
@@ -12,9 +12,10 @@
         "TERM": "xterm-256color"
     },
     "mounts": [
-        "source=${localEnv:HOME}/.claude,target=/home/yuriy/.claude,type=bind,z",
-        "source=${localEnv:HOME}/.claude.json,target=/home/yuriy/.claude.json,type=bind,z",
-        "source=${localEnv:HOME}/.local/bin/claude,target=/usr/local/bin/claude,type=bind,z",
-        "source=${localEnv:HOME}/.local/share/claude,target=/home/yuriy/.local/share/claude,type=bind,z"
+        "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,z",
+        "source=${localEnv:HOME}/.claude.json,target=/home/developer/.claude.json,type=bind,z",
+        "source=${localEnv:HOME}/.local/bin/claude,target=/home/developer/.local/bin/claude,type=bind,z",
+        "source=${localEnv:HOME}/.local/bin/xclaude,target=/home/developer/.local/bin/xclaude,type=bind,z",
+        "source=${localEnv:HOME}/.local/share/claude,target=/home/developer/.local/share/claude,type=bind,z"
     ]
 }
