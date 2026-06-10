@@ -215,7 +215,6 @@ The following symbols carry distinct meanings across the series. When in doubt, 
 | \\(K\\) | Control loop gain (Constraint Structure; Definitions 3–4) | EXP3-IX arm count in [Anti-Fragile Decision-Making at the Edge](@/blog/2026-02-12/index.md) (Definition 81); \\(k_\mathcal{N}\\) = Weibull shape (subscript always present, never a gain) | Lines 222, 230, 239 and Definition 3 (control gain) vs. Definition 81, Part 5 (arm count) |
 | L0–L4 | Capability levels (functional service tier) | Authority tier \\(\\mathcal{Q}_j\\): decision-scope hierarchy | Definition 3 (capability) vs. Definition 68 in *Fleet Coherence Under Partition* (authority) |
 
-*The complete series notation registry is maintained at [Notation Registry](/notation-registry/).*
 
 ### Constraint Structure
 

@@ -506,7 +506,7 @@ $$N_{cache} = \frac{Q_{target} \times \text{Cache Traffic \\%}}{1M}$$
 
 **Key Insights:**
 
-1. **ML Inference dominates compute:** 6,000-8,000 vCPUs (48-60% of total) for CPU-based GBDT prediction - see [Part 2](/blog/ads-platform-part-2-ml-infrastructure/#cpu-based-gbdt-inference-architecture-decision) for CPU vs GPU trade-off analysis
+1. **ML Inference dominates compute:** 6,000-8,000 vCPUs (48-60% of total) for CPU-based GBDT prediction - see [Part 2](/blog/ads-platform-part-2-rtb-ml-pipeline/#cpu-based-gbdt-inference-architecture-decision) for CPU vs GPU trade-off analysis
 2. **Budget Service requires significant resources:** 1,200-1,600 vCPUs (10-12% of total) despite lightweight operations - async I/O throughput limited by CPU for gRPC parsing/serialization
 3. **Memory requirements:** ~43-46TB total RAM across ~200-250 Kubernetes nodes (c6i.4xlarge: 16 vCPU, 32GB RAM or similar)
 4. **Pod density:** ~16-20 pods per node average (4,000-4,500 pods / 200-250 nodes)
@@ -963,7 +963,7 @@ Our CPU-first architecture is not a compromise—it's a deliberate choice optimi
 
 The evolution path (Phase 1 GBDT → Phase 2 two-stage CPU DNN → Phase 3 decision point) allows us to extract 80-90% of ML value without GPU complexity. If we hit the CPU ceiling in 18-24 months, we have a clear migration path to GPU—but we'll have achieved significant cost savings and learned what model quality truly requires.
 
-**See [Part 2 ML Architecture](/blog/ads-platform-part-2-ml-infrastructure/#cpu-based-gbdt-inference-architecture-decision) for detailed technical justification and external research validation.**
+**See [Part 2 ML Architecture](/blog/ads-platform-part-2-rtb-ml-pipeline/#cpu-based-gbdt-inference-architecture-decision) for detailed technical justification and external research validation.**
 
 ---
 

@@ -24,8 +24,6 @@ This final article synthesizes the complete series. [Contested Connectivity](@/b
 
 The preceding articles developed the *what*: the capabilities required for autonomic edge architecture. This article addresses the *when*: in what order should these capabilities be built? The {% term(url="#def-92", def="Ordered list of autonomic capabilities where each must be substantially solved before the next becomes the binding constraint; sequence is valid only when it follows the prerequisite graph's topological order") %}constraint sequence{% end %} determines success or failure. Build in the wrong order, and you waste resources on sophisticated capabilities that collapse because their foundations are missing.
 
-*Full series notation registry: [Notation Registry](/notation-registry/).*
-
 ---
 
 ## Theoretical Contributions
