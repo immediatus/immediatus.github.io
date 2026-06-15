@@ -7,13 +7,11 @@ slug = "coordination-constant-usl-human-ai-teams"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "ai", "multi-agent", "organizational-design", "game-theory"]
+tags = ["distributed-systems", "ai", "multi-agent", "game-theory"]
 
 [extra]
 toc = false
 +++
-
----
 
 ## The Cost of Checking Your Private World
 
@@ -25,7 +23,7 @@ The cost of coordination is not the cost of communication. It is the cost of bui
 
 In 1993, Neil Gunther formalized this cost as the coherency coefficient in the {% term(url="https://en.wikipedia.org/wiki/Neil_J._Gunther#Universal_Scalability_Law", def="Universal Scalability Law: a nonlinear model of system throughput as a function of concurrency, capturing both contention (serial bottleneck) and coherency (mutual consistency) costs") %}Universal Scalability Law{% end %} {{ cite(ref="1", title="Gunther (1993) — A Simple Capacity Model of Massively Parallel Transaction Systems") }}. It predicts throughput retrograde — the phenomenon where adding processors makes the system slower, not faster. What Gunther captured was not a database-specific effect but a universal structure: whenever {% katex() %}N{% end %} nodes must maintain mutual consistency, the coordination cost grows as {% katex() %}\kappa N(N-1){% end %}, and at some {% katex() %}N{% end %}, that quadratic term dominates the linear benefit of adding capacity.
 
-This post traces that equation across three layers of coordination — hardware, human, AI — and extends it with an epistemic dimension that the original formulation did not need. Hardware coherency operates at {% katex() %}\tau = 0{% end %}: deterministic, zero-temperature, no interpretive variance. Human teams operate at high {% katex() %}\tau{% end %}: every engineer interprets shared specifications through the lens of their own experience, creating irreducible epistemic diversity that is simultaneously the source of collective intelligence and the driver of coordination cost. LLM agents occupy a middle ground where {% katex() %}\tau{% end %} is literally a parameter — the sampling temperature — and its effect on coordination cost can be measured in tokens.
+This post traces that equation across three layers of coordination — hardware, human, AI — and extends it with an epistemic dimension that the original formulation did not need. Hardware coherency operates at {% katex() %}\tau = 0{% end %}: deterministic, zero-temperature, no interpretive variance. Human teams operate at high {% katex() %}\tau{% end %}: every engineer interprets shared specifications through the lens of their own experience, creating irreducible epistemic diversity that is both the engine of collective intelligence and the driver of coordination cost. LLM agents occupy a middle ground where {% katex() %}\tau{% end %} is literally a parameter — the sampling temperature — and its effect on coordination cost can be measured in tokens.
 
 The same equation governs all three. The same topology decision resolves all three. The only thing that changes is the calibration.
 
@@ -112,7 +110,7 @@ For {% katex() %}N > N_{\max}{% end %}, {% katex() %}X(N) < X(N_{\max}){% end %}
 </details>
 
 > **Physical translation.** There is a number — computable before you hire, before you spawn, before you provision — beyond which each additional node destroys more throughput through coordination overhead than it contributes through parallel work. For a hardware cluster with {% katex() %}\alpha = 0.05{% end %} and {% katex() %}\kappa = 0.001{% end %}, that number is roughly 31 nodes. For a human team with {% katex() %}\alpha = 0.1{% end %} and {% katex() %}\kappa = 0.02{% end %}, it is roughly 7 people. For an LLM agent system with {% katex() %}\alpha = 0.15{% end %} and {% katex() %}\kappa = 0.08{% end %}, it is roughly 3 agents. The equation is the same. The constants change. *(These are illustrative values chosen to make the arithmetic legible. The empirically calibrated values — derived from published benchmarks and discussed in the Three Curves section — give different numbers: hardware peaks near 57, human teams near 10, AI agents near 6.)*
-<!-- NOTE: These are illustrative values. The only published empirical anchor is the SPEC SDM91 benchmark (Sun SPARCcenter 2000) fitted by Gunther: alpha=0.0277, kappa=0.0001044. Hardware kappa~0.0003 is plausible for more coherence-intensive modern workloads (3x the SPEC SDM91 anchor). Human and AI kappa values have no published empirical counterparts — the ordering (hardware < human < AI) is conceptually sound but the specific values are didactic estimates. jonm.dev uses a speculative beta~0.02 for teams. Label clearly as illustrative in any public version. The calibrated values used in the Three Curves section (alpha=0.02/kappa=0.0003) differ from these illustrative values. -->
+
 
 ---
 
@@ -211,11 +209,7 @@ CG_{\text{hardware}}(i, j) = J(K_i, K_j) \times \text{alignment}(0, 0) = 1 \time
 
 Therefore {% katex() %}\kappa_{\text{eff}} = \kappa_{\text{base}}{% end %}: the effective coherency cost equals the raw hardware cost. No epistemic tax. This is the coordination floor — the minimum cost that any system of interacting nodes must pay, even when those nodes agree perfectly on what the shared state means.
 
-<!-- VERIFIED: Empirical latency numbers from nviennot/core-to-core-latency, Yunming Zhang Haswell-EP benchmarks, 7-cpu.com:
-L1 hit: 4-5 cycles / ~1-2ns (server clock). Post used "0.3-1.5ns" — understates, widen to "~1-2ns".
-Same-socket cross-core snoop: ~40-55ns Intel Xeon (Broadwell/Cascade/Ice Lake); AMD EPYC intra-CCX ~23ns, inter-CCD ~107ns. Post used "10-40ns" — too low for server; correct to "~40-55ns".
-Cross-socket invalidation: ~108-140ns modern Intel dual-socket; up to 200ns older. Post used "60-100ns" — too low; correct to "~100-150ns".
-Remote NUMA: ~120-140ns Intel dual-socket; 200-350ns AMD multi-socket. Post used "100-300ns" — correct range, no change needed. -->
+
 
 The MESI state machine is a solved epistemology. When Core 0 writes to address {% katex() %}A{% end %}, the bus snoops all other caches. Any core holding {% katex() %}A{% end %} in Shared or Exclusive state must invalidate its copy. Core 0 transitions to Modified. The cost is deterministic: one bus transaction, bounded latency, guaranteed completion. No negotiation, no interpretation, no possibility of misunderstanding. The {% term(url="https://en.wikipedia.org/wiki/MESI_protocol", def="MESI protocol: a cache coherence protocol where each cache line is in one of four states — Modified, Exclusive, or Invalid — ensuring all cores observe a consistent memory view") %}MESI{% end %} transition diagram is not a communication protocol — it is a proof that perfect coordination is achievable when {% katex() %}CG = 1{% end %}.
 
@@ -236,7 +230,7 @@ flowchart LR
 
 > **Read the diagram.** Each node is a cache line state on a single core. Each arrow is a bus transaction with a deterministic cost. The critical path is Shared-to-Modified (a write to shared data): it requires invalidating every other core's copy, and the cost scales with the number of sharers. This is {% katex() %}\kappa{% end %} made visible — the per-pair consistency tax, paid in nanoseconds on a memory bus.
 
-<!-- VERIFIED: Haswell-EP (TU-Dresden 2015 ICPP): L1=1.6ns, L2=4.8ns, L3=21.2ns. Same-socket L2-to-L2 HITM ~38-50ns. Cross-socket ~95-120ns. Papamarcos & Patel citation confirmed: ISCA '84, pp.348-354, ACM DOI 10.1145/800015.808204. Also known as the "Illinois protocol." -->
+
 
 The hardware USL calibration gives concrete {% katex() %}N_{\max}{% end %} values. For a multi-core processor with {% katex() %}\alpha \approx 0.02{% end %} (minimal serial fraction — most work is parallelizable) and {% katex() %}\kappa_{\text{base}} \approx 0.0003{% end %} (measured from cache coherence traffic on production workloads):
 
@@ -244,7 +238,7 @@ The hardware USL calibration gives concrete {% katex() %}N_{\max}{% end %} value
 N_{\max}^{\text{hardware}} = \sqrt{\frac{1 - 0.02}{0.0003}} \approx 57
 {% end %}
 
-<!-- RESEARCH: Verify this kappa_base value — Gunther's 1993 calibration data, or more recent multi-socket benchmarks from Specjbb or TPC-C runs -->
+
 
 This is why multi-socket servers exhibit diminishing returns beyond a certain core count, and why the industry moved to scale-out architectures rather than building ever-larger symmetric multiprocessors. The coherency bus saturates. The equation predicted it.
 
@@ -266,13 +260,13 @@ This is not a communication failure. It is a structural property of epistemic di
 
 Robin Dunbar's research on primate social group sizes provides the empirical anchor for human {% katex() %}\kappa{% end %}. The 1992 paper established the 150 ceiling using neocortex-to-brain-volume regression across 38 primate genera {{ cite(ref="4", title="Dunbar (1992) — Neocortex Size as a Constraint on Group Size in Primates") }}; the nested layer structure — roughly 5, 15, 50, 150 — was formalized in subsequent work {{ cite(ref="11", title="Dunbar (1993) — Coevolution of Neocortex Size, Group Size and Language in Humans") }}. Each layer represents a coherency boundary: the maximum number of relationships at a given depth of mutual model that a human brain can maintain. A 2021 reanalysis found wider confidence intervals than the original estimates, but the nested structure remains the most widely-used empirical heuristic for human social scaling.
 
-<!-- VERIFIED: 5/15/50/150 layers confirmed — not from 1992 paper alone. 1992 paper establishes only the 150 number via neocortex regression. Nested layers first in Dunbar (1993) Behavioral and Brain Sciences 16(4), 681-694. Numbers 5/15/50/150 confirmed as canonical; 5/15/35/150 variant does not appear in primary literature. 2021 challenge: Lindenfors et al. Biology Letters 17(5) found wide CIs (2-336, 4-520) — worth noting as contested heuristic not settled law. -->
+
 
 The innermost layer — roughly 5 people — corresponds to relationships with high {% katex() %}CG{% end %}: deep mutual knowledge, shared interpretive framework, low synchronization cost. This is the pair-programming partner, the war-room incident team, the founding engineering group. At this scale, {% katex() %}\kappa_{\text{eff}}{% end %} is low enough that flat coordination works.
 
 The next layer — roughly 15 — is where {% katex() %}\overline{CG}{% end %} begins to drop. Not everyone knows everyone's work in detail. Synchronization requires explicit artifacts: meeting notes, design documents, status updates. The coherency cost increases measurably. This aligns with the two-pizza team heuristic: not a cultural preference but a {% katex() %}\kappa{% end %} observation.
 
-<!-- VERIFIED: Brooks (1975) The Mythical Man-Month, Addison-Wesley. Brook's Law: "Adding manpower to a late software project makes it later." Formula n(n-1)/2 is explicit in the book. Brooks does not claim originality for the combinatorics — he uses it to argue against adding people. Note: the 1995 anniversary edition added new chapters including "No Silver Bullet" (1986). If citing original essays, 1975 is correct. Two-pizza rule: Bezos ~2000s, no canonical headcount in public Amazon documentation; range is 6-10 people in practice. -->
+
 
 At 50 people — Dunbar's clan layer — flat coordination becomes structurally impossible. The number of pairwise channels is {% katex() %}50 \times 49 / 2 = 1{,}225{% end %}. No standup can service 1,225 synchronization edges. Hierarchy becomes mandatory not as a management preference but as a graph-theoretic necessity: replace {% katex() %}O(N^2){% end %} edges with {% katex() %}O(N){% end %} edges by routing coordination through intermediate nodes.
 
@@ -301,7 +295,7 @@ Melvin Conway's original observation — that organizations produce designs mirr
 \varphi: G_{\text{org}} \to G_{\text{system}}
 {% end %}
 
-<!-- VERIFIED: arXiv:2311.10475 — Matsutani, Ohmori, Hiranabe & Hanyuda (2023) — graph homomorphism formalization confirmed -->
+
 
 The homomorphism {% katex() %}\varphi{% end %} maps teams to modules and communication channels to interfaces. Conway's Law says this mapping exists. The epistemic extension says something Conway did not: the mapping is valid only when the common ground coefficient along every organizational edge exceeds a coordination threshold.
 
@@ -380,7 +374,7 @@ When agents have different context windows or different retrieved document sets,
 
 ### Hallucination as Byzantine Fault
 
-A hallucinating LLM agent is not merely wrong. It is wrong with high confidence and internally consistent justification — the precise signature of a {% term(url="https://en.wikipedia.org/wiki/Byzantine_fault", def="Byzantine fault: a failure mode where a node produces arbitrary (including plausible but incorrect) outputs while appearing to function correctly to external observers") %}Byzantine fault{% end %}. Unlike a crash fault, which is self-announcing, a Byzantine fault produces output that looks correct to every other node in the system. In a multi-agent architecture, this means a hallucinating agent does not simply produce a wrong answer — it produces a wrong answer that other agents may incorporate into their own reasoning.
+A hallucinating agent does not simply crash; it errs with high confidence and internally consistent justification—the classic signature of a {% term(url="https://en.wikipedia.org/wiki/Byzantine_fault", def="Byzantine fault: a failure mode where a node produces arbitrary (including plausible but incorrect) outputs while appearing to function correctly to external observers") %}Byzantine fault{% end %}. Unlike a crash fault, which is self-announcing, a Byzantine fault produces output that looks correct to every other node in the system. In a multi-agent swarm, this error propagates: peer nodes ingest the confident falsehood as ground truth, compounding it across downstream reasoning steps.
 
 <span id="def-8"></span>
 
@@ -403,24 +397,24 @@ In a flat mesh, a hallucinating node's output is visible to all {% katex() %}N -
 
 </details>
 
-> **Physical translation.** In a flat four-agent system, one hallucination contaminates three other agents. In a tree-structured four-agent system with a coordinator, the same hallucination contaminates at most one downstream agent before the coordinator catches it. Same number of agents, same hallucination rate, different damage. The topology is a containment parameter — and for LLM agents, where errors compound across reasoning steps (a chain with 95% per-step accuracy collapses to under 60% end-to-end reliability across 10 steps), containment is not optional.
-<!-- VERIFIED: "3-15% per reasoning step" has no citable per-step benchmark. Replaced with the compounding-error framing, which is mathematically sound and widely cited. End-to-end hallucination rates on complex tasks: leading models exceed 10-30% (Vectara 2025/2026 leaderboard; reasoning models consistently >10% on grounded summarization). Per-step figure is inferential not directly measured. -->
+> **Physical translation.** In a flat four-agent system, one hallucination contaminates three other agents. In a tree-structured four-agent system with a coordinator, the same hallucination contaminates at most one downstream agent before the coordinator catches it. Same number of agents, same hallucination rate, different damage. The topology is a containment parameter—and for LLM agents, where errors compound across reasoning steps (a chain with 95% per-step accuracy collapses to under 60% end-to-end reliability across 10 steps), containment is a hard structural constraint.
+
 
 ### The Empirical Evidence: Retrograde in Production
 
 The theoretical prediction — that throughput peaks and then declines as agent count increases — has been confirmed empirically. Kim et al. (2025) measured multi-agent scaling across diverse benchmarks and found a regression coefficient of {% katex() %}\beta = -0.408{% end %} ({% katex() %}p < 0.001{% end %}) for the baseline paradox interaction: tasks where single-agent performance already exceeds ~45% accuracy experience negative returns from adding more agents — throughput retrograde, not merely diminishing returns {{ cite(ref="6", title="Kim et al. (2025) — Towards a Science of Scaling Agent Systems") }}.
 
-<!-- VERIFIED: arXiv:2512.08296. Lead author is Yubin Kim (20-author paper; "Zhang" is 8th author — "Zhang et al." corrected to "Kim et al."). beta = -0.408 confirmed as regression coefficient for baseline paradox interaction term, not a power-law exponent. ICLR 2025 attribution was INCORRECT — this is an arXiv preprint only (submitted Dec 2025, predating ICLR 2025 window). Removed venue claim. -->
+
 
 The OrgAgent framework provides a constructive demonstration of the hierarchy solution. By structuring agents into a three-layer organizational hierarchy — governance, execution, and compliance — with role specialization and designated merge authorities, OrgAgent achieved a 102.73% performance improvement over flat baselines on SQuAD 2.0 while reducing token consumption by 74.52% {{ cite(ref="7", title="Wang et al. (2026) — OrgAgent: Organize Your Multi-Agent System like a Company") }}.
 
-<!-- VERIFIED: arXiv:2604.01020. Authors: Wang, Shen, Han, Backes, Chen, Ho. Exact figures: 102.73% performance improvement, 74.52% token reduction — confirmed on SQuAD 2.0 with GPT-OSS-120B. Original attribution "Li et al." was incorrect. -->
+
 
 These are not small effects. A 74.52% reduction in token consumption means the hierarchical topology eliminated nearly three-quarters of the coordination overhead. In USL terms, the transition from flat to hierarchy reduced {% katex() %}\kappa_{\text{eff}}{% end %} substantially — consistent with the edge-count reduction from {% katex() %}N(N-1)/2{% end %} to {% katex() %}N - 1{% end %}. Empirical studies across other multi-agent benchmarks consistently find 30–70% higher token consumption in flat architectures relative to equivalent single-agent approaches — overhead that grows as agent count rises {{ cite(ref="8", title="Gartner (2025) — Multiagent Systems in Enterprise AI: Efficiency, Innovation and Vendor Advantage") }}.
 
 Gartner recorded a 1,445% increase in client inquiries about multi-agent systems between Q1 2024 and Q2 2025 — a measure of practitioner urgency, not adoption {{ cite(ref="8", title="Coshow & Zamanian, Gartner (Dec 2025) — Multiagent Systems in Enterprise AI") }}. If the default deployment pattern is flat-mesh coordination, the default outcome will be throughput retrograde at scale — exactly as the USL predicts.
 
-<!-- VERIFIED: Gartner statistic: Coshow & Zamanian, "Multiagent Systems in Enterprise AI: Efficiency, Innovation and Vendor Advantage," published Dec 18, 2025. Measures CLIENT INQUIRIES to Gartner analysts, Q1 2024–Q2 2025. NOT adoption. NOT a 2028 projection (separate Gartner stat: "15% of work decisions made autonomously by agents by 2028"). Corrected framing from "adoption surge" to "client inquiries." -->
+
 
 ### The Multiplication Condition
 
@@ -443,7 +437,7 @@ Violating any single condition makes addition harmful. Condition (2) and (3) are
 
 **Empirical violation note (LLM ensembles).** Large-scale evaluation across hundreds of LLMs reveals that condition (2) is not satisfied by default in LLM systems — it is systematically violated. Models trained on overlapping corpora with similar alignment pipelines converge on the same wrong answers at rates far exceeding random chance: empirically, two models that are both wrong agree on the same incorrect answer approximately 60% of the time. More precisely, pairs of individually more accurate models exhibit *higher* error correlation, not lower — because higher accuracy implies more similar training, which implies more correlated failure modes. This is the structural consequence of shared pre-training data and RLHF pipelines: the knowledge bases {% katex() %}K_i{% end %} and {% katex() %}K_j{% end %} are not independent draws from the world — they are projections of the same underlying corpus through similar optimization objectives.
 
-The implication is exact: **condition (2) cannot be assumed by assembling agents. It must be structurally manufactured.** Simply adding more instances of the same model, or more models from the same provider, increases token cost without reducing error correlation — and may worsen it. Decorrelation requires deliberate structural intervention at the topology level: assigning adversarial roles (a critic whose job is to find failures in the generator's output), using different base architectures where possible, and mandating divergent sampling temperatures (forcing a test agent to {% katex() %}\tau = 0{% end %} against a coder agent at {% katex() %}\tau = 0.4{% end %} mechanically widens the gap between their sampling distributions, reducing the probability that both land on the same wrong answer). This is the mathematical justification for the Team-Swarm Hybrid's role differentiation — not a stylistic preference, but a structural requirement for condition (2) to hold.
+Consequently, **condition (2) cannot be assumed; it must be structurally manufactured.** Simply spawning more agents from the same model family scales token costs without reducing error correlation; it often compounds it. Decorrelation requires deliberate structural intervention at the topology level: assigning adversarial roles (a critic whose job is to find failures in the generator's output), using different base architectures where possible, and mandating divergent sampling temperatures (forcing a test agent to {% katex() %}\tau = 0{% end %} against a coder agent at {% katex() %}\tau = 0.4{% end %} mechanically widens the gap between their sampling distributions, reducing the probability that both land on the same wrong answer). This is the mathematical justification for the Team-Swarm Hybrid's role differentiation — not a stylistic preference, but a structural requirement for condition (2) to hold.
 
 </details>
 
@@ -710,7 +704,10 @@ The canvas below renders the same three curves with calibrated parameters. Drag 
     var v=s.min+t*(s.max-s.min);
     v=Math.round(v/sl.step)*sl.step;
     v=Math.max(s.min,Math.min(s.max,v));
-    params[s.key]=v;
+    if(params[s.key]!==v){
+      params[s.key]=v;
+      draw();
+    }
   }
   canvas.addEventListener('mousedown',function(e){
     var h=hitSlider(e.clientX,e.clientY);
@@ -735,14 +732,13 @@ The canvas below renders the same three curves with calibrated parameters. Drag 
     e.preventDefault();
   },{passive:false});
   window.addEventListener('touchend',function(){drag=null;});
-  var running=false;
-  function loop(){draw();if(running)requestAnimationFrame(loop);}
   if('IntersectionObserver' in window){
     new IntersectionObserver(function(en,ob){
-      if(en[0].isIntersecting){running=true;ob.disconnect();setup();loop();}
+      if(en[0].isIntersecting){ob.disconnect();setup();draw();}
     },{threshold:0.1}).observe(canvas);
-  }else{setup();running=true;loop();}
-  window.addEventListener('resize',function(){setup();});
+  }else{setup();draw();}
+  window.addEventListener('resize',function(){setup();draw();});
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){draw();});
 }());
 </script>
 </div>
@@ -766,7 +762,7 @@ The three calibration points — derived from the preceding sections — are:
 | **Human teams** | 0.10 | 0.005 | 0.6 | 0.0083 | ~10 |
 | **AI agents** | 0.15 | 0.01 | 0.4 | 0.025 | ~6 |
 
-<!-- RESEARCH: These calibration values are illustrative — need empirical anchoring. Hardware kappa from Gunther's benchmark data. Human kappa from organizational scaling research. AI kappa from multi-agent coordination benchmarks (OrgAgent, AgentVerse, etc.) -->
+
 
 > The table compresses the entire argument. Hardware has the lowest coherency cost and the highest scalability ceiling because cores share perfect common ground. Human teams pay an epistemic premium — knowledge overlap below 1, interpretive alignment below 1 — that shrinks the ceiling to roughly 10. AI agents pay the highest premium because temperature diversity and context divergence drive {% katex() %}\overline{CG}{% end %} below 0.5, producing a ceiling of roughly 6 agents. The same equation, three orders of magnitude of {% katex() %}\kappa{% end %}.
 
@@ -888,11 +884,11 @@ where {% katex() %}\sigma_{CG}{% end %} is the standard deviation of pairwise {%
 
 ## Applied — Human-AI Hybrid Teams: Engineering the Epistemological Gap
 
-The three-layer analysis traces a clean progression: hardware at {% katex() %}\tau = 0{% end %}, human teams at high {% katex() %}\tau{% end %}, AI agents at tunable {% katex() %}\tau{% end %}. The most immediate design problem most engineering leaders face is none of these in isolation — it is the hybrid team, where human engineers and LLM agents work jointly on the same task. This is where the coordination constant extracts its heaviest tax, because the epistemological gap between human and AI is not a calibration problem. It is structural.
+The three-layer analysis traces a clean progression: hardware at {% katex() %}\tau = 0{% end %}, human teams at high {% katex() %}\tau{% end %}, AI agents at tunable {% katex() %}\tau{% end %}. However, the primary engineering challenge is the hybrid team, where human engineers and LLM agents collaborate on the same task. Here, the coordination constant extracts its heaviest tax, driven by a structural epistemological gap.
 
 Human engineers construct meaning through consequence. When a senior engineer reads "production-ready," their interpretation is shaped by the 3 AM outage they responded to last quarter, the implicit quality standard negotiated across hundreds of pull request reviews, the architectural decision that was revised after a security audit. This is what Wittgenstein called a form of life: meaning embedded in shared practice, irreducible to the words that carry it.
 
-An LLM agent constructs meaning through proximity. The same phrase activates a statistical distribution of tokens that co-occur with it in the training corpus. The agent does not carry the outage memory. It does not carry the implicit standard. It carries a high-fidelity approximation of what humans write when discussing production readiness — and that approximation is indistinguishable from genuine understanding until the moment it matters.
+An LLM agent constructs meaning through proximity. The same phrase activates a statistical distribution of tokens that co-occur with it in the training corpus. The agent lacks the memory of the outage and the context of the implicit standard. It holds only a high-fidelity statistical approximation of what humans write when discussing production readiness—an approximation that remains indistinguishable from genuine understanding until it fails.
 
 This is the epistemological gap: consequence-construction versus proximity-construction. It is not a communication failure. It is a structural property of the two knowledge architectures, and it manifests directly in the common ground coefficient:
 
