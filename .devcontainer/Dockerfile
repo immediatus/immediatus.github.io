@@ -11,6 +11,17 @@ RUN dnf install -y nodejs npm git unzip shadow-utils python3 tzdata && dnf clean
 RUN useradd -m -u 1000 -s /bin/bash developer
 COPY --from=zola-fetcher /usr/local/bin/zola /usr/local/bin/zola
 COPY --from=bun-source /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -sf /usr/local/bin/bun /usr/local/bin/bunx
+
+# Install Claude Code globally inside container
+RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
+
+# Create xclaude and xagy wrapper scripts
+RUN printf '#!/usr/bin/env bash\nexec claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions --allow-dangerously-skip-permissions --remote-control "$(basename "$PWD")" "$@"\n' > /usr/local/bin/xclaude \
+    && chmod +x /usr/local/bin/xclaude
+RUN printf '#!/usr/bin/env bash\nexec agy --dangerously-skip-permissions "$@"\n' > /usr/local/bin/xagy \
+    && chmod +x /usr/local/bin/xagy
+
 RUN chown -R developer:developer /workspaces
 
 USER developer

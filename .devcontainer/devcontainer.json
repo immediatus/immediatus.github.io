@@ -10,21 +10,12 @@
     ],
     "containerEnv": {
         "TZ": "America/Los_Angeles",
-        "TERM": "xterm-256color",
-        "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus"
+        "TERM": "xterm-256color"
     },
     "mounts": [
         "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,readonly=false",
         "source=${localEnv:HOME}/.claude.json,target=/home/developer/.claude.json,type=bind,readonly=false",
         "source=${localEnv:HOME}/.gemini,target=/home/developer/.gemini,type=bind,readonly=false",
-        "source=${localEnv:HOME}/.local/bin/claude,target=/home/developer/.local/bin/claude,type=bind",
-        "source=${localEnv:HOME}/.local/share/dev-workspace/.local/bin/xclaude,target=/home/developer/.local/bin/xclaude,type=bind",
-        "source=${localEnv:HOME}/.local/share/claude,target=/home/developer/.local/share/claude,type=bind",
-        "source=${localEnv:HOME}/.local/bin/agy,target=/home/developer/.local/bin/agy,type=bind",
-        "source=${localEnv:HOME}/.local/share/dev-workspace/.local/bin/xagy,target=/home/developer/.local/bin/xagy,type=bind",
-        "source=${localEnv:HOME}/.local/bin/claude,target=/usr/local/bin/claude,type=bind",
-        "source=${localEnv:HOME}/.local/share/dev-workspace/.local/bin/xclaude,target=/usr/local/bin/xclaude,type=bind",
-        "source=${localEnv:HOME}/.local/bin/agy,target=/usr/local/bin/agy,type=bind",
-        "source=/run/user/1000/bus,target=/run/user/1000/bus,type=bind"
+        "source=${localEnv:HOME}/.local/bin/agy,target=/home/developer/.local/bin/agy,type=bind"
     ]
 }
