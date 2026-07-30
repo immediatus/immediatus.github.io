@@ -133,7 +133,7 @@ CG(i, j) = J(K_i, K_j) \times \text{alignment}(\tau_i, \tau_j)
 
 where {% katex() %}J(K_i, K_j) = |K_i \cap K_j| / |K_i \cup K_j|{% end %} is the Jaccard similarity of knowledge bases, and {% katex() %}\text{alignment}(\tau_i, \tau_j) = 1 - |\tau_i - \tau_j| / \tau_{\max}{% end %} measures how similarly the nodes interpret shared knowledge. {% katex() %}CG \in [0, 1]{% end %}: 1 means perfect overlap in both knowledge and interpretation; 0 means complete disjointness.
 
-*Namespace note: {% katex() %}\tau{% end %} throughout this post denotes the **epistemic temperature parameter** — the degree to which a node applies creative or divergent interpretation to shared artifacts. For LLM agents, this maps directly to the softmax temperature of the sampling distribution. For human nodes, it represents the agent's interpretive stance calibrated on a [0, 1.5] scale. This usage is independent of other distributed-systems variables that conventionally share the symbol — consensus termination thresholds, translation fidelity coefficients, or timeout constants in governance protocols. Where ambiguity could arise in cross-framework derivations, the subscript {% katex() %}\tau_{\text{ep}}{% end %} may be substituted without loss of meaning.*
+*Namespace note: {% katex() %}\tau{% end %} throughout this post denotes the **epistemic temperature parameter** — the degree to which a node applies creative or divergent interpretation to shared artifacts. For LLM agents, this maps directly to the softmax temperature of the sampling distribution. For human nodes, it represents the agent's interpretive stance calibrated on a [0, 1.5] scale — which is also where {% katex() %}\tau_{\max}{% end %} in the alignment formula above is fixed for every worked example in this post. This usage is independent of other distributed-systems variables that conventionally share the symbol — consensus termination thresholds, translation fidelity coefficients, or timeout constants in governance protocols. Where ambiguity could arise in cross-framework derivations, the subscript {% katex() %}\tau_{\text{ep}}{% end %} may be substituted without loss of meaning.*
 
 *Approximation note: Jaccard similarity applies directly when knowledge bases are discrete sets — for example, retrieved document chunks in a RAG system. For LLM knowledge bases represented as continuous weight spaces, actual epistemic overlap scales with distance in the latent manifold, not set overlap. Similarly, temperature affects softmax entropy logarithmically: a unit increase at {% katex() %}\tau = 0.2{% end %} has a far larger effect on output distribution than at {% katex() %}\tau = 1.2{% end %}. The linear alignment formula {% katex() %}1 - |\tau_i - \tau_j| / \tau_{\max}{% end %} is a tractable approximation. The true epistemic divergence is non-linear — it is proportional to the KL divergence between the agents' output distributions, which scales with softmax entropy differences. This model uses the linear form for the same reason the USL uses a polynomial denominator: it captures the qualitative structure with computable inputs.*
 
@@ -164,7 +164,7 @@ When {% katex() %}\overline{CG} \to 1{% end %}, the team approaches hardware-lev
 
 </details>
 
-> **Physical translation.** The effective coherency coefficient is what {% katex() %}\kappa{% end %} actually costs your team. A team of five generalists with high knowledge overlap might have {% katex() %}\overline{CG} = 0.8{% end %}, giving {% katex() %}\kappa_{\text{eff}} = 1.25 \kappa_{\text{base}}{% end %} — close to the hardware minimum. A team of five deep specialists with disjoint expertise might have {% katex() %}\overline{CG} = 0.2{% end %}, giving {% katex() %}\kappa_{\text{eff}} = 5\kappa_{\text{base}}{% end %} — coordination costs five times the base rate. The scalability ceiling {% katex() %}N_{\max}{% end %} drops by a factor of {% katex() %}\sqrt{5} \approx 2.2{% end %}. Specialist teams are smaller not because specialists are difficult. They are smaller because the math demands it.
+> **Physical translation.** The effective coherency coefficient is what {% katex() %}\kappa{% end %} actually costs your team. A team of five generalists with high knowledge overlap might have {% katex() %}\overline{CG} = 0.8{% end %}, giving {% katex() %}\kappa_{\text{eff}} = 1.25 \kappa_{\text{base}}{% end %} — close to the hardware minimum. A team of five deep specialists with disjoint expertise might have {% katex() %}\overline{CG} = 0.2{% end %}, giving {% katex() %}\kappa_{\text{eff}} = 5\kappa_{\text{base}}{% end %} — coordination costs five times the base rate. Since {% katex() %}N_{\max} \propto \sqrt{\overline{CG}}{% end %} at fixed {% katex() %}\alpha{% end %} and {% katex() %}\kappa_{\text{base}}{% end %}, the scalability ceiling drops by {% katex() %}\sqrt{0.8/0.2} = 2{% end %} going from the generalist team to the specialist team. Specialist teams are smaller not because specialists are difficult. They are smaller because the math demands it.
 
 ---
 
@@ -258,7 +258,7 @@ This is not a communication failure. It is a structural property of epistemic di
 
 ### Dunbar Layers as Empirical Calibration
 
-Robin Dunbar's research on primate social group sizes provides the empirical anchor for human {% katex() %}\kappa{% end %}. The 1992 paper established the 150 ceiling using neocortex-to-brain-volume regression across 38 primate genera {{ cite(ref="4", title="Dunbar (1992) — Neocortex Size as a Constraint on Group Size in Primates") }}; the nested layer structure — roughly 5, 15, 50, 150 — was formalized in subsequent work {{ cite(ref="11", title="Dunbar (1993) — Coevolution of Neocortex Size, Group Size and Language in Humans") }}. Each layer represents a coherency boundary: the maximum number of relationships at a given depth of mutual model that a human brain can maintain. A 2021 reanalysis found wider confidence intervals than the original estimates, but the nested structure remains the most widely-used empirical heuristic for human social scaling.
+Robin Dunbar's research on primate social group sizes provides the empirical anchor for human {% katex() %}\kappa{% end %}. The 1992 paper established the 150 ceiling using neocortex-to-brain-volume regression across 38 primate genera {{ cite(ref="4", title="Dunbar (1992) — Neocortex Size as a Constraint on Group Size in Primates") }}; the nested layer structure — roughly 5, 15, 50, 150 — was formalized in subsequent work {{ cite(ref="5", title="Dunbar (1993) — Coevolution of Neocortex Size, Group Size and Language in Humans") }}. Each layer represents a coherency boundary: the maximum number of relationships at a given depth of mutual model that a human brain can maintain. A 2021 reanalysis found wider confidence intervals than the original estimates, but the nested structure remains the most widely-used empirical heuristic for human social scaling.
 
 
 
@@ -289,7 +289,7 @@ For a tree with branching factor {% katex() %}k{% end %}, each internal node coo
 
 ### Conway's Law as Graph Homomorphism
 
-Melvin Conway's original observation — that organizations produce designs mirroring their communication structures — was formalized as a graph homomorphism by Matsutani et al. {{ cite(ref="5", title="Matsutani et al. (2023) — Conway's law, revised from a mathematical viewpoint") }}:
+Melvin Conway's original observation — that organizations produce designs mirroring their communication structures — was formalized as a graph homomorphism by Matsutani et al. {{ cite(ref="6", title="Matsutani et al. (2023) — Conway's law, revised from a mathematical viewpoint") }}:
 
 {% katex(block=true) %}
 \varphi: G_{\text{org}} \to G_{\text{system}}
@@ -399,26 +399,30 @@ In a flat mesh, a hallucinating node's output is visible to all {% katex() %}N -
 
 > **Physical translation.** In a flat four-agent system, one hallucination contaminates three other agents. In a tree-structured four-agent system with a coordinator, the same hallucination contaminates at most one downstream agent before the coordinator catches it. Same number of agents, same hallucination rate, different damage. The topology is a containment parameter—and for LLM agents, where errors compound across reasoning steps (a chain with 95% per-step accuracy collapses to under 60% end-to-end reliability across 10 steps), containment is a hard structural constraint.
 
+<span id="update-2"></span>
+
+*Watch out for:* this containment model assumes the fault is a minority, chosen adversarially — the classical Byzantine precondition. [Part 1 of Theorems Out of Warranty](/blog/borrowed-guarantees-part1-independence/) found the dominant failure mode in same-family LLM committees runs the other way: an honest, correlated *majority* converging confidently on the same wrong answer — precisely the case an outlier-resistant selection rule is built to distrust the minority against, discarding the correct answer along with the noise it was meant to catch. The k-branching containment bound above still holds for genuinely adversarial or independent random faults. It does not hold for this one.
+
 
 ### The Empirical Evidence: Retrograde in Production
 
-The theoretical prediction — that throughput peaks and then declines as agent count increases — has been confirmed empirically. Kim et al. (2025) measured multi-agent scaling across diverse benchmarks and found a regression coefficient of {% katex() %}\beta = -0.408{% end %} ({% katex() %}p < 0.001{% end %}) for the baseline paradox interaction: tasks where single-agent performance already exceeds ~45% accuracy experience negative returns from adding more agents — throughput retrograde, not merely diminishing returns {{ cite(ref="6", title="Kim et al. (2025) — Towards a Science of Scaling Agent Systems") }}.
+The theoretical prediction — that throughput peaks and then declines as agent count increases — has been confirmed empirically. Kim et al. (2025) measured multi-agent scaling across diverse benchmarks and found a regression coefficient of {% katex() %}\beta = -0.408{% end %} ({% katex() %}p < 0.001{% end %}) for what they term capability saturation: tasks where single-agent performance already exceeds ~45% accuracy experience negative returns from adding more agents — throughput retrograde, not merely diminishing returns {{ cite(ref="7", title="Kim et al. (2025) — Towards a Science of Scaling Agent Systems") }}.
 
 
 
-The OrgAgent framework provides a constructive demonstration of the hierarchy solution. By structuring agents into a three-layer organizational hierarchy — governance, execution, and compliance — with role specialization and designated merge authorities, OrgAgent achieved a 102.73% performance improvement over flat baselines on SQuAD 2.0 while reducing token consumption by 74.52% {{ cite(ref="7", title="Wang et al. (2026) — OrgAgent: Organize Your Multi-Agent System like a Company") }}.
+The OrgAgent framework provides a constructive demonstration of the hierarchy solution. By structuring agents into a three-layer organizational hierarchy — governance, execution, and compliance — with role specialization and designated merge authorities, OrgAgent's GPT-OSS-120B configuration achieved a 102.73% performance improvement over flat baselines on SQuAD 2.0 while reducing token consumption by 74.52% {{ cite(ref="8", title="Wang et al. (2026) — OrgAgent: Organize Your Multi-Agent System like a Company") }}.
 
 
 
-These are not small effects. A 74.52% reduction in token consumption means the hierarchical topology eliminated nearly three-quarters of the coordination overhead. In USL terms, the transition from flat to hierarchy reduced {% katex() %}\kappa_{\text{eff}}{% end %} substantially — consistent with the edge-count reduction from {% katex() %}N(N-1)/2{% end %} to {% katex() %}N - 1{% end %}. Empirical studies across other multi-agent benchmarks consistently find 30–70% higher token consumption in flat architectures relative to equivalent single-agent approaches — overhead that grows as agent count rises {{ cite(ref="8", title="Gartner (2025) — Multiagent Systems in Enterprise AI: Efficiency, Innovation and Vendor Advantage") }}.
+That is not a small effect for a single benchmark configuration. A 74.52% reduction in token consumption means the hierarchical topology eliminated nearly three-quarters of the coordination overhead on that task. In USL terms, the transition from flat to hierarchy reduced {% katex() %}\kappa_{\text{eff}}{% end %} substantially — consistent with the edge-count reduction from {% katex() %}N(N-1)/2{% end %} to {% katex() %}N - 1{% end %}.
 
-Gartner recorded a 1,445% increase in client inquiries about multi-agent systems between Q1 2024 and Q2 2025 — a measure of practitioner urgency, not adoption {{ cite(ref="8", title="Coshow & Zamanian, Gartner (Dec 2025) — Multiagent Systems in Enterprise AI") }}. If the default deployment pattern is flat-mesh coordination, the default outcome will be throughput retrograde at scale — exactly as the USL predicts.
+Gartner recorded a 1,445% increase in client inquiries about multi-agent systems between Q1 2024 and Q2 2025 — a measure of practitioner urgency, not adoption {{ cite(ref="9", title="Coshow & Zamanian, Gartner (Dec 2025) — Multiagent Systems in Enterprise AI") }}. If the default deployment pattern is flat-mesh coordination, the default outcome will be throughput retrograde at scale — exactly as the USL predicts.
 
 
 
 ### The Multiplication Condition
 
-When does adding an agent make the collective better? The Marquis de Condorcet answered a version of this question in 1785 for binary votes: if each juror is independently correct with probability greater than 0.5, the probability of a correct majority decision approaches 1 as the jury grows {{ cite(ref="9", title="Condorcet (1785) — Essai sur l'Application de l'Analyse à la Probabilité des Décisions Rendues à la Pluralité des Voix") }}. The extension to multi-agent systems requires three conditions, not one.
+When does adding an agent make the collective better? The Marquis de Condorcet answered a version of this question in 1785 for binary votes: if each juror is independently correct with probability greater than 0.5, the probability of a correct majority decision approaches 1 as the jury grows {{ cite(ref="10", title="Condorcet (1785) — Essai sur l'Application de l'Analyse à la Probabilité des Décisions Rendues à la Pluralité des Voix") }}. The extension to multi-agent systems requires three conditions, not one.
 
 <span id="prop-3"></span>
 
@@ -433,11 +437,15 @@ When does adding an agent make the collective better? The Marquis de Condorcet a
 
 Violating any single condition makes addition harmful. Condition (2) and (3) are in direct tension: maximizing error decorrelation requires diverse stances (low {% katex() %}\overline{CG}{% end %}), while minimizing coordination cost requires shared ground (high {% katex() %}\overline{CG}{% end %}).
 
-**Proof sketch.** Condition (1) is the classical Condorcet requirement. Condition (2) follows from Hong & Page (2004): perfectly correlated errors produce no diversity benefit — the group makes the same mistake as the individual {{ cite(ref="10", title="Hong & Page (2004) — Groups of Diverse Problem Solvers Can Outperform Groups of High-Ability Problem Solvers") }}. Condition (3) is the epistemic extension: without sufficient common ground, the merge operation itself introduces errors that dominate the diversity benefit.
+**Proof sketch.** Condition (1) is the classical Condorcet requirement. Condition (2) follows from Hong & Page (2004): perfectly correlated errors produce no diversity benefit — the group makes the same mistake as the individual {{ cite(ref="11", title="Hong & Page (2004) — Groups of Diverse Problem Solvers Can Outperform Groups of High-Ability Problem Solvers") }}. Condition (3) is the epistemic extension: without sufficient common ground, the merge operation itself introduces errors that dominate the diversity benefit.
 
 **Empirical violation note (LLM ensembles).** Large-scale evaluation across hundreds of LLMs reveals that condition (2) is not satisfied by default in LLM systems — it is systematically violated. Models trained on overlapping corpora with similar alignment pipelines converge on the same wrong answers at rates far exceeding random chance: empirically, two models that are both wrong agree on the same incorrect answer approximately 60% of the time. More precisely, pairs of individually more accurate models exhibit *higher* error correlation, not lower — because higher accuracy implies more similar training, which implies more correlated failure modes. This is the structural consequence of shared pre-training data and RLHF pipelines: the knowledge bases {% katex() %}K_i{% end %} and {% katex() %}K_j{% end %} are not independent draws from the world — they are projections of the same underlying corpus through similar optimization objectives.
 
 Consequently, **condition (2) cannot be assumed; it must be structurally manufactured.** Simply spawning more agents from the same model family scales token costs without reducing error correlation; it often compounds it. Decorrelation requires deliberate structural intervention at the topology level: assigning adversarial roles (a critic whose job is to find failures in the generator's output), using different base architectures where possible, and mandating divergent sampling temperatures (forcing a test agent to {% katex() %}\tau = 0{% end %} against a coder agent at {% katex() %}\tau = 0.4{% end %} mechanically widens the gap between their sampling distributions, reducing the probability that both land on the same wrong answer). This is the mathematical justification for the Team-Swarm Hybrid's role differentiation — not a stylistic preference, but a structural requirement for condition (2) to hold.
+
+<span id="update-1"></span>
+
+*Watch out for:* naming the requirement is not the same as satisfying it. [Part 1 of Theorems Out of Warranty](/blog/borrowed-guarantees-part1-independence/) derives exactly how much correlation costs — a closed-form correction to the naive Condorcet estimate — and gives it a measurement (an effective-independence count computed from output similarity, not assumed) and a routing fix (score-aware synthesis that treats a converged pool differently from a genuinely diverse one), where this section only names the requirement in principle.
 
 </details>
 
@@ -814,6 +822,10 @@ In the Byzantine / high-{% katex() %}c_i{% end %} regime, BFT consensus mechanis
 
 *Watch out for*: This dominance result holds for {% katex() %}N > N_{\max}^{\text{flat}}{% end %} **and** under the benign-fault precondition. Two boundary conditions break it. First, for very small teams ({% katex() %}N \leq 3{% end %}), the overhead of hierarchy — the merge authority node that coordinates but does not produce primary output — may exceed the coordination savings; at {% katex() %}N = 2{% end %}, flat is always optimal. Second, when any node in the subtree operates in the Byzantine / critically-high-{% katex() %}c_i{% end %} regime (see safety constraint above), CRDT merge must be replaced with BFT consensus at that subtree boundary. The rest of the hierarchy can retain CRDT semantics; only the high-risk subtrees require the consensus penalty.*
 
+<span id="update-3"></span>
+
+*Watch out for, a third case:* the benign-fault precondition above covers honest-but-random error and adversarial Byzantine error. It does not cover sub-claims that are each individually honest and correct, combined by a merge rule that produces an incoherent whole. [Part 3 of Theorems Out of Warranty](/blog/borrowed-guarantees-part3-one-bit-of-trust/#def-2) works through this directly: a compound claim decomposed into premises, each majority-correct on its own, can compose into a conclusion no single evaluator reasoning about the whole claim would have endorsed. CRDT merge does not protect against this — preserving every contribution says nothing about whether the rule used to derive a verdict *from* those contributions is itself coherent, and List and Pettit's impossibility result says no such rule can be, in general.
+
 ---
 
 ## Decision Framework — The Engineering Leader's Instrument
@@ -835,6 +847,10 @@ N_{\max} = \sqrt{\frac{(1 - \alpha) \cdot \overline{CG}}{\kappa_{\text{base}}}}
 {% end %}
 
 If your current team size exceeds {% katex() %}N_{\max}{% end %}, you are in throughput retrograde. Every additional node makes the system slower. The fix is not "better communication" — the fix is topological restructuring.
+
+<span id="update-4"></span>
+
+*Watch out for:* this ceiling answers how many nodes should coordinate. It does not answer whether the task is solvable at all within a single node's reasoning budget, independent of how many nodes you throw at it. [Part 4 of Theorems Out of Warranty](/blog/borrowed-guarantees-part4-ceiling-no-retry-clears/) proves a separate, harder floor: a task whose required reasoning exceeds what a bounded forward pass can pay is not fixed by adding agents or retries — only by decomposing the task itself. Run that check first. A perfectly-computed {% katex() %}N_{\max}{% end %} is moot if the task was never solvable at the per-pass budget to begin with.
 
 ### Step 3: Choose the Topology
 
@@ -1351,9 +1367,9 @@ D and E are in direct tension. More diversity means more divergent intermediate 
 
 **Reading a single row: Hierarchical Tree at T = 96%, E = 96%, D = 60%.**
 
-The 96% T score is not arbitrary. In the USL simulation with calibrated AI-layer parameters ({% katex() %}\alpha = 0.05{% end %}, {% katex() %}\kappa_{\text{base}} = 0.15{% end %}, {% katex() %}CG_{\text{mean}} = 0.42{% end %}), {% katex() %}N_{\max} \approx 5{% end %} for a flat mesh but climbs to {% katex() %}\approx 18{% end %} for a tree with branching factor 3 — because the tree's coordinator absorbs most of the coherency cost before it fans out. At {% katex() %}N = 5{% end %} agents, the flat mesh is already past its peak while the tree is still climbing. The normalized throughput ratio is 0.96.
+The 96% T score is not arbitrary. In the USL simulation with calibrated AI-layer parameters ({% katex() %}\alpha = 0.05{% end %}, {% katex() %}\kappa_{\text{base}} = 0.016{% end %}, {% katex() %}CG_{\text{mean}} = 0.42{% end %}), {% katex() %}N_{\max} \approx 5{% end %} for a flat mesh but climbs to {% katex() %}\approx 18{% end %} for a tree with branching factor 3 — because the tree's coordinator absorbs most of the coherency cost before it fans out. At {% katex() %}N = 5{% end %} agents, the flat mesh is already past its peak while the tree is still climbing. The normalized throughput ratio is 0.96.
 
-The 96% E score follows from the propagation model. In the OAuth2 example with 5 agents: a hallucinated OWASP compliance result from the coder agent reaches the security agent (who blocks it), the test agent (who can independently verify it fails), and the coordinator — a propagation factor of 3 instead of 4. More importantly, the coordinator has a structural guarantee: no output crosses the tree boundary without coordinator review. The Pipeline has no such gate — each stage is downstream of the last, so the propagation factor equals stages minus one, with no interception possible.
+The 96% E score follows from the propagation model. In the OAuth2 example with 5 agents: a hallucinated OWASP compliance result from the coder agent reaches only the security agent, whose review gate blocks it before it can reach the test agent, the coordinator, or the liaison — a propagation factor of 1 instead of 4. More importantly, the coordinator has a structural guarantee: no output crosses the tree boundary without a review gate quarantining it first. The Pipeline has no such gate — each stage is downstream of the last, so the propagation factor equals stages minus one, with no interception possible.
 
 The 60% D score is the topology's deliberate cost. The coordinator enforces alignment before forwarding merged output to the liaison. Temperature diversity exists at the leaf level — the coder agent runs at {% katex() %}\tau = 0.4{% end %}, the test agent at {% katex() %}\tau = 0{% end %}, the docs agent at {% katex() %}\tau = 0.8{% end %} — but the coordinator calls consensus on the merged result. The entropy of the output distribution is much lower than the entropy of the leaf distributions. You get the error-decorrelation benefit at inference time but lose it at merge time. That is why the Team-Swarm Hybrid (which uses CRDT merge at the coordinator layer) scores D = 95% against the Hierarchical Tree's 60% — the CRDT operation preserves divergent intermediate results rather than collapsing them.
 
@@ -1499,10 +1515,10 @@ Compute it.
 2. Papamarcos, M. S. & Patel, J. H. (1984). *A Low-Overhead Coherence Solution for Multiprocessors with Private Cache Memories.* Proceedings of the 11th Annual International Symposium on Computer Architecture (ISCA '84), pp. 348–354. ACM. DOI: 10.1145/800015.808204.
 3. Wittgenstein, L. (1953). *Philosophical Investigations.* Blackwell Publishing.
 4. Dunbar, R. I. M. (1992). *Neocortex Size as a Constraint on Group Size in Primates.* Journal of Human Evolution, 22(6), 469–493.
-5. Matsutani, S., Ohmori, S., Hiranabe, K., & Hanyuda, E. (2023). *Conway's law, revised from a mathematical viewpoint.* arXiv:2311.10475.
-6. Kim, Y., Gu, K., Park, C., Park, C., Schmidgall, S., Heydari, A. A., Yan, Y., Zhang, Z., et al. (2025). *Towards a Science of Scaling Agent Systems.* arXiv:2512.08296.
-7. Wang, Y., Shen, X., Han, Y., Backes, M., Chen, P.-Y., & Ho, T.-Y. (2026). *OrgAgent: Organize Your Multi-Agent System like a Company.* arXiv:2604.01020.
-8. Coshow, T. & Zamanian, K. (2025). *Multiagent Systems in Enterprise AI: Efficiency, Innovation and Vendor Advantage.* Gartner, December 18, 2025.
-9. Condorcet, M. J. A. N. de (1785). *Essai sur l'Application de l'Analyse à la Probabilité des Décisions Rendues à la Pluralité des Voix.*
-10. Hong, L. & Page, S. E. (2004). *Groups of Diverse Problem Solvers Can Outperform Groups of High-Ability Problem Solvers.* Proceedings of the National Academy of Sciences, 101(46), 16385–16389. DOI: 10.1073/pnas.0403723101.
-11. Dunbar, R. I. M. (1993). *Coevolution of Neocortex Size, Group Size and Language in Humans.* Behavioral and Brain Sciences, 16(4), 681–694.
+5. Dunbar, R. I. M. (1993). *Coevolution of Neocortex Size, Group Size and Language in Humans.* Behavioral and Brain Sciences, 16(4), 681–694.
+6. Matsutani, S., Ohmori, S., Hiranabe, K., & Hanyuda, E. (2023). *Conway's law, revised from a mathematical viewpoint.* arXiv:2311.10475.
+7. Kim, Y., Gu, K., Park, C., Park, C., Schmidgall, S., Heydari, A. A., Yan, Y., Zhang, Z., et al. (2025). *Towards a Science of Scaling Agent Systems.* arXiv:2512.08296.
+8. Wang, Y., Shen, X., Han, Y., Backes, M., Chen, P.-Y., & Ho, T.-Y. (2026). *OrgAgent: Organize Your Multi-Agent System like a Company.* arXiv:2604.01020.
+9. Coshow, T. & Zamanian, K. (2025). *Multiagent Systems in Enterprise AI: Efficiency, Innovation and Vendor Advantage.* Gartner, December 18, 2025.
+10. Condorcet, M. J. A. N. de (1785). *Essai sur l'Application de l'Analyse à la Probabilité des Décisions Rendues à la Pluralité des Voix.*
+11. Hong, L. & Page, S. E. (2004). *Groups of Diverse Problem Solvers Can Outperform Groups of High-Ability Problem Solvers.* Proceedings of the National Academy of Sciences, 101(46), 16385–16389. DOI: 10.1073/pnas.0403723101.
