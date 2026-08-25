@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "The Phase MAPE-K Usually Skips"
-description = "No algorithm can save a Blood Oath workload: Post 1 proved that formally. What's left is physical, not algorithmic: a redline that watches real headroom and its derivative instead of trusting a number, an honest accounting of when autoscaling actually helps, and a buffer sized by the same critical-fractile logic that opened the series. None of it is antifragile on its own, that only starts once MAPE-K's own most commonly skipped phase actually closes the loop the other four were never built to close by themselves."
+description = "No algorithm can save a Blood Oath workload: Post 1 proved that formally. What's left is physical, not algorithmic: a redline that watches real headroom and its derivative instead of trusting a number, an honest accounting of when autoscaling actually helps, and a buffer sized by the same critical-fractile logic that opened the series. None of it adapts on its own; that only starts once MAPE-K's own most commonly skipped phase, Knowledge, actually closes the loop the other four were never built to close by themselves."
 date = 2026-08-05
 slug = "no-safe-number-part2-provisioning-window"
 draft = false
@@ -14,7 +14,7 @@ series = ["no-safe-number"]
 toc = false
 series_order = 2
 series_title = "Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption"
-series_description = """A capacity number is a bet on which tail you're in, and most of them are placed without checking. This series proves exactly when that bet loses (formally, not anecdotally) then builds what survives the loss: physical-signal backpressure, autonomic control loops that improve from the stress they survive, a multi-resource generalization confirmed by an independent argument from game theory, and a real architectural comparison (decentralized against centralized, staleness traded for a single point of failure) across workloads from a single non-preemptible task to a production disaggregated-serving fleet."""
+series_description = """Capacity planning under heavy-tailed demand isn't harder than under light-tailed demand, it's structurally different, and this series proves exactly where that difference breaks a standard capacity number. It then builds what survives it: a physical-signal admission control loop, a multi-resource generalization checked against an independent Price-of-Anarchy result, an eviction rule derived as optimal stopping, and a fleet-pooling result sized by the same square-root staffing law used in queueing theory. Before recommending any of it, the series prices what the adaptive machinery itself costs to run, and closes with a decentralized-versus-centralized architecture comparison, translated into a concrete build order and on-call runbook."""
 +++
 
 ## The Team on Call Doesn't Get to Wait for Proof

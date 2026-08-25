@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "The Newsvendor Problem Under a Heavy Tail"
-description = "The newsvendor problem is seventy years old, closed-form, and taught in the first weeks of any operations course: cheap to solve right up until the tail gets heavy. This post proves precisely where that seventy-year-old stability ends, then finds the one workload shape where even the correctly-computed answer isn't enough: cost unknowable until completion, no preemption, no horizontal escape. No scheduling algorithm can save it (not a cleverer one, not a centralized one with a perfect view of every node) and this post proves both formally."
+description = "The newsvendor problem is seventy years old, closed-form, and taught in the first weeks of any operations course: cheap to solve right up until the tail gets heavy. This post proves precisely where that stability ends, then finds the one workload shape where even the correctly-computed answer isn't enough: cost unknowable until completion, no preemption, no horizontal escape. No scheduling algorithm can save it: not a cleverer one, not a centralized one with a perfect view of every node. This post proves it formally, for the whole class at once, not case by case."
 date = 2026-08-02
 slug = "no-safe-number-part1-blood-oath"
 draft = false
@@ -14,7 +14,7 @@ series = ["no-safe-number"]
 toc = false
 series_order = 1
 series_title = "Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption"
-series_description = """A capacity number is a bet on which tail you're in, and most of them are placed without checking. This series proves exactly when that bet loses (formally, not anecdotally) then builds what survives the loss: physical-signal backpressure, autonomic control loops that improve from the stress they survive, a multi-resource generalization confirmed by an independent argument from game theory, and a real architectural comparison (decentralized against centralized, staleness traded for a single point of failure) across workloads from a single non-preemptible task to a production disaggregated-serving fleet."""
+series_description = """Capacity planning under heavy-tailed demand isn't harder than under light-tailed demand, it's structurally different, and this series proves exactly where that difference breaks a standard capacity number. It then builds what survives it: a physical-signal admission control loop, a multi-resource generalization checked against an independent Price-of-Anarchy result, an eviction rule derived as optimal stopping, and a fleet-pooling result sized by the same square-root staffing law used in queueing theory. Before recommending any of it, the series prices what the adaptive machinery itself costs to run, and closes with a decentralized-versus-centralized architecture comparison, translated into a concrete build order and on-call runbook."""
 +++
 
 ## The Provisioning Problem

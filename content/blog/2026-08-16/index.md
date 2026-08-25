@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "The Square Root That Doesn't Cover Routing"
-description = "Every post in this series so far has priced one pool, one resource, one task's decision. Real fleets run hundreds of pools at once, and this post answers whether volume changes what the earlier four prove necessary, not by assumption, but by an exact classical queueing result precise enough to price a real number: how many gigabytes pooling a fleet's own memory margin actually frees, and exactly where that pooling stops working. It also opens a question its own routing mechanism begs and never argues for: why push-based sampling, when a design that removes staleness by construction instead of sampling around it already exists: prices that specific tradeoff, and names the fuller comparison against a fully centralized alternative as the job of the post built for it."
+description = "Every post in this series so far has priced one pool, one resource, one task's decision. Real fleets run hundreds of pools at once, and this post checks whether scale changes what the earlier four posts prove is needed, not by assumption, but by an exact classical queueing result precise enough to price a real number: how many gigabytes pooling a fleet's own memory margin actually frees, and exactly where that pooling stops working. It also opens a question its own routing mechanism begs and never argues for: why push-based sampling, when a design that removes staleness by construction, instead of sampling around it, already exists. This post prices that specific tradeoff, and leaves the fuller comparison against a fully centralized alternative for the post built to make it."
 date = 2026-08-16
 slug = "asymptotically-ruined-part5-square-root-routing"
 draft = false
@@ -14,7 +14,7 @@ series = ["no-safe-number"]
 toc = false
 series_order = 5
 series_title = "Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption"
-series_description = """A capacity number is a bet on which tail you're in, and most of them are placed without checking. This series proves exactly when that bet loses (formally, not anecdotally) then builds what survives the loss: physical-signal backpressure, autonomic control loops that improve from the stress they survive, a multi-resource generalization confirmed by an independent argument from game theory, and a real architectural comparison (decentralized against centralized, staleness traded for a single point of failure) across workloads from a single non-preemptible task to a production disaggregated-serving fleet."""
+series_description = """Capacity planning under heavy-tailed demand isn't harder than under light-tailed demand, it's structurally different, and this series proves exactly where that difference breaks a standard capacity number. It then builds what survives it: a physical-signal admission control loop, a multi-resource generalization checked against an independent Price-of-Anarchy result, an eviction rule derived as optimal stopping, and a fleet-pooling result sized by the same square-root staffing law used in queueing theory. Before recommending any of it, the series prices what the adaptive machinery itself costs to run, and closes with a decentralized-versus-centralized architecture comparison, translated into a concrete build order and on-call runbook."""
 +++
 
 ## One Pool, Then One Resource, Then One Task's Decision
