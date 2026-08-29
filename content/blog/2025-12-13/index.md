@@ -923,4 +923,4 @@ The qualitative difference matters. Cold-start abandonment is a quiet exit: user
 
 Part 5 analyzes consistency as a constraint: how state divergence happens at scale, when it becomes a platform-threatening problem, and what consistency architecture resolves it at acceptable cost. The framework from Parts 1-4 continues: we will quantify the revenue exposure, identify the one-way doors, and establish the ROI threshold for the full consistency infrastructure.
 
-*Next: [Part 5 — Cross-Device State Consistency: When Sync Failures Destroy Trust](../2025-12-20/)*
+*Next: [Part 5 — Cross-Device State Consistency: When Sync Failures Destroy Trust](../microlearning-platform-part5-data-state/)*

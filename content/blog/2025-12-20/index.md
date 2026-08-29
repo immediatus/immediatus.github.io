@@ -1151,4 +1151,4 @@ Each analysis followed the same structure: quantify the revenue exposure, identi
 
 Part 6 synthesizes all six into a unified sequencing framework — answering the meta-question: given finite engineering capacity, in what order should these constraints be resolved, and when is each one sufficiently solved to move on? The answer requires a formalization of constraint dependencies that goes beyond the individual ROI calculations in Parts 1-5.
 
-*Next: [Part 6 — Constraint Sequencing: The Engineering Roadmap from 3M to 50M DAU](../2025-12-27/)*
+*Next: [Part 6 — Constraint Sequencing: The Engineering Roadmap from 3M to 50M DAU](../microlearning-platform-part6-meta-framework/)*

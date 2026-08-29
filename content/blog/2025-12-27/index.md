@@ -1191,7 +1191,7 @@ This reference replaces any need for a separate glossary. Cross-references throu
 ### Definitions
 
 #### Framework Scope (Constraint Sequence Framework)
-*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+*(Source: Part 6 — [The Constraint Sequence Framework](../microlearning-platform-part6-meta-framework/))*
 
 **Definition (Constraint Sequence Framework):** Given an engineering system \\(S\\) with:
 
@@ -1212,7 +1212,7 @@ The Constraint Sequence Framework provides:
 ---
 
 #### Universal Revenue Law
-*(Source: Part 1 — [Why Latency Kills Demand When You Have Supply](../2025-11-22/))*
+*(Source: Part 1 — [Why Latency Kills Demand When You Have Supply](../microlearning-platform-part1-foundation/))*
 
 **Law 1 (Universal Revenue):** The annual revenue protected by resolving a constraint that reduces the abandonment rate by \\(\Delta F\\) is:
 
@@ -1225,7 +1225,7 @@ Where DAU = 3M (series baseline), \\(\text{LTV}_{\text{monthly}} = \\$1.72/\text
 ---
 
 #### Weibull Abandonment Model
-*(Source: Part 1 — [Why Latency Kills Demand When You Have Supply](../2025-11-22/))*
+*(Source: Part 1 — [Why Latency Kills Demand When You Have Supply](../microlearning-platform-part1-foundation/))*
 
 **Law 2 (Weibull Abandonment):** User patience follows a Weibull survival function. For viewers (demand-side):
 
@@ -1243,7 +1243,7 @@ The shape parameter \\(k_v = 2.28\\) reveals accelerating abandonment risk: goin
 ---
 
 #### Protocol Regime Boundary (Market Reach Coefficient)
-*(Source: Part 2 — [Why Protocol Choice Locks Physics For Years](../2025-11-29/))*
+*(Source: Part 2 — [Why Protocol Choice Locks Physics For Years](../microlearning-platform-part2-video-delivery/))*
 
 *Note: This definition is presented in Part 2 as the "Market Reach Coefficient" rather than "Protocol Regime Boundary." The regime threshold is the physics floor comparison between TCP+HLS and QUIC+MoQ.*
 
@@ -1344,7 +1344,7 @@ Revenue at risk: 20% of DAU experiences cold start; 12% of those never return af
 ---
 
 #### Personalization Budget
-*(Source: Part 4 — [Why Cold Start Caps Growth Before Users Return](../microlearning-platform-part4-ml-personalization//))*
+*(Source: Part 4 — [Why Cold Start Caps Growth Before Users Return](../microlearning-platform-part4-ml-personalization/))*
 
 **The 100ms Personalization Budget:** The fix requires personalization fast enough that a new user never notices it happening. The performance budget is <100ms from request to personalized path. Within that window, the system must:
 
@@ -1379,7 +1379,7 @@ Of these 10.7M incidents, approximately 10% (1.07M) are user-visible. The underl
 ---
 
 #### CRDT (Conflict-Free Replicated Data Type)
-*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../2025-12-20/))*
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../microlearning-platform-part5-data-state/))*
 
 **CRDTs guarantee convergence:** all replicas eventually reach the same state regardless of operation order, through three algebraic properties:
 
@@ -1402,7 +1402,7 @@ Streak consistency therefore requires a CP (Consistency + Partition-tolerance) d
 ---
 
 #### Vector Clock (Dual-Timestamp Protocol)
-*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../2025-12-20/))*
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../microlearning-platform-part5-data-state/))*
 
 *Note: Part 5 does not use the term "Vector Clock" as a formal definition. The equivalent construct is the Dual-Timestamp Protocol with sequence numbers for causality ordering.*
 
@@ -1426,7 +1426,7 @@ When \\(|t_{\text{client}} - t_{\text{server}}| > 5\text{ min}\\), the event is 
 ---
 
 #### Authority Tier (Clock Authority Model)
-*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../2025-12-20/))*
+*(Source: Part 5 — [Why Consistency Bugs Destroy Trust Faster Than Latency](../microlearning-platform-part5-data-state/))*
 
 *Note: Part 5 uses the term "Clock Authority Models" rather than "Authority Tier." The three models define a hierarchy of timestamp authority.*
 
@@ -1443,7 +1443,7 @@ The series recommends bounded trust (\\(\Delta_{\text{trust}} = 5\text{ min}\\))
 ---
 
 #### Constraint Sequence
-*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+*(Source: Part 6 — [The Constraint Sequence Framework](../microlearning-platform-part6-meta-framework/))*
 
 **Sequence Ordering — Formal Property:** While constraint \\(c_i\\) is binding, all successor constraints \\(c_j\\) are not yet the bottleneck:
 
@@ -1462,7 +1462,7 @@ The six-constraint sequence for the microlearning platform: Physics (latency) to
 ---
 
 #### Prerequisite Graph
-*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+*(Source: Part 6 — [The Constraint Sequence Framework](../microlearning-platform-part6-meta-framework/))*
 
 **Dependency Graph \\(G = (C, E)\\):** Edge \\((c_i, c_j) \in E\\) indicates \\(c_i\\) must be resolved before \\(c_j\\) becomes binding.
 
@@ -1482,7 +1482,7 @@ Resolving a successor constraint before its predecessor yields diminished ROI: t
 ---
 
 #### Phase Gate Function (Decision Function)
-*(Source: Part 6 — [The Constraint Sequence Framework](../2025-12-27/))*
+*(Source: Part 6 — [The Constraint Sequence Framework](../microlearning-platform-part6-meta-framework/))*
 
 *Note: Part 6 presents this as the "Decision Function" rather than "Phase Gate Function." It defines the conditions governing when to invest, defer, or stop for each candidate constraint.*
 
