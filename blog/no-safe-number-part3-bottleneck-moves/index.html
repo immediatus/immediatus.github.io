@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="A margin computed at the wrong level of abstraction doesn&#x27;t fail where the old threshold said it would: it fails a third of the way there. This post generalizes Post 2&#x27;s single-resource redline to a genuinely multi-resource setting, finds the real byte-level exhaustion point sits at roughly a third of the slot-based Sedimentation Threshold, not at the threshold itself, and checks that finding against a structurally unrelated argument reaching the same qualitative warning from a different direction: Price of Anarchy, a nonlinear equilibrium-inefficiency metric that spikes near saturation in a real production system, not a second measurement of the same quantity." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Multi-Resource Capacity and the Price of Anarchy - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part3-bottleneck-moves&#x2F;" />
+  <meta property="og:description" content="A margin computed at the wrong level of abstraction doesn&#x27;t fail where the old threshold said it would: it fails a third of the way there. This post generalizes Post 2&#x27;s single-resource redline to a genuinely multi-resource setting, finds the real byte-level exhaustion point sits at roughly a third of the slot-based Sedimentation Threshold, not at the threshold itself, and checks that finding against a structurally unrelated argument reaching the same qualitative warning from a different direction: Price of Anarchy, a nonlinear equilibrium-inefficiency metric that spikes near saturation in a real production system, not a second measurement of the same quantity." />
+
+  <title>Multi-Resource Capacity and the Price of Anarchy - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part3-bottleneck-moves&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>Multi-Resource Capacity and the Price of Anarchy</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-08-09T00:00:00+00:00" pubdate>09 August 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/capacity-planning/">#capacity-planning</a>
+              <a class="tag" href="https://e-mindset.space/tags/queueing-theory/">#queueing-theory</a>
+              <a class="tag" href="https://e-mindset.space/tags/game-theory/">#game-theory</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<h2 id="when-the-alert-fires-after-the-failure">When the Alert Fires After the Failure</h2>
+<p>A 2025 empirical study looked at 156 high-severity incidents on a hyperscale LLM-serving platform, with methodology strong enough to be worth naming: Cohen’s <script type="math/tex">\kappa \approx 0.89</script>
+ inter-rater agreement, three months of quantitative analysis on top of a year of operational experience <a href="#ref-1" class="cite-ref" data-def="Ranganathan, B., Zhang, M. & Wu, K. (2025) — Enhancing reliability in AI inference services: An empirical study on real production incidents" aria-label="Ranganathan, B., Zhang, M. & Wu, K. (2025) — Enhancing reliability in AI inference services: An empirical study on real production incidents">[1]</a>
+. It found something specific about how these systems actually die. Inference-engine failures dominate the incident population, and within that category, timeouts and resource exhaustion together outweigh outright crashes. The pattern that cuts across all of it isn’t any single failure mode: it’s that discontinuous failures are invisible to monitoring built for continuous degradation. Usage looks normal, then it isn’t. The alert fires after the failure, not before it. That isn’t a flaw specific to one platform’s dashboards. It’s the generic shape of what happens whenever a system watches one signal and a different resource is the one that runs out. This post is about to show that shape happening with this series’ own specimen, numbers attached, not asserted.</p>
+<p>Post 1 named this gap on its own terms, before either of the two posts that would go on to close a different one first, or this one: <em>“The case study’s own 32-slot pool is already a mild simplification here: what actually binds is VRAM, and duration is a proxy for VRAM occupancy: accurate in this case because a generation never releases any of its KV cache early, so time-in-slot and time-holding-memory are the same clock… the vector-valued generalization that vocabulary would need, ‘heavy’ as more than a scalar, the binding resource shifting depending on what else runs concurrently, is a real gap, not a hedge.”</em> This post is where that gap actually gets closed.</p>
+<p><a href="/blog/no-safe-number-part2-provisioning-window/#def-2">Definition 2</a>’s redline watches one gauge: <script type="math/tex">H(t)</script>
+, headroom against VRAM. It isn’t wrong: Post 2 verified it against real numbers, at length, and it held. It’s <em>scoped</em>, built for a pool where VRAM is the only resource that can actually run out, because in Post 2’s single-node world there was only ever one machine to watch. A genuinely disaggregated architecture doesn’t just make VRAM harder to watch. It splits what used to be one node’s job into two phases on separate hardware, and that split creates resources that never existed as separate entities in Definition 2’s own world: GPU compute, spent entirely on the prefill pass, and network bandwidth, spent moving the KV cache between the two machines. VRAM itself doesn’t stop mattering. It’s still exactly what the decode node needs watched, and this post still watches it, now with real numbers behind it. What Definition 2 has no way to see is the other two, not because its own threshold is wrong, but because the resource in trouble was never wired to its gauge to begin with.</p>
+<p><strong>The specimen, extended, not replaced.</strong> Same pool, same reasoning-trace workload, same <script type="math/tex">\alpha=2.2</script>
+ tail: reinterpreted through an architecture real production LLM serving has actually converged on: disaggregated prefill/decode <a href="#ref-2" class="cite-ref" data-def="Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, Í., Maleki, S. & Bianchini, R. (2024) — Splitwise: Efficient Generative LLM Inference Using Phase Splitting" aria-label="Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, Í., Maleki, S. & Bianchini, R. (2024) — Splitwise: Efficient Generative LLM Inference Using Phase Splitting">[2]</a>
+. Instead of one node running both phases of generation, the two phases run on separate machines. <em>Prefill</em> processes the input prompt in a single compute-bound pass; <em>decode</em> generates output tokens one at a time, memory-bandwidth-bound rather than compute-bound. The KV cache built during prefill is physically transferred to a decode node once the prompt pass finishes. This is Post 1’s locality-lock discussion (<a href="/blog/no-safe-number-part1-blood-oath/#def-1">Definition 1</a>, property 3), not a new mechanism. Disaggregation is architecture that <em>deliberately pays</em> the cross-link relocation cost that discussion calls categorically expensive, in exchange for scaling two resources independently: prefill’s resource (GPU compute) and decode’s resource (memory, holding the KV cache resident for as long as generation runs). A third resource, the network link between them, is one neither phase alone needed on its own.</p>
+<p>Splitwise’s own characterization of real Azure inference traces gives two service profiles worth instantiating against: a coding service with median prompt length 1,500 tokens and median output length 13 tokens, and a conversation service with median prompt 1,020 tokens and median output 129 tokens. Both show prompts longer than outputs. The opposite of what “heavy” meant in Posts 1–2, where duration was entirely an output-generation quantity. The same paper’s own characterization gives the ratio that justifies splitting the phases onto different hardware at all, not asserts it: for a 176-billion-parameter model, a 1,500-token prompt phase takes the same wall-clock time as a 6-token output phase: roughly 250 input tokens of prefill compute per 1 output token of decode compute. Prefill and decode aren’t two views of the same cost. They’re different costs, at a 250:1 ratio, which is precisely why a single VRAM-headroom gauge scoped to decode-phase occupancy has nothing to say about prefill-phase GPU pressure building on an entirely different machine.</p>
+<p><span id="def-4a"></span></p>
+<details>
+<summary>Definition 4a -- Multi-Resource Achievable Region: each resource keeps its own separable frontier; only the demotion decision is shared</summary>
+<p><strong>Definition 4a</strong> (Multi-Resource Achievable Region). Given resources <script type="math/tex">r \in \{\text{GPU}, \text{mem}, \text{I/O}\}</script>
+, each with its own reserved margin <script type="math/tex">H_{\min}^r</script>
+, its own arrival process <script type="math/tex">G_r</script>
+ for additional demand during a bridging window, and its own underage/overage cost pair <script type="math/tex">(C_u^r, C_o^r)</script>
+, each resource has its own achievable region. The same two-cost frontier shape as <a href="/blog/no-safe-number-part2-provisioning-window/#def-2a">Definition 2a</a>, reconstructed per resource rather than assumed to carry over by analogy. These regions are separable: reserving margin on one resource consumes none of another’s budget, and there is no joint frontier across resources in the sense <a href="/blog/no-safe-number-part1-blood-oath/#def-0">Definition 0</a> and Definition 2a are frontiers within a single resource. What is <em>not</em> separable is the demotion decision: a single admitted task typically holds all three resources simultaneously for its entire lifetime, so demoting it releases pressure on all three at once, not one at a time. The coupling this post has to formalize lives in that shared decision, not in the cost structures themselves.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> This is a real, worth-stating-precisely distinction, not a technicality. If the resources genuinely traded off against each other (more GPU margin costing you memory margin) this would be a single joint optimization problem, and Dominant Resource Fairness’s own framing <a href="#ref-3" class="cite-ref" data-def="Ghodsi, A., Zaharia, M., Hindman, B., Konwinski, A., Shenker, S. & Stoica, I. (2011) — Dominant Resource Fairness: Fair Allocation of Multiple Resource Types" aria-label="Ghodsi, A., Zaharia, M., Hindman, B., Konwinski, A., Shenker, S. & Stoica, I. (2011) — Dominant Resource Fairness: Fair Allocation of Multiple Resource Types">[3]</a>
+ (a fair <em>share</em> of a <em>pooled</em> set of resources) would be the natural fit. They don’t trade off; VRAM headroom and GPU-compute headroom are drawn from physically separate budgets, on physically separate machines. What DRF’s framing actually earns its keep on in this post is narrower and more precise: not allocating a shared pool, but <em>comparing</em> unlike quantities (a GPU-slot count against a memory-byte count against a network-Mbps figure) on one common scale, so that “which resource is closest to its own limit” is even a well-posed question. Definition 4, later, states that comparison exactly.</p>
+</blockquote>
+<h2 id="what-a-genuinely-heavy-task-actually-costs">What a Genuinely Heavy Task Actually Costs</h2>
+<p>Converting output-token counts into an actual memory-headroom threat needs a real per-token cost, not an assumed one. For Llama-2-70B: 80 layers, hidden size 8,192, 64 attention heads, 8 key-value heads via grouped-query attention, a real, published model configuration <a href="#ref-4" class="cite-ref" data-def="Touvron, H. et al. (2023) — Llama 2: Open Foundation and Fine-Tuned Chat Models" aria-label="Touvron, H. et al. (2023) — Llama 2: Open Foundation and Fine-Tuned Chat Models">[4]</a>
+. The KV cache costs <script type="math/tex">2 \times L \times n_{kv} \times d_{\text{head}} \times 2\text{ bytes (fp16)} = 327{,}680\text{ bytes} = 320</script>
+ KiB per token, following directly from the architecture: a binary figure, exactly <script type="math/tex">320\times2^{10}</script>
+ bytes, the same GiB-versus-GB distinction this post polices for the A100’s own spec below, applied consistently to its own arithmetic rather than only to NVIDIA’s. Applied to Splitwise’s own two profiles: the coding service’s 1,513-token full context costs 496 MB of resident KV cache per sequence at peak; the conversation service’s 1,149 tokens cost 377 MB. The capacity these have to fit against is not the raw HBM total. The model’s own weights occupy most of it first. Llama-2-70B’s 70 billion parameters at fp16 need 140 GB just to reside in memory, 70<script type="math/tex">\times10^9</script>
+ parameters times 2 bytes, a genuinely decimal figure with no ambiguity in it. The GPU side needs the same care Post 1’s own byte-level arithmetic elsewhere in this series applies: NVIDIA’s own “40GB” A100 spec is a binary figure, 40 GiB, <script type="math/tex">40 \times 2^{30} = 42.95</script>
+GB decimal (confirmable directly against the card’s own reported memory, 40,960 MiB) not the 40GB-decimal a reader would default to next to a genuinely-decimal parameter count. Treating “40” as if it shared the weight figure’s own decimal base is exactly the kind of unit mismatch this series has caught itself on before. Converted onto one consistent decimal basis, 4<script type="math/tex">\times</script>
+42.95GB <script type="math/tex">\approx</script>
+171.8GB total, minus the 140GB weight footprint, leaves <strong>31.80GB</strong> for KV cache, optimistically ignoring activation memory on top of it. Against that 31.80GB, not 80 and not a naively-subtracted 20, it’s roughly 64 to 84 concurrent <em>ordinary</em> sequences before memory (not GPU compute) is what actually runs out. Ordinary is doing real work in that sentence: 496 MB and 377 MB are Splitwise’s own real medians, describing traffic this series has never been about.</p>
+<p><script type="math/tex">E[S_{\text{prefill}}]</script>
+ needs its own holding-time estimate, the same way Definition 2a needed <script type="math/tex">E[S_h]=300</script>
+s for decode. A real, if dated, single-request benchmark: Llama-2-70B on 4<script type="math/tex">\times</script>
+A100 40GB, HuggingFace’s text-generation-inference server, version 0.9.4 <a href="#ref-5" class="cite-ref" data-def="TrueFoundry (2024) — Benchmarking Llama-2-70B" aria-label="TrueFoundry (2024) — Benchmarking Llama-2-70B">[5]</a>
+, reports a 50-input, 500-output-token request completing in 33 seconds for a single user, giving a decode rate of roughly 15.15 tokens/second uncontaminated by a large prefill component. Chaining three separate approximations, each named rather than hidden: this decode rate (from a 2024, pre-optimization-era serving stack); the 250:1 prefill-to-decode compute ratio (measured on BLOOM-176B, a different, larger model, applied here as an architectural order-of-magnitude argument, not a same-model exact match); and a representative prefill length borrowed from Splitwise’s own conversation-service median (1,020 tokens). The result: <script type="math/tex">0.264</script>
+ms per input token via the 250:1 ratio, giving <script type="math/tex">E[S_{\text{prefill}}] \approx 0.27</script>
+s for a 1,020-token prompt, three orders of magnitude shorter than decode’s 300s, itself the quantitative reason prefill and decode were ever worth separating onto different hardware in the first place.</p>
+<p><em>A tension worth naming on its own terms, not borrowed as someone else’s finding.</em> <script type="math/tex">E[S_h]=300</script>
+s is a slot-holding duration; Splitwise’s 129-token median is a per-call token count. Treating them as interchangeable: as if a task’s total occupancy time must equal its token count divided by a decode rate, silently assumes a task’s occupancy is nothing but continuous token generation with no idle time folded in. That’s a real, checkable modeling choice this post has to defend on its own terms. A July 2026 paper on agentic scheduling is worth citing here for a related, adjacent reason, not for settling this specific question <a href="#ref-6" class="cite-ref" data-def="Wang, J., Lin, K., Zhang, K., Han, J., Wei, X., Shen, S., Fang, C., Yu, W., Chen, R. & Chen, H. (2026) — SMetric: Rethink LLM Scheduling for Serving Agents with Balanced Session-centric Scheduling" aria-label="Wang, J., Lin, K., Zhang, K., Han, J., Wei, X., Shen, S., Fang, C., Yu, W., Chen, R. & Chen, H. (2026) — SMetric: Rethink LLM Scheduling for Serving Agents with Balanced Session-centric Scheduling">[6]</a>
+. It studies real production agentic serving closely enough to build a whole scheduling metric around a different problem in the same space, KV-cache-locality-driven load imbalance, where schedulers that over-prioritize cache affinity route too many sessions onto too few instances while others sit idle. That’s real evidence session-centric agentic LLM serving is under live, careful 2026 study. It is not evidence for this post’s own narrower question about whether <script type="math/tex">E[S_h]</script>
+ represents continuous decode or a longer session with idle gaps in it. That question is this post’s own to answer, not one to borrow another paper’s authority for.</p>
+<blockquote>
+<p><strong>Design Guardrail.</strong> This post resolves the ambiguity toward continuous decode: a modeling choice it’s making, not one any citation proves.</p>
+</blockquote>
+<p><strong>Why the obvious textual support is weaker than it looks.</strong> Post 1’s own description of the reasoning trace’s KV cache (<em>“built incrementally, one token at a time, as the reasoning trace grows”</em>) describes <em>how</em> the cache accumulates whenever generation happens; it says nothing about whether anything else happens in between. A session with idle gaps between bursts still builds its cache “one token at a time” during each burst, so the quote doesn’t actually distinguish continuous decode from a longer, gappier session.</p>
+<p><strong>The real basis for the choice is narrower.</strong> Blood Oath, as Post 1 built it, is a single non-preemptible generation, not an orchestrated multi-step agent loop with tool calls in between: a different kind of workload from the session-centric agentic case the cited paper actually studies, not a resolution of the same question in this post’s favor.</p>
+<p><strong>The resulting number.</strong> At 15.15 tokens/second, 300 seconds of continuous decode is <script type="math/tex">300 \times 500/33 \approx 4{,}545</script>
+ output tokens, not Splitwise’s 129, which describes ordinary traffic, the population this series has never been about. Paired with the conversation profile’s own 1,020-token prompt, the heavy task’s resident context peaks at <script type="math/tex">1{,}020+4{,}545=5{,}565</script>
+ tokens: <script type="math/tex">5{,}565 \times 320\text{KiB} \approx 1.824</script>
+GB, roughly five times the 377 MB an ordinary request needs. A task this series actually calls “heavy” really does hold roughly five times the context an ordinary one does, which is what heavy was always defined to mean.</p>
+<p>The honest caveat this leaves standing: a real deployment running a genuinely session-structured agentic workload, with meaningful idle time between generation bursts, the pattern the cited paper’s own production study is built around, would need a smaller footprint than this derivation gives, closer to Splitwise’s raw median. It should re-derive this number against its own measured idle-time fraction, rather than reuse either this post’s 1.824 GB or Splitwise’s 377 MB blind.</p>
+<h2 id="not-every-resource-sediments-the-same-way">Not Every Resource Sediments the Same Way</h2>
+<p>The obvious next move is to copy <a href="/blog/no-safe-number-part2-provisioning-window/#prop-1">Proposition 1</a> three times: <script type="math/tex">\rho_r = \lambda_r \cdot E[S_r] \geq C_r</script>
+ for <script type="math/tex">r \in \{\text{GPU}, \text{mem}, \text{I/O}\}</script>
+, same removed-face framing, one instance per resource. Checked against this specimen’s own numbers before writing it that way, because the obvious move turns out to be wrong for two of the three resources, not just imprecise.</p>
+<p><span id="prop-4"></span></p>
+<details>
+<summary>Proposition 4 -- Vector Sedimentation: Little's Law generalizes to occupancy resources: exactly for a constant holding quantity, and via H=λG for a quantity that accumulates with age, and does not generalize to throughput resources by substitution alone</summary>
+<p><strong>Proposition 4</strong> (Vector Sedimentation). For a resource <script type="math/tex">r</script>
+ where “heavy” means <em>long residency</em>. A task holds <script type="math/tex">r</script>
+ for its entire holding time <script type="math/tex">S_r</script>
+. The expected aggregate occupancy is <script type="math/tex">\rho_r = \lambda_r \cdot E[M_r] \cdot E[S_r] \geq C_r</script>
+, where <script type="math/tex">E[M_r]</script>
+ is the expected quantity of <script type="math/tex">r</script>
+ held by a task at a random point in its own residency, a time-averaged, per-task figure (units of <script type="math/tex">r</script>
+, not <script type="math/tex">r</script>
+ per second). The <script type="math/tex">E[S_r]</script>
+ factor is what converts that per-task average into an aggregate, fleet-wide occupancy, the same role <script type="math/tex">E[S_r]</script>
+ played in Proposition 1’s own <script type="math/tex">\rho = \lambda \cdot E[S]</script>
+, carried forward here rather than dropped. Past this threshold, <script type="math/tex">r</script>
+ alone, in expectation, can exhaust itself regardless of the other resources’ state, the same removed-face exclusion Proposition 1 established, per resource. <script type="math/tex">E[M_r]</script>
+ itself splits into two structurally different cases, and treating them as one is where a generalization like this one most easily goes wrong:</p>
+<ul>
+<li><strong>Constant occupancy.</strong> A task that reserves a fixed quantity <script type="math/tex">m</script>
+ of <script type="math/tex">r</script>
+ at admission and holds exactly <script type="math/tex">m</script>
+ until departure gives <script type="math/tex">E[M_r] = m</script>
+, and <script type="math/tex">\rho_r = \lambda_r \cdot m \cdot E[S_r]</script>
+ reduces to Proposition 1’s own formula directly: no dependence on <script type="math/tex">S_r</script>
+’s distribution shape beyond its mean.</li>
+<li><strong>Accumulating occupancy.</strong> A task whose held quantity grows with age <script type="math/tex">a</script>
+ during residency, <script type="math/tex">m(a)</script>
+, needs the exact generalization of Little’s Law to accumulated cost, <script type="math/tex">H = \lambda G</script>
+ <a href="#ref-7" class="cite-ref" data-def="Glynn, P.W. & Whitt, W. (1989) — Extensions of the Queueing Relations L=λW and H=λG" aria-label="Glynn, P.W. & Whitt, W. (1989) — Extensions of the Queueing Relations L=λW and H=λG">[7]</a>
+:</li>
+</ul>
+<script type="math/tex;mode=display">E[M_r] = E\left[\int_0^{S_r} m(a)\,da\right] / E[S_r], \qquad \rho_r = \lambda_r \cdot E\left[\int_0^{S_r} m(a)\,da\right]</script>
+<p>Decode’s own KV-cache is this case, not the constant one. It is <em>not</em> “a fixed quantity held for the entire holding time,” it is prompt tokens resident from handoff plus output tokens accumulating one at a time, exactly as Post 1 described it.</p>
+<p><strong>For a fixed component <script type="math/tex">P</script>
+ present from admission plus a component growing linearly at rate <script type="math/tex">\sigma</script>
+:</strong></p>
+<script type="math/tex;mode=display">\rho_r = \lambda_r\left(P \cdot E[S_r] + \sigma \cdot \dfrac{E[S_r^2]}{2}\right)</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">m(a)</script>
+ - the quantity of <script type="math/tex">r</script>
+ held at age <script type="math/tex">a</script>
+ into residency</li>
+<li><script type="math/tex">P</script>
+ - the fixed component present from admission</li>
+<li><script type="math/tex">\sigma</script>
+ - the growth rate of the accumulating component</li>
+<li><script type="math/tex">E[S_r^2]</script>
+ - the <em>second</em> moment of holding time, not a snapshot at the mean</li>
+</ul>
+<blockquote>
+<p><strong>Design Guardrail.</strong> Substituting <script type="math/tex">(E[S_r])^2</script>
+ for <script type="math/tex">E[S_r^2]/2</script>
+ is exact only for the exponential distribution: silently reintroducing the light-tailed assumption this series exists to break.</p>
+</blockquote>
+<p><strong>The domain this formula needs, stated rather than discovered by a reader plugging in a different tail:</strong> for <script type="math/tex">S_r</script>
+ Pareto<script type="math/tex">(x_m, \alpha)</script>
+, the <script type="math/tex">k</script>
+-th moment exists only for <script type="math/tex">\alpha > k</script>
+, so <script type="math/tex">E[S_r^2] = \alpha x_m^2/(\alpha-2)</script>
+ is finite only for <script type="math/tex">\alpha > 2</script>
+: this specimen’s own <script type="math/tex">\alpha=2.2</script>
+ clears that bar, but not by much. A real deployment with a heavier measured tail, <script type="math/tex">\alpha \leq 2</script>
+, finds <script type="math/tex">\rho_r</script>
+ itself diverges, not a large number requiring a bigger buffer, but an undefined one, since the underlying accumulating-occupancy quantity has no finite expectation to aggregate in the first place. A team measuring its own <script type="math/tex">\alpha</script>
+ below 2 should treat this whole generalization as inapplicable, not just imprecise.</p>
+<p><strong>Why “diverges” isn’t a big-number problem a more robust statistic can route around.</strong> <script type="math/tex">\rho_r</script>
+ is <script type="math/tex">H=\lambda G</script>
+’s own long-run <em>mean</em> occupancy, not a variance term bolted onto an otherwise-fine average. So an infinite <script type="math/tex">E[S_r^2]</script>
+ means the accumulating-occupancy process has no stationary distribution to begin with: memory held by the system trends to infinity over time rather than settling around any level, the same way an M/G/1 queue with infinite-mean service time never reaches a steady state regardless of how small the arrival rate is. A percentile-based sizing rule presupposes a stationary distribution to take percentiles of. It is not a weaker fallback for this regime; it is a category error, since there is no fixed empirical distribution for any window of measurements to converge toward. A longer measurement window would keep finding larger figures, not a stabilizing percentile.</p>
+<p><strong>The only valid response is one that changes which distribution is actually in play.</strong> A hard, enforced ceiling on <script type="math/tex">S_r</script>
+ itself truncates the tail and gives the resulting, bounded distribution a finite second moment by construction, restoring both <script type="math/tex">\rho_r</script>
+ and the stationary process it depends on. It has to be the right kind of ceiling, though. An absolute task timeout is a kill, and Blood Oath’s own execution-immortality property rules that out directly: <em>“once admitted, a task cannot be preempted, yielded, or retried”</em> (Definition 1, property 2). A context-length cap doesn’t have that problem. It’s a limit on how much a task <em>could ever generate</em>, not an intervention against one that’s running. Once a reasoning trace reaches the model’s own maximum context window, there’s no more room left to keep decoding into. <script type="math/tex">L</script>
+ is reached because the model runs out of space, not because anything evicted it. That’s the only truncation mechanism this post can reach for without contradicting the property this entire series is built on. No capacity <script type="math/tex">C_r</script>
+ and no reserved margin <script type="math/tex">H_{\min}^r</script>
+ can substitute for it.</p>
+<details class="proof">
+<summary>Mathematical proof: the truncated second moment, closed form</summary>
+<p>For <script type="math/tex">S_r</script>
+ truncated to a hard ceiling <script type="math/tex">L</script>
+: the Pareto density renormalized over <script type="math/tex">[x_m, L]</script>
+ instead of <script type="math/tex">[x_m,\infty)</script>
+. The second moment is</p>
+<script type="math/tex;mode=display">E[S_{\text{trunc}}^2] = \frac{\dfrac{\alpha}{\alpha-2}\left(x_m^2 - x_m^{\alpha} L^{2-\alpha}\right)}{1-(x_m/L)^{\alpha}}</script>
+<p>finite for <em>every</em> <script type="math/tex">\alpha</script>
+, including every <script type="math/tex">\alpha \leq 2</script>
+ the untruncated formula excludes, since the underlying moment (a bounded random variable’s second moment) can’t diverge once <script type="math/tex">L</script>
+ is finite. The displayed expression itself is a separate, narrower claim: it’s a <script type="math/tex">0/0</script>
+ indeterminate form at exactly <script type="math/tex">\alpha=2</script>
+, since <script type="math/tex">\alpha-2\to0</script>
+ in the denominator while <script type="math/tex">x_m^2-x_m^{\alpha}L^{2-\alpha}\to x_m^2-x_m^2=0</script>
+ in the same numerator factor. The limit exists and is finite: <script type="math/tex">\lim_{\alpha\to2}E[S_{\text{trunc}}^2] = 2x_m^2\ln(L/x_m)/(1-(x_m/L)^2)</script>
+, confirmable by L’Hôpital’s rule on the <script type="math/tex">\alpha/(\alpha-2)</script>
+ factor. A team implementing this formula at a measured <script type="math/tex">\alpha</script>
+ landing on exactly 2 needs that separate closed form, not the displayed one, which divides by zero there as written. It also recovers the original untruncated result exactly as <script type="math/tex">L\to\infty</script>
+ whenever <script type="math/tex">\alpha>2</script>
+: <script type="math/tex">x_m^{\alpha}L^{2-\alpha}\to0</script>
+ and <script type="math/tex">(x_m/L)^{\alpha}\to0</script>
+, leaving <script type="math/tex">\alpha x_m^2/(\alpha-2)</script>
+.</p>
+</details>
+<p>Truncation isn’t a different formula bolted on beside this post’s own <script type="math/tex">\rho_r</script>
+: it’s the same formula with <script type="math/tex">S_r</script>
+’s support corrected to match what a real deployment actually enforces. A team that has imposed a real ceiling <script type="math/tex">L</script>
+ should plug this expression directly into <script type="math/tex">\rho_r = \lambda_r\left(P\cdot E[S_r] + \sigma \cdot E[S_{\text{trunc}}^2]/2\right)</script>
+ rather than treat the <script type="math/tex">\alpha\leq2</script>
+ case as unrecoverable. The queueing derivation stays exact, not approximated by a heuristic, once the distribution it’s applied to is the one the deployment actually runs.</p>
+<p>For a resource where “heavy” means <em>fast, repeated cycling</em>: a task acquires and releases <script type="math/tex">r</script>
+ in a small fraction of its total lifetime, the way prefill acquires GPU compute for a single short pass and the KV-cache handoff acquires network bandwidth for a single short transfer, occupancy is bounded by construction. <script type="math/tex">E[S_r]</script>
+ is too small, relative to the arrival rates this specimen actually produces, for <script type="math/tex">\rho_r</script>
+ to approach any physically realistic <script type="math/tex">C_r</script>
+. If such a resource threatens to exhaust, it does so through aggregate throughput saturation (total work requested per second exceeding the resource’s rate capacity) a structurally different claim this Proposition does not make and is not equipped to make by simply substituting into the same formula.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> “Heavy” meant one thing in Post 1: a task that sits in its slot a long time. That definition smuggled in an assumption this post’s multi-resource setting can no longer afford, that holding a resource for a long time and threatening to exhaust it are the same fact about a resource. They’re only the same fact for a resource a task occupies continuously, memory being the clean case: a byte held is a byte unavailable to anyone else for as long as the task runs, so Little’s Law’s occupancy logic transfers. But <em>how</em> it transfers still depends on whether the number of bytes held is constant or growing, and decode memory is the growing kind. A task’s KV-cache isn’t reserved in full at admission; it’s built one token at a time, so the aggregate has to be computed the way a growing quantity aggregates (weighted by how long, and how variably, a task keeps growing it) not by treating every resident task as though it already holds its final size. GPU compute and the network link don’t have this problem at all: a task touches them in a single short burst and moves on, so no amount of concurrent traffic makes any one holder’s occupancy the risk. Proposition 4 is the formal line between those three failure shapes. It matters because reaching for Proposition 1’s original formula unmodified (on a throughput resource, or on an accumulating one) wouldn’t just be imprecise; it would answer a question neither resource was ever going to fail by.</p>
+</blockquote>
+<p>The KV-cache handoff needs its own I/O estimate, corrected for what actually exists at handoff time: it moves the <em>prompt’s</em> KV cache only, since decode hasn’t started and there’s no output yet to move. A single 200 Gb/s port on NVIDIA’s ConnectX-7 <a href="#ref-8" class="cite-ref" data-def="NVIDIA (2021) — ConnectX-7 InfiniBand Adapter Card Datasheet" aria-label="NVIDIA (2021) — ConnectX-7 InfiniBand Adapter Card Datasheet">[8]</a>
+ transfers 1,020 tokens’ worth, <script type="math/tex">1{,}020 \times 320\text{KiB} \approx 0.334</script>
+GB, in <script type="math/tex">0.334\text{ GB} / 25\text{ GB/s} = 13.4</script>
+ms.</p>
+<table><thead><tr><th style="text-align: left">Resource</th><th style="text-align: left"><script type="math/tex">E[S_r]</script>
+</th><th style="text-align: left"><script type="math/tex">\rho_r</script>
+ at 89/hr</th><th style="text-align: left"><script type="math/tex">\rho_r</script>
+ at 384/hr</th><th style="text-align: left">Against <script type="math/tex">C_r</script>
+</th></tr></thead><tbody>
+<tr><td style="text-align: left">Memory (decode, heavy-task footprint)</td><td style="text-align: left">300s</td><td style="text-align: left">20.55 GB</td><td style="text-align: left">88.64 GB</td><td style="text-align: left">64.6% of 31.80 GB at baseline, 278.7% at threshold</td></tr>
+<tr><td style="text-align: left">GPU (prefill)</td><td style="text-align: left">0.27s</td><td style="text-align: left">0.0067 slots</td><td style="text-align: left">0.029 slots</td><td style="text-align: left">no natural occupancy ceiling to state: see <em>below</em></td></tr>
+<tr><td style="text-align: left">I/O (KV-cache handoff, 200 Gbps link)</td><td style="text-align: left">13.4ms</td><td style="text-align: left">0.0003 transfers in flight</td><td style="text-align: left">0.0014</td><td style="text-align: left">same: no natural occupancy ceiling</td></tr>
+</tbody></table>
+<p><em>Occupancy demand for all three resources at baseline (89/hr) and at the slot-based Sedimentation Threshold (384/hr): only memory approaches its real capacity ceiling.</em></p>
+<p>Memory is the only one of the three that behaves like Proposition 1’s original resource: an occupancy threat that grows toward a real ceiling as arrival rate climbs. Once the footprint is sized to the tail this series actually specifies, not the median Splitwise happens to report, and once the aggregate is computed the way an accumulating quantity actually aggregates (Proposition 4’s own <script type="math/tex">H=\lambda G</script>
+ case, weighted by <script type="math/tex">E[S_h^2]</script>
+, not a mean-duration snapshot), that threat isn’t close. It’s already crossed several times over. At the Sedimentation Threshold this whole series has used, memory demand is 278.7% of the decode node’s real 31.80 GB budget: nearly three full capacities’ worth of expected demand against one.</p>
+<p>That number is worth stopping on rather than folding into the next sentence. It means 384 arrivals per hour: Post 2’s own Sedimentation Threshold, computed once from slot capacity, a concretization of the proxy relationship Post 1 named (duration standing in for VRAM occupancy). That threshold was never the real memory constraint. Solving <script type="math/tex">\rho_{\text{mem}} = C_{\text{mem}}</script>
+ directly gives the rate at which memory alone exhausts: <script type="math/tex">\lambda^* = C_{\text{mem}} / \left(P \cdot E[S_h] + \sigma \cdot E[S_h^2]/2\right) \approx 137.8</script>
+ arrivals per hour, roughly a third of the slot-based threshold this series has treated as <em>the</em> line worth watching since Post 2. That’s well above this specimen’s own 89-arrivals-per-hour baseline, so the pool isn’t broken at rest, but well below the 384/hour a slot-based sizing exercise would have trusted. This is the Constraint Sequence Framework 
+  
+  
+    
+    
+    
+  
+
+<a href="https://e-mindset.space/blog/microlearning-platform-part6-meta-framework/#the-constraint-sequence-framework" class="defined-term" data-def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding" aria-label="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding">Constraint Sequence Framework</a>
+, met one level down from where it last applied in this series. A threshold computed against slot capacity (an abstraction that treats every admitted task as a fungible unit) was never the tightest binding constraint once the resource underneath that abstraction is resolved at the byte level. 384/hour isn’t wrong; the pool really does run out of physical slots at that rate. It just was never the first thing to run out.</p>
+<p>GPU and I/O, by contrast, don’t fail to threaten capacity because this specimen is under-loaded. They fail structurally, at any arrival rate this workload could plausibly produce: their own holding times are more than three orders of magnitude shorter than decode’s for GPU (0.27s against 300s), and more than four orders of magnitude shorter for I/O (13.4ms against 300s). Even multiplying the Sedimentation Threshold’s own 384/hour by a hundred (38,400 arrivals/hour, a scenario with no physical meaning for this pool) still leaves GPU occupancy at 2.88 slots and I/O occupancy under 1 transfer in flight. The gap is structural, not a matter of degree.</p>
+<p><em>Why the table leaves <script type="math/tex">C_r</script>
+ unstated for GPU and I/O</em>: a deliberate omission, not an oversight matching Memory’s own digit. Memory has a real, physical occupancy ceiling: a fixed number of bytes an admitted task holds resident for its whole lifetime, which is what makes <script type="math/tex">C_{\text{mem}}=31.80</script>
+GB a meaningful number to divide by. GPU compute and network bandwidth don’t have an analogous <em>occupancy</em> ceiling at all. There’s no fixed count of “prefill slots” or “transfers in flight” a real system is built to cap the way it caps concurrent decode sequences, because neither resource is naturally rationed in units of concurrent holders. A GPU saturates when the <em>rate</em> of prefill work requested exceeds its FLOPS budget, a throughput constraint, measured in tokens-per-second of aggregate demand against tokens-per-second of aggregate capacity, not in concurrently-held slots. Definition 4’s dominant-share comparison, next, still needs a headroom fraction for every resource regardless of which failure mode threatens it, well-defined for a throughput resource too, just computed against rate capacity instead of occupancy capacity. Vector Sedimentation, as stated, is honestly scoped to the occupancy case; Proposition 4b closes the throughput side.</p>
+<h2 id="the-mechanism-that-watches-all-three">The Mechanism That Watches All Three</h2>
+<p><span id="def-4"></span></p>
+<details>
+<summary>Definition 4 -- The Dominant Redline: demote when any resource crosses its own line, and use a unit-normalized comparison to know which one is closest before any of them do</summary>
+<p><strong>Definition 4</strong> (The Dominant Redline). Demotion triggers whenever any resource crosses its own reserved margin: <script type="math/tex">H_r(t) \leq H_{\min}^r</script>
+ for some <script type="math/tex">r \in \{\text{GPU}, \text{mem}, \text{I/O}\}</script>
+. That’s the direct per-resource generalization of Definition 2’s single-resource rule, and on its own already sufficient to catch the failure mode Definition 2 cannot: a resource other than VRAM crossing its own line while VRAM stays comfortable. What this rule adds on top of that bare per-resource OR-condition, and what Definition 2’s own single-resource design never needed, is a single, comparable signal for <em>which</em> resource is under the most pressure at any moment, the headroom fraction <script type="math/tex">h_r(t) = H_r(t)/C_r \in [0,1]</script>
+, unit-normalized so a GPU-slot count, a memory-byte count, and a network-Mbps figure become comparable on one scale. The dominant resource at time <script type="math/tex">t</script>
+ is <script type="math/tex">\arg\min_r h_r(t)</script>
+, the resource proportionally closest to its own limit, regardless of what units it’s measured in.</p>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">H_r(t)</script>
+, <script type="math/tex">H_{\min}^r</script>
+ - headroom and reserved margin, per resource <script type="math/tex">r</script>
+</li>
+<li><script type="math/tex">h_r(t) = H_r(t)/C_r \in [0,1]</script>
+ - the unit-normalized headroom fraction</li>
+<li><script type="math/tex">\arg\min_r h_r(t)</script>
+ - the dominant resource: proportionally closest to its own limit</li>
+</ul>
+</details>
+<p>The same bridging-window arrival count from Definition 2a (<script type="math/tex">G = \text{Poisson}(2.22)</script>
+) still counts how many additional heavy tasks arrive during the bridging window. Converting that count directly to bytes by multiplying by the task’s own mean-duration footprint (1.824 GB) repeats the exact error Proposition 4 just corrected, one level down. It assumes a task arriving at any point in the window instantly holds the full footprint it only reaches after running to its own mean duration, 300s: more than three times the length of the 90s window itself. What a newly-arrived task actually holds <em>by the time the window closes</em> depends on how long ago it arrived: a task arriving early in the window has been decoding for nearly the full 90s; one arriving late has barely started. Arrivals within a fixed-length Poisson window are uniformly distributed in time (a standard property of the Poisson process), so a task’s age at window’s end is <script type="math/tex">A \sim \text{Uniform}(0, T_{\text{scale}})</script>
+. Its held memory is <script type="math/tex">M(A) = P + \sigma A</script>
+, Proposition 4’s own accumulating-occupancy case, at the scale of one arrival rather than a whole population. Every task that could arrive within a 90-second window is still resident when the window ends, since the Pareto minimum duration, <script type="math/tex">x_m \approx 163.6</script>
+s, already exceeds <script type="math/tex">T_{\text{scale}}</script>
+. No arriving task can complete inside the window, so no truncation correction is needed.</p>
+<p><script type="math/tex">E[M(A)] = P + \sigma T_{\text{scale}}/2 \approx 0.557</script>
+GB, and <script type="math/tex">\text{Var}(M(A)) = \sigma^2 T_{\text{scale}}^2/12 \approx 0.0166</script>
+GB<script type="math/tex">^2</script>
+, giving <script type="math/tex">E[M(A)^2] \approx 0.327</script>
+GB<script type="math/tex">^2</script>
+.</p>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">A \sim \text{Uniform}(0, T_{\text{scale}})</script>
+ - a newly-arrived task’s own age when the window closes</li>
+<li><script type="math/tex">M(A) = P + \sigma A</script>
+ - that task’s held memory at age <script type="math/tex">A</script>
+</li>
+<li><script type="math/tex">P</script>
+ - the fixed prompt-cache component</li>
+<li><script type="math/tex">\sigma</script>
+ - the per-second growth rate</li>
+</ul>
+<p>The aggregate demand from <script type="math/tex">G</script>
+ newly-arrived tasks is a compound Poisson sum, not <script type="math/tex">G</script>
+ copies of a fixed number: mean <script type="math/tex">\lambda_h T_{\text{scale}} \cdot E[M(A)]</script>
+ and variance <script type="math/tex">\lambda_h T_{\text{scale}} \cdot E[M(A)^2]</script>
+, the standard compound-Poisson moment identities. At this specimen’s own <script type="math/tex">\Lambda=2.22</script>
+, the 32:1 critical fractile of that sum: checked by direct simulation rather than a closed-form quantile, since a compound Poisson sum has none, comes to <script type="math/tex">H_{\min}^{\text{mem}} \approx 3.08</script>
+GB against the 31.80 GB decode-node budget: <script type="math/tex">h_{\min}^{\text{mem}} \approx 0.097</script>
+, a standing memory margin of roughly 9.7% of the decode node’s real capacity. The naive count-times-mean-footprint approach (5 task-equivalents, the same 32:1 fractile count as before, at 1.824GB each, 9.12GB) run against this post’s own corrected 31.80GB budget, the fair, single-variable comparison for what this section alone fixes, would already give 28.7%, not 9.7%. A 45.6% figure sometimes quoted for that same 9.12GB is measured against the earlier, naively-subtracted 20GB budget instead: a second, separate correction (the unit-conversion fix earlier in this post), not this section’s own aggregation fix. Folding the two together overstates what correcting the aggregation method alone buys. The earlier number wasn’t wrong about how many tasks might arrive. <script type="math/tex">G=\text{Poisson}(2.22)</script>
+ is exact. It was wrong about how much memory each of those arrivals actually holds by the time the margin needs to have absorbed them.</p>
+<p><strong>Checked immediately against the baseline this series calls comfortable, not deferred to a later section.</strong> <script type="math/tex">H_{\min}^{\text{mem}}</script>
+ is a demotion trigger, not a full-exhaustion line: Definition 4 fires the moment headroom crosses it, well before the resource itself hits zero. At 89 arrivals per hour, <script type="math/tex">\rho_{\text{mem}}(89) \approx 20.55</script>
+GB against a 31.80 GB budget, <script type="math/tex">64.6</script>
+%, comfortably inside raw capacity, with real positive headroom left to cross a trigger with. Solving for the arrival rate where headroom exactly meets the 3.08 GB margin derived above, <script type="math/tex">\lambda_{\text{margin}} = (C_{\text{mem}} - H_{\min}^{\text{mem}}) / \left(P \cdot E[S_h] + \sigma \cdot E[S_h^2]/2\right) \approx 124.4</script>
+ arrivals per hour, below the corrected 137.8-per-hour full-exhaustion rate, and, worth stating precisely, still comfortably above this specimen’s own 89-per-hour baseline. This specimen’s own “baseline,” the arrival rate every other proposition in this series treats as the resting, pre-incident state, isn’t in trouble on the memory dimension at rest. Definition 4’s own trigger hasn’t fired, and the raw 31.80 GB budget has real room left. The finding worth stopping on isn’t “already broken at rest”; it’s how much closer the real byte-level threshold sits to baseline than the slot-based number suggested: 124.4 arrivals per hour before the reserved margin is even touched, next to a slot-based Sedimentation Threshold of 384, less than a third of the distance a team sizing this pool against slots alone would have assumed it had. This specimen, sized the way Posts 1–2 sized it, has real headroom on the memory dimension at its own resting baseline, but far less of it, and far sooner lost to ordinary load growth, than a slot-based accounting would ever show, once the heavy task’s real footprint is aggregated the way an accumulating quantity has to be aggregated, rather than approximated at its mean.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> This is worth being precise about, because it would be easy to overstate: this is not Dominant Resource Fairness’s own algorithm, redone for a different problem. DRF equalizes dominant <em>shares</em> across competing tenants deciding how to split a pool going forward: a genuine multi-agent allocation problem, with its own strategy-proofness guarantee to protect. This mechanism has one tenant class, deciding which of its own already-admitted tasks to deprioritize, using DRF’s normalization idea (comparing unlike resources as fractions of their own capacity) for a single-agent monitoring decision, not a multi-agent allocation one. The borrowed idea is real and load-bearing: without it, “GPU is at 90% free and memory is at 8% free” isn’t comparable to anything, and a system watching three separate unnormalized gauges has no principled way to say which one actually matters most right now. With it, the comparison is well-posed.</p>
+</blockquote>
+<p>It’s worth going one step further than that, rather than letting DRF’s name carry more weight than it’s owed. Converting heterogeneous quantities to fractions of their own capacity isn’t a technique DRF originated, and this mechanism doesn’t actually need DRF’s own machinery to justify it. Expressing usage as a percentage of a budget is older and more generic than any fair-allocation paper, dominant-share or otherwise. What DRF specifically contributes, and what this post is actually leaning on by name, is narrower still: the framing of “which resource is the <em>tightest</em> one right now” as a single, well-posed question, answered by comparing normalized fractions directly against each other rather than treating each resource’s headroom as its own isolated concern. DRF’s dominant-share concept applied to a shared pool is the closest well-known precedent for that framing, worth citing as a recognizable reference point, not as the origin of the underlying arithmetic. That’s the honest scope of the borrowing: a named precedent for the <em>comparison</em>, not a dependency on DRF’s own theory for the normalization itself.</p>
+<p><em>The failure Definition 2 genuinely cannot see, and why it’s not memory.</em> VRAM is exactly the gauge Definition 2 already watches. The corrected arithmetic above means a Definition 2 recalibrated against 124.4 arrivals per hour catches memory sedimentation on its own, no generalization required. The failure Definition 2 has no way to see at all is the one that didn’t structurally exist in the world it was built for: GPU compute, spent entirely on the prefill pass, on a machine that world never had.</p>
+<p><strong>The scenario.</strong> Suppose a burst of prompt-heavy traffic pushes prefill-node GPU demand toward whatever fraction of its FLOPS budget Proposition 4b, next, shows is the real ceiling: a genuine possibility for a different workload mix, even where this specimen’s own numbers, priced there, keep it comfortable. VRAM headroom on the decode node, the only thing Definition 2 was ever wired to read, shows exactly what it showed the moment before: the prefill node’s pressure has no channel back to a gauge built for a machine that, in Definition 2’s own world, didn’t have a separate prefill node to begin with.</p>
+<p><strong>The asymmetry worth being precise about.</strong> GPU’s failure here needs a “suppose”. This specimen’s own demand keeps it clear, as Proposition 4b will show. Memory’s failure needed no hypothetical at all; the margin arithmetic above already showed it holds at this specimen’s own baseline, no burst required.</p>
+<p><strong>What actually closes the gap.</strong> Definition 4’s per-resource rule: <script type="math/tex">H_{\text{GPU}}(t) \leq H_{\min}^{\text{GPU}}</script>
+ trips on its own signal once Proposition 4b supplies a real <script type="math/tex">H_{\min}^{\text{GPU}}</script>
+ to trip against, regardless of what VRAM happens to read, because the rule was never conditioned on VRAM in the first place. This is another application of the Constraint Sequence Framework 
+  
+  
+    
+    
+    
+  
+
+<a href="https://e-mindset.space/blog/microlearning-platform-part6-meta-framework/#the-constraint-sequence-framework" class="defined-term" data-def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding" aria-label="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding">Constraint Sequence Framework</a>
+ in this post. A single-resource Redline is not almost sufficient with a caveat attached; it is structurally blind to an entire class of failure its own world never contained.</p>
+<p><em>Two named boundaries this mechanism doesn’t paper over.</em> First, this borrows DRF’s dominant-share <em>normalization</em>, not its strategy-proofness <em>proof</em>. That proof covers a mechanism allocating against a priori <strong>declared</strong> demand vectors; this mechanism acts on post-facto <strong>observed</strong> resource consumption by tasks already admitted under Blood Oath’s ingress blindness (Definition 1, property 1): a condition the proof’s own prerequisites were never built to cover. Second, the “splintered clock”: three resources with holding times spanning three to four orders of magnitude do not cross their own confidence thresholds on the same clock. That means the MAPE-K Monitor phase (<a href="/blog/no-safe-number-part2-provisioning-window/#def-3">Definition 3</a>) has to run asynchronously per resource, not on one shared tick. Attribute that cost to <a href="/blog/no-safe-number-part1-blood-oath/#def-1b">Definition 1b</a> applied per-resource, not to DRF, which is a static comparison over observed or declared demand and says nothing about detection timing.</p>
+<pre class="mermaid">
+    
+    sequenceDiagram
+    participant GPU as Prefill GPU clock (0.27s)
+    participant Mem as Decode memory clock (300s)
+    participant IO as KV-cache handoff clock (13.4ms)
+    participant Monitor as MAPE-K Monitor (Definition 3)
+    Note over GPU,IO: three resources, three native timescales:<br/>1,100x apart between the fastest and slowest
+    par I/O: reports every 13.4ms
+        IO->>Monitor: handoff completes or stalls
+    and GPU: reports every 0.27s
+        GPU->>Monitor: prefill pass completes or stalls
+    and Memory: still mid-generation, silent for ~300s
+        Mem->>Monitor: decode headroom crosses threshold
+    end
+    Note over Monitor: a single shared tick would either<br/>miss I/O's own fast failures entirely,<br/>or poll memory 1,100x more often<br/>than its own signal changes
+</pre>
+<p><strong>What this means for the Monitor phase:</strong> one shared polling interval is wrong at every timescale simultaneously: too slow for I/O, absurdly wasteful for memory. Definition 3’s Monitor has to run per-resource, on each resource’s own clock, not on one shared tick.</p>
+<p><em>A third boundary, reaching back into Post 2’s own machinery rather than staying inside this one.</em> Definition 4 refuses admission the instant a resource crosses its line. Every refusal is now a heavy arrival that never reaches decode, which matters because Post 2’s own Knowledge phase re-derives <script type="math/tex">G</script>
+ from <script type="math/tex">\hat{\lambda}</script>
+, an EWMA of “the observed arrival count” of tasks Definition 1b classifies as heavy. That phrase was unambiguous when Post 2 wrote it, because nothing yet existed to refuse anything. Every classified arrival was, by construction, an admitted one. Definition 4 breaks that equivalence: an implementation that logs “heavy tasks that reached decode” rather than “heavy tasks Definition 1b classified, admitted or refused” quietly narrows <script type="math/tex">\hat{\lambda}</script>
+’s own input to a censored sample, undercounting true demand by exactly however many Definition 4 is currently turning away. That’s worst precisely when a real surge is underway and refusals are most frequent, which is also exactly when an accurate <script type="math/tex">G</script>
+ is load-bearing rather than a formality. The fix costs nothing structurally, the same way decoupling Knowledge’s own sampling clock from <script type="math/tex">T_{\text{scale}}</script>
+ did: count at Definition 1b’s own classification point, before Definition 4’s gate, not after it. Getting the ordering wrong doesn’t fail loudly. It fails by quietly teaching the system that demand is lower than it actually is, during the one stretch where that lesson costs the most.</p>
+<h3 id="does-the-demotion-rule-itself-oscillate">Does the Demotion Rule Itself Oscillate?</h3>
+<p>Definition 4 demotes (refuses new admissions) when a resource’s headroom crosses its margin. It’s worth asking, with the same skepticism this post has applied to everything else, whether that rule is stable once it’s actually running, or whether it can create its own pathology. A June 2026 paper models exactly this class of problem (memory-constrained LLM serving under threshold-based admission and eviction) as a discrete-time dynamical system <a href="#ref-9" class="cite-ref" data-def="Ao, R., Dong, J., Luo, G. & Simchi-Levi, D. (2026) — Service-Induced Congestion in Memory-Constrained LLM Serving" aria-label="Ao, R., Dong, J., Luo, G. & Simchi-Levi, D. (2026) — Service-Induced Congestion in Memory-Constrained LLM Serving">[9]</a>
+. The answer it finds for the <em>eviction</em> case is genuinely alarming: under saturated demand, the eviction-free equilibrium is <em>unstable</em>, and: except for a measure-zero set of exact-capture initial conditions the paper itself carves out, not a caveat worth leaning on for safety. The system provably converges to a worst-case limit cycle instead: a self-sustaining oscillation between admission and eviction, with throughput losses reaching 50%. The mechanism they name is “service-induced congestion”: the service process itself creates its own future capacity pressure, because KV caches keep growing as generation proceeds. A system that admits freely today manufactures the memory shortage that forces it to evict tomorrow, discarding compute already spent on tasks it now has to cut short.</p>
+<p>This result does not transfer to Definition 4 directly. The reason it doesn’t is worth stating precisely rather than assumed. The paper’s instability is specifically an <em>eviction</em> pathology: it requires a system that can interrupt and discard already-admitted, in-progress work under memory pressure. Blood Oath’s own property 2. No preemption, a task runs once to completion or the node dies with it, established in Post 1 and load-bearing in every post since: rules that mechanism out by construction. Definition 4 doesn’t evict; it demotes at the <em>admission</em> boundary, refusing new heavy tasks while every already-admitted task runs to completion untouched. The specific feedback loop the paper proves unstable (evict, free memory, admit more, grow again, evict again) has no channel to operate through here, because there’s no evict step.</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart TD
+    classDef trigger fill:none,stroke:#333,stroke-width:2px;
+    classDef broken fill:none,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 4;
+    classDef used fill:none,stroke:#22c55e,stroke-width:2px;
+
+    P["KV cache grows during generation:<br/>memory pressure rises toward the margin"]:::trigger
+
+    P -->|"blocked here: Blood Oath<br/>property 2 forbids preemption"| E1["Evict an in-flight task<br/>to free memory"]:::broken
+    E1 --> E2["Compute already spent on<br/>that task is wasted"]:::broken
+    E2 --> E3["Freed memory admits new tasks,<br/>which grow again"]:::broken
+    E3 -.->|"worst-case limit cycle,<br/>50% throughput loss<br/>(Ao et al. 2026)"| P
+
+    P -->|"Definition 4: H_r(t) ≤ H_min"| A1["Refuse new admissions:<br/>nothing already running is touched"]:::used
+    A1 --> A2["Already-admitted tasks run to<br/>completion untouched: property 2"]:::used
+    A2 --> A3["Memory frees as tasks<br/>finish naturally"]:::used
+    A3 -->|"resume admissions"| P
+</pre>
+<p><em>Same trigger, two mechanisms.</em> The dashed red path is the one the cited paper proves unstable: and the one Blood Oath’s non-preemptibility rules out before it can even start, since there is no evict step to take. The solid green path is what Definition 4 actually does: refuse new admissions, touch nothing in flight. Whether the green loop has its own oscillation risk is the question the next paragraph doesn’t get to answer yes to.</p>
+<p>That doesn’t make Definition 4 free and clear. The honest version of this section says so rather than stopping at the good news. Refusing admissions under pressure and resuming them once memory frees up is still a control loop with delay in it. The same “splintered clock” asynchrony named above. Delay in a feedback loop is a real, named source of instability in control theory generally, not just an intuition <a href="#ref-10" class="cite-ref" data-def="Hellerstein, J.L., Diao, Y., Parekh, S. & Tilbury, D.M. (2004) — Feedback Control of Computing Systems" aria-label="Hellerstein, J.L., Diao, Y., Parekh, S. & Tilbury, D.M. (2004) — Feedback Control of Computing Systems">[10]</a>
+. Even without an eviction step: if enough tasks finish around the same time, headroom can jump back above the margin all at once, admission resumes in a burst, and if that burst’s own tasks tend to finish around the same time too, the cycle can repeat. Naming the mechanism precisely, rather than leaving “unfinished work” as the full extent of the honesty here: what this section is missing is a formal stability margin for a delay system (a Nyquist-style criterion, or an equivalent frequency-domain bound for feedback loops with dead time) applied to Definition 4’s own admission/resumption loop, not just the heavy-tail-driven desynchronization argument borrowed by analogy below. That analysis has a real target to be run against: this specimen’s own EWMA time constant, the <script type="math/tex">T_{\text{scale}}</script>
+ reaction lag, and the completion-rate distribution feeding resumption bursts. This post doesn’t run it, distinct from not having proven stability by any means at all.</p>
+<p>The paper’s own stated fix is suggestive here, even though its problem isn’t quite this post’s. It finds that workload heterogeneity (completions desynchronized from each other, achieved in their setting via coprime decoding lengths) stabilizes the system by preventing exactly this kind of mass-simultaneous-completion resonance. It states that result for a specific regime, worth naming rather than eliding: under what the paper calls input-dominated scaling, coprime lengths stabilize the eviction-free equilibrium, while non-coprime lengths under the same scaling create synchronized instability instead. This post’s specimen inherits the same heavy-tailed duration distribution from Post 1’s <a href="/blog/no-safe-number-part1-blood-oath/#prop-0">Proposition 0</a>, which already gives completions a spread rather than a synchronized clock. That’s a structural reason to expect Definition 4’s own admission-refusal loop is better-behaved than a fixed-duration system would be. But it’s an argument from analogy on two counts, not one. Not only has this post not proven Definition 4’s own loop stable, it hasn’t checked whether this specimen’s own scaling actually falls inside the input-dominated regime the paper’s own stabilization result is stated for. Whether Definition 4’s specific admission/resumption loop is provably stable, the way the paper proves its own eviction loop is provably <em>not</em>, is unfinished work this post names rather than assumes away.</p>
+<h2 id="closing-the-gap-two-independent-confirmations">Closing the Gap: Two Independent Confirmations</h2>
+<p><span id="prop-4b"></span></p>
+<details>
+<summary>Proposition 4b -- Throughput Capacity, Instantiated: even correctly modeled as a rate constraint, GPU and I/O still don't bind at this specimen's own numbers</summary>
+<p><strong>Proposition 4b</strong> (Throughput Capacity, Instantiated). For a throughput-type resource, the analog of Proposition 1’s occupancy threshold is a rate comparison: aggregate demand, in units of work per second, against aggregate capacity in the same units. A resource sediments in the throughput sense when demand approaches capacity, the same removed-face logic as Proposition 1 and Proposition 4, restated in rate terms rather than occupancy terms.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> Occupancy and throughput answer different questions about the same word, “full.” A pool is occupancy-full when every slot holds a task that hasn’t left yet: a fact about who’s currently there. A GPU is throughput-full when the rate of incoming work matches the rate the hardware can retire it, a fact about flow. Proposition 1 and Proposition 4 asked the first question, correctly, for resources where residency is the actual risk. Proposition 4b asks the second, because prefill and network transfer are gone in a fraction of a second and residency was never the risk for them in the first place.</p>
+</blockquote>
+<p>A dense transformer’s forward pass costs approximately <script type="math/tex">2N</script>
+ FLOPs per token, <script type="math/tex">N</script>
+ the parameter count: the standard estimate used throughout the ML-systems literature for exactly this kind of capacity planning, and one that folds self-attention’s own compute into the weight-matmul term rather than pricing it separately, a simplification named here and checked below rather than left implicit. For Llama-2-70B, that’s <script type="math/tex">2 \times 70\times10^9 = 140</script>
+ GFLOPs per prefill token. The same 4<script type="math/tex">\times</script>
+A100 40GB already cited for the decode-rate benchmark delivers a real, published 312 TFLOPS of dense FP16/BF16 tensor throughput per GPU <a href="#ref-11" class="cite-ref" data-def="NVIDIA (2020) — A100 Tensor Core GPU Datasheet" aria-label="NVIDIA (2020) — A100 Tensor Core GPU Datasheet">[11]</a>
+, 1,248 TFLOPS aggregate across four. No real system sustains peak FLOPS; published model-FLOPS-utilization figures for prefill specifically run 30 to 50 percent, against a much lower 8 to 12 percent for decode at moderate batch sizes, an independent, third confirmation of the compute-bound-versus-memory-bandwidth-bound split this whole specimen is built on. Taking the <em>worst</em> case for this argument, 30% MFU, still gives 2,674 tokens/second of real prefill throughput. Against that ceiling, this specimen’s own demand at the Sedimentation Threshold (384 arrivals/hour, each carrying the conversation profile’s 1,020-token prompt) is 108.8 tokens/second: 4.1% of the worst-case ceiling.</p>
+<p>Decode’s ongoing streaming cost isn’t the one-time KV-cache handoff already priced; it’s streaming generated tokens back to the client for the full decode duration. Using a deliberately generous per-token overhead: 50 bytes, covering UTF-8 token text plus typical chunked-transfer framing, an estimate flagged as such rather than dressed up as a citation, this series’ own heavy output, <script type="math/tex">\approx4{,}545</script>
+ tokens per task, not Splitwise’s 129-token median, at the Sedimentation Threshold’s own 384/hour, demands roughly 24,240 bytes per second of sustained streaming bandwidth. Against the same 200 Gb/s ConnectX-7 port already priced for the handoff, that’s still under one ten-thousandth of one percent of link capacity, thirty-five times the naive median-output estimate, and still not remotely close. GPU and I/O aren’t close under either lens, occupancy or throughput; the correction that made memory’s numbers much worse never touched theirs.</p>
+<p><em>A second, independently-derived argument that reaches the same warning from a different direction.</em> Everything above used one method (queueing occupancy, Little’s Law generalized per resource) to find this specimen’s real margin far thinner than a slot-based sizing exercise ever showed, not yet crossed at rest but far closer to baseline than 384-per-hour ever suggested. <script type="math/tex">\rho_{\text{mem}}(\lambda)</script>
+ is exactly linear in arrival rate; the finding is that this specimen’s own baseline sits comfortably below two real, corrected thresholds, but by less than a third of the distance a slot-based sizing exercise assumed it had. That’s a straight line closing in on a misjudged line, not a nonlinear failure mode. A different method, applied to the exact production system already cited above, and sharing no mathematical structure with queueing theory, reaches a genuinely different kind of warning: not a threshold misjudged, but a metric that is itself nonlinear. A 2026 Price-of-Anarchy analysis models NVIDIA Dynamo’s own prefill/decode split as three coupled games (GPU allocation between phases, cache placement, and request routing) with an explicit split in how each was checked, worth preserving rather than blurring: cache placement and routing are empirically validated on real Dynamo v0.9.0, while GPU allocation is treated analytically <a href="#ref-12" class="cite-ref" data-def="Georgiou, A. (2026) — The Price of Anarchy in Disaggregated Inference" aria-label="Georgiou, A. (2026) — The Price of Anarchy in Disaggregated Inference">[12]</a>
+:</p>
+<ul>
+<li>a resource-competition game between prefill and decode GPU pools bidding for capacity</li>
+<li>a selfish caching game over hierarchical KV-cache tier placement, which cache tier a given sequence’s state lives in, decided by each pool acting in its own interest rather than a global optimum</li>
+<li>a congestion game with positive externalities for request routing, where one pool’s routing choice changes the congestion every other pool experiences</li>
+</ul>
+<p>Below saturation, the efficiency gap between this selfish, uncoordinated equilibrium and a centrally coordinated optimum (the Price of Anarchy) is small. The paper’s own finding is sharper than “small and stable”: it’s <em>invariant</em> across topology. <script type="math/tex">\text{PoA}\approx7.47\pm0.08</script>
+ holds across the parameter combinations the paper checks for the 70B model, the same figure regardless of whether the routing game is the larger 1P/5D configuration (one prefill worker, five decode workers) or the smaller 1P/2D one. The paper’s own named result, not this post’s inference from separate numbers. At saturation, on the 1P/5D topology specifically, that shared baseline stops holding. It jumps to <strong>66.4</strong>: roughly <strong>8.9-fold</strong>, not a small correction to the invariant baseline but close to an order of magnitude past it, same hardware, same model, same architecture, no change except how close to the edge the system is running. The 1P/2D topology breaks the same way at saturation. The paper’s own reported figures there are relative rather than a second absolute baseline this post can independently confirm to the same precision. Its saturation-aware adaptive routing fix recovers a <script type="math/tex">2.2\times</script>
+ reduction in the saturated-phase metric on 1P/2D, and a separate <script type="math/tex">4.8\times</script>
+ drop in saturated-phase P99 time-to-first-token (<script type="math/tex">28.3</script>
+s to <script type="math/tex">5.9</script>
+s) on the 340B model’s own 1P/2D configuration: two more independent confirmations of the same break, not just the 1P/5D case restated. Even the paper’s own proposed fix claws part of the saturated gap back, a real improvement, not a full recovery.</p>
+<p>Worth being precise about what these two arguments do and don’t share, since the strength of pairing them lives entirely in getting this right: the imprecise version of this claim is worse than no claim at all. They are not two measurements of the same quantity. They are not even the same <em>kind</em> of mathematical claim, and that’s worth stating plainly rather than glossing over.</p>
+<p>The queueing argument is about a single resource (decode-node memory) exhausting under Little’s Law in this post’s specific specimen. <script type="math/tex">\rho_{\text{mem}}</script>
+ is a straight line in arrival rate, with no nonlinearity anywhere in it. What makes the finding sharp is that the line crosses a threshold a coarser abstraction had misjudged, not that the line itself bends.</p>
+<p>The game-theoretic argument is about equilibrium inefficiency across three entirely different games (GPU allocation, cache placement, routing) in a general Dynamo deployment, not this post’s Llama-2-70B/4-A100 configuration specifically. It isn’t making a claim about memory occupancy at all. PoA genuinely is nonlinear: stable below saturation, then provably accelerating above a knee: a bend in the metric itself, not a threshold crossed on an otherwise-straight line.</p>
+<table><thead><tr><th style="text-align: left"></th><th style="text-align: left">Queueing argument</th><th style="text-align: left">Price-of-Anarchy argument</th></tr></thead><tbody>
+<tr><td style="text-align: left">Claim type</td><td style="text-align: left">Threshold crossed on a straight line</td><td style="text-align: left">Metric itself accelerates, nonlinearly</td></tr>
+<tr><td style="text-align: left">Scope</td><td style="text-align: left">This specimen’s own decode-node memory</td><td style="text-align: left">General Dynamo deployments, not this specimen</td></tr>
+<tr><td style="text-align: left">Below saturation</td><td style="text-align: left"><script type="math/tex">\rho_{\text{mem}}</script>
+ already past budget at baseline</td><td style="text-align: left">PoA <script type="math/tex">\approx7.47</script>
+, invariant across topology</td></tr>
+<tr><td style="text-align: left">At/past saturation</td><td style="text-align: left">Same linear formula, now past a corrected threshold</td><td style="text-align: left">PoA jumps to <strong>66.4</strong>: an 8.9-fold, non-linear break</td></tr>
+<tr><td style="text-align: left">Shared conclusion</td><td style="text-align: left">Margins near a resource limit are less forgiving than a coarse abstraction suggests</td><td style="text-align: left">Same</td></tr>
+</tbody></table>
+<p><em>Two structurally unrelated arguments (a linear queueing threshold and a nonlinear equilibrium metric) converging on the same qualitative warning, without sharing assumptions or mathematical structure.</em></p>
+<p>Claiming these two “have the same shape” would overclaim exactly the kind of equivalence the paragraph above exists to rule out. What they actually share is narrower, and for that reason more honest: both conclude that a system’s real margin against its own resource limits is smaller, and the cost of misjudging it larger, than an intuition calibrated on the wrong quantity would suggest. One because a threshold was computed one level of abstraction too coarse; the other because the metric itself accelerates precisely where a naive picture expects it to stay flat.</p>
+<p>Two arguments with no shared mathematical structure landing on the same qualitative conclusion (margins near a resource limit are less forgiving than they look) is still a different kind of evidence than either alone. It’s harder to attribute to an assumption specific to one method, since the two methods don’t share assumptions to begin with. It is not evidence that the two quantities behave alike. This post’s actual claim doesn’t need that stronger, false version to stand.</p>
+<p>“The bottleneck moves” is true in general: across a wide enough range of workloads and hardware ratios, GPU or network pressure absolutely can dominate over memory, which is exactly why Definition 4’s mechanism has to watch all three rather than assume one. For <em>this</em> specimen, at <em>these</em> numbers, it doesn’t move to a different resource. It was already memory. Sizing that task’s footprint against the tail it actually comes from, rather than an ordinary request’s median, and aggregating it the way an accumulating quantity has to be aggregated, makes the case stronger, not weaker: not a comfortable 37.9% at the slot-based Sedimentation Threshold (the number an ordinary-traffic footprint would naively give), but 278.7%. The real full-exhaustion rate is 137.8 arrivals per hour, and Definition 4’s own reserved-margin trigger sits sharper still, at 124.4. Both are above this specimen’s own 89/hour baseline, so the pool isn’t broken at rest, but both still sit far below the 384/hour a slot-based sizing exercise would have trusted. GPU and I/O never get to make either of these claims, no burst, no correlated shift, no long-context traffic mix pushes either of them within reach of their own throughput ceilings at any rate this specimen plausibly produces.</p>
+<h2 id="what-real-systems-actually-do-and-where-this-post-s-model-breaks">What Real Systems Actually Do, and Where This Post’s Model Breaks</h2>
+<p>Definition 4 was built from first principles, against this series’ own established pattern, without first checking what production disaggregated-serving systems that exist today actually do. Checked now, not skipped: NVIDIA Dynamo and the vLLM Router <a href="#ref-13" class="cite-ref" data-def="NVIDIA (2025) — Introducing NVIDIA Dynamo, technical blog" aria-label="NVIDIA (2025) — Introducing NVIDIA Dynamo, technical blog">[13]</a>
+ don’t use a threshold-crossing redline at all. Dynamo routes on live KV-cache-block availability and load; the vLLM Router explicitly targets prefill/decode-aware load balancing under latency SLOs, not a resource-headroom threshold. Two systems, two different jobs, not one replacing the other. Dynamo’s router and the vLLM Router are optimizing schedulers: given a request, which worker minimizes latency under an SLO, continuously, in the common case. Definition 4 is a safety backstop: given a system already running under whatever scheduling policy governs it, does any resource cross a line that means the node is about to fail the way Proposition 1 already proved it can. The same relationship CoDel has to a full traffic-engineering stack in networking. A production deployment running Dynamo’s own scheduler still needs an answer to “what happens when the scheduler’s own assumptions break” (a correlated surge outside the traffic pattern it was tuned against). That answer is this post’s mechanism, not a competing one.</p>
+<p>A separate line of work breaks this post’s own separability assumption on purpose. A load-aware prefill-deflection scheduler <a href="#ref-14" class="cite-ref" data-def="Arun, S., Parayil, A., Bharadwaj, S., St. Amant, R. & Rühle, V. (2026) — Towards Load-Aware Prefill Deflection for Disaggregated LLM Serving" aria-label="Arun, S., Parayil, A., Bharadwaj, S., St. Amant, R. & Rühle, V. (2026) — Towards Load-Aware Prefill Deflection for Disaggregated LLM Serving">[14]</a>
+ lets decode nodes serve <em>chunked</em> prefill steps interleaved with their own in-flight decode batches, whenever doing so keeps decode’s own latency SLO intact. That’s the same physical GPU absorbing both phases’ work when it helps: exactly the coupling Definition 4a declared away: <em>“reserving margin on one resource consumes none of another’s budget.”</em> That claim is true for the strict, fully-disaggregated architecture this specimen assumes, sourced from Splitwise’s own original proposal; it stops being true the moment a real deployment adopts chunked-prefill interleaving to reclaim idle decode-node compute. A deployment running chunked-prefill needs Definition 4a’s separable-regions claim re-derived against a joint frontier, not this post’s separable one, closer to Definition 0’s single joint frontier than to the structure this post built.</p>
+<p><strong>A second, narrower way the same separability assumption can break doesn’t need chunked-prefill at all. It needs nothing more than the strict, fully-disaggregated architecture this specimen already assumes, doing exactly what it was built to do.</strong> Chunked-prefill couples GPU compute across phases deliberately, by software design. The KV-cache handoff Proposition 4 already prices couples I/O and decode’s own memory bandwidth by hardware topology, whether anyone chose it to or not: the incoming handoff writes the prompt’s own KV cache into GPU memory over the same path decode’s own ongoing generation reads and writes it from, on any accelerator where the NIC and the compute don’t have fully separate memory paths. Definition 4’s own <script type="math/tex">h_{\text{I/O}}(t)</script>
+ and <script type="math/tex">h_{\text{mem}}(t)</script>
+ treat these as independent axes because Definition 4a states they draw from separate budgets. On hardware where the handoff genuinely contends with decode’s own memory bandwidth, an I/O-heavy moment can suppress the decode rate <script type="math/tex">\sigma</script>
+ this post’s own Proposition 4 treats as a fixed, resource-independent constant. This is a second way the same underlying assumption can break, distinct from the one named above in this post: chunked-prefill couples resources by software choice; this couples them by ordinary, every-task handoff traffic, on hardware this specimen never assumed away chunked-prefill to avoid. A team on hardware with a dedicated, isolated NIC path per accelerator, the kind Post 3’s own ConnectX-7 figure implicitly assumes, shouldn’t see this. A team whose handoff traffic and decode compute share a memory controller or PCIe root complex should check whether <script type="math/tex">\sigma</script>
+ actually holds steady under sustained handoff load before trusting Proposition 4’s own constant-<script type="math/tex">\sigma</script>
+ accounting.</p>
+<p><strong>A third source of <script type="math/tex">\sigma</script>
+ non-constancy is neither a software coupling choice nor a hardware-topology contention effect: it’s a property of the decode algorithm itself, present even on the dedicated NIC path that clears both risks named above.</strong> Proposition 4’s own <script type="math/tex">\sigma</script>
+ prices a fixed bytes-per-second accumulation rate, derived from a fixed tokens-per-second decode rate. Speculative decoding breaks that fixity by design: a draft model proposes several tokens per step, the target model verifies them in one pass, and the number actually accepted, and therefore committed to the KV cache, varies step to step with how well the draft model’s guesses matched. The same variability shows up, more mundanely, whenever a real traffic mix varies prompt and output composition request to request rather than holding both fixed the way this specimen’s own worked numbers do. Neither source needs shared hardware to bite. A team running speculative decoding, or any workload whose per-request generation rate isn’t itself close to constant, should treat <script type="math/tex">\sigma</script>
+ as a distribution with its own real variance around this post’s single value, not a hardware-contingent risk a dedicated interconnect makes go away.</p>
+<p><strong>A fourth source is not noise around a fixed value the way the three above are: it’s a systematic drift within a single task’s own generation, present even with no speculative decoding and no hardware contention at all.</strong> Per-step decode attention costs <script type="math/tex">O(P)</script>
+ against the sequence’s own current context length <script type="math/tex">P</script>
+, linear in how many tokens have already accumulated, not the constant-per-token cost <script type="math/tex">\sigma</script>
+ assumes. A token generated early in a long response attends over a short context; a token generated late in the same response attends over nearly the whole thing. Summed across an entire generation this integrates to the same <script type="math/tex">O(P^2)</script>
+ total this post already prices for prefill, but the <em>per-step</em> effect is what matters here: wall-clock time per output token grows as the task’s own context grows, which means fewer bytes accumulate per second of elapsed decode late in a task than early in it, the opposite of what a single time-constant <script type="math/tex">\sigma</script>
+ assumes throughout. Whether the constant-<script type="math/tex">\sigma</script>
+ model over- or underestimates <script type="math/tex">M(a) = P + \sigma a</script>
+ at a given age <script type="math/tex">a</script>
+ depends on where in the generation <script type="math/tex">\sigma</script>
+‘s own benchmark figure was actually measured: a rate calibrated from short-context decode understates real memory held late in a long generation, while a rate calibrated from an average across mixed context lengths overstates it early and understates it late. This series’ own <script type="math/tex">\sigma \approx 4.97</script>
+MB/s came from a published benchmark’s aggregate figure, not a context-length-resolved one, so which direction it actually biases <script type="math/tex">E[M_r]</script>
+ for this specimen’s own heavy-tailed output lengths (some tasks running far longer than the benchmark’s own typical context) is a real, unchecked question, distinct from the jitter the three sources above already name. A team pushing this specimen toward long, heavy-tailed output lengths should re-measure <script type="math/tex">\sigma</script>
+ as a function of elapsed context specifically, not assume the aggregate benchmark figure holds steady across a task’s own full duration.</p>
+<p>A different, structurally distinct real-system response attacks the same underlying problem: prefill and decode demand drifting out of the ratio a static cluster split was provisioned for, by moving the split itself rather than coupling the resources within a fixed instance.</p>
+<table><thead><tr><th style="text-align: left">System</th><th style="text-align: left">Approach</th><th style="text-align: left">Reported gain</th></tr></thead><tbody>
+<tr><td style="text-align: left">Arrow <a href="#ref-15" class="cite-ref" data-def="Wu, Y., Liu, T., Zeng, Y., Wu, S., Xiong, J., Dong, X., Yang, H., Zhang, K. & Li, J. (2025) — Arrow: Adaptive Scheduling Mechanisms for Disaggregated LLM Inference Architecture" aria-label="Wu, Y., Liu, T., Zeng, Y., Wu, S., Xiong, J., Dong, X., Yang, H., Zhang, K. & Li, J. (2025) — Arrow: Adaptive Scheduling Mechanisms for Disaggregated LLM Inference Architecture">[15]</a>
+</td><td style="text-align: left">Prefill/decode as a <em>request</em> property, not an <em>instance</em> attribute: stateless instances reassigned between roles on live signals</td><td style="text-align: left">up to 2.55<script type="math/tex">\times</script>
+ higher throughput vs. static disaggregation</td></tr>
+<tr><td style="text-align: left">HeteroScale <a href="#ref-16" class="cite-ref" data-def="Li, R., Du, R., Chu, Z., Zhao, S., Han, C., Shi, Z., Shao, Y., Han, H., Huang, L., Liu, Z. & Liu, S. (2025) — Taming the Chaos: Coordinated Autoscaling for Heterogeneous and Disaggregated LLM Inference" aria-label="Li, R., Du, R., Chu, Z., Zhao, S., Han, C., Shi, Z., Shao, Y., Han, H., Huang, L., Liu, Z. & Liu, S. (2025) — Taming the Chaos: Coordinated Autoscaling for Heterogeneous and Disaggregated LLM Inference">[16]</a>
+</td><td style="text-align: left">Jointly scaling prefill/decode pools against one production-derived metric, at tens of thousands of GPUs</td><td style="text-align: left">26.6-percentage-point gain in average GPU utilization</td></tr>
+</tbody></table>
+<p><em>Two production systems that treat the prefill/decode split itself as a live, load-responsive variable rather than a fixed provisioning-time constant.</em></p>
+<p><strong>Bottom line: two independently developed, independently deployed production systems converging on “capacity per role is a live variable, not a provisioning-time constant” turns “worth naming as a caveat” into “worth treating as the more likely production reality.”</strong> That breaks a quieter assumption than chunked-prefill’s. Every <script type="math/tex">C_r</script>
+ this post computed (the 31.80 GB memory budget, the 2,674-token/second GPU ceiling) was derived once, from fixed hardware, and held fixed for a given prompt length and static cluster split throughout (the quadratic-attention correction above revises the GPU figure across <em>prompt lengths</em>, a modeling refinement; what Arrow and HeteroScale break is different, an <em>operational</em> one: the split itself moving in production, not just this post’s own estimate of it needing a sharper formula).</p>
+<p>A system where the prefill/decode split itself responds to load has a <script type="math/tex">C_r</script>
+ that moves on the same timescale the demand it’s compared against does. That means Definition 4’s headroom fraction <script type="math/tex">h_r(t) = H_r(t)/C_r</script>
+ needs its denominator re-checked as often as its numerator. A monitoring cost this post’s fixed-capacity specimen never had to pay. The fraction survives the correction without needing to be rebuilt, worth stating plainly: a ratio, re-evaluated at each observation, is more robust to a moving denominator than any threshold stated as a fixed number ever could be.</p>
+<p>Elastic reallocation breaks something upstream of this series too, worth naming precisely rather than leaving as a vague “capacity moves now.” Post 2’s own <script type="math/tex">T_{\text{scale}}</script>
+, the 90-second reaction latency behind its entire tail-index-dependent scaling-viability result, was scoped explicitly to threshold-based autoscaling standing up new infrastructure: detection, cooldown, and cold provisioning, in that post’s own words. Reassigning an already-running, stateless Arrow-style instance from prefill to decode is a structurally different operation: no cold boot, no new instance, just flushing a queue and reconfiguring a role. Nothing in this post’s own numbers says how fast that reassignment actually completes, and asserting a specific replacement figure here would be exactly the kind of unfounded precision this series has repeatedly caught itself avoiding elsewhere. But the direction of the effect is not in question, because Post 2’s own condition already states it: viability holds unconditionally, at any detection time, whenever <script type="math/tex">\alpha < E[S_h]/T_{\text{scale}}</script>
+. Shrinking <script type="math/tex">T_{\text{scale}}</script>
+ only makes that inequality easier to satisfy, and past some reassignment latency fast enough, the trap window Post 2 derives around <script type="math/tex">x_m</script>
+ for heavier tails closes entirely. A team running elastic role reassignment shouldn’t reuse Post 2’s own <script type="math/tex">T_{\text{scale}}=90</script>
+s for that calculation at all. It should re-measure its own reassignment latency and re-run Post 2’s condition against that number, not this specimen’s cold-boot one.</p>
+<h2 id="model-scope-and-failure-envelope">Model Scope and Failure Envelope</h2>
+<p>Post 1 named its own assumptions rather than leaving them implicit; Post 2 owed the same accounting and gave it. This post owes it twice over. Every assumption Posts 1–2 already named still applies here, plus a genuine second layer specific to going multi-resource.</p>
+<table><thead><tr><th style="text-align: left">Assumption</th><th style="text-align: left">Checked against</th><th style="text-align: left">Result</th></tr></thead><tbody>
+<tr><td style="text-align: left">One prompt-length profile represents real traffic</td><td style="text-align: left">Splitwise’s own second profile (coding, 1,500 tokens)</td><td style="text-align: left">Conclusion survives; exact margin doesn’t</td></tr>
+<tr><td style="text-align: left">The BLOOM-176B compute ratio transfers to Llama-2-70B</td><td style="text-align: left">A <script type="math/tex">24\times</script>
+ margin against worst-case MFU</td><td style="text-align: left">Survives a real model-size mismatch</td></tr>
+<tr><td style="text-align: left">30% MFU is a fixed hardware property</td><td style="text-align: left">Sequence-length variance under heavy-tailed load</td><td style="text-align: left">Survives, <script type="math/tex">12\times</script>
+ margin, but never separately bounded</td></tr>
+<tr><td style="text-align: left">Self-attention’s own FLOPs are negligible (<script type="math/tex">2N</script>
+ per token)</td><td style="text-align: left">Prompt length from 1,020 to 32,000 tokens</td><td style="text-align: left">Negligible at baseline, <script type="math/tex">\approx60\%</script>
+ of the weight-matmul term at 32K</td></tr>
+<tr><td style="text-align: left">Arrivals are non-adversarial across three resources, not one</td><td style="text-align: left">DRF’s own strategy-proofness scope</td><td style="text-align: left">No defense exists, same gap as Post 2, now tripled</td></tr>
+<tr><td style="text-align: left">Resource correlation is only across time, not within one request</td><td style="text-align: left">Context length driving prefill and memory together</td><td style="text-align: left">A real, unpriced within-request coupling</td></tr>
+<tr><td style="text-align: left">The three resources stay separable (Definition 4a)</td><td style="text-align: left">Chunked-prefill, elastic reallocation, handoff-traffic contention</td><td style="text-align: left">Three named boundaries, one by design, two by production reality</td></tr>
+<tr><td style="text-align: left">KV-cache handoff doesn’t couple network and memory</td><td style="text-align: left">This specimen’s own 13.4ms handoff, 384 arrivals/hour</td><td style="text-align: left">Real coupling, <script type="math/tex">700\times</script>
+ margin at this demand</td></tr>
+<tr><td style="text-align: left">Reported free memory is actually usable (no fragmentation)</td><td style="text-align: left">Page-based allocation (PagedAttention)</td><td style="text-align: left">Mostly closed, a residual byte-versus-page gap remains</td></tr>
+</tbody></table>
+<p><em>Nine assumption boundaries this post depends on, in the order the paragraphs below name them.</em></p>
+<p><strong>Every quantitative claim in this post uses one workload profile’s prompt length, not a distribution over profiles. The choice matters more than a single number can show.</strong> The conversation service’s 1,020-token prompt ran through every memory calculation above, paired with this series’ own heavy-task output length: <script type="math/tex">\approx4{,}545</script>
+ tokens, derived from <script type="math/tex">E[S_h]</script>
+, not borrowed from Splitwise. Rerun the same arithmetic against Splitwise’s <em>other</em> real prompt profile (coding, 1,500 tokens) and memory utilization at the Sedimentation Threshold climbs from 278.7% to 294.6% of the same 31.80 GB budget, purely from the longer prompt. A heavy task’s own output length doesn’t depend on which Splitwise profile a request started as, since it’s set by this series’ own duration distribution, not by traffic type. Prefill demand barely moves in relative terms (160 tokens/second against the same 2,674-token/second worst-case ceiling, still under 6%) because prefill’s own ceiling is so far above either profile’s demand that the profile choice barely registers there. The conclusion that memory dominates, badly, and GPU/I/O stay clear survives the switch; the exact margin by which memory has already failed does not. Estimating which profile actually dominates a deployment’s real traffic is an ordinary binomial proportion problem, cheap relative to the stakes. But the confidence level attached to “cheap” is worth stating rather than leaving implicit: <script type="math/tex">n=625</script>
+ observed requests bounds the worst-case-variance proportion to <script type="math/tex">\pm2</script>
+ percentage points at one standard error, roughly 68% confidence, not the 95% a reader would likely assume “precision” means unless told otherwise. The conventional 95% bound needs <script type="math/tex">n \approx 2{,}401</script>
+ at the same <script type="math/tex">\pm2</script>
+ points (<script type="math/tex">z=1.96</script>
+ rather than <script type="math/tex">z=1</script>
+), roughly 27 hours at this specimen’s own baseline rate rather than seven, just over a full day, not under one. Both are cheap relative to the multi-week floor Post 2’s Hill-estimator tail-index estimation needed, because a mix fraction only needs a count of which type each request was, not the most extreme observations specifically. But “under a single business day” only holds at the weaker confidence level. Both profiles land well past the slot-based threshold either way, so the measurement doesn’t answer whether memory is a problem. It already is, under either profile. What it buys instead is exactly where the real margin sits: the coding profile’s memory-exhaustion rate of 130.4 arrivals per hour against the conversation profile’s 137.8, a band under 8 arrivals per hour wide, worth pinning down precisely for a team running anywhere near it.</p>
+<p><strong>The GPU throughput ceiling crosses a model-size boundary its own source material doesn’t fully cover. This post’s honesty about that boundary is worth restating rather than compressing away.</strong> The 250:1 prefill-to-decode compute ratio grounding <script type="math/tex">E[S_{\text{prefill}}]</script>
+ was measured on BLOOM-176B; the FLOPS-per-token estimate and MFU ranges pricing Proposition 4b’s throughput ceiling were applied to Llama-2-70B, a smaller, architecturally different model. Both are treated as architectural order-of-magnitude arguments (compute-bound-versus-memory-bandwidth-bound is a property of the phase split itself, not a same-model exact figure). That’s a real, named approximation, not a hidden one. It’s worth being specific about what could actually break it. A genuinely different model family could shift the exact ratio meaningfully: a different attention mechanism, mixture-of-experts routing that changes which parameters activate per token (and therefore the real FLOPs-per-token count), or a different KV-cache compression scheme that changes the memory-to-compute ratio this whole specimen is built on. Even so, the qualitative conclusion this post actually leans on (GPU throughput isn’t remotely close to binding at this specimen’s demand) has enough margin to absorb a change of this kind without flipping: 108.8 against 2,674 tokens/second, a 24<script type="math/tex">\times</script>
+ gap. Memory’s own margin has no comparable slack; that asymmetry is itself informative about which of this post’s numbers a team should re-derive first before trusting them on different hardware.</p>
+<p><strong>A third uncertainty source sits alongside the model-size mismatch above. It’s a property of the workload’s own variance, not of which model the ratio was measured on.</strong> The 30% MFU figure this post takes as its own worst case is drawn from published ranges for ordinary, low-variance batches. It isn’t a fixed property of the hardware alone. Sequence-length variance within a batch fragments tensor-parallel execution and introduces pipeline bubbles, as shorter sequences finish and stall waiting for longer ones. MFU degrades as that variance grows, not as a discount applied once and left alone. That’s precisely the shape of the traffic this whole series is built to survive: a heavy-tailed mix of ordinary and reasoning-trace-length prompts. The moments most likely to push MFU below this post’s own 30% floor are the same correlated, heavy-tailed surges the redline exists to catch, not an unrelated worst case. Checked against this post’s own margin before treating it as dangerous: even halving MFU to 15%, well past what published ranges suggest as a floor, still gives roughly 1,337 tokens per second against this specimen’s own 108.8 tokens-per-second demand. A 12<script type="math/tex">\times</script>
+ gap. Not a comfortable one, but not a flipped conclusion either. The qualitative finding survives a real MFU hit the same way it survives the model-size mismatch above. What this post has never done, and the model-size paragraph didn’t either, is bound how far MFU could plausibly fall under this specimen’s own actual sequence-length distribution, rather than assume the published 30% floor already accounts for it.</p>
+<p><strong>A second, more specific approximation is worth checking on its own terms, not folded into the model-size caveat above. <script type="math/tex">2N</script>
+ per token treats self-attention’s own compute as negligible, and that assumption is prompt-length-dependent in a way the rest of this section isn’t.</strong> Full-sequence self-attention costs <script type="math/tex">4 \times L \times d_{\text{model}} \times P^2</script>
+ FLOPs for a <script type="math/tex">P</script>
+-token prompt: Llama-2-70B’s own 80 layers and 8,192 hidden size give <script type="math/tex">4 \times 80 \times 8192 \approx 2.62</script>
+ million FLOPs per squared prompt token, against <script type="math/tex">2N</script>
+ per token’s own 140 GFLOPs. At this section’s own <script type="math/tex">P=1{,}020</script>
+-token baseline, that’s <script type="math/tex">\approx1.9</script>
+% of the weight-matmul term, genuinely negligible, and the <script type="math/tex">2N</script>
+ approximation is fine as stated here. It does not stay negligible at every prompt length this post tests. At the <script type="math/tex">P=4{,}000</script>
+-token context examined further below, the same ratio grows to <script type="math/tex">\approx7.5</script>
+%, since attention cost scales with <script type="math/tex">P^2</script>
+ while the weight-matmul term this ceiling is priced against scales only with <script type="math/tex">P</script>
+. Correcting for it lowers the true ceiling there to roughly 2,488 tokens/second, not 2,674, and raises the true utilization figure quoted below from 15.96% to roughly 17.2%. Still nowhere close to binding (the correction moves the number, not the conclusion). But it’s a real, quantifiable gap in treating <script type="math/tex">C_{\text{GPU}}</script>
+ as a single prompt-length-independent constant. A team pushing this specimen toward genuinely long contexts (tens of thousands of tokens, not thousands) should recompute this ratio rather than assume it stays small: at <script type="math/tex">P=32{,}000</script>
+, for instance, the same ratio reaches roughly 60%, no longer a rounding error against the weight-matmul term, a correction of a different order of magnitude entirely.</p>
+<p>Attention’s own FLOPs count is quadratic in <script type="math/tex">P</script>
+, but the weight-matmul term this ratio is measured against is itself linear in <script type="math/tex">P</script>
+ (2N per token, times <script type="math/tex">P</script>
+ tokens). So the two powers of <script type="math/tex">P</script>
+ don’t fully compound. One cancels, leaving the <em>ratio itself</em> linear, not quadratic:</p>
+<script type="math/tex;mode=display">\frac{\text{attention FLOPs}}{\text{weight-matmul FLOPs}} = \frac{4Ld_{\text{model}}P^2}{2N \cdot P} = \frac{2Ld_{\text{model}}}{N} \cdot P</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">L, d_{\text{model}}</script>
+ - layer count and hidden size (80, 8,192 for Llama-2-70B)</li>
+<li><script type="math/tex">N</script>
+ - parameter count (70 billion)</li>
+<li><script type="math/tex">P</script>
+ - prompt length in tokens</li>
+</ul>
+<p>At this post’s own <script type="math/tex">P=1{,}020</script>
+-token baseline that ratio is negligible; at <script type="math/tex">P=32{,}000</script>
+ it reaches roughly 60%, no longer a rounding error against the weight-matmul term. A team running this specimen against real long-context traffic should check where their own prompt lengths actually fall on that line, not assume the baseline’s own negligibility transfers.</p>
+<p><strong>Non-adversarial, statistically ordinary demand is still assumed, and it does more work here than it did in Post 2, for a reason worth spelling out rather than gesturing at.</strong> Post 2 scoped this boundary to a single resource: VRAM, gamed by concealing a task’s true duration from the ingress classifier. Here it has to hold across three resources simultaneously, and the Dominant Redline’s own scope caveat sharpens exactly why. DRF’s strategy-proofness proof was never available to lean on in the first place, since this mechanism observes post-facto consumption rather than acting on declared demand. The real 2026 game-theoretic literature on this exact production architecture doesn’t close that gap either. It studies algorithmic pools under a centralized router’s control, not strategic tenants who could misrepresent demand to game admission: a different actor model entirely, not a result that happens to answer this post’s question. A tenant with an incentive to avoid demotion on <em>any one</em> of three resources (not just the one this series has spent two posts building defenses for) has three separate signatures to game instead of one. It could look GPU-light while quietly building memory pressure, or the reverse. This post’s mechanisms have no more defense against that than Post 2’s did against a single resource.</p>
+<p><strong>Resource correlation isn’t only about arrival-count correlation across time, the failure mode Definition 2a already named: it’s also about content correlation within a single request.</strong> Proposition 4’s own caveat flagged that GPU-heavy and memory-heavy tasks might not be the same tasks, evidenced by input and output token counts having different medians in real traces. That’s true across the population, but a single dimension (context length) drives both prefill compute <em>and</em> resident KV-cache size simultaneously for the <em>same</em> request, unlike the light/heavy split Posts 1–2 modeled as one scalar duration.</p>
+<p><strong>The check.</strong> Hold the heavy task’s own output length fixed at this series’ own <script type="math/tex">\approx4{,}545</script>
+ tokens (isolating the prompt-length effect specifically) and push prompt length from 1,020 tokens to 4,000, an unremarkable context length for document analysis or a moderately long agentic tool-call history.</p>
+<table><thead><tr><th style="text-align: left">Quantity</th><th style="text-align: left">at 1,020 tokens</th><th style="text-align: left">at 4,000 tokens</th></tr></thead><tbody>
+<tr><td style="text-align: left"><script type="math/tex">E[S_{\text{prefill}}]</script>
+</td><td style="text-align: left">0.27s</td><td style="text-align: left">1.06s</td></tr>
+<tr><td style="text-align: left">Per-sequence KV cache</td><td style="text-align: left">1.824 GB</td><td style="text-align: left">2.80 GB</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">\rho_{\text{mem}}</script>
+ at Sedimentation Threshold</td><td style="text-align: left">278.7%</td><td style="text-align: left">377.0%</td></tr>
+<tr><td style="text-align: left">Full-exhaustion rate</td><td style="text-align: left">137.8/hr</td><td style="text-align: left">101.9/hr</td></tr>
+<tr><td style="text-align: left">Margin-crossing rate</td><td style="text-align: left">124.4/hr</td><td style="text-align: left">76.1/hr</td></tr>
+<tr><td style="text-align: left">Prefill throughput utilization</td><td style="text-align: left">5.98%</td><td style="text-align: left">15.96% (17.2% corrected)</td></tr>
+</tbody></table>
+<p><em>How this specimen’s own memory and GPU margins move when prompt length quadruples from 1,020 to 4,000 tokens, output length held fixed: memory’s margin breaks at rest, GPU’s stays comfortable.</em></p>
+<p><strong>Bottom line: under a long-context traffic mix, this pool’s reserved margin is already breached at rest, even though the raw budget itself isn’t yet exhausted there.</strong> The margin-crossing rate, 76.1/hr, drops below this specimen’s own 89-per-hour baseline: Definition 4 fires at rest under this profile, something the ordinary 1,020-token profile’s own 124.4/hr margin-crossing rate never does. Full exhaustion, 101.9/hr, stays just above baseline, so the raw budget itself isn’t yet gone in expectation, the narrower and more honest claim than the margin-crossing one. A longer prompt raises <script type="math/tex">H_{\min}^{\text{mem}}</script>
+ itself (the prompt’s own resident KV-cache is bigger, so five arrivals’ worth of margin costs more, 8.05GB against 3.08GB), which pulls the margin-crossing rate down toward baseline even as the raw exhaustion rate falls too, just not as far. Prefill throughput moves too, but stays comfortable. That confirms the two resources move together in <em>direction</em> without moving together in <em>how close to binding they get</em>, exactly the asymmetry Proposition 4 and Proposition 4b already established, now shown to persist under a correlated shift rather than being an artifact of treating the resources as independent.</p>
+<p><strong>Strict prefill/decode disaggregation is assumed throughout, and the Real Systems section already showed real deployments don’t all keep it.</strong> Definition 4a’s separable-achievable-regions claim, and everything built on it, holds for the architecture Splitwise originally proposed and this specimen adopts wholesale. Chunked-prefill interleaving is a real, deployed alternative that couples GPU and memory pressure on purpose, and a system running that architecture needs Definition 4a re-derived against a joint frontier before Definition 4’s per-resource mechanism can be trusted as stated. Elastic reallocation, Arrow’s and HeteroScale’s own real production behavior, breaks a different assumption in a different place (capacity itself, not resource separability) already named above rather than repeated here.</p>
+<p><strong>A third coupling exists even inside the architecture this post adopts as-is, unlike the two named above, and it’s worth checking its actual size rather than either ignoring it or assuming the worst.</strong> A prefill node’s own VRAM stays occupied by a completed sequence’s KV cache until that cache has actually finished crossing the link to its decode node: the handoff isn’t instantaneous, and until it clears, the prefill node can’t fully reclaim the memory a finished request was using. That’s a real coupling between the network resource and the memory resource, on the prefill side, that Definition 4a’s separable-regions claim doesn’t explicitly price. Checked against this specimen’s own numbers rather than left as a qualitative worry: a single handoff takes 13.4ms, established earlier from the conversation profile’s own prompt size. At the Sedimentation Threshold’s own 384 arrivals/hour, aggregate egress demand is roughly 35.7 MB/s against a 25 GB/s link, a 700<script type="math/tex">\times</script>
+ margin. Even at the long-context correlated-shift scenario just above, the ratio stays comparably small. Thirteen milliseconds of pinned VRAM is also under 5% of prefill’s own <script type="math/tex">\approx0.27</script>
+s per-request compute time, not a meaningful fraction of the resource’s own duty cycle. The coupling is real; at this specimen’s own demand, it isn’t close to binding, the same shape of finding as the quadratic-attention correction above. It wouldn’t stay negligible at a much higher demand or a much slower link than this specimen’s own real ConnectX-7 figure. A team running either should re-check this margin rather than assume 700<script type="math/tex">\times</script>
+ headroom transfers.</p>
+<p><strong><script type="math/tex">H_{\text{mem}}(t)</script>
+ assumes every reported free byte is actually usable, and that assumption has a real name in memory-allocator terms: no fragmentation.</strong> A naive byte-counter (sum of allocated minus capacity) can report comfortable headroom while the free bytes are scattered across gaps too small individually to hold the next KV-cache block a task needs: the classic external-fragmentation failure. The redline reads green, but an admission or a relocation target actually fails to fit. That gap between “bytes reported free” and “bytes usable” is exactly the blind spot Definition 4 was built to eliminate for cross-resource visibility, reopened here within a single resource. This post’s own infrastructure assumption already narrows the exposure substantially without fully closing it. Every KV-cache-relocation citation this series uses, PagedAttention foremost, manages memory in fixed-size pages rather than variable-size contiguous blocks, specifically to eliminate external fragmentation the way OS virtual memory eliminated it decades earlier. Any free page satisfies any request needing one, so scattered free bytes stop being unusable. What survives that design, and what <script type="math/tex">H_{\text{mem}}(t)</script>
+ still has to get right, is coarser and narrower: internal fragmentation from partially-filled pages, and a residual gap between “bytes free” and “pages free” whenever the page allocator’s own bookkeeping doesn’t perfectly track the byte-level accounting this post’s formulas assume. A team implementing <script type="math/tex">H_{\text{mem}}(t)</script>
+ should read it off the page allocator’s own free-page count, converted to bytes at the page’s fixed size, not off a general-purpose memory API that has no reason to know pages are the actual unit of allocation here. The difference is small under a page-based allocator, and not zero. Treating <script type="math/tex">H_{\text{mem}}(t)</script>
+ as byte-exact when it’s actually page-quantized is the specific, narrower version of this gap worth checking before trusting the redline at its own stated precision.</p>
+<p><strong>Compute it.</strong> Three instincts opened Post 2: catch it before it happens, catch it while it’s happening, ride it out and add capacity. This post adds a fourth question underneath all three: catch it <em>where</em>, when the answer isn’t always the resource you’ve already instrumented.</p>
+<ul>
+<li><strong>Do you actually know which resource binds first, or are you assuming it’s the one you already monitor?</strong> Definition 2’s redline is structurally blind to a resource that didn’t exist in the world it was built for: prefill’s own GPU-compute pressure, on a machine a single-node VRAM gauge was never wired to.</li>
+<li><strong>Is the number you’re calling “the threshold” computed against the real resource, or against a proxy one level up?</strong> This post’s own 384-arrivals-per-hour Sedimentation Threshold was reused from Post 2’s slot-count abstraction. Priced in bytes instead of slots, and aggregated by the accumulating quantity’s own second moment rather than a mean-duration snapshot, the real full-exhaustion ceiling turned out to be 137.8 arrivals per hour. The reserved-margin trigger, recomputed the same way (the margin also has to be aggregated by how long each newly-arrived task has actually been accumulating, not a snapshot at the mean) sat lower still, at 124.4: still comfortably <em>above</em> the arrival rate this series has treated as an uncontroversial baseline since Post 2, but far below the slot-based 384 that baseline’s own safety margin was actually sized against.</li>
+<li><strong>Have you classified each of your own resources as occupancy-type or throughput-type before reusing a Little’s-Law-style formula on all of them?</strong> Applying an occupancy formula to a resource that’s actually throughput-bound asks a question that formula was never built to answer.</li>
+<li><strong>Does your own hardware give the relocation NIC and the decode accelerator’s own memory controller genuinely separate paths, or do they share a PCIe root complex</strong> where ordinary KV-cache handoff traffic could throttle decode’s own generation rate the moment it’s under load? Definition 4a’s separable regions assume the answer is separate; check it rather than inherit it.</li>
+<li><strong>Is your own GPU throughput ceiling priced against a realistic MFU for your own traffic’s actual sequence-length variance, or against a published low-variance figure</strong> that this post’s own worst case already discounts once but not against variance specifically? Check the margin either way: a comfortable multiple survives a real MFU hit, a thin one might not.</li>
+<li><strong>Does your admission-control mechanism only refuse new work, or can it also evict work already in flight?</strong> Real 2026 dynamical-systems research on exactly this problem class proves that eviction-based memory management under saturated demand is unstable (a worst-case limit cycle, not graceful degradation) and Blood Oath’s non-preemptibility rules that specific pathology out for this series’ own mechanism, but the more general lesson stands: know which failure mode your own control loop is actually exposed to before assuming it’s stable.</li>
+</ul>
+<p>If you’re comparing resources on a common scale, do you know exactly what you borrowed to make that comparison legitimate, and what you didn’t? Definition 4’s headroom fraction borrows DRF’s normalization idea, explicitly not its strategy-proofness proof. A real game-theoretic analysis of this exact production architecture studies a different actor model, centrally-routed pools, not strategic tenants, so it doesn’t close that gap either. The question stays genuinely open, not resolved by citation. Does your architecture actually keep your resources separable, or does it deliberately couple them for efficiency? Chunked-prefill interleaving trades this post’s clean separable-regions structure for better hardware utilization, and knowing which side of that trade a real deployment is on determines whether Definition 4a’s math applies as written. Is your own <script type="math/tex">C_r</script>
+ actually a constant, or is something in your stack already treating it as a control variable? Arrow and HeteroScale both do, independently, in production, changing the denominator of Definition 4’s headroom fraction on the same timescale demand changes its numerator. And have you priced your own resource ratios, or are you reusing this specimen’s? Older GPUs, a larger model, a slower interconnect, or a workload skewed toward long-context requests can each move a resource that’s currently comfortable into genuine contention. Measure before assuming this post’s specific percentages transfer.</p>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>Post 1’s <a href="/blog/no-safe-number-part1-blood-oath/#prop-a">Proposition A</a> proved no algorithm can save a Blood Oath workload. Post 2 built the physical-signal response for the one resource that case study made binding: VRAM. This post generalizes into a real production architecture, disaggregated prefill/decode, that genuinely splits GPU, memory, and network I/O into independently-scaled resources.</li>
+<li>Definition 4a corrects a naive joint-frontier framing into separable achievable regions, coupled only through a shared demotion decision.</li>
+<li>Proposition 4 shows Little’s Law generalizes only to occupancy resources: exactly for a constant holding quantity, and via <script type="math/tex">H=\lambda G</script>
+ for one that accumulates with age, decode memory’s own case. Checked against this specimen’s own numbers. The heavy task’s footprint sized against its own tail, aggregated by the second moment rather than a mean-duration snapshot, memory alone already exceeds its budget more than fourfold at the slot-based Sedimentation Threshold, while GPU and I/O stay negligible by three to four orders of magnitude.</li>
+<li>That correction is a Constraint Sequence Framework result in its own right: the real memory-exhaustion rate, aggregated by the KV-cache’s own second moment rather than its mean, is 137.8 arrivals per hour. Definition 4’s own reserved-margin trigger (itself corrected the same way, from 28.7% of decode memory down to 9.7%, holding the budget fixed to isolate the aggregation fix alone) sits lower still, at 124.4: both above the 89/hour baseline this series has called resting since Post 2, and both well below the 384/hour a slot-based sizing exercise would have trusted.</li>
+<li>A June 2026 dynamical-systems result shows the more dangerous version of this mechanism, threshold-based <em>eviction</em>, is provably unstable under saturation. Blood Oath’s non-preemptibility structurally avoids that specific pathology, though this post’s own admission-refusal loop hasn’t been proven stable either. It names the specific missing tool: a formal, Nyquist-style stability margin for a delay system, not run here.</li>
+<li>A 2026 Price-of-Anarchy analysis of the same production architecture, sharing no mathematical structure with this post’s queueing arithmetic, reaches the same conclusion from a genuinely different kind of argument: an efficiency-loss metric the paper itself finds invariant across topology below saturation, then a real nonlinear jump (roughly 8.9-fold on the topology checked) at it. Not the linear threshold-crossing the memory argument found, but the same warning: margins near a resource limit are less forgiving than they look.</li>
+<li>Checked against what real production systems actually do, this post’s mechanism is named for what it is: a safety backstop underneath an optimizing scheduler, not a competing one. Chunked-prefill interleaving, elastic capacity reallocation, and ordinary handoff-traffic contention on shared memory bandwidth are named as three real boundaries where this post’s separable-resources assumption stops holding, one by software coupling, one by an operational reallocation decision, one by hardware topology alone.</li>
+<li>The GPU throughput ceiling’s own 30% MFU floor absorbs a real hit from two separate uncertainty sources: the model-size mismatch between the ratio’s own source and this specimen’s model, and MFU’s own sensitivity to the sequence-length variance a heavy-tailed surge produces, the same regime this whole series is built to survive. It stays comfortably clear of this specimen’s own demand under both, a 24<script type="math/tex">\times</script>
+ margin against the first, a 12<script type="math/tex">\times</script>
+ margin against halving MFU for the second. But neither uncertainty is bounded precisely; both are checked only against the margin that happens to be large enough to absorb them.</li>
+</ol>
+<p>Two independent methods, two different mathematical shapes, one conclusion. That convergence, not any single derivation, is this post’s actual claim.</p>
+</blockquote>
+<hr />
+<p><sup>[1]</sup> Ranganathan, B., Zhang, M. &amp; Wu, K. (2025). <em>Enhancing reliability in AI inference services: An empirical study on real production incidents.</em> arXiv:2511.07424.</p>
+<p><sup>[2]</sup> Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, Í., Maleki, S. &amp; Bianchini, R. (2024). <em>Splitwise: Efficient Generative LLM Inference Using Phase Splitting.</em> Proceedings of the 51st Annual International Symposium on Computer Architecture (ISCA 2024).</p>
+<p><sup>[3]</sup> Ghodsi, A., Zaharia, M., Hindman, B., Konwinski, A., Shenker, S. &amp; Stoica, I. (2011). <em>Dominant Resource Fairness: Fair Allocation of Multiple Resource Types.</em> 8th USENIX Symposium on Networked Systems Design and Implementation (NSDI 11).</p>
+<p><sup>[4]</sup> Touvron, H. et al. (2023). <em>Llama 2: Open Foundation and Fine-Tuned Chat Models.</em> arXiv:2307.09288.</p>
+<p><sup>[5]</sup> TrueFoundry (2024). <em>Benchmarking Llama-2-70B.</em></p>
+<p><sup>[6]</sup> Wang, J., Lin, K., Zhang, K., Han, J., Wei, X., Shen, S., Fang, C., Yu, W., Chen, R. &amp; Chen, H. (2026). <em>SMetric: Rethink LLM Scheduling for Serving Agents with Balanced Session-centric Scheduling.</em> arXiv:2607.08565.</p>
+<p><sup>[7]</sup> Glynn, P.W. &amp; Whitt, W. (1989). <em>Extensions of the Queueing Relations L=λW and H=λG.</em> Operations Research, 37(4), 634–644.</p>
+<p><sup>[8]</sup> NVIDIA (2021). <em>ConnectX-7 InfiniBand Adapter Card Datasheet.</em></p>
+<p><sup>[9]</sup> Ao, R., Dong, J., Luo, G. &amp; Simchi-Levi, D. (2026). <em>Service-Induced Congestion in Memory-Constrained LLM Serving.</em> arXiv:2606.15555.</p>
+<p><sup>[10]</sup> Hellerstein, J.L., Diao, Y., Parekh, S. &amp; Tilbury, D.M. (2004). <em>Feedback Control of Computing Systems.</em> Wiley-IEEE Press.</p>
+<p><sup>[11]</sup> NVIDIA (2020). <em>A100 Tensor Core GPU Datasheet.</em></p>
+<p><sup>[12]</sup> Georgiou, A. (2026). <em>The Price of Anarchy in Disaggregated Inference.</em> arXiv:2606.17081.</p>
+<p><sup>[13]</sup> NVIDIA (2025). <em>Introducing NVIDIA Dynamo, technical blog.</em></p>
+<p><sup>[14]</sup> Arun, S., Parayil, A., Bharadwaj, S., St. Amant, R. &amp; Rühle, V. (2026). <em>Towards Load-Aware Prefill Deflection for Disaggregated LLM Serving.</em> arXiv:2607.02043.</p>
+<p><sup>[15]</sup> Wu, Y., Liu, T., Zeng, Y., Wu, S., Xiong, J., Dong, X., Yang, H., Zhang, K. &amp; Li, J. (2025). <em>Arrow: Adaptive Scheduling Mechanisms for Disaggregated LLM Inference Architecture.</em> arXiv:2505.11916.</p>
+<p><sup>[16]</sup> Li, R., Du, R., Chu, Z., Zhao, S., Han, C., Shi, Z., Shao, Y., Han, H., Huang, L., Liu, Z. &amp; Liu, S. (2025). <em>Taming the Chaos: Coordinated Autoscaling for Heterogeneous and Disaggregated LLM Inference.</em> arXiv:2508.19559.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/no-safe-number/" class="series-link">
+            Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption
+          </a>
+          
+            <span class="series-progress">Part 3/7</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+            <a class="series-nav-item series-nav-prev" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part2-provisioning-window&#x2F;" title="The Phase MAPE-K Usually Skips">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part4-eviction-crossover&#x2F;" title="Optimal Stopping at the Edge of a Limit Cycle">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>

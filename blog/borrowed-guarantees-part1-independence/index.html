@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="More voters should mean more truth — that&#x27;s the promise behind the jury theorem, Byzantine fault tolerance, and the scalability law alike. All three need the voters to disagree, when they&#x27;re wrong, for genuinely different reasons. Stochastic agents pulled from overlapping training data don&#x27;t fail that way: they agree, confidently, for the same reason, and a headcount can&#x27;t tell independent judgment from an echo. Opening Theorems Out of Warranty." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="The Independence Illusion - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;borrowed-guarantees-part1-independence&#x2F;" />
+  <meta property="og:description" content="More voters should mean more truth — that&#x27;s the promise behind the jury theorem, Byzantine fault tolerance, and the scalability law alike. All three need the voters to disagree, when they&#x27;re wrong, for genuinely different reasons. Stochastic agents pulled from overlapping training data don&#x27;t fail that way: they agree, confidently, for the same reason, and a headcount can&#x27;t tell independent judgment from an echo. Opening Theorems Out of Warranty." />
+
+  <title>The Independence Illusion - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;borrowed-guarantees-part1-independence&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>The Independence Illusion</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-07-08T00:00:00+00:00" pubdate>08 July 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a>
+              <a class="tag" href="https://e-mindset.space/tags/multi-agent/">#multi-agent</a>
+              <a class="tag" href="https://e-mindset.space/tags/formal-methods/">#formal-methods</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<p>Five proposals reached a merge step. Two had passed every binary check the constraint corpus specified. Three had failed at least one. The merge step could not tell them apart — the verification score had been stripped out three phases earlier, before any of the five ever reached synthesis. A failing proposal’s language sat in the same context window as a passing one, carrying the same implicit authority, because nothing marked which was which.</p>
+<p><em>Five voices spoke. How many of them had actually earned a vote?</em></p>
+<p>The synthesis prompt never asked. It treated five outputs as five independent judgments, when only some of the five had passed anything at all. That’s the independence illusion: five voices that sound like corroboration, and are actually one voice, played five times.</p>
+<p>That is not a bug in the ordinary sense — no line of code disagreed with its own specification. It is what happens when a system inherits a theorem’s conclusion without inheriting the assumption the conclusion depends on. Three theorems, in this case, borrowed from three different fields, each carrying one clause that a committee of LLM agents does not automatically satisfy.</p>
+<h2 id="framework-overview">Framework Overview</h2>
+<table><thead><tr><th style="text-align: left">Borrowed result</th><th style="text-align: left">What it assumes</th><th style="text-align: left">What breaks for LLM committees</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Condorcet Jury Theorem</strong></td><td style="text-align: left">Voters reason independently</td><td style="text-align: left">Shared pretraining collapses independence between agents</td></tr>
+<tr><td style="text-align: left"><strong>Byzantine fault tolerance (Krum)</strong></td><td style="text-align: left">A corrupted minority chosen adversarially</td><td style="text-align: left">LLMs converge honestly on the same wrong answer — no adversary required</td></tr>
+<tr><td style="text-align: left"><strong>Universal Scalability Law</strong></td><td style="text-align: left">One coherency cost means the same thing across the pool</td><td style="text-align: left">A single scalar cannot distinguish a homogeneous pool from a genuinely diverse one</td></tr>
+</tbody></table>
+<p>Each row is a theorem doing real work elsewhere, transplanted into a domain that doesn’t automatically satisfy the clause the proof depends on. None of the three theorems is wrong in its own domain — Condorcet’s result holds for genuinely independent voters, Krum’s proof holds against a genuinely adversarial minority, USL’s model holds when one coherency number genuinely means one thing across a pool. The failure is entirely on the transplant side, in assuming the clause carried over along with the conclusion. The rest of this post follows each transplant to where it stops holding, then follows the consequence downstream to a traceable failure mode: a merge step that doesn’t know which proposals to trust.</p>
+<hr />
+<h2 id="three-assumptions-traced-to-where-they-stop-holding">Three Assumptions, Traced to Where They Stop Holding</h2>
+<p><span id="def-1"></span></p>
+<details>
+<summary>Definition 1 -- Independent Testimony: what the Condorcet Jury Theorem requires of its voters</summary>
+<p><strong>Definition 1</strong> (Independent Testimony). A set of <script type="math/tex">N</script>
+ judgments is independent under the Condorcet Jury Theorem if each judgment’s probability of being correct, <script type="math/tex">p</script>
+, is drawn without conditioning on any other judgment in the set, and each judgment exceeds chance: <script type="math/tex">p > 0.5</script>
+. Take <script type="math/tex">N</script>
+ odd, the standard Condorcet setting, since an even-sized pool admits an exact tie that “strict majority” doesn’t resolve. Under independence, the probability that a strict majority is correct,</p>
+<script type="math/tex;mode=display">Q_{\text{ind}}(N, p) = \sum_{k=(N+1)/2}^{N} \binom{N}{k} p^k (1-p)^{N-k}</script>
+<p>increases toward 1 as <script type="math/tex">N</script>
+ grows. Every pool this post measures against is five explorers — already odd — so the restriction costs nothing in practice.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> Condorcet’s theorem is why a jury of twelve outperforms a jury of one, provided the twelve actually thought about the case separately. If eleven of them read the same headline before walking into the room, you don’t have twelve votes — you have one vote and eleven echoes.</p>
+</blockquote>
+<p>This isn’t a failure mode invented for AI committees. The same collapse has been produced experimentally in human groups: let people estimate an unknown quantity, then show each person the running estimates of others in the group before they revise their own guess, and the group’s estimates converge sharply — while each individual, having just incorporated what looks like independent confirmation, grows <em>more</em> confident in a number that is now less diverse, not more accurate <a href="#ref-1" class="cite-ref" data-def="Lorenz, Rauhut, Schweitzer & Helbing (2011) — How Social Influence Can Undermine the Wisdom of Crowd Effect, PNAS 108(22), 9020–9025" aria-label="Lorenz, Rauhut, Schweitzer & Helbing (2011) — How Social Influence Can Undermine the Wisdom of Crowd Effect, PNAS 108(22), 9020–9025">[1]</a>
+. The mechanism this post spends the rest of its length on — correlated judgments mistaken for independent ones — has a name in the social-choice and collective-intelligence literature that predates large language models by decades. The pool doesn’t need to be silicon for the illusion to hold.</p>
+<p>That mechanism also has an exact, decades-older mathematical form in ensemble learning, not just a qualitative description. For predictors <script type="math/tex">f_1, \ldots, f_N</script>
+ averaged into an ensemble estimate <script type="math/tex">\bar f</script>
+, the ensemble’s squared error decomposes exactly as the average member’s own error minus a diversity term measuring how much the members actually disagree with each other,
+<script type="math/tex;mode=display">E_{\text{ensemble}} = \frac{1}{N}\sum_i E_i \;-\; \frac{1}{N}\sum_i (f_i - \bar f)^2</script>
+
+an identity that holds regardless of what’s causing the disagreement or its absence <a href="#ref-2" class="cite-ref" data-def="Krogh & Vedelsby (1995) — Neural Network Ensembles, Cross Validation, and Active Learning, NeurIPS 7, 231–238" aria-label="Krogh & Vedelsby (1995) — Neural Network Ensembles, Cross Validation, and Active Learning, NeurIPS 7, 231–238">[2]</a>
+. It says precisely what a merge step blind to verification scores can’t see: an ensemble’s improvement over its average member is capped exactly by that diversity term, and as correlation between members climbs, the diversity term collapses toward zero — at which point the ensemble’s error equals the average member’s error, no better, however many members are pooled. Five agents converging on one answer aren’t a five-times-checked answer. Mathematically, they’re a one-times-checked answer with four free-riders attached.</p>
+<p>Lin, Hilton and Evans’ and others’ work on LLM behavior converges on the same finding from a different angle Lefort et al. make directly: LLMs trained on overlapping corpora — Common Crawl, Wikipedia, the same handful of code repositories — inherit correlated failure modes, not independent ones <a href="#ref-3" class="cite-ref" data-def="Lefort, Benhamou, Ohana, Guez, Saltiel & Jacquot (2024) — Examining Independence in Ensemble Sentiment Analysis: A Study on the Limits of Large Language Models Using the Condorcet Jury Theorem" aria-label="Lefort, Benhamou, Ohana, Guez, Saltiel & Jacquot (2024) — Examining Independence in Ensemble Sentiment Analysis: A Study on the Limits of Large Language Models Using the Condorcet Jury Theorem">[3]</a>
+. Five model calls on the same question are five draws from one shared prior, not five independent judgments — and the theorem’s guarantee was never conditioned on the <em>number</em> of voters alone. It was conditioned on their independence, which is the clause that silently stops holding.</p>
+<p><span id="def-2"></span></p>
+<details>
+<summary>Definition 2 -- Correlation-corrected quality: this post's own interpolation for what the theorem's guarantee degrades to under shared priors</summary>
+<p><strong>Definition 2</strong> (Correlation-Corrected Quality, an interpolation built for this post, not transcribed from a cited source). Given pairwise error correlation <script type="math/tex">\rho</script>
+, a quality function constructed to match the two limits the correlation literature does establish — full independence and total correlation — is</p>
+<script type="math/tex;mode=display">Q(N, p, \rho) = p + \bigl(Q_{\text{ind}}(N, p) - p\bigr)(1 - \rho)</script>
+<p>At <script type="math/tex">\rho = 0</script>
+, <script type="math/tex">Q</script>
+ recovers the independent-voter guarantee. At <script type="math/tex">\rho \to 1</script>
+, <script type="math/tex">Q \to p</script>
+ — adding voters buys nothing, regardless of <script type="math/tex">N</script>
+.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> The correction doesn’t say the theorem is wrong. It says the theorem’s benefit is being <em>taxed</em> by however correlated the voters actually are, and the tax rate is not something you get to assume — it’s something you have to measure, per pool, per task.</p>
+</blockquote>
+<p>The second borrowed result carries a different clause. Krum’s breakdown-point proof <a href="#ref-4" class="cite-ref" data-def="Blanchard, El Mhamdi, Guerraoui & Stainer (2017) — Byzantine-Tolerant Machine Learning" aria-label="Blanchard, El Mhamdi, Guerraoui & Stainer (2017) — Byzantine-Tolerant Machine Learning">[4]</a>
+ guarantees that the algorithm selects an honest value provided the corrupted minority’s divergence is <em>adversarially chosen</em> — a Byzantine actor picking the worst-case position to poison the aggregate. Nothing in that proof requires the corrupted values to be honest, correlated, and confident. When they are — five agents converging on the same wrong answer because it’s the best-attested answer in a shared training distribution, not because anyone chose to attack — the corrupted set stops looking like an outlier and starts looking exactly like the cluster the algorithm was built to trust. That gap is a property of the proof’s own stated scope, not a separate empirical claim needing its own citation: Krum’s guarantee is proven against an <em>adversarial</em> minority, and a majority that is honestly, confidently wrong for shared structural reasons is a different failure entirely — one the theorem was never asked to cover. Separately, recent work building formal consensus protocols specifically for stochastic reasoning agents is its own acknowledgment of a related gap — that ad-hoc coordination heuristics designed for deterministic distributed systems don’t transfer cleanly to agents whose outputs are draws from a shared model rather than independently executed code, and need new formal treatment rather than a relabeling of old guarantees <a href="#ref-5" class="cite-ref" data-def="Ruan, Wang, Shi & Li (2025) — Reaching Agreement Among Reasoning LLM Agents, arXiv:2512.20184" aria-label="Ruan, Wang, Shi & Li (2025) — Reaching Agreement Among Reasoning LLM Agents, arXiv:2512.20184">[5]</a>
+.</p>
+<p>The third assumption is the quietest of the three, and the easiest to miss. The Universal Scalability Law’s coherency term, <script type="math/tex">\beta</script>
+, is a single scalar standing in for “how expensive it is for this pool to reconcile disagreement.” A pool of five agents from five distinct architectures and a pool of five identical model calls at different temperatures can report the <em>same</em> <script type="math/tex">\beta</script>
+, measured the <em>same</em> way, while meaning completely different things — one pool’s disagreement reflects genuine diversity of approach; the other’s reflects nothing but sampling noise around a single underlying answer. A single coherency parameter cannot see that distinction; work on agent scaling in multi-agent LLM systems finds diversity, not raw agent count, is the variable that actually predicts scaling behavior — a single homogeneity-blind coefficient misses the variable that matters <a href="#ref-6" class="cite-ref" data-def="Yang, Qu, Wen, Shi, Wen, Zhang, Wierman & Gu (2026) — Understanding Agent Scaling in LLM-Based Multi-Agent Systems via Diversity, arXiv:2602.03794" aria-label="Yang, Qu, Wen, Shi, Wen, Zhang, Wierman & Gu (2026) — Understanding Agent Scaling in LLM-Based Multi-Agent Systems via Diversity, arXiv:2602.03794">[6]</a>
+.</p>
+<h2 id="the-worked-number-not-just-the-formula-computed-not-asserted">The Worked Number, Not Just the Formula — Computed, Not Asserted</h2>
+<p>Definitions earn their keep when the two candidate formulas are actually traced through on realistic input, not just contrasted in principle. Take a pool with measured constraint agreement <script type="math/tex">CG_{\text{mean}} = 0.70</script>
+, giving accuracy proxy <script type="math/tex">p = 0.5 + CG/2 = 0.85</script>
+, and follow both readings of <script type="math/tex">\rho</script>
+ through the same formula to two different destinations:</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart TD
+    classDef gate fill:none,stroke:#333,stroke-width:2px;
+    classDef ok fill:none,stroke:#22c55e,stroke-width:2px;
+    classDef alt fill:none,stroke:#ca8a04,stroke-width:2px;
+    A["Q_ind(N=5, p=0.85)<br/>binomial majority sum"] --> B["ρ = CG = 0.70"]:::gate
+    A --> C["ρ = 1 − CG = 0.30"]:::gate
+    B --> D["Q(5, 0.85, 0.70) = 0.887"]:::ok
+    C --> E["Q(5, 0.85, 0.30) = 0.936"]:::alt
+    D --> F["ratio = CG / (1 − CG)"]
+    E --> F
+</pre><figcaption>Figure 1: the same formula, evaluated at two defensible readings of the same measured quantity, landing on two different marginal-gain estimates.</figcaption>
+<p>Traced through rather than merely described, the two readings give <script type="math/tex">Q = 0.887</script>
+ at <script type="math/tex">\rho = CG = 0.70</script>
+ and <script type="math/tex">Q = 0.936</script>
+ at <script type="math/tex">\rho = 1 - CG = 0.30</script>
+. Both sit above the baseline <script type="math/tex">p = 0.85</script>
+ — at this specific input, neither formula flips a “trust the ensemble or don’t” decision, which is a narrower and more honest claim than the divergence first appears to support. What the two numbers actually disagree on is <em>magnitude</em>: <script type="math/tex">Q - p</script>
+ is <script type="math/tex">+0.037</script>
+ under one reading and <script type="math/tex">+0.086</script>
+ under the other — a factor of roughly 2.33 apart on the exact marginal-gain quantity <script type="math/tex">N_{\text{optimal}}</script>
+ is computed from. That ratio isn’t a coincidence of this particular input: because <script type="math/tex">Q_{\text{ind}}(N,p) - p</script>
+ is a shared factor in both numerator and denominator, it cancels exactly, leaving <script type="math/tex">[Q(N,p,1-CG) - p] / [Q(N,p,CG) - p] = CG / (1 - CG)</script>
+ for any <script type="math/tex">N</script>
+ and <script type="math/tex">p</script>
+ — a closed form, not an empirical observation. Swept across <script type="math/tex">CG</script>
+, the two formulas coincide exactly at <script type="math/tex">CG = 0.5</script>
+ (where that ratio is 1, and <script type="math/tex">CG = 1 - CG</script>
+ is also an algebraic necessity there) and pull apart on either side; at <script type="math/tex">CG = 0.8</script>
+ the ratio is <script type="math/tex">0.8 / 0.2 = 4</script>
+ exactly, matching the marginal-gain estimates of <script type="math/tex">+0.018</script>
+ versus <script type="math/tex">+0.073</script>
+. The consequence isn’t binary — it’s the input to a downstream optimization that assumes it has one clean number, when the framework itself carries two live candidates whose disagreement grows without bound as <script type="math/tex">CG</script>
+ moves away from <script type="math/tex">0.5</script>
+ in either direction.</p>
+<p><span id="def-3"></span></p>
+<details>
+<summary>Definition 3 -- The Correlation-Proxy Inversion Problem: two derivations, divergent marginal-gain predictions from the same measured quantity</summary>
+<p><strong>Definition 3</strong> (Correlation-Proxy Inversion). Given mean constraint agreement <script type="math/tex">CG_{\text{mean}}</script>
+ across a pool, two derivations of the correlation proxy <script type="math/tex">\rho</script>
+ are each defensible without further assumptions:</p>
+<script type="math/tex;mode=display">\rho = 1 - CG_{\text{mean}} \qquad \text{or} \qquad \rho = CG_{\text{mean}}</script>
+<p>The first reads low agreement as high correlation — a pool that disagrees on constraints is treated as more likely to share a correlated error. The second reads low agreement as low correlation, following directly from Hamming-distance geometry: two profiles far apart in Hamming space are, definitionally, less correlated. Neither is derivable from first principles without an additional, currently unstated assumption about whether error correlation tracks constraint-satisfaction specialization or constraint-satisfaction disagreement, and the two produce materially different <script type="math/tex">N_{\text{optimal}}</script>
+ marginal-gain estimates rather than materially different pass/fail verdicts.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> This isn’t a rounding disagreement over a decimal place in a formula everyone already agrees on. It’s a disagreement about which <em>direction</em> the same measurement points, and it shows up specifically in how much a marginal agent is worth, not in whether the pool clears some baseline. A pool that scores <script type="math/tex">CG_{\text{mean}} = 0.70</script>
+ is worth a fifth voter under either formula — the two formulas disagree by more than a factor of two on <em>how much</em> that fifth voter is worth, which is exactly the number an ensemble-sizing decision needs to be precise about and exactly the number this ambiguity corrupts.</p>
+</blockquote>
+<p>Swept across the full range of <script type="math/tex">CG</script>
+ rather than checked at one input, the shape of the disagreement shows up clearly:</p>
+<div style="margin:1.5em 0;">
+<canvas id="chart-correlation-proxy" aria-label="Chart showing two candidate readings of Q as a function of measured constraint agreement CG. The rho equals CG curve and the rho equals one minus CG curve both start at Q equals 0.5 when CG is 0, bow apart with the rho equals CG curve higher until they cross exactly at CG equals 0.5, then swap dominance and bow apart the other way before converging again near CG equals 1. A dashed line shows the baseline accuracy p for reference." style="width:100%; aspect-ratio:700/440; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<script>
+(function () {
+  const canvas = document.getElementById('chart-correlation-proxy');
+  const ctx = canvas.getContext('2d');
+  let W, H, pw, ph, frame = 0;
+  const L = 60, R = 40, T = 30, B = 50;
+  const totalFrames = 180;
+  const SIM = 200;
+  function comb(n, k) {
+    if (k < 0 || k > n) return 0;
+    let r = 1;
+    for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+    return r;
+  }
+  function qInd(n, p) {
+    let s = 0;
+    for (let k = Math.floor(n / 2) + 1; k <= n; k++) s += comb(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+    return s;
+  }
+  function qCondorcet(n, p, rho) { return p + (qInd(n, p) - p) * (1 - rho); }
+  const N = 5;
+  const cgVals = [], pVals = [], qA = [], qB = [];
+  for (let i = 0; i <= SIM; i++) {
+    const cg = i / SIM;
+    const p = 0.5 + cg / 2;
+    cgVals.push(cg);
+    pVals.push(p);
+    qA.push(qCondorcet(N, p, cg));
+    qB.push(qCondorcet(N, p, 1 - cg));
+  }
+  const yMin = 0.45, yMax = 1.0;
+  const px = i => L + (cgVals[i]) * pw;
+  const py = v => T + (1 - (v - yMin) / (yMax - yMin)) * ph;
+  function setupCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    W = rect.width; H = rect.height;
+    pw = W - L - R; ph = H - T - B;
+  }
+  function drawAxes() {
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.moveTo(L, T); ctx.lineTo(L, T + ph); ctx.lineTo(L + pw, T + ph); ctx.stroke();
+    ctx.fillStyle = '#444'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('measured constraint agreement CG', L + pw / 2, H - 10);
+    ctx.save(); ctx.translate(16, T + ph / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Q(N, p, rho)', 0, 0); ctx.restore();
+    ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    for (let t = 0; t <= 10; t += 2) {
+      const cg = t / 10;
+      const x = L + cg * pw;
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(x, T + ph); ctx.lineTo(x, T + ph + 5); ctx.stroke();
+      ctx.fillText(cg.toFixed(1), x, T + ph + 18);
+    }
+    ctx.textAlign = 'right';
+    for (let v = 0.5; v <= 1.0001; v += 0.1) {
+      const y = py(v);
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(L, y); ctx.lineTo(L - 5, y); ctx.stroke();
+      ctx.fillText(v.toFixed(1), L - 8, y + 4);
+    }
+  }
+  function seg(arr, ds, color, lw, dashed) {
+    if (dashed) ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.beginPath();
+    ctx.moveTo(px(0), py(arr[0]));
+    for (let i = 1; i <= ds; i++) ctx.lineTo(px(i), py(arr[i]));
+    ctx.stroke();
+    if (dashed) ctx.setLineDash([]);
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawAxes();
+    const progress = Math.min(frame / totalFrames, 1);
+    const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+    const ds = Math.max(1, Math.min(Math.floor(ease * SIM), SIM));
+    seg(pVals, ds, '#999', 1.2, true);
+    seg(qA, ds, '#2980b9', 2.5, false);
+    seg(qB, ds, '#c0392b', 2.5, false);
+    const midIdx = Math.round(SIM / 2);
+    if (ds >= midIdx) {
+      ctx.beginPath(); ctx.arc(px(midIdx), py(qA[midIdx]), 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#444'; ctx.fill();
+      ctx.fillStyle = '#444'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('CG = 0.5: both readings agree', px(midIdx), py(qA[midIdx]) - 12);
+    }
+    if (progress >= 1) {
+      const leftBump = Math.round(SIM * 0.22), rightBump = Math.round(SIM * 0.78);
+      ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#2980b9'; ctx.fillText('rho = CG', px(leftBump), py(qA[leftBump]) - 12);
+      ctx.fillStyle = '#c0392b'; ctx.fillText('rho = 1 - CG', px(rightBump), py(qB[rightBump]) - 12);
+      ctx.fillStyle = '#999'; ctx.fillText('baseline p', px(Math.round(SIM * 0.15)), py(pVals[Math.round(SIM * 0.15)]) + 16);
+    }
+    if (frame < totalFrames) { frame++; requestAnimationFrame(draw); }
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries, observer) => {
+      if (entries[0].isIntersecting) { observer.disconnect(); setupCanvas(); requestAnimationFrame(draw); }
+    }, { threshold: 0.2 }).observe(canvas);
+  } else { setupCanvas(); requestAnimationFrame(draw); }
+  window.addEventListener('resize', () => { if (frame >= totalFrames) { setupCanvas(); draw(); } });
+})();
+</script>
+</div>
+<p>Both readings start at the same place — a fully uncorrelated pool at <script type="math/tex">CG = 0</script>
+ carries no accuracy edge either way, so <script type="math/tex">Q = p = 0.5</script>
+ regardless of which formula is used — and both converge again near <script type="math/tex">CG = 1</script>
+, where a pool this internally consistent leaves the reading almost moot. The two curves only pull apart in between, cross exactly once at <script type="math/tex">CG = 0.5</script>
+, and swap which one is optimistic depending on which side of <script type="math/tex">0.5</script>
+ the measured pool sits on. That crossing is not a coincidence needing an explanation — it’s forced by the algebra, since <script type="math/tex">CG = 1 - CG</script>
+ only at <script type="math/tex">CG = 0.5</script>
+, the one point where both formulas are quietly computing the identical <script type="math/tex">\rho</script>
+. Everywhere else, they are computing two different numbers and calling them by the same name.</p>
+<p>The honest resolution isn’t picking a side. It’s replacing the proxy with a measurement once enough direct observations exist — an online correlation estimate, seeded with a documented prior and updated from real pairwise outcomes rather than inferred once from a single Hamming-distance snapshot and left alone. Until that measurement accumulates, any marginal-gain calculation resting on the proxy is resting on a factor-of-two-to-four uncertainty band, dressed up as a single confident number.</p>
+<p>Definition 2 already flags <script type="math/tex">Q(N,p,\rho)</script>
+ as this post’s own construction rather than a citation. Here is specifically which paper it’s <em>not</em> transcribed from, and why the distinction matters. Nitzan &amp; Paroush (1982) — <em>International Economic Review</em> 23(2), 289–297, a real and verifiable citation — proves something adjacent but distinct: the optimal <em>weighted</em> majority rule for voters with known, heterogeneous, but still <em>independent</em> competence, with weights proportional to each voter’s log-odds <script type="math/tex">\log(p_i/(1-p_i))</script>
+. Nothing in that result addresses correlated errors. The literature that does — Ladha (1992), <em>American Journal of Political Science</em> 36, 617–34, and the line of work following it — establishes the two boundary conditions Definition 2 was built to match: positive pairwise correlation degrades majority accuracy toward the individual voter’s own accuracy <script type="math/tex">p</script>
+ at the high end, and recovers the independent-voter result at the low end, with the Condorcet guarantee’s asymptotic climb toward certainty eroding somewhere in between. What none of that literature supplies, as far as this post can verify, is the specific linear-interpolation functional form connecting those two points. <script type="math/tex">Q(N,p,\rho)</script>
+ fills that gap by construction, not by transcription. Blurring that line would let a real citation lend borrowed authority to a formula nobody actually published.</p>
+<h2 id="what-the-independence-failure-looks-like-in-a-concrete-case">What the Independence Failure Looks Like in a Concrete Case</h2>
+<p>The independence-assumption chain isn’t only a theoretical concern waiting to bite a future deployment. Take a single-family, five-explorer ensemble, run against a convergent formal-proof task: every explorer scores between 0.83 and 1.00, averaging 0.967. By any naive reading, that’s a healthy pool — high scores, tight agreement, nothing to flag.</p>
+<p>Now apply outlier-resistant selection to that same pool. It discards four of the five proposals as geometric outliers and keeps one. The resulting diversity-adjusted quality signal, <script type="math/tex">j_{\text{eff}}</script>
+ — the ratio of realized ensemble value to its theoretical ceiling under genuine independence — comes out at 0.400, roughly forty cents on the dollar for a pool that looked, on its face, like it was performing near its ceiling. The five high scores were not five independent confirmations of a good answer. They were one answer, confidently restated five times, and the algorithm built to protect against a corrupted minority does exactly what it was built to do: it finds the “outliers” and rejects them — except the outliers, on a convergent task like this one, are frequently where whatever genuine diversity the pool had left was actually hiding.</p>
+<p>The finer-grained diagnosis matters more than the headline number: this failure pattern is specific to <em>convergent</em> task types, where the correct answer is well-attested enough in training data that independent sampling converges on it regardless of genuine reasoning diversity. On a <em>divergent</em>, constraint-heavy task — one where the correct approach genuinely isn’t obvious from surface pattern-matching — the same single-family pool, measured the same way, would instead show genuine proposal differentiation, with a diversity-adjusted quality figure closer to two-thirds rather than four-tenths. Task convergence type, not model-family diversity alone, is the variable that determines whether outlier-resistant selection helps a pool or actively discards its remaining diversity. A fixed selection strategy applied without that distinction gets the convergent case backwards.</p>
+<h2 id="what-shipped-in-response">What Shipped in Response</h2>
+<p>Measuring <script type="math/tex">\rho</script>
+ from constraint-agreement alone conflates two different signals: two agents can share a constraint-satisfaction profile by coincidence while producing semantically distinct proposals, or diverge on constraints while producing near-identical text. A single correlation number, wherever it comes from, inherits the same blindness as USL’s single <script type="math/tex">\beta</script>
+. The response is not a smarter formula — it’s tracking two independent signals instead of collapsing them into one: a Hamming-distance measure of constraint agreement, and a cosine-similarity measure of semantic agreement on embeddings, checked against each other rather than blended.</p>
+<p><span id="prop-1"></span></p>
+<details>
+<summary>Proposition 1 -- Bivariate Coherence Gain: two independent signals catch what one scalar cannot</summary>
+<p><strong>Proposition 1</strong> (Bivariate Coherence Gain). Let <script type="math/tex">CG_{\text{hamming}}</script>
+ be the mean pairwise agreement on constraint-satisfaction fingerprints, and <script type="math/tex">N_{\text{eff}}</script>
+ the participation-ratio-based effective count of semantically independent proposals from embedding similarity:</p>
+<script type="math/tex;mode=display">N_{\text{eff}} = \frac{\left(\sum_i \lambda_i\right)^2}{\sum_i \lambda_i^2}</script>
+<p>over the eigenvalues <script type="math/tex">\lambda_i</script>
+ of the trace-normalized cosine-similarity kernel. A pool with high <script type="math/tex">CG_{\text{hamming}}</script>
+ and low <script type="math/tex">N_{\text{eff}}</script>
+ has coincidental constraint agreement without genuine semantic diversity — a signature neither quantity alone can produce.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> <script type="math/tex">CG_{\text{hamming}}</script>
+ alone asks “do these proposals pass the same checks.” <script type="math/tex">N_{\text{eff}}</script>
+ asks “do these proposals actually say different things.” A pool can score high on the first and near-1.0 on the second — meaning five checkmarks in the same boxes, produced by what is effectively one voice.</p>
+</blockquote>
+<p><script type="math/tex">N_{\text{eff}}</script>
+ has a clean derivation rather than a black-box definition. It’s the participation ratio applied to the eigenvalues of the trace-normalized pairwise-similarity kernel — a quantity with a clean interpretation at both extremes: at full independence the similarity kernel is close to the identity matrix, every eigenvalue is roughly equal, and <script type="math/tex">N_{\text{eff}}</script>
+ returns close to <script type="math/tex">N</script>
+. At full correlation — every proposal a near-identical restatement of one answer — the kernel collapses toward rank 1, one eigenvalue dominates, and <script type="math/tex">N_{\text{eff}}</script>
+ returns close to 1, regardless of how many nominal proposals were pooled. There’s no contested domain transfer here the way there is with <script type="math/tex">\rho</script>
+ — the participation ratio is a direct, standard measurement of how many independent directions a set of vectors actually spans, and it answers exactly the question five agreeing proposals need answered: are these five directions, or one direction measured five times.</p>
+<p>A third diagnostic, borrowed from ensemble weather forecasting, belongs here for a specific reason: checking its implementation against its namesake is itself an instance of this post’s argument. Hamill and Talagrand’s rank histogram, in its original form, accumulates a histogram of where <em>verified ground truth</em> falls, ranked among a set of ensemble forecast members, across many independent verification events — a flat histogram means the ensemble is well-calibrated, a U-shaped one (mass piling at the extreme ranks) means the ensemble is too narrow relative to the truth’s actual variability, a dome-shaped one (mass piling in the middle ranks) means it’s too wide. What’s implemented under this name here does not rank ground truth among proposals at all — no external truth enters the computation. It ranks how many proposal scores in a run exceed the <em>second-highest</em> score in that same run, a purely self-referential measure of how tightly the top of the pool clusters, accumulated across many resolved tasks into a histogram the same shape-classification logic is then applied to.</p>
+<p>That’s a real methodological gap, not a naming quibble — the classical diagnostic’s calibration claim depends on ranking an independent quantity against the ensemble; this version ranks the ensemble against itself. A related, narrower limit deserves the same directness: LLM-as-judge scores aren’t exchangeable draws from one distribution the way the classical method requires, which makes this tool a weak signal for relative comparisons at best, not an absolute calibration measurement — it needs an independent oracle before any calibration claim built on it can be trusted. That caveat is necessary. It’s not sufficient on its own to cover the deeper point: even with exchangeable, oracle-verified scores, a diagnostic that never touches ground truth isn’t measuring calibration in the sense its borrowed name implies — it’s measuring cluster tightness at the top of a pool, which is a real and useful signal, just a different one than “Talagrand rank histogram” would lead a reader familiar with the source field to expect.</p>
+<p>That gives the pool three diversity signals, each catching something the other two are blind to — Hamming agreement, cosine-based semantic independence, and top-of-pool clustering — with the third weighted for what it actually is rather than what its name suggests. It says nothing yet about what the merge step does with a pool that fails any of them — which is the second half of this post, and the part that turns an assumption failure into a specific mechanism failure.</p>
+<h2 id="what-breaks-when-the-merge-step-doesn-t-know">What Breaks When the Merge Step Doesn’t Know</h2>
+<p>Picture a pipeline stage that assembles the final synthesis prompt from every proposal that survives pruning, with the verification score stripped out before it arrives — proposal <em>text</em> forwarded to the merge step, never proposal <em>scores</em>. A proposal that had passed six of six binary checks and a proposal that had passed one of six would sit in the same context window with the same implicit authority, because nothing downstream could tell them apart.</p>
+<p>The research the fix drew on forms a chain, not a single citation. Maryanskyy, Budnikov and Kaliyev name the selection bottleneck directly — Mixture-of-Agents quality depends on what reaches the aggregator, not on the aggregator’s sophistication — the fix belongs <em>before</em> synthesis, not inside it <a href="#ref-7" class="cite-ref" data-def="Maryanskyy, Budnikov & Kaliyev (2026) — When Agents Disagree: The Selection Bottleneck in Multi-Agent LLM Pipelines, arXiv:2603.20324" aria-label="Maryanskyy, Budnikov & Kaliyev (2026) — When Agents Disagree: The Selection Bottleneck in Multi-Agent LLM Pipelines, arXiv:2603.20324">[7]</a>
+. Constitutional AI’s critique-revision loop supplies the pattern for what to do with a rejected proposal instead of discarding it — treat the rejection as a structured negative target for the next attempt, not as silence <a href="#ref-8" class="cite-ref" data-def="Bai et al. (2022) — Constitutional AI: Harmlessness from AI Feedback" aria-label="Bai et al. (2022) — Constitutional AI: Harmlessness from AI Feedback">[8]</a>
+. RouteMoA supplies the pattern for cutting cost before synthesis rather than inside it — a lightweight scorer screens the query itself, before every model in the pool has been called, narrowing the field to a high-potential subset; only that subset proceeds to inference and a lighter judge-based rescoring, rather than the full pool running before anything gets filtered <a href="#ref-9" class="cite-ref" data-def="Wang, Wu, You, Song, Wang, Shan, Li, Zhang, Le, Chen, Guan & Tao (2026) — RouteMoA: Dynamic Routing without Pre-Inference Boosts Efficient Mixture-of-Agents, arXiv:2601.18130" aria-label="Wang, Wu, You, Song, Wang, Shan, Li, Zhang, Le, Chen, Guan & Tao (2026) — RouteMoA: Dynamic Routing without Pre-Inference Boosts Efficient Mixture-of-Agents, arXiv:2601.18130">[9]</a>
+. Denisov-Blanch et al.’s argument that crowd-wisdom strategies fail for LLM truthfulness is the case for keeping the score attached to the text all the way through, rather than treating verification as a gate that ends once a proposal is admitted <a href="#ref-10" class="cite-ref" data-def="Denisov-Blanch, Kazdan, Chudnovsky, Schaeffer, Guan, Adeshina & Koyejo (2026) — Consensus is Not Verification: Why Crowd Wisdom Strategies Fail for LLM Truthfulness, arXiv:2603.06612" aria-label="Denisov-Blanch, Kazdan, Chudnovsky, Schaeffer, Guan, Adeshina & Koyejo (2026) — Consensus is Not Verification: Why Crowd Wisdom Strategies Fail for LLM Truthfulness, arXiv:2603.06612">[10]</a>
+. SMoA is the justification for sparse rather than dense reconciliation — synthesizing only over proposals that passed, never the full pool including rejects <a href="#ref-11" class="cite-ref" data-def="Li, Tan, Qian, Li, Chaudhary, Hu & Shen (2024) — SMoA: Improving Multi-agent Large Language Models with Sparse Mixture-of-Agents, arXiv:2411.03284" aria-label="Li, Tan, Qian, Li, Chaudhary, Hu & Shen (2024) — SMoA: Improving Multi-agent Large Language Models with Sparse Mixture-of-Agents, arXiv:2411.03284">[11]</a>
+.</p>
+<p><span id="prop-2"></span></p>
+<details>
+<summary>Proposition 2 -- Regime-Gated Synthesis: route by score separation before spending a synthesis call</summary>
+<p><strong>Proposition 2</strong> (Regime-Gated Synthesis). Given sorted verification scores <script type="math/tex">s_1 \geq s_2 \geq \dots \geq s_N</script>
+ and a calibrated separation unit <script type="math/tex">t_v</script>
+:</p>
+<script type="math/tex;mode=display">\Delta = s_1 - s_2</script>
+<p>A pool with zero survivors exits before any synthesis call is made at all. A pool with exactly one survivor — <script type="math/tex">N = 1</script>
+ after pruning, no <script type="math/tex">s_2</script>
+ to measure <script type="math/tex">\Delta</script>
+ against — is handled as its own <em>single-survivor</em> case: select <script type="math/tex">s_1</script>
+ directly. That’s the degenerate version of the next case, stated separately because there is no second score for the separation condition to be computed from, not because the routing logic differs. Otherwise, with <script type="math/tex">N \geq 2</script>
+ survivors, a <em>clear-leader</em> case selects <script type="math/tex">s_1</script>
+ directly, no synthesis, when <script type="math/tex">\Delta \geq 2t_v</script>
+. That single condition is doing the whole job: <script type="math/tex">t_v</script>
+ is calibrated so that crossing <script type="math/tex">2t_v</script>
+ already implies a high estimated correctness for the leader — a property of what the threshold means, established once at calibration time, not a second quantity re-checked on every routing decision. Otherwise it falls to the <em>tight-cluster</em> case — reconcile only the passing subset.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> The old design ran a full synthesis pass on every task, on the theory that reconciling more input is always safer. The new design asks first whether there’s anything to reconcile — a proposal with a decisive-enough lead doesn’t need a committee to agree with it, because the lead itself, past a calibrated threshold, already stands in for high estimated correctness. Nothing else needs to be checked at that point; the threshold was built to carry that meaning.</p>
+</blockquote>
+<p>The default separation unit, <script type="math/tex">t_v</script>
+, is itself a calibrated quantity rather than an arbitrary round number, and the calibration is exactly what makes the single <script type="math/tex">\Delta \geq 2t_v</script>
+ check sufficient: <script type="math/tex">t_v</script>
+ is set small enough that a genuinely decisive lead over the second-best proposal routes to the cheap path, large enough that two closely-scored proposals, plausibly reflecting real disagreement rather than measurement noise, still route through reconciliation instead of a coin-flip selection dressed up as confidence. Move the calibration and the correctness guarantee it implies moves with it — which is also the threshold’s exposure: it’s only as reliable as the calibration run that set it, not a property re-verified at decision time.</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart TD
+    classDef gate fill:none,stroke:#333,stroke-width:2px;
+    classDef ok fill:none,stroke:#22c55e,stroke-width:2px;
+    classDef alt fill:none,stroke:#ca8a04,stroke-width:2px;
+    A[Verified proposals, scores attached] --> B{Zero survivors?}
+    B -->|yes| C[Exit before any LLM call]:::ok
+    B -->|no| S{Exactly one survivor?}
+    S -->|yes| T[Single survivor: select it directly]:::ok
+    S -->|no, two or more| D{"Clear lead in score,<br/>past the calibrated threshold?"}
+    D -->|yes| E[Clear leader: select it directly]:::ok
+    D -->|no| F[Tight cluster: reconcile the passing subset]:::alt
+    F --> G[Structured violation feedback to next retry]:::alt
+</pre><figcaption>Figure 2: regime-gated synthesis. Score information, previously stripped out before the merge step, now determines the routing decision before any reconciliation call runs.</figcaption>
+<p>The structured feedback loop in the diagram’s last box has its own worked-out decay behavior. “Remember what failed” and “remember it forever, undiluted” are different design choices with different failure modes, which is why the decay rate needs to be stated precisely rather than left implicit. A per-constraint violation counter carried across retries decays geometrically rather than resetting or persisting flat — each retry wave multiplies the prior wave’s recorded violation weight by a fixed factor below one, giving the count an effective half-life of roughly two retries. A constraint that failed once, three waves ago, still counts against a proposal now, but at a fraction of its original weight — recent evidence dominates, old evidence fades rather than vanishing outright or accumulating without bound. That’s a deliberate middle position between two failure modes on either side of it: a counter that resets every wave forgets a recurring problem the moment the wave that surfaced it ends, and a counter that never decays lets one early, possibly-stale violation keep penalizing a proposal line of reasoning long after later waves have moved past it.</p>
+<h2 id="framework-in-practice-a-multi-tenant-billing-task-walked-through">Framework in Practice — A Multi-Tenant Billing Task Walked Through</h2>
+<p>Abstract routing rules earn their keep against a concrete task. The walkthrough below is a constructed illustration, in the same register as the <script type="math/tex">j_{\text{eff}} = 0.400</script>
+ example earlier in this post, built to make the mechanism legible rather than to report a specific run. A committee of five explorers, single model family, is asked to design a quota-change mechanism for a multi-tenant billing service, required to satisfy four simultaneous constraints: idempotency under retry, an immutable audit trail, no distributed locks on the hot path, and strict tenant isolation on shared infrastructure keys.</p>
+<p>Phase one: calibration. The pool’s measured <script type="math/tex">CG_{\text{hamming}}</script>
+ comes back moderate — proposals agree on roughly six in ten constraint checks — and <script type="math/tex">N_{\text{eff}}</script>
+, measured independently from embeddings, comes back near two, not five. That gap is the bivariate signal doing its job: five nominal proposals, but genuinely only about two independent semantic approaches among them, likely a lock-based approach and a lock-free approach, each restated with minor variation by two or three explorers apiece.</p>
+<p>Phase two: verification. Four of five proposals fail the no-distributed-locks constraint outright — a classic blocking-lock pattern, textbook-common and exactly what the corpus forbids for this hot path. One proposal, using a lock-free atomic update instead, survives with a real but thin margin — passing seven of ten total binary checks across the four constraints, not a comfortable margin above the pass threshold.</p>
+<p>Phase three: the point this post is actually about. Before score-aware routing existed, all five proposals — four failing, one thin-margin survivor — would have reached the merge step with their scores stripped, reconciled as if all five carried equal authority. With scores attached, the regime classifier sees a single survivor and a wide margin below it: this is the single-survivor case, returned directly, no synthesis call spent reconciling four proposals that had already failed a hard constraint. The one proposal that matters reaches the operator without four rejected lock-based drafts diluting its presentation — and just as importantly, the four rejected proposals’ specific violation — the no-distributed-locks constraint from the original four, the same one the blocking-lock pattern tripped in phase two — gets recorded as structured feedback for the next retry wave, in case the thin-margin survivor’s approach needs reinforcement later, rather than discarded the moment the wave ends.</p>
+<p>The independence failure and the routing fix are visible in the same run: an <script type="math/tex">N_{\text{eff}}</script>
+ near 2 is the independence-assumption chain showing up as a measurement, not a theorem; routing the single survivor straight through, and attaching the structured feedback to the four rejects, is what the merge step does differently once it’s told the truth about which of the five proposals actually deserved to be there.</p>
+<h2 id="where-this-sits-among-everything-else-called-multi-agent-orchestration">Where This Sits Among Everything Else Called “Multi-Agent Orchestration”</h2>
+<p>The term covers several genuinely different layers of a stack. Separating them matters before claiming credit for solving any one:</p>
+<table><thead><tr><th style="text-align: left">Layer</th><th style="text-align: left">What it does</th><th style="text-align: left">Relationship to this post’s mechanisms</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Inference</strong></td><td style="text-align: left">Serves the model itself</td><td style="text-align: left">Delegated to entirely — not this layer’s concern</td></tr>
+<tr><td style="text-align: left"><strong>Adapter-internal optimization</strong></td><td style="text-align: left">Compiles prompts and few-shot weights inside one model call</td><td style="text-align: left">Complementary — an internally-optimized adapter can sit inside any explorer slot</td></tr>
+<tr><td style="text-align: left"><strong>Distributed compute fabric</strong></td><td style="text-align: left">Maps agents to hardware, schedules, scales</td><td style="text-align: left">Delegated to — decides <em>where</em> an agent runs, not <em>how many</em> or <em>which role</em></td></tr>
+<tr><td style="text-align: left"><strong>Topology and coordination</strong></td><td style="text-align: left">Bounds N, calibrates correlation, routes by regime, attributes quality</td><td style="text-align: left">Where everything in this post lives</td></tr>
+<tr><td style="text-align: left"><strong>Agentic frameworks generally</strong></td><td style="text-align: left">Compose tools, memory, control flow</td><td style="text-align: left">Adjacent — most don’t bound N from a measured coefficient or route by score regime</td></tr>
+<tr><td style="text-align: left"><strong>Empirical aggregators (MoA family)</strong></td><td style="text-align: left">The strongest published competitors on raw quality</td><td style="text-align: left">Directly comparable, directly citable, not yet directly benchmarked here</td></tr>
+</tbody></table>
+<p>The honest claim for this post’s mechanisms is narrow and specific: calibrated bounding <em>plus</em> score-aware regime routing is the wager, against unbounded aggregation generally. It is a defensible wager, grounded in five independently-converging papers rather than one — and it remains, as stated below, an unverified one on this system’s own task domain until the comparison actually runs.</p>
+<h2 id="where-this-is-still-honest-about-what-it-hasn-t-shown">Where This Is Still Honest About What It Hasn’t Shown</h2>
+<p>The regime-gated design’s predicted routing behavior holds on the walkthrough worked through above. What hasn’t been shown yet is a head-to-head comparison against the strongest published alternatives on the same task domain. Mixture-of-Agents reports 65.1% on AlpacaEval 2.0 against GPT-4o’s 57.5% <a href="#ref-12" class="cite-ref" data-def="Wang, Wang, Athiwaratkun, Zhang & Zou (2024) — Mixture-of-Agents Enhances Large Language Model Capabilities, arXiv:2406.04692" aria-label="Wang, Wang, Athiwaratkun, Zhang & Zou (2024) — Mixture-of-Agents Enhances Large Language Model Capabilities, arXiv:2406.04692">[12]</a>
+; Self-MoA reports that aggregating repeated samples from a single top-performing model beats standard cross-model mixing in most scenarios it was tested against — a 6.6% improvement over MoA on AlpacaEval 2.0, and an average 3.8% gain across MMLU, CRUX, and MATH <a href="#ref-13" class="cite-ref" data-def="Li, Lin, Xia & Jin (2025) — Rethinking Mixture-of-Agents: Is Mixing Different Large Language Models Beneficial?, arXiv:2502.00674" aria-label="Li, Lin, Xia & Jin (2025) — Rethinking Mixture-of-Agents: Is Mixing Different Large Language Models Beneficial?, arXiv:2502.00674">[13]</a>
+. Neither number has been reproduced or contested here. That comparison — not a new mechanism — is the actual next step, and saying so plainly is more useful than implying the fix closes a question the fix was never tested against.</p>
+<blockquote>
+<p><strong>Cognitive Map.</strong> Three theorems, three borrowed clauses: independence (Condorcet), an adversarial-not-honest minority (Krum), one coherency scalar meaning one thing (USL). None survive contact with agents drawn from overlapping training data intact — and the failure isn’t hypothetical, it’s a measured <script type="math/tex">j_{\text{eff}} = 0.400</script>
+ on a convergent-task pool, four valid proposals discarded by an algorithm doing exactly what it was built to do. Bivariate coherence — Hamming agreement checked against semantic independence, plus a third clustering diagnostic borrowed in name from ensemble weather forecasting but measuring something narrower than its namesake, a limit stated precisely here rather than inherited silently — is the response to the third theorem’s blindness. Score-aware, regime-gated synthesis, with a decaying cross-retry memory of what specifically failed, is the response to what a merge step does once it knows the first two don’t hold by default. Even the measurement meant to fix the first theorem carries its own unresolved question — which direction <script type="math/tex">CG_{\text{mean}}</script>
+ should translate into correlation — stated here as an open formula ambiguity rather than smoothed over. The remaining open question is not whether any of this works on its own terms — each piece does, on the runs it was tested against — but whether the whole assembly wins against the strongest published alternative on this system’s own task domain, a comparison that hasn’t been run yet, and won’t be resolved by another paragraph of confident prose.</p>
+</blockquote>
+<p><strong>Compute it.</strong> Before trusting an ensemble’s disagreement rate as a signal of anything, check one thing directly: does the merge step that combines your agents’ outputs ever see which ones passed verification, and by how much? If the score dies at the merge boundary, the aggregation is blind by construction — independent of how sophisticated the algorithm downstream claims to be. And before trusting the diversity number attached to that ensemble, check a second thing: is it one scalar, or two independent measurements checked against each other? A pool that agrees on which checks it passed while saying five genuinely different things needs to be told apart from a pool that agrees on both — and one number, however carefully computed, cannot make that distinction. Two can.</p>
+<hr />
+<p><sup>[1]</sup> Lorenz, J., Rauhut, H., Schweitzer, F. &amp; Helbing, D. (2011). <em>How Social Influence Can Undermine the Wisdom of Crowd Effect.</em> Proceedings of the National Academy of Sciences, 108(22), 9020–9025.</p>
+<p><sup>[2]</sup> Krogh, A. &amp; Vedelsby, J. (1995). <em>Neural Network Ensembles, Cross Validation, and Active Learning.</em> Advances in Neural Information Processing Systems, 7, 231–238.</p>
+<p><sup>[3]</sup> Lefort, B., Benhamou, E., Ohana, J.-J., Guez, B., Saltiel, D. &amp; Jacquot, T. (2024). <em>Examining Independence in Ensemble Sentiment Analysis: A Study on the Limits of Large Language Models Using the Condorcet Jury Theorem.</em> arXiv:2409.00094.</p>
+<p><sup>[4]</sup> Blanchard, P., El Mhamdi, E. M., Guerraoui, R. &amp; Stainer, J. (2017). <em>Byzantine-Tolerant Machine Learning.</em> NeurIPS / arXiv:1703.02757.</p>
+<p><sup>[5]</sup> Ruan, C., Wang, Y., Shi, Z. &amp; Li, J. (2025). <em>Reaching Agreement Among Reasoning LLM Agents.</em> arXiv:2512.20184.</p>
+<p><sup>[6]</sup> Yang, Y., Qu, C., Wen, M., Shi, L., Wen, Y., Zhang, W., Wierman, A. &amp; Gu, S. (2026). <em>Understanding Agent Scaling in LLM-Based Multi-Agent Systems via Diversity.</em> arXiv:2602.03794.</p>
+<p><sup>[7]</sup> Maryanskyy, A., Budnikov, D. &amp; Kaliyev, A. T. (2026). <em>When Agents Disagree: The Selection Bottleneck in Multi-Agent LLM Pipelines.</em> arXiv:2603.20324.</p>
+<p><sup>[8]</sup> Bai, Y. et al. (2022). <em>Constitutional AI: Harmlessness from AI Feedback.</em> Anthropic / arXiv:2212.08073.</p>
+<p><sup>[9]</sup> Wang, J., Wu, H., You, Z., Song, Y., Wang, Y., Shan, Z., Li, Y., Zhang, S., Le, X., Chen, C., Guan, X. &amp; Tao, D. (2026). <em>RouteMoA: Dynamic Routing without Pre-Inference Boosts Efficient Mixture-of-Agents.</em> arXiv:2601.18130.</p>
+<p><sup>[10]</sup> Denisov-Blanch, Y., Kazdan, J., Chudnovsky, J., Schaeffer, R., Guan, S., Adeshina, S. &amp; Koyejo, S. (2026). <em>Consensus is Not Verification: Why Crowd Wisdom Strategies Fail for LLM Truthfulness.</em> arXiv:2603.06612.</p>
+<p><sup>[11]</sup> Li, D., Tan, Z., Qian, P., Li, Y., Chaudhary, K. S., Hu, L. &amp; Shen, J. (2024). <em>SMoA: Improving Multi-agent Large Language Models with Sparse Mixture-of-Agents.</em> arXiv:2411.03284.</p>
+<p><sup>[12]</sup> Wang, J., Wang, J., Athiwaratkun, B., Zhang, C. &amp; Zou, J. (2024). <em>Mixture-of-Agents Enhances Large Language Model Capabilities.</em> arXiv:2406.04692.</p>
+<p><sup>[13]</sup> Li, W., Lin, Y., Xia, M. &amp; Jin, C. (2025). <em>Rethinking Mixture-of-Agents: Is Mixing Different Large Language Models Beneficial?</em> arXiv:2502.00674.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+      
+    
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+        
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/borrowed-guarantees/" class="series-link">
+            Theorems Out of Warranty
+          </a>
+          
+            <span class="series-progress">Part 1/4</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;borrowed-guarantees-part2-same-weights-different-hats&#x2F;" title="The Familiarity Bias">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>

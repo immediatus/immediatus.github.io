@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="Post 3 cited a paper this series can&#x27;t quietly set aside: threshold-based eviction, proven dynamically unstable under saturated demand, a worst-case limit cycle that costs up to half of throughput. This post takes on the population Blood Oath was built to exclude from that result (tasks that can actually be evicted) and asks the two questions Post 3 left open: is a single eviction worth its cost, and is running that rule as a policy, at scale, safe from the instability Post 3 only watched from the outside. It also checks a third: would a fleet-wide coordinator make a better call than the local rule this post proves optimal on its own terms: and the answer splits in two, one physical reason coordination can&#x27;t help the ranking decision itself, and one real, unpriced reason it still might help pace evictions across nodes sharing the same fabric." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Optimal Stopping at the Edge of a Limit Cycle - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part4-eviction-crossover&#x2F;" />
+  <meta property="og:description" content="Post 3 cited a paper this series can&#x27;t quietly set aside: threshold-based eviction, proven dynamically unstable under saturated demand, a worst-case limit cycle that costs up to half of throughput. This post takes on the population Blood Oath was built to exclude from that result (tasks that can actually be evicted) and asks the two questions Post 3 left open: is a single eviction worth its cost, and is running that rule as a policy, at scale, safe from the instability Post 3 only watched from the outside. It also checks a third: would a fleet-wide coordinator make a better call than the local rule this post proves optimal on its own terms: and the answer splits in two, one physical reason coordination can&#x27;t help the ranking decision itself, and one real, unpriced reason it still might help pace evictions across nodes sharing the same fabric." />
+
+  <title>Optimal Stopping at the Edge of a Limit Cycle - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part4-eviction-crossover&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>Optimal Stopping at the Edge of a Limit Cycle</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-08-12T00:00:00+00:00" pubdate>12 August 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/scheduling/">#scheduling</a>
+              <a class="tag" href="https://e-mindset.space/tags/queueing-theory/">#queueing-theory</a>
+              <a class="tag" href="https://e-mindset.space/tags/control-theory/">#control-theory</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<h2 id="the-failure-mode-this-series-has-avoided-by-construction">The Failure Mode This Series Has Avoided by Construction</h2>
+<p>Post 3 cited a result and then, honestly, mostly set it aside. A June 2026 paper models memory-constrained LLM serving under threshold-based admission and eviction as a discrete-time dynamical system. It proves something specific about the eviction case, not just something qualitatively worrying <a href="#ref-1" class="cite-ref" data-def="Ao, R., Dong, J., Luo, G. & Simchi-Levi, D. (2026) — Service-Induced Congestion in Memory-Constrained LLM Serving" aria-label="Ao, R., Dong, J., Luo, G. & Simchi-Levi, D. (2026) — Service-Induced Congestion in Memory-Constrained LLM Serving">[1]</a>
+. Under saturated demand, the eviction-free equilibrium is unstable. The system doesn’t degrade gracefully as pressure rises. Except for a measure-zero set of exact-capture initial conditions the paper itself carves out and doesn’t lean on for safety, it converges to a limit cycle instead: a self-sustaining oscillation. The server evicts a batch of in-flight tasks to free memory; the freed memory admits a new batch; that batch grows toward the same threshold, gets evicted in turn, and the cycle repeats indefinitely rather than settling. The mechanism has a name in the paper: service-induced congestion. The service process manufactures its own future capacity crisis, because KV caches keep growing as generation proceeds. Admitting freely today is exactly what forces the eviction tomorrow. Worst case, the paper’s own bound puts the throughput loss at 50%. Half the fleet’s useful work, gone to an oscillation nobody chose and the threshold rule itself creates.</p>
+<p>It’s worth being honest about why any operator would want to reintroduce eviction at all, rather than treating Posts 1 and 2’s non-preemptive answer as good enough for everything. Blood Oath’s own machinery buys safety by refusing to touch anything already admitted. That’s exactly what makes it safe, and exactly what makes it expensive: every reserved-margin slot <a href="/blog/no-safe-number-part2-provisioning-window/#def-2a">Definition 2a</a> prices, every demoted task <a href="/blog/no-safe-number-part3-bottleneck-moves/#def-4">Definition 4</a> refuses to admit, is capacity held back specifically because nothing, once running, can be taken back. A pool that could evict cheaply wouldn’t need nearly as much of that margin, because a bad admission would be a recoverable mistake rather than a committed one. That’s the entire economic case for wanting eviction back for any part of the population that can actually support it, and it’s a real one. It’s also exactly the case Ao et al.’s own result should make an operator pause before accepting uncritically. The same mechanism that promises to recover margin can, under the wrong conditions, cost half of the fleet’s throughput instead: a worse outcome than the conservative posture it was meant to improve on.</p>
+<p>Post 3 had a clean way out of engaging with this directly, and used it. Blood Oath’s own second property, no preemption, a task runs to completion or the node dies with it, rules the entire mechanism out by construction. There is no evict step in Definition 4’s world. So the paper’s specific instability has no channel to operate through. Definition 4 refuses new admissions under pressure; it never touches anything already running. Post 3 drew that distinction carefully, with a Mermaid diagram showing the two paths side by side. It closed with an honest hedge of its own: even the admission-refusal loop that’s left has a control-theoretic delay in it. Blood Oath’s heavy-tailed duration distribution gives it a structural reason to expect better behavior than a fixed-duration system would show, but that’s an argument from analogy, not a proof. Whether Definition 4’s own loop is provably stable was left as unfinished work, named rather than assumed away.</p>
+<p>This post is where that avoidance stops being available. Not because Definition 4 changes, and not because Blood Oath does. Post 1’s own closing “Compute it.” already named the case this post has to answer. A workload with ingress blindness, but where preemption is available <em>and</em> the task’s own accumulated state can genuinely be relocated rather than only ever discarded, doesn’t need <a href="/blog/no-safe-number-part1-blood-oath/#prop-a">Proposition A</a>’s response. It needs the eviction-crossover treatment, a strictly easier problem than the one Post 1 and Post 2 solve. Easier does not mean free of the exact hazard Post 3 spent a whole section proving Blood Oath avoids. The moment this series relaxes non-preemptibility for any part of its population, even a narrower, more cooperative part than Blood Oath itself, the door the cited paper walked through is open again, on purpose this time. This post is obligated to check what’s on the other side of it before recommending anyone walk through it too.</p>
+<h2 id="the-population-this-post-actually-studies">The Population This Post Actually Studies</h2>
+<p><a href="/blog/no-safe-number-part1-blood-oath/#def-1">Definition 1</a> built three properties into a single workload by design: ingress blindness, execution immortality, locality lock. This post studies a task that keeps the first and drops the other two. The difference between “drops” and “never had” matters enough to state precisely. A Blood Oath task’s KV cache is architecturally locked to the accelerator that built it. Property 3 isn’t a policy choice this post is free to override; it’s a physical fact about where the memory lives and how fast it can be reached from anywhere else. A <strong>checkpointable</strong> task is a different physical object: one whose accumulated state, its KV cache, can actually be serialized and moved off the accelerator holding it, whether to another accelerator, to host memory, or across a network link, at a real, finite, computable cost rather than an architecturally prohibitive one. Property 1 stays untouched either way. Nothing about being checkpointable tells a scheduler how long a task will run; that’s still unknown at admission and stays unknown until completion, the same ingress-blindness property Definition 1’s first clause names.</p>
+<p>This is worth stating plainly rather than leaving implicit. Post 3’s own DRF correction already taught this series what happens when a scope boundary goes unstated for too long: <strong>Blood Oath itself is not in this post’s population.</strong> A reasoning-trace generation with a locked-in cache is exactly the workload Post 1 and Post 2 exist to protect. Nothing here changes that protection or claims to improve on it. What this post studies is whatever fraction of a real production pool is checkpointable in the first place, an ordinary and common case in practice. vLLM’s PagedAttention, and comparable mechanisms in other serving stacks, already support swapping a sequence’s paged KV cache out to host memory and back, precisely to make eviction survivable rather than destructive. A task built on that kind of infrastructure pays a real relocation cost when evicted, but it doesn’t pay Blood Oath’s cost, restart from zero, discard everything computed so far. It resumes.</p>
+<p>What actually falls into this population, in a real deployment, is worth naming concretely rather than left as an abstract property. Batch and offline inference jobs, where nothing downstream is waiting on a specific token’s latency, are checkpointable almost by default: nobody notices a few extra seconds of relocation overhead on a job that wasn’t real-time to begin with. Long-running agentic sessions built around explicit tool-call boundaries are checkpointable at those boundaries even when they aren’t checkpointable mid-generation, since a tool call is already a natural pause point where state can be serialized cheaply. What stays outside this population, deliberately, is anything built the way Blood Oath was built: a single, continuous, latency-sensitive generation with no natural pause point and a KV cache the accelerator’s own memory bus assembled incrementally, the exact case Definition 1’s property 3 was written to describe. A real pool’s mix between these categories is deployment-specific, and this post makes no claim about what fraction of any given fleet falls on which side of that line. What it claims is narrower and checkable: whatever fraction <em>is</em> checkpointable can be reasoned about with Proposition 5’s machinery, and whatever fraction isn’t should be left entirely to Posts 1 and 2’s treatment, not quietly folded into this post’s more permissive one.</p>
+<p>The specimen, then, is Post 3’s own multi-resource pool, narrowed to its checkpointable sub-population: tasks under real, disaggregated-serving memory pressure, holding KV cache that grows the same way this series has priced it since Post 3. It reuses this series’ own Pareto<script type="math/tex">(x_m, \alpha=2.2)</script>
+ duration distribution, since nothing about being checkpointable changes how long a task tends to run, only whether it can be interrupted along the way. Everything Post 3 built for pricing the resource stays load-bearing here. What’s new is the decision this post’s population can make that Blood Oath’s never could: evict, at a price, or keep running.</p>
+<h2 id="definition-5a-what-trading-continuation-against-eviction-actually-costs">Definition 5a: What Trading Continuation Against Eviction Actually Costs</h2>
+<p><span id="def-5a"></span></p>
+<details>
+<summary>Definition 5a -- Eviction Achievable Region: continuation cost traded against eviction cost, for a single, isolated eviction decision</summary>
+<p><strong>Definition 5a</strong> (Eviction Achievable Region). For a checkpointable task that has run for elapsed time <script type="math/tex">t</script>
+, holding accumulated state <script type="math/tex">S(t)</script>
+, a decision to continue running carries an expected opportunity cost, <script type="math/tex">E[R \mid T > t] \cdot c_{\text{opp}}</script>
+, the expected remaining holding time times the cost of holding the resource per unit time. A decision to evict instead carries a real relocation cost, <script type="math/tex">C_{\text{evict}}(S)</script>
+, a function of how much accumulated state has to move. Every choice of when to evict maps to a point on the same two-cost frontier shape as <a href="/blog/no-safe-number-part1-blood-oath/#def-0">Definition 0</a> and Definition 2a. Waiting longer before evicting raises the opportunity cost paid if eviction turns out to be the right call; evicting sooner raises the chance of paying a relocation cost for a task that was about to finish on its own. No policy improves one side of that tradeoff without worsening the other; that is what makes it an achievable-region object at all, not a threshold to guess at.</p>
+<p><strong>This Definition describes a single, isolated eviction decision, and no more than that.</strong> It says nothing yet about what happens when the same rule fires repeatedly, across a whole population, under sustained pressure. Post 3’s cited instability result is specifically about a <em>policy</em> applied at scale, not a single well-priced choice. Keeping that scope narrow here is what lets Proposition 5b, further down, ask the population-scale question honestly instead of quietly assuming the isolated-decision answer already covers it.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> This is the same shape of question Definition 2a asked about reserved margin and <a href="/blog/no-safe-number-part3-bottleneck-moves/#def-4a">Definition 4a</a> asked about per-resource frontiers, asked here about a genuinely different kind of decision: not how much capacity to hold back, but how long to keep running a task that’s already admitted before cutting your losses on it. The frontier exists because both extremes are bad in an obvious, checkable way. Never evict, and a pool of checkpointable tasks behaves exactly like Blood Oath, paying every heavy task’s full opportunity cost with no escape hatch, despite having one available. Evict immediately, on the first sign a task might be heavy, and the pool pays relocation costs constantly, for tasks that would have finished cheaply on their own. Proposition 5, next, is the specific rule that sits on this frontier rather than guessing at either extreme.</p>
+</blockquote>
+<h2 id="pricing-both-sides-of-the-decision">Pricing Both Sides of the Decision</h2>
+<p>Two quantities need real numbers before Proposition 5 can say anything more precise than “somewhere in between.” Neither should be invented from scratch; both are extensions of numbers this series has already earned.</p>
+<p>Why dollars, and not slot-equivalents, the unit Definition 2a and <a href="/blog/no-safe-number-part2-provisioning-window/#prop-3">Proposition 3</a> both used for their own cost accounting. Those two objects priced a binary reservation decision, how many of thirty-two fungible slots to hold back, where every slot was interchangeable and the natural unit of account was the slot itself. Proposition 5’s decision isn’t binary and its two sides aren’t measured in the same physical unit to begin with: one side is a duration, expected remaining seconds of occupancy, and the other is a data transfer, bytes of accumulated state times a link speed. A slot-equivalent has no natural way to compare “seconds not yet spent” against “bytes not yet moved.” Forcing both into that unit would hide the comparison Proposition 5 actually needs to make, rather than clarify it. Dollars are the one unit both sides convert into without a category error. That’s exactly the same justification Post 3’s Definition 4 leaned on when it borrowed DRF’s normalization idea to compare a GPU-slot count against a memory-byte count against a network-Mbps figure. This post borrows that same move once more, on a decision Definition 4 never had to make, whether to spend money moving something now against the money at stake in letting it keep running.</p>
+<p><strong>The opportunity cost of continuing to run, <script type="math/tex">c_{\text{opp}}</script>
+.</strong> Holding a checkpointable task’s accelerator instead of freeing it for other work has a real per-second cost, and a real, if illustrative, way to price it: on-demand cloud GPU rates for the class of accelerator this series has used throughout, roughly $2.50/hour. That figure is flagged here as a representative order of magnitude rather than tied to a specific vendor quote, the same discipline Post 3 applied to its own illustrative per-token streaming overhead. That works out to <script type="math/tex">c_{\text{opp}} \approx \$0.000694</script>
+ per second.</p>
+<p><strong>The cost of evicting, <script type="math/tex">C_{\text{evict}}(S)</script>
+.</strong> Definition 1’s own property 3 discussion already named what a relocation actually costs, physically: moving accumulated KV cache across a link slower than the memory bus that built it, a cost that grows with however much state has accumulated by the time the move happens. Kept fully symbolic, that cost is a fixed overhead plus a link-bandwidth-limited transfer term:</p>
+<script type="math/tex;mode=display">C_{\text{evict}}(S(t)) = c_0 + c_{\text{opp}} \cdot \frac{S(t)}{B}</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">S(t)</script>
+ - the accumulated state a task holds at elapsed time <script type="math/tex">t</script>
+</li>
+<li><script type="math/tex">c_0</script>
+ - the fixed, size-independent overhead of any eviction</li>
+<li><script type="math/tex">B</script>
+ - the relocation link’s bandwidth</li>
+</ul>
+<p><script type="math/tex">c_0</script>
+ covers control-plane bookkeeping, re-scheduling, re-attaching the relocated state on its new host, and a modest allowance for the destination accelerator warming back up rather than resuming at full speed instantly. Neither is a mathematical constant the way <script type="math/tex">\alpha</script>
+ or <script type="math/tex">\pi</script>
+ would be: both are specimen-specific parameters, priced separately, the same discipline this series has applied to <script type="math/tex">c_{\text{opp}}</script>
+ and <script type="math/tex">C_u</script>
+, <script type="math/tex">C_o</script>
+ since Post 1.</p>
+<p><strong>Instantiating <script type="math/tex">B</script>
+ and <script type="math/tex">S(t)</script>
+.</strong> This post can price the relocation link for the first time using a real number this series already has on hand: the 200 Gb/s ConnectX-7 InfiniBand port Post 3 used to time the prefill-to-decode KV-cache handoff, a real <script type="math/tex">B \approx 25</script>
+ GB/s of effective transfer bandwidth <a href="#ref-2" class="cite-ref" data-def="NVIDIA (2021) — ConnectX-7 InfiniBand Adapter Card Datasheet" aria-label="NVIDIA (2021) — ConnectX-7 InfiniBand Adapter Card Datasheet">[2]</a>
+. <script type="math/tex">S(t)</script>
+ itself reuses this series’ own established accounting exactly: the decode rate Post 3 measured, <script type="math/tex">500/33 \approx 15.15</script>
+ tokens per second <a href="#ref-3" class="cite-ref" data-def="TrueFoundry (2024) — Benchmarking Llama-2-70B" aria-label="TrueFoundry (2024) — Benchmarking Llama-2-70B">[3]</a>
+, and the 320KiB-per-token KV-cache cost Post 3 derived from Llama-2-70B’s real published configuration <a href="#ref-4" class="cite-ref" data-def="Touvron, H. et al. (2023) — Llama 2: Open Foundation and Fine-Tuned Chat Models" aria-label="Touvron, H. et al. (2023) — Llama 2: Open Foundation and Fine-Tuned Chat Models">[4]</a>
+. Together they give a task accumulating cache at a rate <script type="math/tex">\sigma \approx 4.97</script>
+ MB per second of elapsed decode, so <script type="math/tex">S(t) = \sigma t</script>
+. <script type="math/tex">c_0</script>
+ itself is priced the same illustrative way, at <script type="math/tex">\$0.50</script>
+. Plugging <script type="math/tex">\sigma</script>
+ and <script type="math/tex">B</script>
+ into the transfer-time term shows something worth stating before it gets buried in the next section’s arithmetic. Even accumulated over the crossover time this post derives below, the total transfer cost stays a tiny fraction of <script type="math/tex">c_0</script>
+: roughly four thousand times smaller, the same order of magnitude the later per-second comparison finds. A real, modern interconnect moves KV cache fast enough that, for any task in the range this post actually cares about, the size of the cache being relocated barely matters to what eviction costs. What matters is the fixed cost of deciding to relocate at all. As the next section shows, exactly how large that fixed cost is relative to the opportunity-cost rate isn’t a detail; it determines whether a single, well-behaved crossover exists at all.</p>
+<h2 id="proposition-5-the-eviction-crossover">Proposition 5: The Eviction Crossover</h2>
+<p><span id="prop-5"></span></p>
+<details>
+<summary>Proposition 5 -- Eviction Crossover: preempt exactly when expected remaining opportunity cost exceeds relocation cost</summary>
+<p><strong>Proposition 5</strong> (Eviction Crossover). For a checkpointable task with elapsed running time <script type="math/tex">t</script>
+:</p>
+<p><script type="math/tex;mode=display">\text{Preempt when } E[R \mid T > t] \cdot c_{\text{opp}} > C_{\text{evict}}(S(t))</script>
+
+<script type="math/tex;mode=display">\text{Continue when } E[R \mid T > t] \cdot c_{\text{opp}} \leq C_{\text{evict}}(S(t))</script>
+</p>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">E[R \mid T > t]</script>
+ - the expected remaining running time, given survival to <script type="math/tex">t</script>
+</li>
+<li><script type="math/tex">c_{\text{opp}}</script>
+ - the opportunity cost of continuing, per unit time</li>
+<li><script type="math/tex">C_{\text{evict}}(S(t))</script>
+ - the relocation cost, a function of accumulated state</li>
+</ul>
+<p><script type="math/tex">E[R \mid T > t]</script>
+ is not a new quantity. It is <a href="/blog/no-safe-number-part2-provisioning-window/#prop-2b">Proposition 2b</a>’s mean residual life, corrected there to be piecewise: <script type="math/tex">m(t) = E[S_h] - t</script>
+ for <script type="math/tex">t < x_m</script>
+, where survival is certain, and <script type="math/tex">m(t) = t/(\alpha-1)</script>
+ for <script type="math/tex">t \geq x_m</script>
+, once elapsed time itself becomes genuine evidence about how much longer a task will run. The same derived object Post 2 built to decide when autoscaling arrives in time now decides when eviction is worth its cost: one formula doing a second, structurally identical job. The same domain the formula requires there applies here too, without exception.</p>
+<p>The two-inequality form above is the rule as a decision; the same comparison also has a value form, named here because later sections in this post reuse it by name:</p>
+<script type="math/tex;mode=display">V(t) = m(t) \cdot c_{\text{opp}} - C_{\text{evict}}(S(t))</script>
+<p><script type="math/tex">V(t) > 0</script>
+ is exactly the preempt case above; <script type="math/tex">V(t) \leq 0</script>
+ is exactly the continue case. The same rule, rewritten as a single signed quantity rather than a pair of inequalities, is useful precisely because later sections need to ask not just which side of zero <script type="math/tex">V(t)</script>
+ falls on, but how it moves and what it correlates with.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> The rule compares two things, and which one is bigger depends on where <script type="math/tex">t</script>
+ sits relative to <script type="math/tex">x_m</script>
+. Below <script type="math/tex">x_m</script>
+, survival is certain, so expected remaining opportunity cost <em>falls</em> as elapsed time passes. Every second run is a second closer to the point where the task’s own tail behavior takes over, not evidence the task will keep going. Past <script type="math/tex">x_m</script>
+, the opposite holds: elapsed time becomes real evidence of a long remaining run, and expected remaining opportunity cost grows without bound. The right side, eviction cost, is nearly flat throughout, dominated by a fixed overhead that doesn’t scale with how long the task has already run. For a fixed overhead large enough to sit above the opportunity-cost curve’s own value at <script type="math/tex">t=0</script>
+, the two curves don’t meet anywhere in <script type="math/tex">[0, x_m)</script>
+ at all: continuing is cheaper than evicting for the entire span where survival is guaranteed. The only crossing happens once, on the rising branch past <script type="math/tex">x_m</script>
+, never to cross back. That’s not automatic. It’s a condition on the prices, checked below before it’s assumed, and it’s also the condition doing the real work in the claim that follows. A one-step-look-ahead rule, compare continuing against stopping now, stop the moment continuing stops paying, is only a heuristic in general. Nothing guarantees a myopic threshold beats every other stopping strategy unless the problem is <em>monotone</em>: once stopping is favorable, it stays favorable, so no policy that ever continues past that point can do better than one that stops there. The single crossing just established is exactly that monotonicity. With it, this is precisely, and not by metaphor, an <strong>optimal-stopping rule</strong> in the classical decision-theory sense, the myopic rule provably optimal, not merely shaped like one. Without it, a myopic rule can be beaten by a policy willing to look further ahead: exactly what a non-monotone hazard would produce. That’s the same mixture risk Post 1’s own Model Scope names for a population blending multiple sub-populations with different characteristic durations, four hazard-rate reversals instead of one smooth decline. That risk was named there for a different mechanism, whether elapsed time reliably predicts remaining time at all, but it bears just as directly here. A duration mixture doesn’t just weaken the elapsed-time signal Proposition 5’s own <script type="math/tex">m(t)</script>
+ depends on; it can break the single-crossing property this optimal-stopping claim requires, reopening the crossing more than once and making the myopic rule provably suboptimal rather than merely approximate.</p>
+</blockquote>
+<p><strong>Solved symbolically first, then instantiated, not left symbolic forever, but not built on a hardcoded number either.</strong> <script type="math/tex">t^*</script>
+ here is a new crossover, not a reuse of Post 1’s <a href="/blog/no-safe-number-part1-blood-oath/#def-1b">Definition 1b</a> crossover time of the same name. That one marks when an elapsed-time posterior overtakes a fixed classification confidence, a probabilistic quantity measured in single-digit seconds for this series’ own specimen. This one marks an economic optimal-stopping point, measured in the hundreds of seconds. The two share a symbol because both are, structurally, the point where one curve overtakes another, not because they’re the same object. Context disambiguates which is meant everywhere this series uses <script type="math/tex">t^*</script>
+, but it’s worth naming once rather than trusting a reader to infer it. For <script type="math/tex">t \geq x_m</script>
+, expanding <script type="math/tex">C_{\text{evict}}(S(t)) = c_0 + c_{\text{opp}}\sigma t/B</script>
+ and setting it equal to the opportunity-cost side, <script type="math/tex">(t/(\alpha-1)) \cdot c_{\text{opp}}</script>
+, and solving for <script type="math/tex">t</script>
+:</p>
+<script type="math/tex;mode=display">t^* = \frac{c_0}{c_{\text{opp}} \left(\dfrac{1}{\alpha-1} - \dfrac{\sigma}{B}\right)}</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">t^*</script>
+ - the economic optimal-stopping crossover, in seconds, not Definition 1b’s own <script type="math/tex">t^*</script>
+ (see note above)</li>
+<li><script type="math/tex">\alpha, c_0, c_{\text{opp}}, \sigma, B</script>
+ - this specimen’s own priced parameters, instantiated above</li>
+</ul>
+<blockquote>
+<p><strong>Trace example, continued.</strong> Plugging this series’ own numbers straight through: <script type="math/tex">\alpha=2.2</script>
+, <script type="math/tex">c_{\text{opp}}\approx\$0.000694</script>
+/s, <script type="math/tex">c_0=\$0.50</script>
+, <script type="math/tex">\sigma\approx4.97</script>
+MB/s, <script type="math/tex">B\approx25</script>
+GB/s.</p>
+</blockquote>
+<p>Every quantity in that expression is a parameter of the specimen, not a universal constant: <script type="math/tex">\alpha</script>
+ from this series’ own tail, <script type="math/tex">c_{\text{opp}}</script>
+ and <script type="math/tex">c_0</script>
+ priced above, <script type="math/tex">\sigma</script>
+ and <script type="math/tex">B</script>
+ instantiated above. The formula is agnostic to what any of them turn out to be. Before plugging numbers in, the first thing worth checking is whether a single, well-behaved crossover exists at all: it does exactly when <script type="math/tex">c_0</script>
+ exceeds the opportunity-cost curve’s own maximum on <script type="math/tex">[0,x_m)</script>
+, which (since that branch is decreasing) is its value at <script type="math/tex">t=0</script>
+, <script type="math/tex">E[S_h] \cdot c_{\text{opp}}</script>
+. With <script type="math/tex">\alpha = 2.2</script>
+, <script type="math/tex">c_{\text{opp}} \approx \$0.000694</script>
+/s, and <script type="math/tex">c_0 = \$0.50</script>
+ from above: <script type="math/tex">E[S_h]\cdot c_{\text{opp}} \approx \$0.2083</script>
+, and <script type="math/tex">\$0.50 > \$0.2083</script>
+, with room to spare. (This is worth flagging as a real modeling choice, not a coincidence: a fixed overhead priced much below roughly <script type="math/tex">\$0.21</script>
+ would reopen a second, early-eviction zone before <script type="math/tex">x_m</script>
+, an artifact this post is deliberately pricing around rather than papering over, see Model Scope.) With that checked, the crossover sits entirely on the <script type="math/tex">t \geq x_m</script>
+ branch. There, the left-hand side grows at <script type="math/tex">c_{\text{opp}}/(\alpha - 1) \approx \$0.000579</script>
+ per second of elapsed time, and the right-hand side (<script type="math/tex">c_0</script>
+ plus the <script type="math/tex">c_{\text{opp}}\sigma/B</script>
+ transfer term) grows at roughly <script type="math/tex">\$0.00000014</script>
+ per second, over four thousand times slower. Instantiating the symbolic solution above with this specimen’s own numbers:</p>
+<script type="math/tex;mode=display">t^* \approx 864.2\text{ seconds}</script>
+<p>864 seconds is worth sitting with, because it’s a genuinely different shape of surprise than a first guess might expect, not “surprisingly soon,” but “surprisingly rare.” It’s roughly 2.9<script type="math/tex">\times</script>
+ <script type="math/tex">E[S_h] = 300</script>
+s, the mean heavy-task duration this series has treated as its own unit of “long” since Post 1, and roughly 5.3<script type="math/tex">\times</script>
+ <script type="math/tex">x_m \approx 163.6</script>
+s. Since Pareto’s density is highest at its own minimum and falls off from there, the fraction of the heavy population that ever runs long enough to clear <script type="math/tex">t^*</script>
+ at all is <script type="math/tex">(x_m/t^*)^\alpha \approx 2.6</script>
+%: fewer than one heavy task in thirty-eight. At <script type="math/tex">t=300</script>
+s, exactly the mean, continuing is still comfortably cheaper: <script type="math/tex">m(300) \cdot c_{\text{opp}} \approx \$0.174</script>
+ against a relocation cost of <script type="math/tex">\$0.50</script>
+. Even at <script type="math/tex">t=600</script>
+s, twice the mean, the comparison hasn’t flipped: <script type="math/tex">m(600) \cdot c_{\text{opp}} \approx \$0.347</script>
+ still under <script type="math/tex">\$0.50</script>
+. Only past <script type="math/tex">t^*\approx864</script>
+s does eviction actually win. For a genuinely checkpointable task under real, grounded pricing, eviction isn’t a routine intervention against ordinary heavy-task duration at all. It’s a remedy reserved for the rare, genuine long-tail outlier, exactly the population a heavy tail’s own shape says will be hardest to predict in advance and, per Proposition 5b below, the population least likely to arrive in lockstep with anything else.</p>
+<p><strong>How much does the crossover move if the illustrative prices are wrong?</strong> <script type="math/tex">t^*</script>
+ scales linearly in the ratio <script type="math/tex">c_0 / c_{\text{opp}}</script>
+, since the negligible transfer-time term barely touches either slope: provided the well-behaved-crossover check above still passes at the adjusted prices. Doubling the GPU-hour price to $5.00/hour halves the crossover to roughly 432.1 seconds; halving it to $1.25/hour doubles the crossover to roughly 1,728.4 seconds. Both remain safely inside the checked, single-crossover regime (at $5.00/hour, <script type="math/tex">E[S_h]\cdot c_{\text{opp}} \approx \$0.417</script>
+, still under <script type="math/tex">c_0=\$0.50</script>
+). What doesn’t move with the price assumptions is the qualitative shape of the finding: across this $1.25-to-$5.00 spread, the crossover stays multiples of <script type="math/tex">E[S_h]</script>
+, not a fraction of it. Eviction remains a rare-outlier remedy at every price in this range, not a routine one. What moves is the exact second and the exact rarity; what doesn’t move is that shape, and it’s the shape, not the specific 864, that this post’s later sections lean on.</p>
+<p><strong><script type="math/tex">t^*</script>
+ moves with <script type="math/tex">\alpha</script>
+ too. It’s worth checking the actual shape of that dependence rather than assuming it’s fragile, because <script type="math/tex">\alpha</script>
+ governs a different, less forgiving threshold elsewhere in this series.</strong> On the <script type="math/tex">t\geq x_m</script>
+ branch this crossover lives on, mean residual life takes the closed form <script type="math/tex">m(t) = t/(\alpha-1)</script>
+, so <script type="math/tex">t^* = c_0(\alpha-1)/c_{\text{opp}}</script>
+: linear in <script type="math/tex">\alpha-1</script>
+, not explosive, and well-behaved everywhere except the limit <script type="math/tex">\alpha \to 1</script>
+, where the mean itself stops existing: a boundary this specimen’s own <script type="math/tex">\alpha=2.2</script>
+ sits nowhere near.</p>
+<table><thead><tr><th style="text-align: left"><script type="math/tex">\alpha</script>
+</th><th style="text-align: left"><script type="math/tex">t^*</script>
+</th></tr></thead><tbody>
+<tr><td style="text-align: left">2.2 (this specimen)</td><td style="text-align: left">864.2s</td></tr>
+<tr><td style="text-align: left">2.0</td><td style="text-align: left">720.5s</td></tr>
+<tr><td style="text-align: left">1.9</td><td style="text-align: left">648.4s</td></tr>
+</tbody></table>
+<p><em>The eviction crossover moves lower, not higher, as the tail heavies (lower <script type="math/tex">\alpha</script>
+): linear in <script type="math/tex">\alpha-1</script>
+, not explosive.</em></p>
+<p><strong>Lower, not higher</strong>: and not by an order of magnitude, because a heavier tail means <script type="math/tex">m(t)</script>
+ grows <em>faster</em> with elapsed time, so the crossover where growing opportunity cost finally exceeds the fixed relocation cost is reached <em>sooner</em>, not later. There’s a real, separate reason <script type="math/tex">\alpha \leq 2</script>
+ matters to this series: <a href="/blog/no-safe-number-part3-bottleneck-moves/#prop-4">Proposition 4</a>’s own second moment, in Post 3, genuinely does stop existing at that exact boundary. But that’s a different quantity than <script type="math/tex">t^*</script>
+, which only ever needed the first moment. Conflating the two thresholds overstates what an <script type="math/tex">\alpha</script>
+ drift into the 1.9–2.2 range actually does to this specific number.</p>
+<p><strong>The real gap this exposes.</strong> <script type="math/tex">t^*</script>
+ was computed once, from a single measured <script type="math/tex">\alpha</script>
+. Nothing in Proposition 5c re-derives it the way Post 2’s own Knowledge phase re-derives <script type="math/tex">G</script>
+ from a continuously-updated <script type="math/tex">\hat{\lambda}</script>
+. A 0.3 shift in <script type="math/tex">\alpha</script>
+ moves <script type="math/tex">t^*</script>
+ by roughly 25% here: real, boundable, checkable against the formula above. But a deployment running Proposition 5’s crossover as a value baked in at design time, rather than recomputed against a periodically re-measured <script type="math/tex">\alpha</script>
+ the way Post 2’s own Hill-estimator discipline already prescribes, will drift out of sync with its own true optimum. That drift is continuous, not catastrophic, as the underlying duration distribution moves: a slow, compounding inefficiency rather than the sudden breakdown a naive reading of “the tail got heavier” might suggest.</p>
+<p><strong>What this rule buys back, named against the exact bound Proposition A took away.</strong> Post 1’s Proposition A proved that under Definition 1’s three properties together, no algorithm can achieve any non-trivial competitive-ratio guarantee. It named the mechanism: an adversary that keeps extending whatever job the algorithm is currently running, unable to abandon it <a href="#ref-5" class="cite-ref" data-def="Motwani, R., Phillips, S. & Torng, E. (1994) — Nonclairvoyant scheduling" aria-label="Motwani, R., Phillips, S. & Torng, E. (1994) — Nonclairvoyant scheduling">[5]</a>
+. That same paper’s own positive result, round-robin’s 2-competitive deterministic bound, is part of what preemption buys back the moment it’s available; the broader literature it opened up adds a further result on top, randomized preemptive algorithms reaching <script type="math/tex">\Theta(\log n)</script>
+-competitiveness. Neither bound requires knowing task durations in advance, the same ingress blindness this post’s population still carries. Both require exactly the one thing this post’s population has and Blood Oath doesn’t: the ability to stop running a job before it finishes. Proposition 5’s crossover rule is one concrete way to exercise that ability, priced against this series’ own specimen rather than left as an abstract competitive-ratio guarantee.</p>
+<p><strong>The Constraint Sequence Framework note, and why it runs backward here.</strong> Every earlier use of the 
+  
+  
+    
+    
+    
+  
+
+<a href="https://e-mindset.space/blog/microlearning-platform-part6-meta-framework/#the-constraint-sequence-framework" class="defined-term" data-def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding" aria-label="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding">Constraint Sequence Framework</a>
+ in this series has run the same direction: a fix at one level of abstraction reveals a tighter constraint one level down, and the fix has to move down to meet it. This post is the one place that sequencing reverses. Proposition A excluded a face of the achievable region, the world where preemption exists, by fiat, because Blood Oath’s own Definition 1 rules it out. This post doesn’t discover a new constraint underneath that exclusion. It relaxes the property that created the exclusion in the first place, for a population narrow enough to afford relaxing it, and the excluded face becomes reachable again, not despite the framework but because of it. The framework never claimed a downstream constraint was permanent, only that it couldn’t be dissolved by re-optimizing upstream. Removing the actual property that generated it is a different move entirely, available here specifically because this post’s specimen was scoped, honestly, to exclude the population where that property is load-bearing rather than optional.</p>
+<h2 id="proposition-5-answers-a-question-definition-4-never-asked">Proposition 5 Answers a Question Definition 4 Never Asked</h2>
+<p>Proposition 5 is a per-task rule. It has no term in it for the pool’s own state. It compares one task’s own opportunity cost against its own relocation cost and says nothing about whether the node is, at that exact moment, comfortably provisioned or seconds from running out of memory. That’s a real, load-bearing gap, not a simplification that washes out in the aggregate: worth stating plainly rather than discovering by consequence: <strong>Proposition 5, exactly as derived, governs only the voluntary regime.</strong> It answers “is this task worth moving, on its own economics”, never “does the node need memory right now.” Definition 4, from Post 3, already has a signal for that second question: <script type="math/tex">H_r(t) \leq H_{\min}^r</script>
+ for the memory resource specifically. But Definition 4’s own response was scoped to admission (refuse new work, touch nothing already running) precisely because Post 3’s specimen had no eviction mechanism to reach for. This post’s population does. Composing the two isn’t automatic just because both now exist; it has to be stated, or the gap between them becomes a real operational failure mode, not a hypothetical one.</p>
+<p>Put the failure mode concretely. Suppose <script type="math/tex">H_{\text{mem}}(t)</script>
+ crosses <script type="math/tex">H_{\min}^{\text{mem}}</script>
+ (Definition 4’s redline fires) and the pressure is coming from already-admitted checkpointable tasks accumulating KV cache, not from a burst of new arrivals Definition 4’s admission-refusal can actually stop. Suppose further that none of those running tasks has individually crossed Proposition 5’s own <script type="math/tex">t^* \approx 864</script>
+s: a likely state, not a rare one, since fewer than 3% of heavy tasks ever reach it. Proposition 5, read as the <em>only</em> eviction rule, says: evict nothing. Definition 4 says: refuse new admissions, which does nothing about memory already committed. The node has no lever left, and heads toward the failure this whole series exists to price precisely: an uncontrolled exhaustion. A working eviction mechanism sits unused because the per-task economics haven’t individually caught up to what the pool’s own state is already saying.</p>
+<p><span id="prop-5c"></span></p>
+<details>
+<summary>Proposition 5c -- Emergency Eviction Priority: once the redline is real, rank candidates by how fast they relieve pressure within the time the node actually has, not by how economically ready they are, and account for the ones already in flight</summary>
+<p><strong>Proposition 5c</strong> (Emergency Eviction Priority). When <script type="math/tex">H_{\text{mem}}(t) \leq H_{\min}^{\text{mem}}</script>
+ and admission-refusal alone is not relieving it, eviction of at least one running checkpointable task becomes mandatory, not optional. Two corrections to the voluntary rule apply, not one: which task to evict, and how fast the control loop is allowed to react to its own commands.</p>
+<p><em>Which task.</em> Not Proposition 5’s own comparison quantity, <script type="math/tex">V(t) = m(t)\cdot c_{\text{opp}} - C_{\text{evict}}(S(t))</script>
+. That quantity answers a different question: whether <em>this one</em> task is worth evicting on its own economics, not which order clears a redline breach fastest across a whole population. Reusing it here would also mean re-estimating <script type="math/tex">m(t)</script>
+ for every candidate under exactly the time pressure an emergency doesn’t have to spare. The actual objective is speed: minimize the wall-clock time until enough memory is freed, evicting sequentially, one transfer at a time.</p>
+<blockquote>
+<p><strong>Operational Axiom.</strong> Rank eviction candidates by descending <script type="math/tex">S(t)</script>
+, largest accumulated state first, not ascending. A larger transfer amortizes the same fixed overhead over more freed bytes, so relief rate rises with <script type="math/tex">S</script>
+. It doesn’t fall.</p>
+</blockquote>
+<p><script type="math/tex">c_0</script>
+ dominates the transfer term at any realistic <script type="math/tex">S</script>
+ (established above). That means a single eviction’s own effective relief rate, bytes freed per second spent evicting it, is <script type="math/tex">S/(\delta_0 + S/B)</script>
+, where <script type="math/tex">\delta_0</script>
+ is <script type="math/tex">c_0</script>
+’s own wall-clock counterpart, not the transfer-only rate <script type="math/tex">S/(S/B)=B</script>
+, a constant that doesn’t discriminate between candidates at all. Rank candidates by <strong>descending</strong> <script type="math/tex">S(t)</script>
+ instead: largest accumulated state first, among tasks that have already cleared Definition 1b’s own confidence crossover, not the ordinary sub-second traffic that hasn’t been running long enough to say, and evict down that list until the projected headroom clears.</p>
+<details class="proof">
+<summary>Mathematical proof: why relief rate strictly increases with S</summary>
+<p>Relief rate <script type="math/tex">= S/(\delta_0 + S/B)</script>
+, where <script type="math/tex">\delta_0</script>
+ is <script type="math/tex">c_0</script>
+’s own wall-clock counterpart. Its derivative with respect to <script type="math/tex">S</script>
+ is <script type="math/tex">\delta_0/(\delta_0+S/B)^2</script>
+, strictly positive for any real <script type="math/tex">\delta_0</script>
+. A larger transfer amortizes the same fixed overhead over more freed bytes: so relief rate rises with accumulated state, not falls, at every point on the curve, not just at the extremes.</p>
+</details>
+<p>That ranking maximizes relief per second of effort, which is a throughput objective. It quietly assumes any candidate’s own transfer is guaranteed to land before it matters. That’s not automatic, since the node keeps losing memory to every surviving task at rate <script type="math/tex">\sigma</script>
+ each while a chosen eviction is still in flight. There is a real deadline this maximization doesn’t see:</p>
+<script type="math/tex;mode=display">T_{\text{OOM}}(t) = H_{\text{mem}}(t) / (\sigma \cdot N_{\text{survivors}}(t))</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">T_{\text{OOM}}(t)</script>
+ - the wall-clock time until the node exhausts on its own, nothing freed</li>
+<li><script type="math/tex">H_{\text{mem}}(t)</script>
+ - the current real headroom</li>
+<li><script type="math/tex">N_{\text{survivors}}(t)</script>
+ - tasks still running, still consuming memory</li>
+</ul>
+<p><strong><script type="math/tex">T_{\text{OOM}}(t)</script>
+ prices survivor consumption theoretically, at the constant <script type="math/tex">\sigma</script>
+ this post’s own Model Scope has since shown isn’t always true. The fix isn’t swapping in <script type="math/tex">\dot{H}(t)</script>
+, though, and it’s worth being precise about why not.</strong> Definition 2’s own <script type="math/tex">\dot{H}(t)</script>
+ is a live physical signal, but it’s a finite difference of the EWMA-smoothed <script type="math/tex">\hat{H}(t)</script>
+, smoothed specifically to trade reaction speed for noise immunity. Post 2’s own Model Scope already names the cost of differentiating that smoothed signal: phase lag, a standard route to oscillation, unpriced anywhere in this series. Substituting it into <script type="math/tex">T_{\text{OOM}}(t)</script>
+ would import that exact lag into a hard safety deadline computed during an active emergency, the one moment lag is least affordable, and it cuts both ways: if relief from an earlier eviction is already landing, <script type="math/tex">\dot{H}(t)</script>
+ reflects a mix of consumption and partial credit, which could read <script type="math/tex">T_{\text{OOM}}(t)</script>
+ as safer than it actually is. The theoretical <script type="math/tex">\sigma \cdot N_{\text{survivors}}(t)</script>
+ has a real weakness of its own, the <script type="math/tex">\sigma</script>
+-jitter this post’s own Model Scope names elsewhere, but it responds instantly to a directly observable count, <script type="math/tex">N_{\text{survivors}}(t)</script>
+, rather than lagging behind a smoothed derivative. Whichever error is worse, in which direction, at a given deployment’s own tick rate and jitter magnitude, this post hasn’t compared. A team that wants a live correction to <script type="math/tex">T_{\text{OOM}}(t)</script>
+ should reach for an unsmoothed, purpose-built rate estimate distinct from <script type="math/tex">\dot{H}(t)</script>
+, not the demotion trigger’s own signal repurposed for a job it wasn’t tuned for.</p>
+<blockquote>
+<p><strong>Design Guardrail.</strong> The most efficient candidate by relief rate can still be a fatal pick.</p>
+</blockquote>
+<p>A candidate whose own <script type="math/tex">T_{\text{evict}} = \delta_0 + S/B</script>
+ exceeds <script type="math/tex">T_{\text{OOM}}(t)</script>
+ is the most efficient pick by relief rate and a fatal one to make: the node fails mid-transfer, before the one eviction chosen to save it finishes arriving. The ranking needs that deadline as a ceiling alongside Definition 1b’s own floor: descending <script type="math/tex">S(t)</script>
+, subject to <script type="math/tex">\delta_0 + S/B < T_{\text{OOM}}(t)</script>
+, taking the largest candidate that still clears its own deadline rather than the largest candidate unconditionally. Whether this ceiling actually binds at any real deployment’s own numbers turns on <script type="math/tex">\delta_0</script>
+, deliberately left illustrative above rather than pinned, and on how many survivors a real breach finds running concurrently. At this specimen’s own scale, <script type="math/tex">B</script>
+ some four thousand times larger than <script type="math/tex">\sigma</script>
+, transfer time stays small enough across any <script type="math/tex">S</script>
+ this pool produces that the ceiling is unlikely to bind, unless <script type="math/tex">\delta_0</script>
+ itself turns out to be unusually large or a breach catches an unusually large survivor population running concurrently. Unlikely to bind here is not the same as safe to omit: a deployment with a slower relocation path, a heavier per-eviction control-plane cost, or a much larger concurrently-running pool should check <script type="math/tex">T_{\text{OOM}}(t)</script>
+ against its own <script type="math/tex">\delta_0</script>
+ before trusting descending-<script type="math/tex">S(t)</script>
+ to pick a candidate that actually arrives in time.</p>
+<p>This deadline is stated per candidate. It has to be re-checked at the level a real deployment actually runs evictions at, not left there. If a single relocation clears the deficit, the per-candidate check above is the whole story. If it doesn’t, the deficit needs several evictions off the top of the ranked list before projected headroom recovers. Those evictions run one at a time, to protect the fabric from exactly the incast pattern named below. The relevant deadline isn’t any single candidate’s own <script type="math/tex">T_{\text{evict}}</script>
+ against <script type="math/tex">T_{\text{OOM}}(t)</script>
+; it’s the <em>cumulative</em> serialized time, roughly <script type="math/tex">k</script>
+ candidates’ worth of <script type="math/tex">\delta_0</script>
+ each since transfer time itself stays negligible, against the same <script type="math/tex">T_{\text{OOM}}(t)</script>
+. Serializing to protect the fabric and satisfying the physical deadline are not automatically compatible, and nothing checked so far verifies they are. A redline breach deep enough to need several evictions, on a control plane with a real, non-trivial <script type="math/tex">\delta_0</script>
+, can serialize its way past <script type="math/tex">T_{\text{OOM}}(t)</script>
+, even though every individual candidate would have cleared its own per-candidate check in isolation. Whichever mechanism ends up bounding fabric exposure has to be checked against this cumulative version of the deadline, not just the single-candidate one. That’s a real, engineering-level tension this post names rather than resolves, since resolving it means choosing a specific fabric-safety mechanism this post’s own symbolic model doesn’t commit to.</p>
+<p>This same fixed-overhead argument is why “evict smallest first” was the wrong direction to begin with, not a right direction that merely needed a floor to stay safe at the extreme. A light task finishing in half a second accumulates roughly 2.5MB of state: genuinely negligible relief for the fixed overhead <script type="math/tex">c_0</script>
+ an eviction pays regardless of size. Freeing the same <script type="math/tex">\approx1</script>
+GB a single moderately-elapsed heavy task holds at <script type="math/tex">t=200</script>
+s would take roughly 400 light-task evictions instead, paying <script type="math/tex">400 \times c_0 \approx \$200</script>
+ in fixed overhead. More to the point in an emergency, that’s 400 separate control-plane round trips, each with its own wall-clock cost, to do what one eviction of the heavy task does in one. That’s not a corner case an otherwise-sound ascending rule mishandles only at the extreme; it’s the same arithmetic at every point along the ranking, which is exactly why the rule itself needed reversing, not bounding. Definition 1b’s own confidence floor still matters here, for a narrower reason than before: descending <script type="math/tex">S(t)</script>
+ already reaches for the largest available candidates first, so it only risks dipping into ordinary, not-yet-confidently-classified traffic in the residual case where every currently-running task past that floor has already been evicted and the deficit still isn’t cleared. That’s a real boundary worth keeping stated, just no longer the rule’s main defense against its own worst case.</p>
+<p><em>How fast the loop reacts.</em> A redline check run against raw <script type="math/tex">H_{\text{mem}}(t)</script>
+ at every control-loop tick will keep firing new eviction commands for every tick the first transfer hasn’t yet completed. Freed memory doesn’t physically exist until the transfer finishes, but the loop has no way to know that from <script type="math/tex">H_{\text{mem}}(t)</script>
+ alone. A pending-credit term alone isn’t sufficient either, and shouldn’t be presented as though it were. Crediting <script type="math/tex">S_i</script>
+ for every in-flight eviction as if it were already free treats the moment those transfers land as now, when it’s actually <script type="math/tex">T_{\text{wait}}(t)</script>
+ in the future: time during which every surviving task keeps consuming memory at rate <script type="math/tex">\sigma</script>
+. Evaluate the redline against a headroom that accounts for both, natively, not as two separate patches:</p>
+<script type="math/tex;mode=display">\hat{H}_{\text{mem}}(t) = H_{\text{mem}}(t) + \sum_{i \in \text{pending}} S_i - \sigma \cdot N_{\text{survivors}}(t) \cdot T_{\text{wait}}(t)</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">T_{\text{wait}}(t)</script>
+ - time until the <em>slowest</em> still-pending transfer completes, shrinking tick by tick</li>
+<li><script type="math/tex">N_{\text{survivors}}(t)</script>
+ - checkpointable tasks still running, still consuming memory during that wait</li>
+</ul>
+<blockquote>
+<p><strong>Operational Axiom.</strong> <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+ is a projection, not a snapshot.</p>
+</blockquote>
+<p>It asks not “would I be safe if pending credits applied instantly” but “will I actually be safe once they land, given what survivors will have consumed by then.” <script type="math/tex">H_{\text{mem}}(t)</script>
+ is re-sampled live at every tick. A task’s pending credit is removed from the sum and folded into real <script type="math/tex">H_{\text{mem}}(t)</script>
+ once its transfer actually finishes, at which point it also drops out of <script type="math/tex">N_{\text{survivors}}</script>
+’s count on the pending side, and the projection shrinks to match.</p>
+<p><strong>This arithmetic is exact for the instant it targets</strong>: crediting every pending <script type="math/tex">S_i</script>
+ in full and subtracting <script type="math/tex">\sigma \cdot N_{\text{survivors}}(t)</script>
+ once over the whole <script type="math/tex">T_{\text{wait}}(t)</script>
+ gives precisely the real, physical headroom at the moment the slowest transfer lands, regardless of the order in which faster transfers complete along the way. Addition and subtraction don’t care when within the interval each pending credit actually arrived, only that it arrives by the end of it.</p>
+<p><strong>What that exactness doesn’t cover: whether headroom ever dips <em>below</em> that endpoint value before reaching it.</strong> It can, and does whenever more than one transfer is pending. Between now and the slowest transfer’s own landing, survivors keep consuming continuously while relief arrives in discrete jumps, one per completing transfer. So the real trajectory’s lowest point sits <em>before</em> the fastest pending transfer lands, not at <script type="math/tex">T_{\text{wait}}(t)</script>
+: the moment with the least relief credited and the most accumulated consumption, not the moment with all of it. <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+, checked only at the endpoint, is systematically the <em>best</em> point on that trajectory, not a conservative estimate of the worst one. A redline evaluated solely against it can read “safe” while the real, physical <script type="math/tex">H_{\text{mem}}(t)</script>
+ is, at that same moment, still falling toward a trough the projection has already priced past.</p>
+<p>Whether that gap is small enough to ignore depends on how close together pending transfers actually land. At this specimen’s own numbers, where <script type="math/tex">\delta_0</script>
+ dominates every transfer’s own duration regardless of <script type="math/tex">S</script>
+, a full wave’s individual completions cluster within a few seconds of each other, keeping the trough shallow. But “keeps it shallow at this specimen’s scale” is a checked observation, not a property the formula itself guarantees. A more conservative check verifies the trajectory’s minimum directly rather than only its endpoint, computable in closed form from the same pending set, at negligible extra cost, since the minimum can only occur at <script type="math/tex">t</script>
+ or immediately before one of the already-known pending completion times, not at an unknown point requiring a search.</p>
+</details>
+<p><pre class="mermaid">
+    
+    stateDiagram-v2
+    [*] --> Running
+    Running --> Eligible: past confidence floor
+    Eligible --> Running: V(t) < 0
+
+    state fork_choice <<choice>>
+    Eligible --> fork_choice
+    fork_choice --> Evicting_Voluntary: V(t) > 0
+    fork_choice --> Evicting_Emergency: redline breach
+
+    Evicting_Voluntary --> Transferring: pays C_evict(S)
+    Evicting_Emergency --> Transferring: pays C_evict(S)
+
+    Transferring --> Resuming: transfer lands
+    Resuming --> Running: penalization clears
+    Resuming --> [*]: T_timeout elapsed
+</pre>
+<em>Each edge compresses a checked condition, spelled out in full above and below: “past confidence floor” is Definition 1b’s own crossover, “redline breach” additionally requires ranking candidates by descending <script type="math/tex">S(t)</script>
+ and clearing the <script type="math/tex">T_{\text{OOM}}(t)</script>
+ deadline, <script type="math/tex">C_{\text{evict}}(S) = \delta_0 + S/B</script>
+, and “T_timeout elapsed” means the client gave up before the second transfer could land: nothing left worth preserving.</em></p>
+<p><strong>What this diagram deliberately leaves out:</strong> demotion, Definition 4’s own admission-refusal mechanism, never appears here: it’s a scheduling-priority change that touches nothing running, a structurally separate mechanism from the physical relocation this diagram traces.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> Both corrections exist to close the same gap: Proposition 5’s own logic was built for a world where nothing is urgent, and urgency changes what “the right candidate” and “the right reaction speed” mean. On ranking: a superficially appealing shortcut is to rank by bytes freed per second of <em>transfer</em>. But that ratio is exactly the link bandwidth, a constant, for every candidate: it doesn’t discriminate at all, and treating it as the relevant rate is what makes “ascending” look defensible when it isn’t. The rate that actually determines how fast a redline breach clears is bytes freed per second <em>spent evicting</em>, fixed overhead included, and that ratio isn’t constant. It rises with <script type="math/tex">S</script>
+, because the same fixed cost buys more relief the larger the transfer is. Ranking by descending <script type="math/tex">S(t)</script>
+, bounded below by Definition 1b’s own confidence floor so it never needs to reach into ordinary light traffic, is the formalization that rate actually supports. On reaction speed: the credited-headroom check isn’t a cosmetic addition. Without it, a control loop ticking faster than a single transfer completes is a real risk, since even a full-pool emergency transfer only takes several seconds while a Monitor/Analyze cycle typically ticks in a fraction of that. It will see the redline still breached after issuing one eviction command and simply issue another, then another, gutting far more of the node’s workload than the pressure ever required, before the first freed byte has finished crossing the wire. Definition 2a already settled the underlying cost comparison this whole mechanism rests on: a 32:1 underage-to-overage ratio, node failure costing dramatically more than one idle slot. <script type="math/tex">C_{\text{evict}}(S(t))</script>
+ stays close to <script type="math/tex">c_0</script>
+ across any realistic elapsed time, still within a fraction of a percent of <script type="math/tex">\$0.50</script>
+ even at ten thousand seconds of accumulated runtime. Against a node-failure cost this series has always treated as categorically larger, evicting <em>something</em> is never a close call. Evicting the <em>right</em> something, fast enough to matter, is the actual design problem, and it’s a ranking-and-pacing problem, not a stopping problem.</p>
+</blockquote>
+<p><strong>The projection term isn’t optional, and at this post’s own numbers it isn’t small.</strong> A <script type="math/tex">k=32</script>
+ emergency wave with a 5.5-second wait and 30 surviving tasks burns <script type="math/tex">\sigma \times 30 \times 5.5\text{s} \approx 820</script>
+MB before the credited transfers land. That’s a figure large enough, next to a margin sized in the single-digit gigabytes, to leave a control loop that only credits pending bytes and never subtracts projected consumption genuinely short of the redline it thinks it already cleared, not just flickering at tick granularity. That’s why <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+ carries the <script type="math/tex">\sigma N_{\text{survivors}} T_{\text{wait}}</script>
+ term directly rather than treating it as a refinement a careful implementer might add later. What the live re-sampling of <script type="math/tex">H_{\text{mem}}(t)</script>
+ still buys, on top of that: <script type="math/tex">N_{\text{survivors}}(t)</script>
+ and <script type="math/tex">T_{\text{wait}}(t)</script>
+ are themselves estimates, evaluated at whatever the loop currently believes about who’s running and how much longer the slowest transfer needs. A live tick corrects both against reality as new information arrives, rather than compounding a stale projection for the full duration of the wait. The residual risk that’s left is narrower than the one this post started with: not “the formula ignores survivor consumption,” but “the projection is only as good as its own estimate of <script type="math/tex">N_{\text{survivors}}</script>
+ and <script type="math/tex">T_{\text{wait}}</script>
+ between ticks.”</p>
+<p><strong>“Normal estimation-error problem” undersells that residual risk for one specific case, worth naming rather than folding into the general one.</strong> It’s the right description for ordinary jitter: a transfer running a little slower or faster than the last tick’s estimate, the kind of noise live re-sampling corrects for smoothly, tick over tick. It’s the wrong description for the PFC-storm case this post’s own Model Scope already establishes: a <em>collapse</em>, not a slowdown, the cited production failure mode’s own word for it. There, <script type="math/tex">T_{\text{wait}}</script>
+ doesn’t drift a little between ticks; it jumps, discontinuously, from a sub-second figure to several seconds, once incast congestion actually triggers. Live re-sampling corrects for drift. It only corrects for a jump <em>after</em> the tick that observes it. Every tick before that one was computing <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+ against a <script type="math/tex">T_{\text{wait}}</script>
+-estimate that PFC collapse has already made wrong by orders of magnitude, not a normal estimation error at all. How much damage that one-tick lag does depends on the control loop’s own tick rate relative to how fast a real PFC storm actually develops, a comparison this post has never run, the same way it has never run the <script type="math/tex">\sigma</script>
+-under-contention check named just above. A team on lossless RDMA fabric should treat both gaps as one question, not two: how fast can this specific fabric’s own congestion collapse, and does the control loop tick faster than that.</p>
+<p><strong>What this doesn’t solve, named rather than assumed away.</strong> Proposition 5c assumes there’s an evictable population large enough to relieve the pressure it’s responding to. If the checkpointable sub-population running at the moment of a redline breach is too small, or too uniformly early in its own lifetime, to free enough memory by evicting the top of the ranked list, this rule has nothing further to offer. The node’s fate reverts to whatever Definition 4’s admission-refusal alone can do, which Post 3 already showed is not much once the pressure comes from work already in flight. Sizing the checkpointable population itself against a real redline-breach scenario, the way Definition 2a sized <script type="math/tex">H_{\min}</script>
+ against a real bridging-window arrival process, is unfinished work this post is naming, not solving. Ranking by descending <script type="math/tex">S(t)</script>
+ happens to track, rather than fight, Proposition 5’s own economic preference. Since <script type="math/tex">S(t)</script>
+ accumulates with elapsed time for this resource, the tasks a footprint-first emergency ranking reaches for first are the same ones with larger <script type="math/tex">m(t)</script>
+, which is what Proposition 5’s own <script type="math/tex">V(t)</script>
+ rewards evicting. Within this specimen’s own model, that’s not a loose tendency: it’s exact, and worth proving rather than asserted, since “disproportionately” undersells what’s actually true here. Mean residual life for a Pareto tail takes the closed form <script type="math/tex">m(t) = t/(\alpha-1)</script>
+ for <script type="math/tex">t \geq x_m</script>
+, already established in Proposition 5’s own derivation above: strictly increasing in elapsed time <script type="math/tex">t</script>
+. <script type="math/tex">S(t) = \sigma t</script>
+, this post’s own accumulation model, is strictly increasing in that same <script type="math/tex">t</script>
+, using the single specimen-wide <script type="math/tex">\sigma</script>
+ Proposition 5’s own <script type="math/tex">C_{\text{evict}}(S)</script>
+ formula uses everywhere else in this post. Two quantities that are each strictly increasing functions of the same variable induce the same ordering: for any two candidates with elapsed times <script type="math/tex">t_1 < t_2</script>
+, <script type="math/tex">S(t_1) < S(t_2)</script>
+ exactly when <script type="math/tex">m(t_1) < m(t_2)</script>
+, since both inequalities reduce to <script type="math/tex">t_1 < t_2</script>
+ directly. <strong>Descending-<script type="math/tex">S(t)</script>
+ ranking is descending-<script type="math/tex">m(t)</script>
+ ranking, exactly, not approximately, wherever this post’s own constant-<script type="math/tex">\sigma</script>
+ model holds.</strong> The emergency channel’s own speed-first rule and Proposition 5’s own economics-first rule pick the identical order, for a real, provable reason, not a fortunate accident of this specimen’s own numbers.</p>
+<p>What keeps this from being unconditional is real, and worth stating precisely now that the exact case is proven rather than left blurred together with it. A real deployment’s <script type="math/tex">\sigma</script>
+ need not be identical across tasks the way this specimen’s own single-<script type="math/tex">\sigma</script>
+ model assumes. A task with a longer prompt accumulates state at a different effective rate than one with a shorter prompt, even holding elapsed decode time fixed, the same per-task variation Post 3’s own Model Scope section named for prompt length generally. Where <script type="math/tex">\sigma</script>
+ genuinely varies task to task, <script type="math/tex">S(t)</script>
+ and <script type="math/tex">t</script>
+ stop being interchangeable, and the exact equivalence above degrades to a strong correlation rather than a guaranteed one. A deployment with meaningfully heterogeneous prompt lengths across its checkpointable population should treat descending-<script type="math/tex">S(t)</script>
+ as a strong, but no longer exact, proxy for descending-<script type="math/tex">m(t)</script>
+, and re-verify the gap between the two rankings against its own measured <script type="math/tex">\sigma</script>
+ distribution before leaning on it as strictly as this specimen’s own single-<script type="math/tex">\sigma</script>
+ model permits. Where they do diverge, it’s still the price of the same regime shift Definition 5a’s own physical translation named at the start: continuing to run <em>something</em> stops being available once the redline is real.</p>
+<h2 id="from-one-eviction-to-a-policy-of-evicting">From One Eviction to a Policy of Evicting</h2>
+<p>Splitting Proposition 5 into a voluntary rule and Proposition 5c’s emergency priority ranking closes the trigger gap. The node no longer goes silent exactly when it needs eviction most. It opens a different one. Proposition 5c’s whole design evicts more than one task per redline breach, on purpose, and evicts them together, in response to a single shared signal, which is a structurally different pattern than Proposition 5’s own naturally-sparse, individually-timed voluntary evictions. Whether applying either version of this machinery <em>repeatedly</em>, across a whole pool of checkpointable tasks under sustained pressure, is safe to run as a standing policy is not a hypothetical question. It is the exact question Post 3’s own citation answers, and answers unfavorably, for a system that behaves the way a naive population-scale application of eviction would behave. Proposition 5c’s emergency channel is, if anything, the more dangerous of the two to check.</p>
+<p>Restated precisely, because the distinction is the whole point of this section: Ao et al.’s proof is about <em>eviction</em>, not admission-refusal. Post 3’s own admission-refusal loop, Definition 4, was a structurally different mechanism, and Post 3 said so explicitly, hedging honestly that its own stability was an open question argued from analogy, not proof. This post’s population doesn’t get to lean on that same distinction. A checkpointable task under Proposition 5’s rule <em>is</em> evicted, not merely demoted or refused re-admission. Applied at population scale, under sustained memory pressure, this post’s own mechanism is not adjacent to the paper’s subject. It is the paper’s subject, run for real rather than borrowed as an analogy.</p>
+<p>The mechanism the paper proves unstable has a specific shape, worth restating precisely rather than trusted as “roughly what happened in Post 3’s diagram.” Memory pressure rises toward a threshold. A batch of tasks crosses Proposition 5’s crossover point at roughly the same time and gets evicted together. The memory that frees up admits a fresh batch. If that fresh batch’s tasks tend to reach the same crossover point at roughly the same elapsed time as each other, because they were admitted together and share a similar duration profile, the system evicts them together too, and the cycle repeats, synchronized, without settling. Fifty percent of throughput, in the paper’s own worst case, spent on compute that gets evicted before it pays off, over and over, not because any single eviction decision was wrong, but because the <em>population</em> of decisions resonates with itself.</p>
+<p><strong>The paper’s own model has one more assumption worth checking before its mechanism is reused wholesale. It studies tasks that are evicted and, on re-admission, start from zero: a fresh task with no relationship to whatever was evicted before it.</strong> This post’s population doesn’t behave that way. The difference isn’t cosmetic. A checkpointable task that’s evicted isn’t discarded; its state is serialized and moved, and the system still owes it that state back the moment it’s re-admitted. Re-admission for this population isn’t a fresh start. It’s a second transfer: the same multi-hundred-megabyte-to-multi-gigabyte KV cache pulled back across the same kind of link the eviction just used to move it out, before the task can resume doing anything useful at all. Call this <strong>memory gravity</strong>: a checkpointable task doesn’t leave the system’s own accounting when it’s evicted, it just becomes a liability with a return trip already owed. If the scheduler treats a just-evicted task as an ordinary new arrival, competing for readmission on the same footing as anything else waiting, the specific failure mode Ao et al. describe gets a second, worse channel to run through. Not just compute wasted on tasks evicted before they paid off, but the <em>same</em> large task’s state paid to move out and immediately paid again to move back in, every time it wins re-admission only to get caught by the next redline breach. A limit cycle built on this population isn’t bounded by compute waste alone, the way the cited paper’s own model is. It’s compounded by bidirectional transfer cost the paper’s stateless model never has to pay. The minimal defense: a just-evicted checkpointable task should not be immediately eligible to compete for re-admission on equal terms. A penalization window, sized against this post’s own transfer-time numbers rather than guessed at, keeps a task’s return trip from starting until there’s real reason to believe the memory it would re-claim is actually going to stay available.</p>
+<p><strong>A re-admitted task doesn’t just compete for memory on the same footing as a genuinely new one. If it’s counted the same way, it corrupts the signal Post 2’s own Knowledge phase uses to decide how much margin the whole node needs.</strong> Knowledge’s <script type="math/tex">\hat{\lambda}</script>
+ is an EWMA of <script type="math/tex">c_n</script>
+, “the observed arrival count” of heavy tasks per bridging window: a mechanism that predates this post’s own population and was never revisited once eviction-and-resume entered the picture. A resumption isn’t a new piece of work arriving; it’s the same task’s own state coming back, already priced once when it was first admitted. Counting it again as a fresh arrival inflates <script type="math/tex">c_n</script>
+ by exactly the number of resumptions landing in that window. The timing is the dangerous part, not the double-count in isolation: resumptions cluster in the immediate aftermath of an eviction wave, precisely when a redline breach has already happened and the node is already under the most pressure it sees. An inflated <script type="math/tex">\hat{\lambda}</script>
+ in that window doesn’t just overstate ordinary demand. It feeds directly back into <script type="math/tex">H_{\min}</script>
+’s own re-derivation and Definition 4’s admission-refusal threshold, widening the reserved margin and tightening admission exactly when the system just finished evicting to relieve pressure. That’s a real, closed feedback path this post’s own memory-gravity mechanism creates, and Post 2’s counter was never built to filter out. The fix costs nothing structurally, the same shape as the censored-demand fix Post 3 needed once Definition 4 started refusing admissions: <script type="math/tex">c_n</script>
+ has to count genuinely new heavy-task classifications at Definition 1b’s own classification point, tagged as such, and exclude resumptions of a task this node (or any node) has already counted once before. A resumption still needs its own accounting, since it still consumes memory and still needs Definition 4’s redline to see it coming, but it belongs in <script type="math/tex">H_{\text{mem}}(t)</script>
+ directly, not in the arrival-rate estimator that sizes tomorrow’s buffer against today’s <em>new</em> demand.</p>
+<p>That window has an upper bound this post hasn’t named. The bound comes from outside the system this post has modeled entirely in terms of memory and money. A synchronous serving architecture holds a live client connection open against every in-flight request, with its own timeout, <script type="math/tex">T_{\text{timeout}}</script>
+, independent of anything this post’s accounting prices. A task paused for longer than its client is willing to wait doesn’t get resumed into a system that still cares about the answer. The connection is already gone, and whatever compute the resumption spends finishing the task is spent for nobody. That breaks Proposition 5’s own recoverability assumption more fundamentally than a bad price ever could. <script type="math/tex">C_{\text{evict}}(S)</script>
+ was priced on the premise that relocating a task preserves the value of finishing it. A task whose client has already timed out has no value left to preserve, regardless of how cheaply its state moved. The physical bound this forces: <script type="math/tex">W_{\text{penalize}} \leq T_{\text{timeout}} - t - T_{\text{transfer\_out}} - T_{\text{transfer\_in}}</script>
+: whatever’s left of the client’s own patience once elapsed time and both transfer legs, out and back, are subtracted. A task for which that bound is already negative (one whose remaining timeout budget can’t cover even a zero-length penalization window) has nothing left to protect by checkpointing at all; the honest choice for that task is the same one Blood Oath was always stuck with, terminate outright, not pay a relocation cost for a resumption nobody will be there to receive. This post names <script type="math/tex">T_{\text{timeout}}</script>
+ as a real, unpriced parameter rather than assume synchronous clients wait indefinitely; sizing the window against a real arrival process, and against a real client-timeout distribution, is unfinished work, the same way Proposition 5c’s own population-sizing question is.</p>
+<p><strong>Proposition 5c’s own batching channel is worth separating from this description, not folded into it, because it’s a structurally closer match to the paper’s mechanism than Proposition 5’s voluntary rule ever was.</strong> The “batch crosses the crossover point at roughly the same time” story above describes several tasks <em>coincidentally</em> reaching Proposition 5’s own <script type="math/tex">t^*</script>
+ together: a coincidence Proposition 5b, next, argues a heavy tail makes unlikely. Proposition 5c doesn’t need that coincidence. It evicts several currently-running tasks <em>by design</em>, all in response to one shared signal, a single redline breach, regardless of whether any of them individually cleared <script type="math/tex">t^*</script>
+. That’s not a coincidental batch the duration distribution happens to avoid. It’s a designed batch, triggered by exactly the kind of shared threshold-crossing event Ao et al.’s own mechanism is built around. Whether the heavy tail’s protection carries over to this designed batch turns out to depend on exactly which candidates the ranking rule reaches for, which the next section works out in full. It isn’t automatic just because the batch is deliberate rather than coincidental.</p>
+<p>“Admitted together” is itself worth checking against this specimen rather than accepted as a clean starting assumption. Definition 2a already committed this series to a real arrival model, a Poisson process, not a scheduler that batches admissions into discrete cohorts. Under a Poisson process, tasks trickle in continuously rather than arriving in synchronized waves. That on its own gives a second, independent reason to expect less clustering than a worst-case resonance scenario needs: even before duration heterogeneity enters the picture, the tasks a real eviction event frees memory for were rarely admitted at exactly the same instant to begin with. That doesn’t make the resonance mechanism impossible; a memory-pressure threshold crossing is still a shared, synchronizing event regardless of how staggered the arrivals were. But it’s a second structural reason, independent of the duration-distribution argument Proposition 5b makes, worth naming rather than leaving Proposition 5b’s heavy-tail argument to carry the whole case alone.</p>
+<p>The paper’s own finding about what prevents that resonance is precise enough to check against, not just gesture at: workload heterogeneity, completions desynchronized from each other rather than clustered, breaks the resonance that drives the cycle. In the paper’s own setting, that desynchronization comes from coprime decoding lengths: task durations chosen so that no small set of tasks admitted together tends to reach a shared milestone at the same time. The paper states this specifically for what it calls input-dominated scaling, not as a claim that holds for every scaling regime a real deployment might sit in. This series’ own specimen was never built with coprime lengths in mind, but it was built, since Post 1, on a heavy-tailed Pareto<script type="math/tex">(x_m, \alpha=2.2)</script>
+ duration distribution, and a heavy tail is, structurally, a very different shape from a narrow, clustered one. Post 3 already leaned on exactly this property once, for its own admission-refusal loop. The honest version of that argument transfers here more directly than it did there: this post’s eviction loop is not an analogy to the paper’s subject needing its own separate justification. It is the paper’s actual subject. The same heavy tail that gave Post 3’s hedge its structural footing is now doing that job on the paper’s own literal case, not a borrowed one, with the same regime question Post 3 left open still open here: whether this specimen’s own scaling is the input-dominated case the paper’s own result is stated for is a measurement this series hasn’t made.</p>
+<h2 id="proposition-5b-eviction-stability-condition">Proposition 5b: Eviction Stability Condition</h2>
+<p><span id="prop-5b"></span></p>
+<details>
+<summary>Proposition 5b -- Eviction Stability Condition: heavy-tailed duration provides a structural, not proven, defense against the limit cycle</summary>
+<p><strong>Proposition 5b</strong> (Eviction Stability Condition, Voluntary Regime). A population of checkpointable tasks, each governed by Proposition 5’s <em>voluntary</em> crossover rule, has a structural reason to avoid the mass-simultaneous-eviction resonance Ao et al. prove drives a worst-case limit cycle under threshold-based eviction. Proposition 5’s own corrected crossover sits deep in the tail (<script type="math/tex">t^* \approx 864</script>
+s, reached by fewer than 3% of heavy tasks) so the population actually at risk of eviction is never the bulk of admitted tasks, clustered near <script type="math/tex">x_m</script>
+, but specifically the rare, genuine long-tail survivors. That’s the population a heavy tail’s own defining property speaks to most directly. Past <script type="math/tex">x_m</script>
+, elapsed time carries decreasing information about exactly how much longer a task has left, which spreads <em>when</em> different long-tail survivors individually cross <script type="math/tex">t^*</script>
+ rather than clustering it: precisely the opposite of the synchronized-completion structure the cited instability depends on. <strong>This condition is stated for the voluntary regime specifically and does not extend to Proposition 5c’s emergency channel without further argument</strong>, see below.</p>
+<p><strong>This is a structural argument, not a stability proof, and the difference matters enough to state without softening it.</strong> Ao et al.’s own paper achieves desynchronization through a specific, engineered mechanism, coprime decoding lengths, chosen by construction to guarantee no small subset of tasks shares a completion milestone. This post’s specimen achieves whatever desynchronization it has as a byproduct of a duration distribution chosen for entirely different reasons, back in Post 1, to model a real reasoning-trace workload, not to defeat this specific instability. That the same property happens to point the same direction is a real, load-bearing reason for optimism about the voluntary mechanism. It is not a derivation showing Proposition 5’s rule, applied at population scale under this specimen’s actual arrival and duration statistics, provably avoids the limit cycle the way Ao et al. prove their own eviction-free equilibrium is unstable in the first place. Whether it does is unfinished work this post names rather than assumes away, the same discipline Post 3 already applied to its own, structurally easier, admission-refusal question.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> Post 3 asked essentially this same question about a <em>milder</em> mechanism, refuse admission, touch nothing running, and still only managed an honest hedge, not a proof. This post’s voluntary mechanism, evict work already in flight, is the mechanism the cited paper actually studied and proved unstable under a threshold rule with no heterogeneity to break the resonance. Having a genuine structural reason to expect better behavior, grounded in the same heavy tail that’s done real work everywhere else in this series, is worth a great deal more than an unexamined assumption that eviction is fine because Proposition 5’s own math checked out. It is still, honestly, short of a proof, and a team running this mechanism in production should treat that gap as real rather than papered over by the strength of the analogy.</p>
+</blockquote>
+<p><strong>Proposition 5c’s emergency channel turns out to inherit Proposition 5b’s desynchronization protection rather than lack it. The correction from ascending to descending state changes which population the emergency channel draws from, and it lands on nearly the same one.</strong> Proposition 5b’s whole argument rests on desynchronization that arises from the <em>duration</em> distribution, different tasks reach their own <script type="math/tex">t^*</script>
+ at different, spread-out times because the tail is heavy, which is a real structural property of the rare, long-tail survivors specifically. Proposition 5c’s corrected ranking rule selects close to that same population: it evicts by <em>descending</em> accumulated state, largest and most memory-heavy first. Because <script type="math/tex">S(t)=\sigma t</script>
+ is an exactly increasing function of elapsed time within this specimen’s own constant-<script type="math/tex">\sigma</script>
+ model, the same equivalence proven above for <script type="math/tex">m(t)</script>
+ applies here directly. Ranking by <script type="math/tex">S(t)</script>
+ among currently-running tasks <em>is</em> ranking by elapsed time itself, not merely correlated with it. The tasks with the largest <script type="math/tex">S(t)</script>
+ at any given moment are exactly the rare tasks that have already run long, the same sparse long-tail survivors Proposition 5b’s desynchronization argument is about, not the common, populous early-elapsed-time majority Pareto’s density concentrates near <script type="math/tex">x_m</script>
+. That equivalence holds exactly within this post’s own single-<script type="math/tex">\sigma</script>
+ model; it degrades to a strong but no longer exact correlation for a deployment with real, per-task-varying <script type="math/tex">\sigma</script>
+, the same boundary named above. A task there could accumulate unusual footprint early without having run long. With that caveat stated, the emergency channel’s resonance risk looks better than a first pass without the ranking correction would suggest, not worse. A redline breach now draws disproportionately from the same heavy-tailed, spread-out population whose desynchronization Proposition 5b already argues for, rather than from a population concentrated enough in elapsed time to resonate the way Ao et al.’s adversarial construction requires. Whether repeated emergency-channel breaches can still fall into that resonance through some other correlation this post hasn’t ruled out is a genuinely open question it has not fully answered, but the ranking correction removes what would otherwise have been the clearest reason to expect the emergency channel’s risk to exceed the voluntary channel’s. It remains worth naming as unfinished work, behind only the more basic question of whether <script type="math/tex">m(t)</script>
+ is even well-behaved in the first place, see Model Scope.</p>
+<p><strong>Putting a number on “spread out,” rather than leaving it qualitative.</strong> A Pareto<script type="math/tex">(x_m, \alpha)</script>
+ distribution’s coefficient of variation, the ratio of its standard deviation to its mean, has a closed form for <script type="math/tex">\alpha > 2</script>
+:</p>
+<script type="math/tex;mode=display">CV = \frac{1}{\sqrt{\alpha(\alpha-2)}}</script>
+<p>At this series’ own <script type="math/tex">\alpha = 2.2</script>
+, <script type="math/tex">CV \approx 1.51</script>
+.</p>
+<blockquote>
+<p><strong>Finding.</strong> Blood Oath’s own duration distribution is <em>more</em> variable than the textbook “maximally unpredictable” baseline, not less.</p>
+</blockquote>
+<p>An exponential distribution, the case queueing theory treats as its own no-memory, no-structure reference, has <script type="math/tex">CV = 1</script>
+ exactly, by definition.</p>
+<p>That number describes the <em>unconditional</em> population, though, and Proposition 5b’s actual claim is about a narrower group: tasks that have already survived to somewhere near <script type="math/tex">t^*</script>
+. The right quantity is the coefficient of variation of <em>residual</em> life at elapsed time <script type="math/tex">t</script>
+, not of total duration, and the two aren’t the same object.</p>
+<table><thead><tr><th style="text-align: left">Regime</th><th style="text-align: left">Residual-life CV</th><th style="text-align: left">Why</th></tr></thead><tbody>
+<tr><td style="text-align: left"><script type="math/tex">t < x_m</script>
+</td><td style="text-align: left">rises from 1.51 toward 3.32</td><td style="text-align: left">survival certain, so shifting <script type="math/tex">t</script>
+ moves the mean without touching variance: <script type="math/tex">CV(t)=\text{SD}(T)/(E[T]-t)</script>
+</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">t \geq x_m</script>
+</td><td style="text-align: left">flat at <script type="math/tex">\sqrt{\alpha/(\alpha-2)} \approx 3.32</script>
+</td><td style="text-align: left">Pareto’s own scale-invariance: <script type="math/tex">T\mid T>t</script>
+ is again Pareto, now with scale <script type="math/tex">t</script>
+</td></tr>
+</tbody></table>
+<p><em>Residual-life coefficient of variation by elapsed-time regime: the sparse long-tail survivors Proposition 5’s crossover draws from are more spread out than the unconditional population, strengthening the desynchronization case.</em></p>
+<p>Pareto’s density is highest at <script type="math/tex">x_m</script>
+ and falls off from there, so the bulk of the population clusters near the low end. But the population Proposition 5’s crossover actually draws from, the sparse survivors past <script type="math/tex">t^* \approx 864</script>
+s, is <em>more</em> spread out in relative terms than the aggregate <script type="math/tex">CV \approx 1.51</script>
+ figure suggested, not less. That’s a stronger, not weaker, structural case for desynchronization among voluntary-channel evictions than this post originally claimed.</p>
+<p>This holds the same way for Proposition 5c. Ranking by descending <script type="math/tex">S(t)</script>
+ selects, for the reason given above, disproportionately from the high-<script type="math/tex">t</script>
+ end of this same curve: candidates near or past <script type="math/tex">t^*</script>
+, where residual-life <script type="math/tex">CV</script>
+ sits at or near the flat <script type="math/tex">3.32</script>
+ figure that governs the deep survivors, rather than the lower, rising range in <script type="math/tex">[1.51, 3.32]</script>
+ that governs the early-elapsed-time majority. Trading <script type="math/tex">V(t)</script>
+ for descending <script type="math/tex">S(t)</script>
+, made for a real and separate reason (transfer speed, not economics), doesn’t cost this protection the way the earlier, incorrect ascending rule would have. The emergency channel’s candidates end up about as heterogeneous, on this specific axis, as the ones the voluntary channel would have picked, because both rankings draw from the same long-elapsed-time tail for the same underlying reason: one directly, since <script type="math/tex">V(t)</script>
+ grows with elapsed time, the other by strong correlation, since <script type="math/tex">S(t)</script>
+ does too. This isn’t a guarantee at every instant, for the same reason named above: <script type="math/tex">S(t)</script>
+ and elapsed time aren’t identical. But it means the ranking correction, made purely for speed, doesn’t carry the additional desynchronization cost an earlier version of this argument found.</p>
+<p>A separate, narrower caveat still stands on its own: neither <script type="math/tex">CV \approx 1.51</script>
+ nor its <script type="math/tex">3.32</script>
+ residual-life counterpart is something a real deployment could cheaply confirm from its own traffic. Because <script type="math/tex">\alpha=2.2 < 4</script>
+, the distribution’s fourth moment is infinite, and the sample coefficient of variation converges to its true value very slowly, dominated by rare extreme draws. A team trying to verify “my own traffic actually has <script type="math/tex">CV</script>
+ this high” from a real trace should expect the empirical figure to underestimate the true value substantially, even at millions of observations, and should not treat a measured shortfall as evidence the theoretical argument is wrong. It is still not the same thing as checking this specimen’s own arrival-and-duration process against Ao et al.’s precise desynchronization condition, which the paper states for its specific coprime-length construction, not for a general class of high-<script type="math/tex">CV</script>
+ distributions. A high coefficient of variation is necessary-looking evidence for the kind of spread that condition needs; it is not, on its own, a demonstration that this specimen’s spread takes the specific form the paper’s own proof requires. That gap is named here precisely so neither number gets mistaken, on a second reading, for having closed it.</p>
+<p><em>Watch out for</em>: treating Proposition 5b’s structural argument as though it closes the question Proposition 5 opened. It doesn’t. The temptation to read “heavy tails help” as “heavy tails are enough” is exactly the kind of shortcut this series has spent three posts warning against taking on faith. Proposition 5 alone answers whether a single eviction is worth its cost; nothing about it says the resulting policy is stable at scale. Proposition 5b alone gives a structural reason for optimism about that stability; nothing about it is a proof. Both are required, together, before “eviction is the right mechanism for a checkpointable population” is a conclusion this series is actually entitled to, rather than one theorem doing the rhetorical work of two.</p>
+<h2 id="does-this-pool-actually-have-the-heterogeneity-it-s-leaning-on">Does This Pool Actually Have the Heterogeneity It’s Leaning On?</h2>
+<p>Proposition 5b’s whole structural argument rests on one assumption worth checking rather than inheriting silently: that the checkpointable sub-population carries the same heavy-tailed spread the full pool does. That’s not guaranteed by definition. There’s a real, specific reason it might not hold. Checkpointability is a property of a task’s infrastructure, not of its duration, but the two aren’t necessarily independent in a real deployment. If the workloads an operator chooses to make checkpointable in the first place, because they’re the ones expected to run long enough for eviction to matter, skew toward a narrower duration profile than the pool as a whole, restricting to “checkpointable tasks” could itself select a <em>more</em> synchronized, more resonance-prone sub-population than the one Posts 1 through 3 analyzed. That would be exactly backward from what this post needs to be true.</p>
+<p>Put a concrete shape on the worry rather than leaving it abstract. Suppose an operator’s actual policy is “make checkpointing available only past some minimum expected duration,” a reasonable-sounding engineering rule, since checkpointing infrastructure has its own fixed cost to build and isn’t worth paying for tasks that finish in milliseconds anyway. That rule, applied naively, truncates the <em>left</em> tail of the duration distribution feeding this post’s own population: every checkpointable task, by construction, already ran long enough to clear the operator’s own minimum-duration bar before checkpointing was even switched on for it. A truncated Pareto distribution has a smaller coefficient of variation than the untruncated version Proposition 5b’s <script type="math/tex">CV \approx 1.51</script>
+ was computed against, precisely because truncating the short end removes exactly the mass that made the untruncated distribution so spread out relative to its own mean. This post has not computed how much smaller, because it depends on where the truncation point sits relative to <script type="math/tex">x_m</script>
+, an operator-specific choice this post has no way to know in advance. What it can say is the direction of the effect. That direction is the one Proposition 5b needs to not be true.</p>
+<p>This is not a settled question, and it shouldn’t be presented as one. It’s a real, checkable empirical question about a real deployment’s own task-classification policy, not a property of the mathematics this post has derived. A team running this mechanism has a concrete, cheap check available before trusting Proposition 5b’s structural argument: measure the tail index of the checkpointable sub-population specifically, using the same Hill-estimator approach Post 2 already priced, rather than assuming it inherits the full pool’s <script type="math/tex">\alpha = 2.2</script>
+ by default. If the checkpointable slice turns out to have a lighter, more clustered duration distribution than the pool as a whole, Proposition 5b’s own structural defense weakens or disappears. A team in that position should weight the honest gap named above more heavily, not less, before running eviction as a standing policy at scale.</p>
+<p><strong>That measurement itself has a trap this post hasn’t named: the same mechanism built to escape one censoring gap has a censoring problem of its own.</strong> A Hill estimator needs real observations of how long tasks actually run, out to the true extreme. Proposition 5’s own crossover exists specifically to remove tasks from observation once they cross <script type="math/tex">t^*</script>
+: an evicted task’s own remaining duration, on the node that was measuring it, simply stops there. Feed that truncated record into a standard Hill estimator and it reads the absence of extreme durations as evidence of a lighter tail than the population actually has, since it never sees what would have happened past the point eviction cut it off. A falsely inflated <script type="math/tex">\alpha</script>
+ pushes <script type="math/tex">t^*</script>
+ further out, <script type="math/tex">t^* = c_0(\alpha-1)/c_{\text{opp}}</script>
+ rises directly with <script type="math/tex">\alpha</script>
+, which changes how much of the tail gets truncated on the next round of measurement too. Whether that self-referential loop converges or compounds is a question this post hasn’t checked either way. The fix is the same shape as the one this post already applied to <script type="math/tex">\hat{\lambda}</script>
+’s own re-admission bias above, not a new discipline: either track a checkpointable task’s true duration end to end, stitching its pre-eviction and post-eviction segments into one observation regardless of which node it finishes on, or fit the Hill estimator against the right-censored data directly, using a survival-analysis variant built for exactly that case rather than the plain estimator this series uses everywhere else. Measuring <script type="math/tex">\alpha</script>
+ on a population actively being evicted by threshold, then feeding that number back into the same threshold, is not a loop this post has verified is safe to run unmodified.</p>
+<h2 id="what-real-systems-already-decide-this-way">What Real Systems Already Decide This Way</h2>
+<p>vLLM’s own PagedAttention design already forces production serving engines to make a recompute-or-swap decision when memory pressure evicts a running sequence. It’s worth checking what actually governs that decision, rather than assuming it matches this post’s own variable <a href="#ref-6" class="cite-ref" data-def="Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C.H., Gonzalez, J.E., Zhang, H. & Stoica, I. (2023) — Efficient Memory Management for Large Language Model Serving with PagedAttention" aria-label="Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C.H., Gonzalez, J.E., Zhang, H. & Stoica, I. (2023) — Efficient Memory Management for Large Language Model Serving with PagedAttention">[6]</a>
+. Once an evicted sequence gets re-admitted, the engine can either swap its paged KV-cache blocks back in from wherever they were relocated, or discard them and recompute the sequence’s cache from scratch. The paper’s own reported result is precise about what drives the choice, and it isn’t a sequence’s elapsed progress or how much compute is sunk into it. Recomputation is more efficient at small block sizes, swapping is more efficient at large ones, with recomputation overhead never exceeding roughly 20% of swapping’s latency regardless: a real system tuning parameter, decided once for the deployment, not a per-task, per-eviction decision the way Proposition 5’s crossover is. That’s a real, useful data point about how a genuinely deployed system reasons about the same underlying tradeoff (relocate accumulated state versus rebuild it). But it’s evidence for a <em>different</em> decision variable than this post’s own <script type="math/tex">t</script>
+, not a direct precedent for Proposition 5’s specific per-task crossover rule, and this post shouldn’t imply otherwise.</p>
+<p>That correction also sharpens a real simplification in this post’s own model, worth naming rather than smoothing over. PagedAttention’s actual granularity is the block, not the whole task: a running sequence’s cache lives in many small, independently pageable blocks. Definition 5a’s frontier and Proposition 5’s crossover rule both price a task’s accumulated state as a single scalar <script type="math/tex">S(t)</script>
+, treating an eviction decision as all-or-nothing per task. A production implementation built on block-level paging has a cheaper-<em>looking</em> option this post hasn’t priced: evict only the oldest blocks of a task’s cache rather than the whole thing, trading a smaller relocation cost against a partial, rather than total, loss of accumulated work. Per the paper’s own finding above, the swap-versus-recompute choice for those individual blocks would itself be governed by block size, not by how far into Proposition 5’s own crossover the task has run.</p>
+<p><strong>Cheaper-looking, not cheaper, and worth stopping on rather than filing as a footnote: block-level eviction that discards rather than relocates the oldest blocks doesn’t just lose a partial amount of accumulated work. It breaks this specimen’s own strict prefill/decode separation the moment the task resumes.</strong> Self-attention needs the KV cache for every prior token still in context to generate the next one. A task whose oldest blocks were discarded, not swapped, has no path back to correct generation without reconstructing them, and reconstructing a block of KV cache from its own token IDs means running those tokens through the model again: a multi-token forward pass over already-known content, which is what prefill <em>is</em>, not what a decode node’s own hardware is provisioned to do at any real volume. If that reconstruction runs on the decode node itself, it’s chunked-prefill in every way that matters, the exact coupling Definition 4a’s separable-regions claim excludes by name, and it needs the same joint-frontier re-derivation this post already requires before trusting Definition 4’s per-resource mechanism under real chunked-prefill. If it runs by shipping the task back to a prefill node instead, the relocation this option was supposed to make cheaper is now a full prefill-side reconstruction plus a second handoff, closer to Definition 1’s own KV-cache-handoff cost than to a fraction of <script type="math/tex">C_{\text{evict}}(S)</script>
+. Either way, “smaller relocation cost” describes the transfer alone, not what resuming the task actually costs once the missing blocks have to come back from somewhere. That finer-grained version of Proposition 5 is a real, well-motivated extension this post’s single-scalar <script type="math/tex">S(t)</script>
+ doesn’t capture, but it isn’t free the way this section’s opening framing suggests, named here as a limitation rather than folded quietly into the next section as an afterthought.</p>
+<h2 id="would-a-fleet-wide-eviction-coordinator-beat-proposition-5c-s-local-ranking">Would a Fleet-Wide Eviction Coordinator Beat Proposition 5c’s Local Ranking?</h2>
+<p>Proposition 5c’s ranking rule is entirely local: each node ranks its own candidates by descending <script type="math/tex">S(t)</script>
+, blind to what any other node is doing. The natural question: would a coordinator with a fleet-wide view of every node’s candidate population make a strictly better emergency-eviction decision?</p>
+<p>For the decision Proposition 5c actually makes, the honest answer is no. The reason is physical, not architectural. Eviction relieves memory pressure on exactly the node the evicted task was running on: freeing bytes on node B does nothing for node A’s own redline breach. A fleet-wide coordinator can see every node’s own candidates, but it can’t spend node B’s memory to pay node A’s debt; the two headroom pools don’t share a budget the way a genuinely pooled, fleet-wide reserve would. Whatever a coordinator adds here, it isn’t a better choice of <em>which task</em> to evict on a given node. Proposition 5c’s own descending-<script type="math/tex">S(t)</script>
+ rule is already the right local answer, established above, and no amount of fleet-wide visibility changes what maximizes relief-per-second on a node in genuine trouble.</p>
+<p>There is a real place fleet-wide coordination could help, and it’s a different question than the one Proposition 5c answers. Not <em>which</em> task, but <em>when</em>, across nodes sharing physical fabric. A single upstream trigger can plausibly push a heavy-task surge across many nodes at once, not just one. If several nodes independently breach their own redlines close together, each running its own local emergency channel with no knowledge of the others, <script type="math/tex">k</script>
+ concurrent relocations from node A and <script type="math/tex">k</script>
+ more from node B can converge on the same shared upstream fabric (the top-of-rack switch, the spine link) at the same moment. That doubles the incast this post’s own <script type="math/tex">k=32</script>
+-on-one-node PFC-storm analysis priced, and scales the same way, roughly linearly, with however many more nodes than two fire together. A real deployment where a correlated surge trips redlines on ten nodes at once, not an exotic count for the kind of single upstream trigger this series has already priced elsewhere, sees an order of magnitude past the single-node figure, not just double. That’s a real gap this post’s own per-node model structurally can’t see: it prices contention <em>within</em> one node’s own emergency wave, never contention <em>across</em> several nodes’ waves landing on shared fabric simultaneously. A coordinator with visibility into which nodes are about to fire their own emergency channels could stagger them, the same pacing problem, one level up, that a single node’s own credited-headroom projection (<script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+) already solves within one node. Whether that coordination is worth building, against what it costs to run, a single point every node’s own emergency channel now has to check in with before firing, is a real tradeoff this post names rather than resolves.</p>
+<h2 id="model-scope-and-failure-envelope">Model Scope and Failure Envelope</h2>
+<p>Eleven assumptions are doing real work in this post and deserve the same naming Posts 1 through 3 gave their own.</p>
+<table><thead><tr><th style="text-align: left">#</th><th style="text-align: left">Assumption</th><th style="text-align: left">What it threatens</th><th style="text-align: left">Status</th></tr></thead><tbody>
+<tr><td style="text-align: left">1</td><td style="text-align: left"><script type="math/tex">m(t)</script>
+ is monotonic (single Pareto population)</td><td style="text-align: left">Undermines the crossover for one task, before population scale</td><td style="text-align: left">Highest priority, unresolved</td></tr>
+<tr><td style="text-align: left">2</td><td style="text-align: left">Checked against this post’s own prices</td><td style="text-align: left">Confirms #1 concretely: crosses threshold 4 times, <script type="math/tex">t</script>
+=150-1300s</td><td style="text-align: left">Reproduced with real numbers</td></tr>
+<tr><td style="text-align: left">3</td><td style="text-align: left">#1 is a prerequisite to the two gaps below it</td><td style="text-align: left">Neither #6 nor #8 is worth trusting until #1 is checked</td><td style="text-align: left">Structural ordering</td></tr>
+<tr><td style="text-align: left">4</td><td style="text-align: left"><script type="math/tex">m(t)</script>
+ stays untruncated (no hard ceiling <script type="math/tex">L</script>
+)</td><td style="text-align: left">Reopens a second crossing, from the opposite direction of #1</td><td style="text-align: left">Unresolved, distinct from #1</td></tr>
+<tr><td style="text-align: left">5</td><td style="text-align: left"><script type="math/tex">c_{\text{opp}}, c_0</script>
+ are illustrative, not measured</td><td style="text-align: left">The specific <script type="math/tex">t^*\approx864</script>
+s isn’t load-bearing</td><td style="text-align: left">Priced: the <em>shape</em> survives re-pricing</td></tr>
+<tr><td style="text-align: left">6</td><td style="text-align: left">No repeated-batch resonance in the emergency channel</td><td style="text-align: left">Whether freed memory re-triggers the next breach</td><td style="text-align: left">Unfinished, second priority</td></tr>
+<tr><td style="text-align: left">7</td><td style="text-align: left">Descending <script type="math/tex">S(t)</script>
+ isn’t gamed</td><td style="text-align: left">Emergency channel’s own effectiveness, not the voluntary channel</td><td style="text-align: left">Named, unchecked empirically</td></tr>
+<tr><td style="text-align: left">8</td><td style="text-align: left">Voluntary channel’s stability holds under this specimen’s real arrivals, not just its durations</td><td style="text-align: left">Proposition 5b’s argument is structural, not a proof</td><td style="text-align: left">Unfinished, third priority</td></tr>
+<tr><td style="text-align: left">9</td><td style="text-align: left"><script type="math/tex">c_0</script>
+ fully captures resume-side cost</td><td style="text-align: left">May undercount cache-locality and warm-up cost on the destination</td><td style="text-align: left">Named, treat <script type="math/tex">C_{\text{evict}}</script>
+ as a lower bound</td></tr>
+<tr><td style="text-align: left">10</td><td style="text-align: left">The destination’s own opportunity cost is zero</td><td style="text-align: left"><script type="math/tex">V(t)=m(t)\cdot c_{\text{opp}} - C_{\text{evict}}(S)</script>
+ treats eviction as fully recovering <script type="math/tex">m(t)\cdot c_{\text{opp}}</script>
+, but the task still runs its remaining <script type="math/tex">m(t)</script>
+ seconds somewhere</td><td style="text-align: left">Named here, unpriced everywhere in this post</td></tr>
+<tr><td style="text-align: left">11</td><td style="text-align: left">The relocation link is uncontended</td><td style="text-align: left"><script type="math/tex">k=32</script>
+ concurrent transfers share bandwidth, and can collapse non-linearly under PFC</td><td style="text-align: left">Partially priced below, partially open</td></tr>
+<tr><td style="text-align: left">12</td><td style="text-align: left"><script type="math/tex">c_{\text{opp}}</script>
+ is priced at the rental rate, not the shadow price of admission foregone</td><td style="text-align: left">This pool runs persistently close to its own memory ceiling, not in an uncongested equilibrium</td><td style="text-align: left">Named, unpriced, distinct from #10</td></tr>
+</tbody></table>
+<p><em>Twelve assumption boundaries this post depends on, numbered in the order the paragraphs below name them, not in strict priority: priority is stated explicitly where it matters (#1 above #6 above #8).</em></p>
+<p>Every well-behaved-crossover check in this post, referenced repeatedly below, reduces to the same condition:</p>
+<script type="math/tex;mode=display">c_0 > E[S_h] \cdot c_{\text{opp}}</script>
+<p>Get the price ratio wrong and what breaks isn’t the crossover’s <em>timing</em>, it’s its <em>existence</em>: a second, early-eviction zone opens up instead of the single clean threshold this post presents.</p>
+<p><strong>The well-behaved-crossover check above verifies a single crossing exists given that <script type="math/tex">m(t)</script>
+ is monotonic past <script type="math/tex">x_m</script>
+. It does not verify that assumption itself. This is the one gap that undermines the voluntary rule for a single task in isolation, before any population-scale question is even asked.</strong> Post 1’s own Model Scope names the underlying risk: the heavy class this whole series builds on is assumed to be one clean Pareto population. A real fleet’s own “heavy” traffic is often a mixture of genuinely distinct workload types (different tenants, batch jobs, agentic loops), each with its own comparatively narrow characteristic duration. Post 1 works a three-component mixture where mean residual life reverses direction four times rather than settling into the clean fall-then-rise Proposition 2b’s formula assumes. Checking for this in production isn’t a one-time verification either: a workload mix drifts, and confirming the heavy class still looks unimodal is exactly the kind of ongoing engineering burden this series doesn’t put a price on until several posts from now.</p>
+<p><strong>Checked against <em>this post’s own</em> prices, not just Post 1’s illustrative ones.</strong> The eviction threshold is <script type="math/tex">c_0/c_{\text{opp}} = 0.50/0.000694 \approx 720</script>
+: a value the same mixture’s mean residual life crosses four separate times between <script type="math/tex">t=150</script>
+s and <script type="math/tex">t=1{,}300</script>
+s (continue, evict, continue, evict, continue), not once. A task governed by that trajectory would be marked for eviction, left running because the ranked list was already clear, re-marked, and un-marked again, the exact control-loop thrashing a badly-behaved hazard rate predicts, reproduced with this post’s own numbers rather than left as a hypothetical.</p>
+<p><strong>Priority: this is the single highest-priority gap this post leaves standing, ahead of both gaps named below: it’s a prerequisite, not a peer.</strong> The emergency channel’s own batching risk and Proposition 5b’s population-scale argument both assume <script type="math/tex">m(t)</script>
+ behaves the way a clean Pareto tail predicts. Neither one is worth trusting until that assumption is actually checked against real data. Every other assumption in this section, and Proposition 5b’s whole stability argument, presupposes this one holds. If a real fleet’s heavy traffic doesn’t pass a multimodal check against its own empirical duration distribution (the same check Post 2’s Model Scope now asks for) this post’s crossover rule should be applied per workload segment, not to an unexamined aggregate, or it inherits a failure mode no amount of correctly-priced <script type="math/tex">c_{\text{opp}}</script>
+ and <script type="math/tex">c_0</script>
+ can fix.</p>
+<p><strong>A team following Post 3’s own remedy for <script type="math/tex">\alpha \leq 2</script>
+ inherits a second monotonicity break this post has never named, distinct from the mixture-hazard one above.</strong> Post 3’s own Vector Sedimentation proof requires a hard ceiling <script type="math/tex">L</script>
+ on <script type="math/tex">S_r</script>
+ whenever a real deployment’s measured tail index falls at or below 2, since the untruncated second moment diverges otherwise. This post’s own crossover, built on <script type="math/tex">m(t) = t/(\alpha-1)</script>
+ rising without bound past <script type="math/tex">x_m</script>
+, assumes exactly the untruncated tail Post 3’s own remedy removes. A task can’t survive past <script type="math/tex">L</script>
+, so residual life under truncation can’t keep rising toward <script type="math/tex">t=L</script>
+: it has to fall back toward zero as the ceiling approaches, the same certain-survival logic that makes <script type="math/tex">m(t)</script>
+ fall on <script type="math/tex">[0, x_m)</script>
+ in the untruncated case, mirrored at the opposite end. That reopens a second crossing this post’s own well-behaved-crossover check was built specifically to rule out, and not merely as a possibility worth flagging. <script type="math/tex">C_{\text{evict}}(S(t))</script>
+ stays bounded below by <script type="math/tex">c_0 > 0</script>
+ for every <script type="math/tex">t</script>
+, while <script type="math/tex">m(t) \cdot c_{\text{opp}} \to 0</script>
+ as <script type="math/tex">t \to L</script>
+. So <script type="math/tex">V(t)</script>
+ is forced back below zero before the ceiling, for certain, the moment any point past <script type="math/tex">x_m</script>
+ clears the threshold at all: a task nearing <script type="math/tex">L</script>
+ simply has too little remaining opportunity cost left to protect. The single, permanent crossing Proposition 5 proves is a property of the untruncated tail specifically, not something this post re-derives for the truncated case Post 3 actually prescribes. A team whose own measured <script type="math/tex">\alpha</script>
+ sits at or below 2, and who has therefore imposed Post 3’s own hard cap, should not reuse Proposition 5’s crossover as stated: <script type="math/tex">m(t)</script>
+ needs to be re-derived against the truncated distribution first, and the well-behaved-crossover check re-run against whatever shape that produces, which may no longer be a single clean threshold at all.</p>
+<p><strong><script type="math/tex">c_{\text{opp}}</script>
+ and <script type="math/tex">c_0</script>
+ are illustrative, grounded order-of-magnitude figures, not measured production costs.</strong> The transfer-time component of <script type="math/tex">C_{\text{evict}}</script>
+ is priced against a real ConnectX-7 bandwidth figure this series has already used once, and that piece of the arithmetic is load-bearing and defensible as stated. The GPU-hour opportunity cost and the fixed relocation overhead are not pinned to a citation the way the bandwidth is, the same discipline Post 3 applied to its own per-token streaming-overhead estimate. And <script type="math/tex">c_0</script>
+ carries an additional obligation this post’s numbers don’t get to skip: it has to exceed <script type="math/tex">E[S_h]\cdot c_{\text{opp}}</script>
+, or the crossover degenerates into a second, early-eviction zone rather than the single clean threshold this section presents. What survives a change to either number, provided that check still passes, is the <em>shape</em> of Proposition 5’s result (eviction as a rare-outlier remedy, multiples of <script type="math/tex">E[S_h]</script>
+ out) not the specific value <script type="math/tex">t^* \approx 864</script>
+s. A team with real, measured cloud pricing and a real, measured control-plane overhead should re-run this post’s arithmetic, including the well-behaved-crossover check, against its own numbers before trusting the specific crossover time on a different deployment.</p>
+<p><strong>Proposition 5c’s emergency channel has a structural desynchronization argument after all, not none. It’s established above, where descending <script type="math/tex">S(t)</script>
+ was shown to draw from exactly the same long-tail population Proposition 5b’s argument covers. That argument covers a single batch, not repeated ones, and closing that gap is unfinished work this post leaves standing, behind only the more basic mixture-hazard question named above.</strong> A ranked, multi-task eviction triggered by one redline breach is a designed batch, not a coincidental one. Proposition 5b’s heavy-tail argument was built to explain away coincidental clustering in individually-timed voluntary evictions. It was never built to rule out a <em>repeated</em> designed batch resonating with itself. Whether emergency breaches can do that, freed memory admitting a batch that grows into the next breach, evicted in its own wave, is still open. It’s worth flagging here specifically rather than trusting the single-batch result above to have settled it: the two are different claims, and only the first one has an argument behind it.</p>
+<p><strong>A rule stated precisely enough to implement is also precise enough to game, and descending <script type="math/tex">S(t)</script>
+ is exactly that kind of rule. It’s a real behavioral-drift risk distinct from the general non-adversarial boundary named elsewhere in this series, because it targets this post’s own mechanism specifically rather than admission in general.</strong> Every other adversarial gap this series has named is about a tenant misrepresenting demand to <em>avoid demotion</em>, gaming Definition 1b’s classifier, or Definition 4’s per-resource redline. Proposition 5c creates a narrower, sharper target: once a ranking rule that reaches for the largest <script type="math/tex">S(t)</script>
+ first is known, published, reverse-engineered from observed eviction patterns, or simply the obvious design once “emergency eviction” is mentioned, a rational client, with no adversarial intent at all, has a direct incentive to keep any single request’s own accumulated state below whatever an emergency sweep is likely to reach.</p>
+<p><strong>The mechanism.</strong> Chunking a long generation into several shorter ones, resumed across separate requests, does exactly that: no request in the chain individually presents a large <script type="math/tex">S(t)</script>
+ to the ranking rule, even though the aggregate work is the same or larger. This is a Goodhart-style failure specifically, not a repeat of the demand-gaming gap already named. The measure <script type="math/tex">S(t)</script>
+ was chosen because it correlates with how much relief an eviction buys, and a population that reorganizes itself around dodging that specific measure breaks the correlation between “high <script type="math/tex">S(t)</script>
+ candidates exist to evict” and “evicting them actually relieves pressure,” which is the premise the whole ranking rule stands on.</p>
+<p><strong>What this doesn’t threaten.</strong> Proposition 5’s own voluntary crossover, driven by <script type="math/tex">m(t)</script>
+ and each task’s own economics rather than a published ranking order, gives a rational client nothing obvious to game, since dodging it costs the client nothing but also buys nothing: voluntary eviction never touches a task that hasn’t individually crossed <script type="math/tex">t^*</script>
+.</p>
+<p><strong>What it does threaten: specifically the emergency channel’s own effectiveness.</strong> A population that has learned to stay chunked below the ranking’s own reach is a population Proposition 5c’s descending-<script type="math/tex">S(t)</script>
+ selection has nothing left to select from. It forces the rule down toward Definition 1b’s own confidence floor into ordinary traffic, for exactly the near-zero relief this post’s own fixed-overhead argument already showed is the worst case, not the exception. Whether real client behavior actually drifts this way is an empirical question this post hasn’t checked, the same honest limit as every other behavioral assumption named here. But it’s worth naming specifically, rather than folded into the general non-adversarial boundary, because unlike that boundary this one doesn’t require a strategic actor to trigger. An ordinary engineering team chunking long-running jobs for unrelated reasons (retry safety, progress checkpointing) produces the same effect without ever intending to game anything.</p>
+<p><strong>Proposition 5b’s own stability argument, for the voluntary channel, has not been checked against this specimen’s actual arrival process, only its duration distribution.</strong> Ao et al.’s own instability result depends on the joint behavior of admissions and evictions over time, not just on how spread out individual task durations are. This post has argued that a heavy-tailed duration distribution gives a structural reason to expect desynchronized completions; it has not simulated or analytically verified that this specimen’s own arrival pattern, layered on top of that duration distribution, actually avoids the resonance the cited paper proves possible. That gap is named above and repeated here because it is real, unfinished work: third in priority, behind both the mixture-hazard question and the emergency-channel gap, not because it matters less in absolute terms, but because the voluntary channel at least has a structural argument to lean on while it’s resolved.</p>
+<p><strong>Checkpoint-and-resume cost is only partly captured by <script type="math/tex">C_{\text{evict}}(S)</script>
+’s fixed overhead.</strong> <script type="math/tex">c_0</script>
+’s $0.50 is deliberately priced to include a modest allowance for the resuming side (destination warm-up, re-attachment) rather than charging nothing there. But “modest allowance” is doing real work in that sentence. A relocated task that resumes on a different accelerator may pay a larger real cost this post hasn’t fully priced: cache-locality effects, contention with whatever else is already running on the destination, or warm-up time well beyond a flat per-eviction estimate. Definition 5a’s frontier, and Proposition 5’s crossover rule built on it, price the cost of <em>moving</em> a task with a single fixed number, not a cost that itself depends on destination-side conditions. A deployment where the resuming side’s cost is significant, and variable, relative to this post’s flat <script type="math/tex">c_0</script>
+ should treat <script type="math/tex">C_{\text{evict}}(S)</script>
+ as a lower bound, not a complete accounting. It should re-check the well-behaved-crossover condition from Proposition 5 against its own, larger <script type="math/tex">c_0</script>
+, not assume it still holds.</p>
+<p><strong>A more fundamental gap than the resume-side cost above: <script type="math/tex">V(t)</script>
+ prices only the source’s own ledger, never the destination’s.</strong> <script type="math/tex">V(t) = m(t) \cdot c_{\text{opp}} - C_{\text{evict}}(S(t))</script>
+ treats evicting a task as recovering its entire expected remaining opportunity cost, <script type="math/tex">m(t) \cdot c_{\text{opp}}</script>
+, in full. But a relocated task doesn’t stop consuming resources. It keeps running its own remaining <script type="math/tex">m(t)</script>
+ seconds somewhere, on whatever node it lands on. If that destination has a genuinely idle slot the fleet would otherwise waste, the source’s own opportunity cost really is recovered net, since the destination was paying nothing for that capacity anyway. If the destination has to give up capacity it would otherwise have used for something else, and most fleets running close enough to a redline to trigger eviction in the first place aren’t sitting on free capacity, the true net benefit is smaller: the source’s own <script type="math/tex">m(t)\cdot c_{\text{opp}}</script>
+ avoided, minus whatever opportunity cost the destination now incurs holding the same task for the same remaining time, minus <script type="math/tex">C_{\text{evict}}(S)</script>
+. In the limit where the destination’s own opportunity cost equals the source’s, evicting buys nothing at all beyond the relocation fee itself, since the task’s own remaining cost was never eliminated, only moved. <script type="math/tex">V(t)>0</script>
+ as stated is the right rule exactly when the destination is meaningfully cheaper than the source. That’s an assumption this post has never stated, and Proposition 5c’s own routing (send relocations toward whichever node has headroom) makes plausible but doesn’t prove: a node with headroom isn’t necessarily a node with zero opportunity cost for the capacity it’s about to spend.</p>
+<p><strong>A separate, more basic gap sits underneath both of the ones above: <script type="math/tex">c_{\text{opp}}</script>
+ itself is priced as if the source’s own accelerator were an uncongested resource, freely rentable at a fixed market rate, when this post’s own specimen is nowhere close to that.</strong> <script type="math/tex">c_{\text{opp}}</script>
+’s <script type="math/tex">\$2.50</script>
+/hour is an on-demand cloud rental figure: what the accelerator would cost to rent on an open, uncongested market. That’s the right price for “holding this resource” only when the alternative use of the freed capacity is itself worth roughly that much, the ordinary case for a spot market with slack in it. Post 3’s own numbers say this pool doesn’t have that slack: memory utilization at the Sedimentation Threshold runs at 278.7% of budget, and even at this specimen’s own resting baseline the pool sits at 64.6% of raw capacity with a redline crossed well before that. A resource this scarce has a shadow price, the value of the admission a freed slot could actually serve, not a rental-market price, and nothing says the two coincide. Worth being precise about where this does and doesn’t bite: it’s a claim about Proposition 5’s own <em>voluntary</em> channel, priced continuously against ordinary, non-emergency conditions, not about Proposition 5c’s emergency channel, which never references <script type="math/tex">c_{\text{opp}}</script>
+ or <script type="math/tex">V(t)</script>
+ at all, ranking by <script type="math/tex">S(t)</script>
+ and a hard <script type="math/tex">T_{\text{OOM}}(t)</script>
+ deadline instead, precisely because per-task economics don’t apply once a redline has actually breached. A shadow-priced <script type="math/tex">c_{\text{opp}}</script>
+ would move <script type="math/tex">t^*</script>
+ closer, by the same linear relationship the earlier sensitivity check already established: a higher <script type="math/tex">c_{\text{opp}}</script>
+ shrinks the crossover proportionally. Whether the <em>shape</em> of this post’s finding, eviction as a rare-outlier remedy rather than a routine one, survives that repricing is a question this post hasn’t run, since it depends on how large the true shadow price actually is relative to the rental figure, not on whether shadow pricing applies at all. A team pricing this mechanism against a genuinely scarce pool should treat <script type="math/tex">c_{\text{opp}}</script>
+ as a shadow price to be estimated from admission-refusal data, not assumed from a cloud rate card, and re-run the well-behaved-crossover check against whatever that repricing produces.</p>
+<p><strong><script type="math/tex">C_{\text{evict}}(S)</script>
+ assumes uncontended access to the relocation link, and this is now checked rather than left as an open question: with a real, narrower finding than a first guess suggests.</strong> The 25GB/s ConnectX-7 figure pricing the transfer-time term is a per-port number, available in full to a single relocation happening in isolation. Proposition 5c’s own emergency channel is exactly the mechanism that breaks that isolation on purpose, evicting several tasks concurrently in response to one redline breach. So <script type="math/tex">k</script>
+ concurrent relocations sharing the same link, each seeing <script type="math/tex">B/k</script>
+ instead of <script type="math/tex">B</script>
+, is the realistic case to check, not a hypothetical.</p>
+<table><thead><tr><th style="text-align: left">Quantity</th><th style="text-align: left">at <script type="math/tex">k=1</script>
+</th><th style="text-align: left">at <script type="math/tex">k=32</script>
+ (full pool)</th></tr></thead><tbody>
+<tr><td style="text-align: left"><script type="math/tex">t^*</script>
+ (dollar-cost crossover)</td><td style="text-align: left">864.2s</td><td style="text-align: left">870.6s: a 0.7% shift</td></tr>
+<tr><td style="text-align: left">Transfer time</td><td style="text-align: left">0.17s</td><td style="text-align: left">5.5s</td></tr>
+</tbody></table>
+<p><em>Link contention across a <script type="math/tex">k=32</script>
+ concurrent eviction wave: the dollar-cost crossover barely moves, but transfer time stretches from 0.17s to 5.5s.</em></p>
+<blockquote>
+<p><strong>Design Guardrail.</strong> The dollar-cost crossover is robust to contention. Transfer time is not.</p>
+</blockquote>
+<p>It would need <script type="math/tex">k\approx4{,}200</script>
+ concurrent evictions sharing one link before the transfer term rivaled <script type="math/tex">c_0</script>
+ at all. But transfer <em>time</em>, not transfer <em>cost</em>, scales linearly with <script type="math/tex">k</script>
+ the same way. That’s not destabilizing feedback on <script type="math/tex">t^*</script>
+, but it is a real, previously-unquantified delay between “eviction triggered” and “memory actually freed,” landing specifically on Proposition 5c’s own emergency channel at the exact moment a node is most stressed. A team running a full-pool eviction wave should expect the last relocation in that wave to complete several seconds after the first, not simultaneously, and should size the redline’s own margin, <script type="math/tex">H_{\min}^{\text{mem}}</script>
+, to absorb that delay rather than assume relief is instantaneous once Proposition 5c fires.</p>
+<p><strong>The <script type="math/tex">B/k</script>
+ fair-share model is itself an idealization the 5.5-second figure inherits without checking. The direction of the error is the wrong one to be casual about.</strong> Equal division of link bandwidth across <script type="math/tex">k</script>
+ concurrent flows assumes the network fabric multiplexes them costlessly. A real RDMA fabric running RoCEv2 doesn’t: it depends on Priority Flow Control, a lossless-delivery mechanism that pauses an entire upstream link rather than dropping packets when a receiving buffer fills. A real, documented production failure mode of that mechanism is exactly the many-to-one pattern Proposition 5c’s own emergency channel creates on purpose: <script type="math/tex">k</script>
+ relocations converging on however many destination nodes have headroom, at the same moment, is textbook incast. Microsoft’s own production RDMA deployment work names the resulting pathology directly: PFC pause frames propagating upstream from a congested receiver can cascade into a pause-frame storm, and under the wrong traffic pattern, into deadlock <a href="#ref-7" class="cite-ref" data-def="Guo, C., Wu, H., Deng, Z., Soni, G., Ye, J., Padhye, J. & Lipshteyn, M. (2016) — RDMA over Commodity Ethernet at Scale" aria-label="Guo, C., Wu, H., Deng, Z., Soni, G., Ye, J., Padhye, J. & Lipshteyn, M. (2016) — RDMA over Commodity Ethernet at Scale">[7]</a>
+. That’s a materially different failure shape than <script type="math/tex">B/k</script>
+ describes: not a graceful, linear slowdown as <script type="math/tex">k</script>
+ grows, but a control-plane-level collapse triggered by the <em>pattern</em> of concurrent transfers, not just their count. Whether this specimen’s own <script type="math/tex">k=32</script>
+ emergency wave, run against real fabric hardware rather than this post’s own uncontended-link arithmetic, stays inside the region where <script type="math/tex">B/k</script>
+ is a reasonable approximation, or crosses into the PFC-storm regime the cited work documents, is a question about a specific deployment’s own switch buffering, traffic-class configuration, and congestion-control settings. It’s not one this post’s own symbolic model has the inputs to answer. A team running this mechanism on a lossless RDMA fabric should treat the 5.5-second figure as a floor, not an estimate, and should check its own fabric’s incast behavior under a synthetic <script type="math/tex">k=32</script>
+ burst before trusting <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+’s own projection to hold at the exact moment it matters most.</p>
+<p><strong>One more assumption inside <script type="math/tex">\delta_0</script>
+ itself has never been checked: whether it’s actually <script type="math/tex">k</script>
+-independent.</strong> This post treats <script type="math/tex">\delta_0</script>
+ as a fixed, per-eviction control-plane cost, the same figure whether one relocation is running or thirty-two. That holds only if the relocation link’s own RDMA queue pairs are already established and reused across evictions. If they aren’t, each new relocation pays a real connection-setup cost, queue-pair creation and path negotiation, before the first byte moves: a cost the <script type="math/tex">B/k</script>
+ model and the PFC-storm correction above both fold silently into <script type="math/tex">\delta_0</script>
+’s own illustrative <script type="math/tex">\$0.50</script>
+ without checking whether it’s actually there. This risk cuts the opposite direction from the PFC-storm risk above. Pause-frame storms are a large-<script type="math/tex">k</script>
+ problem; connection setup is a small-<script type="math/tex">k</script>
+ one, since a queue pair, once established, amortizes across every later relocation that reuses it. The danger is sharpest for the very first eviction in a wave, or for infrastructure that tears connections down between waves rather than pooling them. A team implementing this mechanism should check whether its own relocation transport reuses connections across evictions or re-establishes one per transfer, and price the difference into <script type="math/tex">\delta_0</script>
+ directly rather than assume the illustrative figure already accounts for it.</p>
+<p><strong>The <script type="math/tex">B/k</script>
+ model, and the PFC-storm correction to it, both price contention on the transfer link. Neither prices whether the same contention reaches back into <script type="math/tex">\sigma</script>
+ itself, the generation rate of the survivors an emergency wave exists to protect.</strong> This post treats <script type="math/tex">\sigma</script>
+ and <script type="math/tex">B</script>
+ as drawing from separate budgets throughout, the entire premise Post 3’s own disaggregated architecture was built on: a dedicated ConnectX-7 port for relocation, distinct from the GPU compute that drives decode. On hardware where that separation genuinely holds, the credited-headroom projection <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+ is safe to treat <script type="math/tex">\sigma</script>
+ as constant through an emergency wave, exactly as this post does. It doesn’t hold unconditionally. A real server’s own PCIe topology can put the relocation NIC and the accelerators driving decode behind a shared root complex or a shared memory controller. A <script type="math/tex">k=32</script>
+ relocation wave saturating that shared resource degrades both sides of the same contention at once. <script type="math/tex">T_{\text{wait}}</script>
+ stretches, the way the PFC-storm discussion above already prices. <script type="math/tex">\sigma</script>
+ for every surviving task on that host can fall at the same time, for the same underlying reason. <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+’s own projection term, <script type="math/tex">\sigma \cdot N_{\text{survivors}}(t) \cdot T_{\text{wait}}(t)</script>
+, treats <script type="math/tex">\sigma</script>
+ as a constant multiplied against a <script type="math/tex">T_{\text{wait}}</script>
+ that’s already inflated by contention. A <script type="math/tex">\sigma</script>
+ that’s simultaneously falling under the same contention makes that product wrong in a direction this post hasn’t checked, not obviously conservative and not obviously the reverse. A team whose own hardware shares PCIe lanes or a memory controller between the relocation NIC and decode compute should measure whether <script type="math/tex">\sigma</script>
+ actually holds steady under a synthetic <script type="math/tex">k=32</script>
+ burst before trusting this projection at all, the same discipline this section already asks for <script type="math/tex">T_{\text{wait}}</script>
+.</p>
+<p><strong>Compute it.</strong> Before running any eviction rule against a real checkpointable population, work through these in order.</p>
+<ul>
+<li><strong>Is there a mechanism for what happens when a redline breach isn’t relieved by any task individually clearing Proposition 5’s own crossover?</strong> That state is not rare, it’s the expected case, given fewer than 3% of heavy tasks ever reach <script type="math/tex">t^*</script>
+. If the only eviction logic in the system is Proposition 5’s voluntary rule with no Proposition-5c-style emergency fallback wired to the actual redline signal, the system has the same gap this post just fixed: it goes silent exactly when pressure is real.</li>
+<li><strong>Is the population actually one, in the strict sense Definition 5a needs?</strong> Can accumulated state genuinely be serialized and relocated at a finite, computable cost, or is “checkpointable” a label applied to a workload nobody has actually tested a real eviction-and-resume cycle against? If it hasn’t been tested, treat every number in this post as conditional on infrastructure that doesn’t exist yet.</li>
+<li><strong>If it has been tested, price both sides of Proposition 5’s rule against your own real numbers</strong>, not this post’s illustrative GPU-hour rate and fixed overhead, and check the well-behaved-crossover condition (<script type="math/tex">c_0 > E[S_h]\cdot c_{\text{opp}}</script>
+) first, since with the wrong price ratio the crossover’s existence, not just its timing, is what changes.</li>
+<li><strong>If your own measured <script type="math/tex">\alpha</script>
+ sits at or below 2, and you’ve imposed Post 3’s own hard ceiling <script type="math/tex">L</script>
+ as a result, don’t reuse this post’s crossover as stated.</strong> Re-derive <script type="math/tex">m(t)</script>
+ against the truncated distribution first, since a single clean crossing is a property of the untruncated tail, not something this post proves survives a cap.</li>
+<li><strong>If your own relocation NIC shares PCIe lanes or a memory controller with the accelerators driving decode, check whether <script type="math/tex">\sigma</script>
+ actually holds steady under a synthetic <script type="math/tex">k=32</script>
+ burst</strong> before trusting <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+‘s own projection: this post prices contention on the transfer link, not contention that reaches back into the survivors’ own generation rate.</li>
+<li><strong>Before running that rule as a standing policy rather than a one-off decision, measure your own population’s tail index</strong> the way Post 2’s Hill-estimator approach prescribes, specifically on the checkpointable subset, not the pool as a whole, since this post’s own open question is exactly whether that subset inherits the heterogeneity the argument leans on or quietly loses it. If the measured tail turns out lighter than <script type="math/tex">\alpha = 2.2</script>
+, treat Proposition 5b’s structural defense as weaker in direct proportion, not as a fixed guarantee that survives any duration distribution.</li>
+<li><strong>If none of this measurement has happened yet, the honest fallback isn’t “don’t evict.”</strong> It’s Blood Oath’s own answer, restated for a population that happens to have an escape hatch it hasn’t verified is safe to use: a policy nobody has checked for the specific failure mode a real, cited result proves possible is a policy running on faith, dressed in the vocabulary of a theorem it hasn’t actually earned.</li>
+</ul>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>Post 3 cited a real result and mostly set it aside: threshold-based eviction is provably unstable under saturated demand, a worst-case limit cycle costing up to 50% of throughput. Blood Oath’s non-preemptibility ruled the mechanism out by construction, not by choice.</li>
+<li>This post studies the population Blood Oath excludes: checkpointable tasks, which keep ingress blindness but can actually be relocated at a real, finite cost rather than an architecturally prohibitive one.</li>
+<li>Definition 5a builds the achievable-region frontier for a single, isolated eviction decision, explicitly scoped to say nothing yet about repeated application at population scale.</li>
+<li>Proposition 5 prices both sides using numbers this series already earned: Proposition 2b’s corrected, piecewise mean residual life, Post 3’s KV-cache cost and decode rate, and, for the first time, Post 3’s own ConnectX-7 bandwidth figure. It finds a genuine crossover at roughly 864 seconds, nearly three times the mean heavy-task duration: eviction is a rare-outlier remedy, not a routine one, reached by fewer than 3% of heavy tasks.</li>
+<li>This is the one place in the series the Constraint Sequence Framework runs backward: relaxing the property that excluded a face of the achievable region makes that face reachable again, for the narrower population that can afford to relax it.</li>
+<li>Proposition 5, taken as the only eviction rule, has no term for the pool’s own state. It can say “evict nothing” while a redline is breached and admission-refusal alone can’t relieve it, since fewer than 3% of tasks ever individually justify eviction. Proposition 5c closes that gap with corrections to both which task and how fast the loop reacts. Rank by descending accumulated state, largest and most memory-heavy first, floored at Definition 1b’s confidence crossover so the rule can’t reach into ordinary light traffic for near-zero relief at full fixed cost, and capped by a real time-to-exhaustion deadline so the rule never picks a candidate whose own transfer wouldn’t land before the node fails outright. That’s rather than Proposition 5’s own economic comparison, since fixed per-eviction overhead means relief rate strictly increases with the size of what’s evicted, not the reverse. And evaluate the redline against a projected headroom: physical state, plus pending eviction credits, minus what surviving tasks will still consume before the slowest pending transfer lands, so neither a lagging transfer nor ongoing survivor growth triggers a cascade of unnecessary further evictions before relief actually arrives.</li>
+<li>Every crossover rule in this post assumes the heavy class is one clean Pareto population. A real fleet’s heavy traffic is often a mixture of distinct workload types instead, and Post 1’s own worked three-component mixture shows what that does: mean residual life reverses direction four times rather than settling into a single fall-then-rise. Checked against this post’s own prices, that mixture crosses the eviction threshold (<script type="math/tex">\approx720</script>
+) four separate times between <script type="math/tex">t=150</script>
+s and <script type="math/tex">t=1{,}300</script>
+s: continue, evict, continue, evict, continue. This is the single highest-priority gap in the post, a prerequisite the other two below both assume away.</li>
+<li>Proposition 5c’s own batching is a designed one, not a coincidental one, and its descending-state ranking draws from close to the same sparse long-tail survivors Proposition 5b’s desynchronization argument is about, by strong correlation rather than by construction. It inherits most of that argument’s protection, not none of it, though not as a proven guarantee. Closing that gap from correlation to proof is unfinished work this post names.</li>
+<li>Proposition 5b gives a structural, heavy-tail-grounded reason to expect the <em>voluntary</em> channel avoids Post 3’s cited instability. The same argument Post 3 made for its own milder mechanism, now applied to the paper’s own literal subject: honestly short of a proof, and explicitly scoped to not cover the emergency channel.</li>
+<li>That structural argument depends on the checkpointable sub-population actually inheriting the full pool’s heterogeneity, an assumption worth measuring, not assuming, since the classification itself could plausibly select against it.</li>
+<li>Ao et al.’s own model evicts stateless tasks that restart from zero. This post’s population has memory gravity instead (an evicted task is owed its state back, not discarded), so a real limit cycle here is compounded by a second, return-trip transfer the cited paper’s model never has to price. That’s a cost channel this post names but doesn’t yet size a defense for beyond a penalization window on re-admission, one bounded from outside this post’s own accounting by a live client’s own timeout.</li>
+<li>The <script type="math/tex">B/k</script>
+ fair-share model behind the 5.5-second <script type="math/tex">k=32</script>
+ transfer-time figure assumes costless multiplexing. Real RDMA fabrics running RoCEv2 depend on Priority Flow Control, whose own documented production failure mode (pause-frame storms triggered by exactly the many-to-one pattern an emergency eviction wave creates) collapses non-linearly rather than degrading linearly with <script type="math/tex">k</script>
+. The 5.5-second figure should be read as a floor on real fabric hardware, not an estimate.</li>
+<li>A team following Post 3’s own truncation remedy for <script type="math/tex">\alpha \leq 2</script>
+ breaks this post’s crossover proof from the opposite direction of the mixture-hazard gap: <script type="math/tex">m(t)</script>
+ can’t keep rising toward a hard ceiling <script type="math/tex">L</script>
+, so it has to fall back toward zero as <script type="math/tex">t \to L</script>
+, reopening a second crossing the well-behaved-crossover check was built to rule out. Proposition 5’s single, permanent crossing is a property of the untruncated tail specifically, unproven for the truncated case Post 3 actually prescribes.</li>
+<li><script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+‘s own projection prices contention on the transfer link; it doesn’t price contention that reaches back into <script type="math/tex">\sigma</script>
+, the survivors’ own generation rate. Where the relocation NIC and decode compute share PCIe lanes or a memory controller, a <script type="math/tex">k=32</script>
+ wave can degrade both at once, and a falling <script type="math/tex">\sigma</script>
+ multiplied against an already-inflated <script type="math/tex">T_{\text{wait}}</script>
+ makes the projection wrong in a direction this post hasn’t checked.</li>
+<li>Live re-sampling of <script type="math/tex">N_{\text{survivors}}(t)</script>
+ and <script type="math/tex">T_{\text{wait}}(t)</script>
+ corrects for ordinary estimation drift between ticks, not for a PFC-storm collapse, which jumps rather than drifts. Every tick before the one that observes the jump computed <script type="math/tex">\hat{H}_{\text{mem}}(t)</script>
+ against an estimate already wrong by orders of magnitude. That’s a one-tick lag whose real cost depends on the control loop’s own tick rate against how fast a real fabric can actually collapse, a comparison this post has never run.</li>
+</ol>
+</blockquote>
+<hr />
+<p><sup>[1]</sup> Ao, R., Dong, J., Luo, G. &amp; Simchi-Levi, D. (2026). <em>Service-Induced Congestion in Memory-Constrained LLM Serving.</em> arXiv:2606.15555.</p>
+<p><sup>[2]</sup> NVIDIA (2021). <em>ConnectX-7 InfiniBand Adapter Card Datasheet.</em></p>
+<p><sup>[3]</sup> TrueFoundry (2024). <em>Benchmarking Llama-2-70B.</em></p>
+<p><sup>[4]</sup> Touvron, H. et al. (2023). <em>Llama 2: Open Foundation and Fine-Tuned Chat Models.</em> arXiv:2307.09288.</p>
+<p><sup>[5]</sup> Motwani, R., Phillips, S. &amp; Torng, E. (1994). <em>Nonclairvoyant scheduling.</em> Theoretical Computer Science, 130(1), 17–47.</p>
+<p><sup>[6]</sup> Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C.H., Gonzalez, J.E., Zhang, H. &amp; Stoica, I. (2023). <em>Efficient Memory Management for Large Language Model Serving with PagedAttention.</em> Proceedings of the 29th Symposium on Operating Systems Principles (SOSP 2023).</p>
+<p><sup>[7]</sup> Guo, C., Wu, H., Deng, Z., Soni, G., Ye, J., Padhye, J. &amp; Lipshteyn, M. (2016). <em>RDMA over Commodity Ethernet at Scale.</em> Proceedings of the 2016 ACM SIGCOMM Conference, 202–215.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/no-safe-number/" class="series-link">
+            Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption
+          </a>
+          
+            <span class="series-progress">Part 4/7</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+            <a class="series-nav-item series-nav-prev" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part3-bottleneck-moves&#x2F;" title="Multi-Resource Capacity and the Price of Anarchy">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part5-square-root-routing&#x2F;" title="The Square Root That Doesn&#x27;t Cover Routing">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>

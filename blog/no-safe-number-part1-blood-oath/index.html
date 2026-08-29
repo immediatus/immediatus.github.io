@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="The newsvendor problem is seventy years old, closed-form, and taught in the first weeks of any operations course: cheap to solve right up until the tail gets heavy. This post proves precisely where that stability ends, then finds the one workload shape where even the correctly-computed answer isn&#x27;t enough: cost unknowable until completion, no preemption, no horizontal escape. No scheduling algorithm can save it: not a cleverer one, not a centralized one with a perfect view of every node. This post proves it formally, for the whole class at once, not case by case." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="The Newsvendor Problem Under a Heavy Tail - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part1-blood-oath&#x2F;" />
+  <meta property="og:description" content="The newsvendor problem is seventy years old, closed-form, and taught in the first weeks of any operations course: cheap to solve right up until the tail gets heavy. This post proves precisely where that stability ends, then finds the one workload shape where even the correctly-computed answer isn&#x27;t enough: cost unknowable until completion, no preemption, no horizontal escape. No scheduling algorithm can save it: not a cleverer one, not a centralized one with a perfect view of every node. This post proves it formally, for the whole class at once, not case by case." />
+
+  <title>The Newsvendor Problem Under a Heavy Tail - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part1-blood-oath&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>The Newsvendor Problem Under a Heavy Tail</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-08-02T00:00:00+00:00" pubdate>02 August 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/queueing-theory/">#queueing-theory</a>
+              <a class="tag" href="https://e-mindset.space/tags/scheduling/">#scheduling</a>
+              <a class="tag" href="https://e-mindset.space/tags/economics/">#economics</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<h2 id="the-provisioning-problem">The Provisioning Problem</h2>
+<p>A number nobody has tested and a number that’s actually safe look identical. Right up until the day they don’t.</p>
+<p>Every system that commits to a capacity figure before it knows real demand eventually meets the demand that tests it. That’s not bad planning: it’s what committing in advance means.</p>
+<p><strong>Case Study: A Pool Sized by What Usually Happens.</strong> Picture a model-serving node running thirty-two concurrent generation slots: fixed by GPU memory, not by choice, since every request in flight needs its own slice of VRAM for its KV cache, and the card only has so much of it. Most traffic is cheap: a classification, a short rewrite, a few hundred tokens, done in under a second. About one call in two thousand is different, an open-ended reasoning trace with no natural stopping point, indistinguishable from the cheap case until it either finishes fast or doesn’t. Thirty-two slots handles the ordinary traffic with room to spare. It has for months. Every load test that mattered passed, because every load test ran the traffic that was easy to generate, the ordinary case, repeated.</p>
+<p>That’s the trap a long tail sets. The rare event’s absence from the sample so far isn’t evidence it won’t happen: only that it hasn’t happened <em>yet</em>. And when it lands, the gap isn’t a modest overrun; it scales with whatever “ordinary” already was. A process whose typical call finishes in milliseconds can have a tail that runs minutes. A process whose typical job takes hours can have a tail that runs days. The units change. The shape (vastly rare, vastly long relative to its own median) doesn’t.</p>
+<p>On some unremarkable day, three or four reasoning traces land close together. Slots don’t get preempted mid-generation: evicting one means discarding its KV cache, and resuming later costs exactly what starting over costs, so nothing pauses the long ones to let the short ones through. Occupancy drifts rather than jumps: a short completion cycles through its slot in under a second, a long reasoning trace holds its slot for minutes, and the pool skews further toward slow traffic than the arriving mix would suggest. Every other node is running the same traffic mix through its own full pool, so there’s nowhere to send the overflow. The short, cheap, everyday calls (the actual bulk of the traffic) start queuing behind generations that are each, individually, doing exactly what they were asked to do.</p>
+<p>No request was malformed. No bug shipped. The pool filled correctly, one legitimate admission at a time, until nothing else could get in. Call it <strong>provisioning by precedent</strong>: trusting a number because it has always worked, which is exactly the property that stops being informative the day the traffic finally tests the assumption underneath it.</p>
+<p>Provisioning by precedent is what happens when nobody runs the actual computation. That computation has a name and a complete, textbook answer: the <strong>newsvendor problem</strong> <a href="#ref-1" class="cite-ref" data-def="Arrow, K.J., Harris, T. & Marschak, J. (1951) — Optimal Inventory Policy" aria-label="Arrow, K.J., Harris, T. & Marschak, J. (1951) — Optimal Inventory Policy">[1]</a>
+: seventy years old, closed-form, taught in the first weeks of any operations course. Given a demand distribution <script type="math/tex">F</script>
+, choose a capacity <script type="math/tex">Q</script>
+ that balances two costs: underage <script type="math/tex">C_u</script>
+ (provisioning too little) against overage <script type="math/tex">C_o</script>
+ (provisioning too much). The optimal <script type="math/tex">Q^*</script>
+ is a single closed-form quantile:</p>
+<script type="math/tex;mode=display">Q^* = F^{-1}\!\left(\frac{C_u}{C_u + C_o}\right)</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">Q^*</script>
+ - the optimal capacity to provision</li>
+<li><script type="math/tex">F</script>
+ - the true demand distribution, with inverse (quantile function) <script type="math/tex">F^{-1}</script>
+</li>
+<li><script type="math/tex">C_u</script>
+ - the underage cost of one unit of unmet demand</li>
+<li><script type="math/tex">C_o</script>
+ - the overage cost of one unit of unused capacity</li>
+</ul>
+<p>The folklore version stops there: compute <script type="math/tex">Q^*</script>
+, deploy it, remeasure occasionally, done. That version is wrong, not everywhere, but for a specific, checkable, unremarkable-looking class of demand. The 32-slot pool above is exactly what the failure looks like when it arrives. Proposition 0, below, proves precisely where the stability the folklore version leans on stops holding.</p>
+<details class="proof">
+<summary>Mathematical proof: how the fractile formula actually falls out</summary>
+<p>Arrow, Harris &amp; Marschak’s derivation is a single first-order condition, not a black box worth taking on faith. Expected total cost at capacity <script type="math/tex">Q</script>
+ is <script type="math/tex">C_u \cdot E[(D-Q)^+] + C_o \cdot E[(Q-D)^+]</script>
+, where <script type="math/tex">D</script>
+ is the random demand. Differentiate with respect to <script type="math/tex">Q</script>
+ and set the result to zero:</p>
+<script type="math/tex;mode=display">-C_u \cdot (1 - F(Q)) + C_o \cdot F(Q) = 0 \;\Longrightarrow\; F(Q) \cdot (C_u + C_o) = C_u \;\Longrightarrow\; F(Q^*) = \frac{C_u}{C_u + C_o}</script>
+<p>Inverting <script type="math/tex">F</script>
+ gives the formula above. The whole result rests on one property of <script type="math/tex">F</script>
+: the second derivative of expected cost is <script type="math/tex">(C_u+C_o) \cdot f(Q) \geq 0</script>
+ wherever a density <script type="math/tex">f</script>
+ exists, so expected cost is convex and the first-order condition characterizes an actual minimum, not just a critical point. That’s true for essentially any demand distribution encountered in practice, light- or heavy-tailed alike.</p>
+</details>
+<p><strong>The formula itself never assumed light tails.</strong> What breaks under heavy tails, per Proposition 0, isn’t this derivation. It’s the habit of plugging in an <script type="math/tex">F</script>
+ estimated from a finite sample as if it were the true one.</p>
+<p><span id="def-0"></span></p>
+<details>
+<summary>Definition 0 -- The Provisioning Achievable Region: every capacity choice is a point in a two-cost tradeoff space, and only one point is optimal for a given cost ratio</summary>
+<p><strong>Definition 0</strong> (Provisioning Achievable Region). Given a true demand distribution <script type="math/tex">F</script>
+, every choice of capacity <script type="math/tex">Q</script>
+ maps to a point <script type="math/tex">(E[\text{underage} \mid Q, F],\ E[\text{overage} \mid Q, F])</script>
+. The expected cost of provisioning too little, and the expected cost of provisioning too much, at that <script type="math/tex">Q</script>
+. Varying <script type="math/tex">Q</script>
+ traces a Pareto frontier: lowering <script type="math/tex">Q</script>
+ decreases expected overage cost and increases expected underage cost, and no choice of <script type="math/tex">Q</script>
+ improves one without worsening the other. Given a fixed cost ratio <script type="math/tex">C_u/C_o</script>
+, exactly one point on that frontier minimizes the weighted objective <script type="math/tex">C_u \cdot E[\text{underage}] + C_o \cdot E[\text{overage}]</script>
+. That point is <script type="math/tex">Q^*</script>
+, the critical fractile.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> This is the actual object the newsvendor formula is computing a point on, not just a formula in isolation. There’s a whole curve of feasible tradeoffs between under-provisioning and over-provisioning, and <script type="math/tex">Q^*</script>
+ isn’t “the answer” in the abstract: it’s the specific point on that curve that matches how much you actually care about each kind of failure, expressed as a ratio.</p>
+</blockquote>
+<div style="margin:1.5em 0;">
+<canvas id="graph-achievable-region" aria-label="A curve in a plane with expected cost of provisioning too little on the horizontal axis and expected cost of provisioning too much on the vertical axis. Every point on the curve is reachable by some choice of capacity. Q-star is marked where the curve's tradeoff rate matches a four-to-one cost ratio. A second point further down the same curve is marked to show it is equally reachable, on the same frontier, but costs more overall at that same ratio: the wrong point on the curve, not an unreachable one." style="width:100%; aspect-ratio:700/400; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<script>
+(function(){
+var cv=document.getElementById('graph-achievable-region');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var W,H;
+var SCALE=20;
+var CU=4,CO=1;
+function underage(Q){return SCALE*Math.exp(-Q/SCALE);}
+function overage(Q){return Q-SCALE+SCALE*Math.exp(-Q/SCALE);}
+function weighted(Q){return CU*underage(Q)+CO*overage(Q);}
+function setup(){var r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.scale(d,d);W=r.width;H=r.height;}
+function draw(){
+ctx.clearRect(0,0,W,H);
+var fg='#333',grid='#eee',sub='#777';
+var PL=58,PR=24,PT=40,PB=48,AW=W-PL-PR,AH=H-PT-PB;
+var XMAX=21,YMAX=35;
+function SX(u){return PL+(u/XMAX)*AW;}
+function SY(o){return PT+AH-(Math.min(o,YMAX)/YMAX)*AH;}
+ctx.fillStyle=fg;ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+ctx.fillText('Every Point on This Curve Is Reachable. Only One Is Worth It.',W/2,18);
+var i,x,y;
+for(i=0;i<=XMAX;i+=5){x=SX(i);ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+AH);ctx.stroke();ctx.fillStyle=sub;ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(i,x,PT+AH+14);}
+for(i=0;i<=YMAX;i+=5){y=SY(i);ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+AW,y);ctx.stroke();ctx.fillStyle=sub;ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(i,PL-6,y+3);}
+ctx.strokeStyle=sub;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,PT+AH);ctx.lineTo(PL+AW,PT+AH);ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+AH);ctx.stroke();
+ctx.fillStyle=sub;ctx.font='11px sans-serif';ctx.textAlign='center';
+ctx.fillText('cost of provisioning too little (underage)',PL+AW/2,PT+AH+32);
+ctx.save();ctx.translate(16,PT+AH/2);ctx.rotate(-Math.PI/2);ctx.fillText('cost of provisioning too much (overage)',0,0);ctx.restore();
+ctx.strokeStyle='#2980b9';ctx.lineWidth=2;ctx.beginPath();
+var Q,first=true;
+for(Q=0;Q<=120;Q+=1){var u=underage(Q),o=overage(Q);if(o>YMAX)break;var px=SX(u),py=SY(o);if(first){ctx.moveTo(px,py);first=false;}else{ctx.lineTo(px,py);}}
+ctx.stroke();
+var ratio=CU/(CU+CO);
+var Qstar=-SCALE*Math.log(1-ratio);
+var uStar=underage(Qstar),oStar=overage(Qstar);
+var Qdom=Qstar-20,uDom=underage(Qdom),oDom=overage(Qdom);
+function point(u,o,color,r){var px=SX(u),py=SY(o);ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,r,0,6.2832);ctx.fill();return [px,py];}
+var pDom=point(uDom,oDom,'#c0392b',5);
+ctx.fillStyle='#c0392b';ctx.font='bold 11px sans-serif';ctx.textAlign='left';
+ctx.fillText('reachable, but worse here',pDom[0]+8,pDom[1]-6);
+ctx.fillStyle='#c0392b';ctx.font='10px sans-serif';
+ctx.fillText('total cost 46.5 at this ratio',pDom[0]+8,pDom[1]+10);
+var pStar=point(uStar,oStar,'#27ae60',6);
+ctx.fillStyle='#27ae60';ctx.font='bold 11px sans-serif';ctx.textAlign='left';
+ctx.fillText('Q*: optimal for a 4:1 ratio',pStar[0]+8,pStar[1]-6);
+ctx.fillStyle='#27ae60';ctx.font='10px sans-serif';
+ctx.fillText('total cost 32.2 at this ratio',pStar[0]+8,pStar[1]+10);
+}
+if('IntersectionObserver' in window){
+new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();setup();draw();}},{threshold:0.2}).observe(cv);
+}else{setup();draw();}
+window.addEventListener('resize',function(){setup();draw();});
+})();
+</script>
+<figcaption>The blue curve is every capacity choice's cost, traced as <script type="math/tex">Q</script>
+ sweeps from 0 to large: each point is a reachable <script type="math/tex">(\text{underage cost}, \text{overage cost})</script>
+ pair. For an underage-to-overage cost ratio of 4:1, <script type="math/tex">Q^*</script>
+ (green) is the one point on the curve where its local tradeoff rate matches that ratio, giving the lowest weighted total cost: 32.2. A point further down the same curve (red) is equally reachable but costs 46.5 at this same ratio: not unreachable, just the wrong point on the curve for what you actually care about.</figcaption>
+</div>
+<p>The chart above uses a single, simple exponential demand to show what an achievable region <em>is</em>, in general, and what it means to be at the wrong point on it. Definition 0 holds for any <script type="math/tex">F</script>
+, so a clean illustrative distribution is enough there. What follows is a different, sharper exercise: not one distribution’s frontier, but a real comparison between two, built to make Proposition 0’s dominance claim checkable rather than merely plausible.</p>
+<blockquote>
+<p><strong>Trace example A. The capacity number.</strong> This example runs on illustrative units (<script type="math/tex">x_m=5</script>
+), deliberately not the case study’s own seconds. It exists to make Proposition 0’s dominance claim checkable in isolation, before Trace Example B (below) applies the same machinery to the case study’s real numbers.</p>
+</blockquote>
+<p><strong>Proposition 0’s claim, made concrete rather than asserted.</strong> Let the true demand be Pareto-distributed: <script type="math/tex">F(x) = 1-(x_m/x)^\alpha</script>
+ for <script type="math/tex">x \geq x_m</script>
+, with <script type="math/tex">x_m=5</script>
+, <script type="math/tex">\alpha=2.2</script>
+, a real heavy tail, not an exotic one, with finite mean <script type="math/tex">E[D] = \alpha x_m/(\alpha-1) = 9.17</script>
+. An operator who has only ever seen the ordinary case fits a light-tailed exponential model instead, using the <em>correct</em> mean, the most generous version of the mistake possible, since even a perfectly-estimated mean doesn’t save you if the shape is wrong. At a 999:1 underage-to-overage cost ratio <script type="math/tex">r = C_u/(C_u+C_o) = 0.999</script>
+, the same asymmetry that made the case study’s outage expensive, where a sedimented pool refusing every admission cost far more than one idle slot ever would. The correctly-specified Pareto model gives <script type="math/tex">Q^*_{\text{true}} = x_m(1-r)^{-1/\alpha}</script>
+ = <strong>115.5</strong>. The exponential model, same mean, same ratio, gives only <script type="math/tex">Q_{\text{wrong}} = -E[D]\ln(1-r)</script>
+ = <strong>63.3</strong>, a 45% capacity shortfall from the shape mistake alone. Evaluating <script type="math/tex">Q_{\text{wrong}}</script>
+ against the <em>true</em> Pareto cost function, using the Pareto mean-residual-life identity <script type="math/tex">E[(D-Q)^+] = x_m^\alpha Q^{1-\alpha}/(\alpha-1)</script>
+ for the underage term, gives a weighted cost <strong>24.5%</strong> higher than <script type="math/tex">Q^*_{\text{true}}</script>
+ achieves. <script type="math/tex">Q_{\text{wrong}}</script>
+ sits exactly on the frontier for the exponential world it was computed against. On the frontier of the real one it’s still a reachable point, just the wrong one for this ratio: the 24.5% figure above is exactly the price of sitting at that wrong point instead of <script type="math/tex">Q^*_{\text{true}}</script>
+. That is Proposition 0’s dominance claim, verified with numbers, not asserted.</p>
+<table><thead><tr><th style="text-align: left">Quantity</th><th style="text-align: left">Value</th><th style="text-align: left">What it means</th></tr></thead><tbody>
+<tr><td style="text-align: left"><script type="math/tex">E[D]</script>
+</td><td style="text-align: left">9.17</td><td style="text-align: left">the true mean, used identically by both models</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">Q^*_{\text{true}}</script>
+</td><td style="text-align: left">115.5</td><td style="text-align: left">optimal capacity under the correctly-specified Pareto</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">Q_{\text{wrong}}</script>
+</td><td style="text-align: left">63.3</td><td style="text-align: left">optimal capacity under the misspecified exponential, same mean</td></tr>
+<tr><td style="text-align: left">Capacity shortfall</td><td style="text-align: left">45%</td><td style="text-align: left">how much smaller the wrong answer is</td></tr>
+<tr><td style="text-align: left">Weighted-cost overpayment</td><td style="text-align: left">24.5%</td><td style="text-align: left">the actual price of the shape mistake, evaluated against the true cost function</td></tr>
+</tbody></table>
+<p><em>The measured cost of fitting an exponential to Pareto-distributed demand: a 45% capacity shortfall and a 24.5% weighted-cost overpayment against the true optimum.</em></p>
+<p>Exponential isn’t the wrong model here because light-tailed workloads are always exponential: they aren’t. It’s chosen because it’s the maximum-entropy distribution on <script type="math/tex">[0,\infty)</script>
+ given only a known mean: the least additional structure assumable beyond “I know the average.” An operator who correctly measures the mean and adds no further assumption defaults, whether they realize it or not, to exactly this distribution. That’s why using the <em>correct</em> mean above is the most generous version of the mistake, not a strawman. The failure isn’t sloppy estimation. It’s that the single most information-conservative distribution consistent with what was actually measured is still the wrong one, whenever what’s measured is a mean and nothing about the shape.</p>
+<p>Scheduling has its own version of the same problem, one layer down. Not how much capacity to provision, but which arriving <em>units of work</em> to admit into a shared, finite pool, when each unit’s true cost (how long it will actually run) is unknown until it finishes or reveals itself in flight. Where the newsvendor problem asks “how much capacity,” this version asks “admit or hold,” repeatedly, under the same underage/overage cost structure. It inherits every fragility Proposition 0 proves for the parent problem, plus a second one: <strong>a capacity number can be recomputed after a bad day. A concurrency pool cannot un-admit a task already running inside it.</strong></p>
+<p><span id="prop-0"></span></p>
+<details>
+<summary>Proposition 0 -- Fragility of Misspecified Capacity Targets: a correct answer exists under heavy tails, but not the one most operators compute</summary>
+<p><strong>Proposition 0</strong> (Fragility of Misspecified Capacity Targets). Das, Dhara &amp; Natarajan <a href="#ref-2" class="cite-ref" data-def="Das, B., Dhara, A. & Natarajan, K. (2021) — On the Heavy-Tail Behavior of the Distributionally Robust Newsvendor" aria-label="Das, B., Dhara, A. & Natarajan, K. (2021) — On the Heavy-Tail Behavior of the Distributionally Robust Newsvendor">[2]</a>
+ prove that a distributionally-robust order quantity (computed explicitly against a heavy-tailed ambiguity set rather than an assumed-light-tailed demand curve) is itself heavy-tail-optimal. A correct answer exists; the fractile concept is not broken. What their results show instead is where the fragility actually lives: an order quantity optimized under a <em>misspecified</em> light-tailed assumption degrades sharply once the true demand carries even a modest heavy-tailed contamination, and computing the correct robust alternative requires exactly the moment information (tail index, higher moments) that is hardest to estimate reliably from finite historical data.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> The fractile formula was never the problem. Given the <em>true</em> demand distribution, <script type="math/tex">Q^*</script>
+’s closed form is exactly correct, heavy tail or not: the formula doesn’t care how demand is shaped. What breaks is a specific, ordinary, easy-to-miss habit: fitting a light-tailed family to historical data because it’s the default, without checking whether the tail was estimated or merely assumed. That habit costs nothing when the assumption happens to be right. Proposition 0 makes precise how much it costs when it’s wrong, not a vague “instability,” a specific, checkable overpayment, computed below against this post’s own numbers.</p>
+</blockquote>
+<p><em>How the robust order quantity is actually built.</em> Das, Dhara &amp; Natarajan don’t estimate a single demand distribution and hedge around it. They define an ambiguity set: every distribution consistent with a small amount of known information, the mean and one higher moment tied to tail weight, and solve for the order quantity that minimizes the <em>worst-case</em> expected cost over that entire set: a minimax problem, not a point estimate. Their result is what makes this post’s claim precise: the distribution that actually realizes the worst case inside that ambiguity set is regularly varying, heavy-tailed, and the minimax-optimal quantity coincides exactly with the classical fractile computed <em>against that worst-case distribution</em>. The robust method isn’t a hedge against heavy tails as one risk among many. It’s provably defending against exactly the heavy-tailed case, which is why a quantity built to survive the worst case in the ambiguity set is automatically heavy-tail-optimal, not heavy-tail-robust as a separate property bolted on.</p>
+<p>That’s a narrower, more defensible claim than “fractiles are unstable under heavy tails,” and Definition 0 makes it precise. A capacity computed under a misspecified light-tailed <script type="math/tex">F'</script>
+ isn’t merely unstable: it fails to minimize <script type="math/tex">C_u \cdot E[\text{underage} \mid F] + C_o \cdot E[\text{overage} \mid F]</script>
+, the operator’s actual weighted objective evaluated against the true distribution <script type="math/tex">F</script>
+, even while sitting exactly on the frontier for the distribution it was mistakenly computed against. It’s Pareto-efficient for a world that doesn’t exist, and merely the wrong point on the frontier for the one that does: efficient for a preference weighting nobody actually holds. The classical solution most operators actually compute (a fractile fit to recent observed demand, under an implicit light-tailed assumption nobody examined) is a light-tailed guess wearing the robust answer’s clothing. The two only look the same until the tail event the guess was never built for.</p>
+<p><strong>Back to the pool from the opening.</strong> Its 32 generation slots are exactly <script type="math/tex">Q</script>
+: a capacity number, computed once, from a demand distribution nobody re-examined for tail weight. The generation-length cost that produced the pileup is heavy-tailed: dominated by rare, long reasoning traces, not the millisecond-short-completion case the pool was sized against. <script type="math/tex">Q</script>
+ was computed correctly, against the distribution that existed the day it was set. The pool filling until nothing else could get in isn’t a separate incident from Proposition 0. It’s the theorem, watched happen: a capacity number, misspecified against a tail nobody measured, failing in exactly the expensive direction the theorem predicts.</p>
+<h2 id="where-the-scheduling-version-gets-strictly-harder">Where the Scheduling Version Gets Strictly Harder</h2>
+<p>The capacity version can always be fixed after the fact: remeasure <script type="math/tex">F</script>
+, recompute <script type="math/tex">Q^*</script>
+, redeploy. The scheduling version can’t. Once a long generation is admitted into a slot, nothing in the story just told takes that slot back. Recomputing <script type="math/tex">Q</script>
+ more carefully, or picking a better fractile, doesn’t touch that: the binding constraint isn’t the capacity number anymore, it’s a structurally different one sitting downstream of it. This is the 
+  
+  
+    
+    
+    
+  
+
+<a href="https://e-mindset.space/blog/microlearning-platform-part6-meta-framework/#the-constraint-sequence-framework" class="defined-term" data-def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding" aria-label="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding">Constraint Sequence Framework</a>
+’s core invariant, not a narrative complication: you cannot solve a downstream constraint by working harder on the upstream one that exposed it. Whether that downstream constraint is fixable at all, and what secures it if a better <script type="math/tex">Q^*</script>
+ can’t, is the question the rest of this post answers formally.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> A capacity number lives at the level of “how many,” and every failure at that level has the same fix: measure again, recompute, redeploy. A running task lives at a different level entirely (“which one, right now, holding what”) and no amount of skill at the first level reaches the second. An operator who responds to a sedimented pool by tuning <script type="math/tex">Q^*</script>
+ again, more carefully this time, isn’t wrong about the math. They’re solving the wrong layer’s problem: the way re-tuning a thermostat does nothing for a stuck valve.</p>
+</blockquote>
+<p><span id="def-1"></span></p>
+<details>
+<summary>Definition 1 -- The Blood Oath Constraint: a workload that denies visibility, denies preemption, and denies horizontal escape simultaneously</summary>
+<p><strong>Definition 1</strong> (Blood Oath Constraint). A workload exhibits the Blood Oath Constraint when three properties hold simultaneously:</p>
+<ol>
+<li><strong>Ingress blindness.</strong> Task cost (its true execution duration) is unknown at admission and remains formally unknown until the task completes. What is available in-flight is not a fact but a probabilistic signal. Because task duration is Pareto-shaped, a single, genuinely heavy-tailed population rather than a mixture (Model Scope, below, checks that assumption), a task’s expected remaining duration grows, not shrinks, the longer it has already run: a decreasing-hazard-rate property real for this specific shape, not a property every heavy-tailed distribution shares automatically. This is established for exactly this kind of workload by Harchol-Balter &amp; Downey <a href="#ref-3" class="cite-ref" data-def="Harchol-Balter, M. & Downey, A. (1997) — Exploiting Process Lifetime Distributions for Dynamic Load Balancing" aria-label="Harchol-Balter, M. & Downey, A. (1997) — Exploiting Process Lifetime Distributions for Dynamic Load Balancing">[3]</a>
+, who showed UNIX process lifetimes are Pareto-distributed and that elapsed runtime alone predicts remaining runtime well enough to schedule on, without ever needing a job’s true size in advance. Elapsed time is therefore an increasingly reliable, never certain, heavy-task signal, a physical quantity a system can act on directly, unlike the true cost itself, which stays unknown until completion (acting on it means adjusting the task’s resource-accounting class for the system’s own capacity math, not touching the task itself, which Property 2 already rules out).</li>
+<li><strong>Execution immortality.</strong> Once admitted, a task cannot be preempted, yielded, or retried. It runs to completion or the node dies with it.</li>
+<li><strong>Locality lock.</strong> The workload requires shared-memory cache locality, which forecloses the standard escape hatch of horizontal sharding: you cannot route the problem away from a single node’s boundary. In the case study’s own terms: a generation’s KV cache lives in the accelerator’s own high-bandwidth memory, built incrementally, one token at a time, as the reasoning trace grows. Moving it means moving the entire accumulated cache across a network link that is, categorically, slower than the memory bus that built it. That’s true for standard networking, and true in kind even as RDMA and CXL memory-pooling fabrics narrow the bandwidth gap for tightly-coupled intra-rack configurations, since moving accumulated state across any inter-device link costs strictly more than never having moved it at all. That relocation cost grows with the same elapsed time that made the task worth relocating in the first place. Horizontal sharding is the standard answer to “one node is out of room” precisely because most workloads carry no state worth the move: a stateless request retried against a different replica costs nothing beyond the retry itself. A Blood Oath task inverts that economics by construction. The longer it runs, the more expensive relocating it becomes, at exactly the moment its duration would make relocation most tempting. This describes a real, non-empty category of systems, genuinely locked to a single node’s memory bus with no swap or checkpoint infrastructure behind it. It’s the category this series is built around, not a claim that every LLM-serving deployment necessarily works this way. Real serving engines increasingly ship infrastructure specifically to make mid-generation relocation survivable rather than catastrophic, swapping paged KV-cache blocks to host memory or recomputing them on resumption <a href="#ref-4" class="cite-ref" data-def="Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C.H., Gonzalez, J.E., Zhang, H. & Stoica, I. (2023) — Efficient Memory Management for Large Language Model Serving with PagedAttention" aria-label="Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C.H., Gonzalez, J.E., Zhang, H. & Stoica, I. (2023) — Efficient Memory Management for Large Language Model Serving with PagedAttention">[4]</a>
+, at a real, non-trivial cost, but a finite one, not the effectively-infinite one property 3 describes. A workload running on that kind of infrastructure isn’t Blood Oath, and the two shouldn’t be priced with the same formula: relocation that costs real money is a fundamentally different economic object than relocation that’s ruled out by construction.</li>
+</ol>
+<p>Any one of these alone is a familiar, solvable scheduling problem. Together, they remove every lever a scheduler normally has. No admission control on cost: you don’t know it, and won’t until completion. No correcting a bad admission after the fact: nothing can be evicted. No spreading the risk across more machines: the data doesn’t move. <em>“Immortal task” is this post’s own term for property 2, it doesn’t appear in the scheduling literature under that name; the formal name for the underlying model is non-clairvoyant, non-preemptive scheduling, addressed directly below.</em></p>
+<p>A natural follow-up: if locality lock somehow didn’t hold (if the KV cache could move for free) would spreading the same traffic across more nodes fix the sedimentation problem? No, and it’s worth showing why rather than asserting it. The heavy-occupancy fraction, <script type="math/tex">p/(1-p) \cdot (W_h/W_l)</script>
+ normalized to a share, where <script type="math/tex">p</script>
+ is the fraction of arrivals that are heavy and <script type="math/tex">W_h, W_l</script>
+ their respective mean holding times, the same Little’s-Law occupancy ratio this post computes with real numbers later in this section, has no arrival-rate term in it at all. Double the number of nodes while splitting the identical traffic mix proportionally across them, and every node still faces the same <script type="math/tex">p</script>
+, the same <script type="math/tex">W_h</script>
+, the same <script type="math/tex">W_l</script>
+. That’s the same expected occupancy fraction, independently, on every single node. Horizontal scaling multiplies the number of pools sedimenting to roughly 23% heavy occupancy. It doesn’t reduce that 23% on any one of them. This is the quantitative version of what property 3 already rules out by fiat: even in a hypothetical world where locality lock didn’t hold, adding capacity in the wrong shape (more nodes, same per-node traffic ratio) isn’t the same lever as adding capacity in the right shape (more slots per node, fewer heavy tasks per node). Blood Oath’s fragility lives specifically in the second shape, the one horizontal scaling never touches.</p>
+</details>
+<p><strong>What Harchol-Balter &amp; Downey actually measured.</strong> The decreasing-hazard-rate claim in property 1 isn’t a theoretical convenience: it’s an empirical finding about real systems. Their study analyzed UNIX process lifetime traces across multiple production and workstation environments and found the lifetime distribution consistently follows a Pareto shape, not the exponential shape classical M/M/1-style queueing models assume by default. The consequence is exactly the property Definition 1 leans on: because the distribution is heavy-tailed, a process’s <em>expected remaining</em> lifetime, given it’s survived this long, grows rather than shrinks with elapsed time, the opposite of the memoryless behavior an exponential assumption predicts. That’s what makes scheduling policies favoring freshly-arrived work over long-running work provably better under real process-lifetime data than policies treating every running task as equally likely to finish soon, the same asymmetry Definition 1b’s crossover time formalizes below. It’s also why shortest-remaining-processing-time-style intuitions generalize so well from the classical, fully-clairvoyant literature to a world with no true job sizes at all. SRPT wants to run whatever finishes soonest, and under a decreasing-hazard-rate distribution, elapsed time alone already tells you which class a task is drawing from, even with the actual remaining time still unknown. The intuition survives losing clairvoyance because the <em>ranking</em> it needs (which task is more likely to finish first) doesn’t require the exact number, only the direction the posterior is moving. Property 1 hands it that for free.</p>
+<p><strong>Worth being precise about what a 1997 measurement can and can’t carry into a 2026 claim.</strong> Harchol-Balter &amp; Downey measured UNIX process lifetimes: a different generative mechanism entirely from autoregressive token generation. The shape matching doesn’t, by itself, mean the underlying cause matches. What the citation actually earns is the general scheduling argument: for <em>any</em> decreasing-hazard-rate distribution, however it arises, elapsed time predicts remaining time well enough to schedule on, and that argument doesn’t depend on the domain the distribution came from. It doesn’t, on its own, earn the empirical claim that LLM reasoning-trace duration specifically is heavy-tailed. That claim needs its own, more recent evidence, and it exists. A 2025 study fitting extreme value theory directly to LLM response lengths, across 14,301 real completions from GPT-4o and cross-validated against Qwen and DeepSeek, found response-length tails follow a Weibull-type generalized extreme value distribution, heavier under stochastic decoding <a href="#ref-5" class="cite-ref" data-def="Jiao, L., Gao, C., Yang, Y., Zhou, C., Huang, Y., Chen, X. & Li, Y. (2025) — Analyzing and Modeling LLM Response Lengths with Extreme Value Theory: Anchoring Effects and Hybrid Distributions" aria-label="Jiao, L., Gao, C., Yang, Y., Zhou, C., Huang, Y., Chen, X. & Li, Y. (2025) — Analyzing and Modeling LLM Response Lengths with Extreme Value Theory: Anchoring Effects and Hybrid Distributions">[5]</a>
+. Worth being exact about what that does and doesn’t confirm: Weibull-type is the <em>bounded</em> domain in extreme value theory, a finite upper endpoint, not the unbounded Fréchet-type domain an unbounded Pareto tail belongs to. It doesn’t independently confirm this series’ own untruncated Pareto<script type="math/tex">(x_m, \alpha)</script>
+ as the exactly-correct functional form. It does independently confirm, from real, model-diverse 2025 data rather than a 1997 analogy, that LLM response lengths are genuinely heavy-tailed and that a bounded ceiling is the empirically right way to model where that tail actually ends, not an untruncated one. The two findings, reached independently, point the same direction.</p>
+<table><thead><tr><th style="text-align: left">Property removed</th><th style="text-align: left">What it normally lets a scheduler do</th><th style="text-align: left">Why Blood Oath removes it</th></tr></thead><tbody>
+<tr><td style="text-align: left">Admission control on cost</td><td style="text-align: left">Reject expensive work before it starts</td><td style="text-align: left">Cost is unknown until completion (property 1)</td></tr>
+<tr><td style="text-align: left">Mid-flight correction</td><td style="text-align: left">Kill or reschedule a bad admission</td><td style="text-align: left">Nothing can be preempted or evicted (property 2)</td></tr>
+<tr><td style="text-align: left">Horizontal escape</td><td style="text-align: left">Shard risk across more machines</td><td style="text-align: left">Shared-memory locality forecloses sharding (property 3)</td></tr>
+</tbody></table>
+<p><em>The three scheduling levers Blood Oath removes simultaneously, and which of Definition 1’s three properties removes each one.</em></p>
+<blockquote>
+<p><strong>Physical translation.</strong> Most scheduling problems give you one axis to pull: reject expensive work at the door, kill it mid-flight if it turns out expensive, or shard it away from anything else that matters. The Blood Oath Constraint is what’s left when a workload takes all three axes off the table at once, not a harder version of a normal scheduling problem, but a different problem that looks identical from the outside.</p>
+</blockquote>
+<p><em>Watch out for</em>: treating two-out-of-three as most of the way there. It isn’t: the three properties don’t degrade the achievable region additively, they intersect it. A workload with ingress blindness and locality lock, but where preemption <em>is</em> available, still has an escape hatch: evict the task that turns out heavy, eat the sunk cost, let something else through. A workload with ingress blindness and non-preemption, but where sharding <em>is</em> available, still has an escape hatch: spread the risk thin enough that no single node’s pool sediments even if some of them do. Removing any two of the three still leaves a lever. Proposition A, below, is a claim about all three at once. It says nothing about workloads that only satisfy two, which is exactly why “Compute it,” at the end of this post, asks which of the three actually hold for your system, not whether any do.</p>
+<p><span id="def-1b"></span></p>
+<details>
+<summary>Definition 1b -- Prior Confidence and the Crossover Time: pre-classification is a fixed signal, elapsed time is not</summary>
+<p><strong>Definition 1b</strong> (Prior Confidence and the Crossover Time). Suppose ingress is not entirely blind after all. A pre-admission classifier exists, using whatever features are available before execution starts (endpoint, payload shape, caller identity), producing a fixed confidence <script type="math/tex">\pi_0</script>
+ that a given task is heavy. This does not contradict Definition 1’s blindness property; it refines it. Two signals are now available, and they behave differently over time:</p>
+<ul>
+<li><script type="math/tex">\pi_0</script>
+ is <strong>fixed at admission.</strong> It cannot improve by waiting. It is whatever it is the instant the task is accepted, and no amount of elapsed execution time makes it a better classifier than it already was.</li>
+<li>The elapsed-time posterior <script type="math/tex">P(\text{heavy} \mid \text{still running at } t)</script>
+ is <strong>monotonically increasing in <script type="math/tex">t</script>
+</strong>, a direct consequence of Definition 1’s decreasing-hazard-rate property, and approaches certainty as <script type="math/tex">t</script>
+ grows relative to the light-task timescale.</li>
+</ul>
+<p>Because one signal is fixed and the other is unbounded and monotonic, there exists a crossover time <script type="math/tex">t^*</script>
+ such that for all <script type="math/tex">t > t^*</script>
+, the elapsed-time-only posterior exceeds <script type="math/tex">\pi_0</script>
+: regardless of how good the pre-classifier is. This holds for any fixed <script type="math/tex">\pi_0 < 1</script>
+.</p>
+</details>
+<p>This is a claim about what happens eventually, not always. Near <script type="math/tex">t = 0</script>
+, right after admission, the elapsed-time signal carries almost no information, and a well-built pre-classifier with strong admission-time features (a reliable payload-size header, a caller known to only submit heavy jobs) can and should beat it outright. The correct reading isn’t “elapsed time is always the better signal.” It’s “elapsed time is the <em>only</em> signal that keeps improving without bound, so no fixed pre-classifier (however good) stays the better one forever.”</p>
+<blockquote>
+<p><strong>Trace example B. The reasoning trace.</strong> This is the case study’s own workload, followed through the rest of this post in real seconds: a heavy task drawn from Pareto<script type="math/tex">(x_m\approx164, \alpha=2.2)</script>
+, competing against light calls that finish in about half a second. Proposition A’s own worked example, further below, resumes exactly this trace.</p>
+</blockquote>
+<p><strong>Worked example.</strong> The elapsed-time posterior isn’t an arbitrary curve: it falls out of Bayes’ rule applied to the two task classes already in use throughout this post. Let heavy tasks be the same Pareto<script type="math/tex">(x_m=5, \alpha=2.2)</script>
+ used in Proposition 0, and let light tasks be exponential with mean <script type="math/tex">\mu_L=1</script>
+, fast, and memoryless, the <em>wrong</em> model for heavy tasks but the right one for light ones. Let <script type="math/tex">p</script>
+ be the population base rate of heavy tasks among all arrivals: a deliberately less extreme <script type="math/tex">p=0.02</script>
+ here, not the case study’s actual one-in-two-thousand. It’s chosen so the crossover shows up on a readable timescale, rather than requiring the reader to squint at values close to zero. <script type="math/tex">x_m=5</script>
+ is the same kind of convenience: reused directly from Proposition 0’s demand-quantity example for continuity, not calibrated against the case study’s own heavy-task duration. The case study’s real numbers are worked separately below, not read off this graph’s axis. The mechanism is identical either way; only the numbers on the axis change. Then:</p>
+<script type="math/tex;mode=display">P(\text{heavy} \mid T>t) = \frac{p \cdot S_h(t)}{p \cdot S_h(t) + (1-p) \cdot S_l(t)}</script>
+<p>where <script type="math/tex">S_l(t) = e^{-t/\mu_L}</script>
+, and <script type="math/tex">S_h(t)</script>
+ is piecewise to respect the Pareto minimum: a survival probability can’t exceed 1, so it can’t be <script type="math/tex">(x_m/t)^\alpha</script>
+ for <script type="math/tex">t</script>
+ below <script type="math/tex">x_m</script>
+:</p>
+<script type="math/tex;mode=display">S_h(t) = \begin{cases} 1 & t < x_m \\ (x_m/t)^\alpha & t \geq x_m \end{cases}</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">P(\text{heavy}\mid T>t)</script>
+ - the probability a task is heavy given it’s still running at <script type="math/tex">t</script>
+</li>
+<li><script type="math/tex">p</script>
+ - the population base rate of heavy tasks among all arrivals</li>
+<li><script type="math/tex">\mu_L</script>
+ - the mean duration of a light task</li>
+<li><script type="math/tex">x_m</script>
+, <script type="math/tex">\alpha</script>
+ - the Pareto minimum and tail index of the heavy class</li>
+</ul>
+<p>This is genuinely not exponential-shaped, and it shouldn’t be. That would smuggle a light-tailed assumption into the one signal this post is building specifically to survive heavy tails. Because <script type="math/tex">S_l</script>
+ decays exponentially and <script type="math/tex">S_h</script>
+ decays only polynomially, the ratio inverts sharply, not smoothly: near-zero while both classes look equally likely to still be running, then a fast swing to near-certainty once the light-task timescale is behind it. Solving <script type="math/tex">P(\text{heavy}\mid T>t^*) = \pi_0</script>
+ numerically for <script type="math/tex">\pi_0=0.3</script>
+ gives <script type="math/tex">t^* \approx 3.05</script>
+. A few points along the way:</p>
+<table><thead><tr><th style="text-align: left">Elapsed time <script type="math/tex">t</script>
+</th><th style="text-align: left">Elapsed-time posterior</th><th style="text-align: left">Fixed <script type="math/tex">\pi_0</script>
+</th><th style="text-align: left">Which one’s ahead</th></tr></thead><tbody>
+<tr><td style="text-align: left">0</td><td style="text-align: left">0.020</td><td style="text-align: left">0.30</td><td style="text-align: left"><script type="math/tex">\pi_0</script>
+: no elapsed-time signal yet</td></tr>
+<tr><td style="text-align: left">1</td><td style="text-align: left">0.053</td><td style="text-align: left">0.30</td><td style="text-align: left"><script type="math/tex">\pi_0</script>
+: still well ahead</td></tr>
+<tr><td style="text-align: left">2</td><td style="text-align: left">0.131</td><td style="text-align: left">0.30</td><td style="text-align: left"><script type="math/tex">\pi_0</script>
+: closing fast</td></tr>
+<tr><td style="text-align: left">3</td><td style="text-align: left">0.291</td><td style="text-align: left">0.30</td><td style="text-align: left"><script type="math/tex">\pi_0</script>
+: barely ahead, crossover imminent</td></tr>
+<tr><td style="text-align: left">4</td><td style="text-align: left">0.527</td><td style="text-align: left">0.30</td><td style="text-align: left">elapsed time, decisively (crossover was at <script type="math/tex">t^* \approx 3.05</script>
+)</td></tr>
+<tr><td style="text-align: left">8</td><td style="text-align: left">0.956</td><td style="text-align: left">0.30</td><td style="text-align: left">elapsed time, nearly certain</td></tr>
+</tbody></table>
+<p><em>The elapsed-time posterior overtaking a fixed <script type="math/tex">\pi_0=0.3</script>
+ pre-classifier at <script type="math/tex">t^*\approx3.05</script>
+: the worked numbers behind the crossover graph above.</em></p>
+<p>A moderate <script type="math/tex">\pi_0</script>
+ buys three time units of lead before the clock alone would have flagged anything: real value, earned faster than a smooth exponential curve would suggest, because the true transition is a sharp one. Push <script type="math/tex">\pi_0</script>
+ to 0.6 and <script type="math/tex">t^*</script>
+ moves out to about 4.3; push it to 0.9 and it moves to about 6.75. Lead time scales with classifier quality. It never becomes infinite.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> A pre-classifier’s real value isn’t that it out-predicts watching the clock: past the crossover point, it can’t. Its value is <em>lead time</em>: it lets the system act before <script type="math/tex">t^*</script>
+, during exactly the window where elapsed time hasn’t said anything useful yet. The right design isn’t “pick one signal.” It’s Bayesian combination: start from <script type="math/tex">\pi_0</script>
+ at admission, update continuously as elapsed time accrues, let the elapsed-time term take over the posterior on its own schedule as it strengthens. A system that trusts only <script type="math/tex">\pi_0</script>
+ forever throws away the one signal in this problem guaranteed to become arbitrarily reliable. A system that ignores <script type="math/tex">\pi_0</script>
+ entirely gives up free, immediate signal for no reason, during the exact window it would have mattered most.</p>
+</blockquote>
+<div style="margin:1.5em 0;">
+<canvas id="graph-crossover" aria-label="Three flat lines at pi-zero equals 0.3, 0.6, and 0.9, the fixed pre-classification confidence at three levels, against a single monotonically increasing curve, the elapsed-time posterior derived from a genuine Bayesian mixture of a Pareto heavy-task class and an exponential light-task class. The curve is a sharp sigmoid, not a smooth exponential approach. Each line crosses the curve exactly once, at t-star values 3.05, 4.30, and 6.75 respectively -- higher confidence buys a longer lead time, but every line eventually crosses." style="width:100%; aspect-ratio:700/340; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<script>
+(function(){
+var cv=document.getElementById('graph-crossover');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var W,H;
+var XM=5,ALPHA=2.2,MU_L=1,P_POP=0.02;
+var PRIORS=[0.3,0.6,0.9];
+function Sheavy(t){if(t<XM)return 1;return Math.pow(XM/t,ALPHA);}
+function Slight(t){return Math.exp(-t/MU_L);}
+function posterior(t){var h=P_POP*Sheavy(t),l=(1-P_POP)*Slight(t);return h/(h+l);}
+function crossoverT(p0){var lo=0,hi=200;for(var i=0;i<100;i++){var mid=(lo+hi)/2;if(posterior(mid)<p0){lo=mid;}else{hi=mid;}}return (lo+hi)/2;}
+function setup(){var r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.scale(d,d);W=r.width;H=r.height;}
+function draw(){
+ctx.clearRect(0,0,W,H);
+var fg='#333',grid='#eee',sub='#777';
+var PL=48,PR=20,PT=36,PB=36,AW=W-PL-PR,AH=H-PT-PB;
+var TMAX=8;
+function SX(t){return PL+(Math.min(t,TMAX)/TMAX)*AW;}
+function SY(p){return PT+AH-(p*AH);}
+ctx.fillStyle=fg;ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+ctx.fillText('However Confident the Guess, Waiting Eventually Beats It',W/2,17);
+var yt,y;
+for(yt=0;yt<=1.0001;yt+=0.25){
+y=SY(yt);ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+AW,y);ctx.stroke();
+ctx.fillStyle=sub;ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(yt.toFixed(2),PL-6,y+3);
+}
+ctx.strokeStyle=sub;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,PT+AH);ctx.lineTo(PL+AW,PT+AH);ctx.stroke();
+ctx.fillStyle=sub;ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('elapsed time t',PL+AW/2,PT+AH+16);
+ctx.strokeStyle='#27ae60';ctx.lineWidth=2;ctx.beginPath();
+var t,first=true;
+for(t=0;t<=TMAX;t+=1){var px=SX(t),py=SY(posterior(t));if(first){ctx.moveTo(px,py);first=false;}else{ctx.lineTo(px,py);}}
+ctx.stroke();
+ctx.fillStyle='#27ae60';ctx.font='11px sans-serif';ctx.textAlign='left';
+ctx.fillText('elapsed-time posterior',PL+8,PT+14);
+var shades=['#e67e22','#c0530f','#8a3a0a'];
+for(var i=0;i<PRIORS.length;i++){
+var p0=PRIORS[i],col=shades[i];
+ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+ctx.beginPath();ctx.moveTo(PL,SY(p0));ctx.lineTo(PL+AW,SY(p0));ctx.stroke();ctx.setLineDash([]);
+var tStar=crossoverT(p0);
+var cx=SX(tStar),cy=SY(p0);
+ctx.fillStyle=fg;ctx.beginPath();ctx.arc(cx,cy,3.5,0,6.2832);ctx.fill();
+ctx.fillStyle=col;ctx.font='bold 10px sans-serif';ctx.textAlign='left';
+ctx.fillText('π₀='+p0.toFixed(1)+', t*='+tStar.toFixed(1),Math.min(cx+6,PL+AW-110),cy-6);
+}
+}
+if('IntersectionObserver' in window){
+new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();setup();draw();}},{threshold:0.2}).observe(cv);
+}else{setup();draw();}
+window.addEventListener('resize',function(){setup();draw();});
+})();
+</script>
+<figcaption>Three fixed values of <script type="math/tex">\pi_0</script>
+ against the same rising elapsed-time posterior: derived from a genuine Bayes mixture of a Pareto heavy class and an exponential light class, not an illustrative exponential curve. Every line crosses exactly once. A higher prior confidence buys more lead time before elapsed time takes over (<script type="math/tex">t^* \approx</script>
+ 3.05, 4.30, 6.75 for <script type="math/tex">\pi_0</script>
+ = 0.3, 0.6, 0.9), but none of them avoid the crossing. Notice the curve's own shape: near-flat while both classes still look equally likely to be running, then a fast swing past <script type="math/tex">t\approx4</script>
+ to near-certainty, the sharp, non-exponential transition the text describes, not a smooth approach.</figcaption>
+</div>
+<p><strong>In real terms.</strong> The graph above uses illustrative parameters chosen for readability, not the case study’s own scale: its <script type="math/tex">t^*</script>
+ values shouldn’t be read as real seconds. Recompute against the case study’s actual numbers: heavy tasks arriving at one in two thousand, light calls averaging <script type="math/tex">\mu_L\approx0.5</script>
+s, the same <script type="math/tex">\alpha=2.2</script>
+ applied to a heavy-task duration with mean <script type="math/tex">E[S_h]=300</script>
+s (implying <script type="math/tex">x_m = E[S_h](\alpha-1)/\alpha \approx 164</script>
+s, this series’ real scale, not the <script type="math/tex">x_m=5</script>
+ borrowed above for the graph). The crossover lands at <script type="math/tex">t^*\approx3.4</script>
+s for <script type="math/tex">\pi_0=0.3</script>
+, <script type="math/tex">4.0</script>
+s for <script type="math/tex">\pi_0=0.6</script>
+, <script type="math/tex">4.9</script>
+s for <script type="math/tex">\pi_0=0.9</script>
+. All three land well below <script type="math/tex">x_m\approx164</script>
+s. The heavy-task Pareto’s own tail shape isn’t even doing the work yet, since <script type="math/tex">S_h(t)=1</script>
+ identically for <script type="math/tex">t<x_m</script>
+. The crossover here is driven entirely by how fast the light-task exponential decays away, not by anything heavy-tailed. It’s still a fast trigger relative to a five-minute heavy task and any conventional dashboard latency alert: the bare fact that a call hasn’t finished yet becomes a more reliable heavy-task signal than a decent pre-admission classifier within single-digit seconds of execution, for a request whose eventual heavy-classified duration will be measured in minutes.</p>
+<p>This crossover argument sits inside a broader, active research area, not a first foray into the question. <em>Learning-augmented non-clairvoyant scheduling</em> studies exactly this shape of problem formally: a fixed or partial prediction combined with an online algorithm that falls back on classical worst-case guarantees when the prediction turns out wrong <a href="#ref-6" class="cite-ref" data-def="Lindermayr, A. & Megow, N. (2022) — Permutation Predictions for Non-Clairvoyant Scheduling" aria-label="Lindermayr, A. & Megow, N. (2022) — Permutation Predictions for Non-Clairvoyant Scheduling">[6]</a>
+. That line of work develops the consistency-robustness tradeoff (how much a good prediction helps, how little a bad one costs) with more formal machinery than the worked Bayesian crossover above. Worth being precise about what does and doesn’t survive that context: the argument above is a correctly-derived, concretely-numbered instance of a known pattern, useful for grounding this series’ own specimen, not a claim to be charting new territory in the scheduling-theory literature. It doesn’t change Proposition A below, which targets the strictly <em>non-preemptive</em> case this predictions literature, as far as this post is aware, doesn’t claim to rescue.</p>
+<p><span id="prop-a"></span></p>
+<details>
+<summary>Proposition A -- No Competitive Algorithm Exists Without Preemption: this is not a hard instance, it's a formally impossible one</summary>
+<p><strong>Proposition A</strong> (Non-Clairvoyant Impossibility). This is not rhetorical framing. Motwani, Phillips &amp; Torng <a href="#ref-7" class="cite-ref" data-def="Motwani, R., Phillips, S. & Torng, E. (1994) — Nonclairvoyant scheduling" aria-label="Motwani, R., Phillips, S. & Torng, E. (1994) — Nonclairvoyant scheduling">[7]</a>
+ formalize exactly Definition 1’s first two properties. An algorithm that “only becomes aware of the processing time of a job when the job completes,” under a no-preemption constraint: and prove that <strong>no algorithm can achieve any non-trivial competitive-ratio guarantee</strong> under these conditions. Allow preemption and the picture changes completely: round-robin recovers a 2-competitive deterministic bound (a result this same paper establishes) and the broader line of work it opened adds a further result on top, preemptive scheduling with randomization reaching <script type="math/tex">\Theta(\log n)</script>
+-competitiveness. Preemption is not an optimization here. It is the one assumption every worst-case guarantee in this literature depends on, and Definition 1 explicitly removes it.</p>
+<p><strong>Proof sketch (adversary argument).</strong> The impossibility isn’t shown by exhaustively checking every algorithm: it’s shown by constructing a single adaptive adversary that defeats <em>any</em> deterministic non-preemptive algorithm, whatever it does. The adversary doesn’t fix a job sequence in advance. It watches which job the algorithm is currently running and continuously extends <em>that</em> job’s true length, withholding the information that it’s still growing, for as long as the algorithm keeps running it. Because the algorithm can’t preempt, it has no way to abandon a job that turns out to be a bad bet, every job the adversary chooses to extend is a commitment the algorithm made and cannot revoke. The optimal clairvoyant schedule, by contrast, would have run the genuinely short jobs first and deferred the one the adversary is inflating. The gap between the two grows without bound as the adversary keeps extending, which is exactly what “no non-trivial competitive ratio” means: not merely worse, but arbitrarily worse, for any fixed algorithm the adversary is built to target.</p>
+</details>
+<p>This is the reasoning trace from the case study, run to its logical extreme. The adversary isn’t a hypothetical attacker: it’s what “no natural stopping point” means when nothing bounds how much longer a running task can decide to keep going, and nothing exists to cut it off. The slot the algorithm committed to is exactly the slot in the opening’s pool that filled and stayed filled.</p>
+<p><strong>Why one contested slot is enough to condemn a 32-slot pool.</strong> The theorem is proven against a single point of contention. One job the algorithm is currently, irrevocably running. A 32-slot pool doesn’t dilute that; it hands the adversary 32 independent targets instead of one, and the adversary only needs to win against a single one to make the algorithm’s worst-case guarantee unbounded. Confine the construction to slot <script type="math/tex">k</script>
+: feed it the ten-short-jobs-behind-one-extending-job pattern above, and feed every other slot only arrivals so trivial they resolve immediately, however the algorithm handles them. The algorithm’s performance restricted to slot <script type="math/tex">k</script>
+’s own sub-stream is exactly the single-resource instance the cited theorem already rules out. Competitive ratio is a worst-case guarantee over the <em>whole</em> algorithm: the other 31 slots running perfectly doesn’t rescue a guarantee that one arbitrarily bad slot has already broken. This is a standard move in competitive analysis: embed a hard instance of a smaller problem inside a larger one to inherit its lower bound. It’s the actual reason the pool’s own concurrency doesn’t buy safety in numbers.</p>
+<blockquote>
+<p><strong>Trace example B, continued.</strong> The reasoning trace from Definition 1b is what the adversary is inflating below: the “job the algorithm has already committed to running” is exactly a heavy task the pool can’t preempt, and the ten short jobs behind it are the ordinary, sub-second calls from the same case study.</p>
+</blockquote>
+<details class="proof">
+<summary>Mathematical proof: the adversary's construction, in numbers</summary>
+<p>Put numbers on the adversary’s construction rather than leaving “grows without bound” as a phrase to trust. Ten short jobs, true length 1 each, sit queued behind a job the algorithm has already committed to running: non-preemptively, because Definition 1 rules out anything else. The adversary, instead of letting that job finish, extends its true length to <script type="math/tex">L</script>
+. Unable to abandon it, the algorithm finishes it at time <script type="math/tex">L</script>
+, then runs the ten short jobs in sequence, completing at <script type="math/tex">L+1, L+2, \ldots, L+10</script>
+:</p>
+<script type="math/tex;mode=display">\text{Algorithm's total completion time} = L + \sum_{i=1}^{10}(L+i) = 11L + 55</script>
+<p>The clairvoyant optimum, seeing the true length in advance, runs the short jobs first (provably the total-completion-time-minimizing order on a single server, by a standard exchange argument) then the long one last:</p>
+<script type="math/tex;mode=display">\text{Optimal's total completion time} = \sum_{i=1}^{10} i + (10+L) = L + 65</script>
+<table><thead><tr><th style="text-align: left"><script type="math/tex">L</script>
+</th><th style="text-align: left">Algorithm</th><th style="text-align: left">Optimal</th><th style="text-align: left">Ratio</th></tr></thead><tbody>
+<tr><td style="text-align: left">1,000</td><td style="text-align: left">11,055</td><td style="text-align: left">1,065</td><td style="text-align: left">10.4</td></tr>
+<tr><td style="text-align: left">10,000</td><td style="text-align: left">110,055</td><td style="text-align: left">10,065</td><td style="text-align: left">10.9</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">\to\infty</script>
+</td><td style="text-align: left">n/a</td><td style="text-align: left">n/a</td><td style="text-align: left">11 (exactly <script type="math/tex">N{+}1</script>
+ for <script type="math/tex">N=10</script>
+ waiting jobs)</td></tr>
+</tbody></table>
+<p><em>The adversary’s competitive-ratio gap against ten waiting jobs, growing without bound as the inflated job length <script type="math/tex">L</script>
+ increases, converging to exactly 11.</em></p>
+</details>
+<p><strong>Ten isn’t special.</strong> Queue twenty short jobs behind the same trick and the ceiling moves to 21. Fifty, and it moves to 51. Whatever competitive ratio <script type="math/tex">c</script>
+ an algorithm claims to guarantee, the adversary picks a number of waiting jobs greater than <script type="math/tex">c-1</script>
+ and an extension <script type="math/tex">L</script>
+ large enough to realize it. That’s what “no non-trivial competitive ratio” cashes out to in numbers: not a bad ratio, a ratio with no ceiling, because the adversary picks the ceiling after seeing what the algorithm is trying to promise.</p>
+<p><strong>Why preemption changes the bound, not just the difficulty.</strong> The worked example’s trick has one specific mechanical requirement: the algorithm must be unable to interrupt whatever job it’s currently running. Round-robin defeats that requirement directly. Give every active job a small time slice and cycle through all of them, and no single job (however long the adversary tries to make it) can hold the server for more than its fair share of any window. The ten short jobs above never wait behind the <em>full</em> length of the extended one; they wait behind, at most, a bounded number of round-robin slices: exactly the mechanism that caps round-robin’s competitive ratio at 2 for total completion time, no matter how large <script type="math/tex">L</script>
+ gets. Randomization does better still. Algorithms in this space reach <script type="math/tex">\Theta(\log n)</script>
+-competitiveness by spreading their choices across possible job orderings instead of committing to one fixed rotation, which makes it structurally harder for even an adaptive adversary to reliably target whatever the algorithm is about to do next. Both results depend on the one ingredient Definition 1 rules out: neither bound exists without the ability to stop running a job before it finishes.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> There is no clever admission policy waiting to be discovered here, because the theory that would house it proves none exists. Preemption doesn’t just make the impossibility more expensive to overcome. It removes an entire face from the achievable region, the same way CAP and FLP remove faces rather than draw threshold cuts. Every point corresponding to a non-trivial competitive-ratio guarantee isn’t merely hard to reach without preemption: it’s not in the achievable region at all. The impossibility isn’t a rhetorical flourish. It’s the actual reason the fix has to be structural (change what you’re allowed to do to a running task, change what backpressure is allowed to look at) rather than algorithmic (find a smarter rule for which tasks to admit).</p>
+</blockquote>
+<h2 id="where-this-sits-against-familiar-mitigations">Where This Sits Against Familiar Mitigations</h2>
+<p>Three tools get reached for before anyone accepts that Proposition 0 and Proposition A actually apply. Worth naming precisely why each one misses.</p>
+<blockquote>
+<p><strong>Finding.</strong> All three assume a failure can be caught before it’s expensive, or undone after. Blood Oath removes both assumptions by construction, so none of the three ever had traction here.</p>
+</blockquote>
+<table><thead><tr><th style="text-align: left">Mitigation</th><th style="text-align: left">What it actually does</th><th style="text-align: left">Why it misses</th></tr></thead><tbody>
+<tr><td style="text-align: left">Circuit breaker</td><td style="text-align: left">Rejects <em>new</em> admissions once tripped</td><td style="text-align: left">Detects the pool filling; can’t evict what’s already running</td></tr>
+<tr><td style="text-align: left">Rate limiter</td><td style="text-align: left">Throttles <em>all</em> traffic by a fraction <script type="math/tex">r</script>
+</td><td style="text-align: left">Can’t selectively throttle heavy traffic: cost is unknown at ingress</td></tr>
+<tr><td style="text-align: left">Retry budget</td><td style="text-align: left">Counts <em>failed</em> attempts</td><td style="text-align: left">Blood Oath tasks never fail and retry: the counter never moves</td></tr>
+</tbody></table>
+<p><em>Why the three most-reached-for mitigations each fail against a Blood Oath workload, despite working correctly on their own terms.</em></p>
+<p><strong>Circuit breakers</strong> classically trip on an <em>error</em> signal: a rising failure rate past a threshold. Production systems worth trusting also trip on latency degradation and queue dwell time: CoDel-style active queue management, p99-based load shedding. That distinction matters here, and it would be wrong to pretend otherwise. A 32-slot pool pinned by reasoning traces absolutely degrades admission latency, and a well-instrumented latency-based breaker would trip on it sooner than an error-based one ever could. Even at the case study’s own ordinary baseline (the roughly 23% heavy occupancy this post derives from Little’s Law <a href="#ref-8" class="cite-ref" data-def="Little, J.D.C. (1961) — A Proof for the Queuing Formula: L = λW" aria-label="Little, J.D.C. (1961) — A Proof for the Queuing Formula: L = λW">[8]</a>
+ later in this post, not the surge that turned it into an incident), a latency-based breaker watching admission wait times has a real, standing signal to calibrate against, where an error-based one has nothing to see until the pool is already saturated. But what tripping buys is narrower than it sounds. Tripping means rejecting <em>new</em> admissions, failing fast instead of queueing silently. It doesn’t free a slot. Nothing in Definition 1 gives a breaker, however well-instrumented, a way to evict a reasoning trace already running. The pool stays pinned until those traces finish on their own, breaker tripped or not. And “the queue just absorbs the load” was never really an escape either: queue depth is bounded by physical resources whether anyone declares a limit or not, so the failure a breaker exists to catch happens somewhere regardless, cleanly, at the breaker, or one layer down, once the queue exhausts file descriptors, ephemeral ports, or physical memory. The honest version of this claim isn’t “no failure is ever observable.” It’s that detecting the problem, however early, doesn’t undo the admission that caused it. Thirty-two successful, entirely healthy admissions are still holding a resource nothing can take back.</p>
+<p><strong>Rate limiters</strong> cap arrival rate, on the theory that slowing admission protects whatever’s downstream. But the case study’s problem was never arrival volume: 99.95% of what arrived was cheap and harmless. A rate limiter admits at ingress, before cost is known (Definition 1, property 1), so it can’t selectively throttle heavy traffic, only <em>all</em> traffic, uniformly, by some admitted fraction <script type="math/tex">r</script>
+. Suppose heavy-task arrivals surge by a factor <script type="math/tex">S</script>
+ (the case study’s own “three or four reasoning traces landing close together,” generalized) while light-task arrivals hold steady. To keep heavy occupancy at its pre-surge baseline, the limiter needs <script type="math/tex">r \cdot S \leq 1</script>
+, i.e. <script type="math/tex">r \leq 1/S</script>
+. At a 10x heavy surge, that means admitting only 10% of <em>all</em> offered traffic, rejecting 90%, the overwhelming majority of it harmless load the pool was never in danger from. At a 20x surge: admit 5%, reject 95%. The limiter can hold the line, but only by treating nearly everything as guilty to catch the rare guilty party it can’t actually identify. Loosened enough to let the healthy majority through, it no longer holds the line at all. It only delays the moment the pool sediments, since the underlying dynamic doesn’t care about absolute arrival rate, only the ratio of offered heavy load to capacity. And a rate limit is, structurally, just another <script type="math/tex">Q</script>
+. It inherits Proposition 0’s exact fragility, computed against a distribution nobody re-examined for tail weight.</p>
+<p><strong>Retry budgets</strong> cap how many times a <em>failed</em> request gets retried, to stop retry storms from amplifying an outage: reject the 11th retry in a rolling window, say, rather than let every client keep hammering a struggling downstream. Blood Oath’s tasks don’t fail and get retried. Property 2 rules retry out entirely. A task runs once, to completion, or the node goes down with it, and there’s no failed attempt for a budget to count against. Point a retry budget at the case study’s incident and watch what it does. The thirty-two reasoning traces holding their slots never fail, so the counter never increments, so the budget never trips, so nothing happens, not because the mitigation was configured wrong, but because the event it watches for structurally cannot occur here. A retry budget is solving a real problem that simply isn’t this one. Applying it here doesn’t fail loudly. It just does nothing: a worse failure mode than an error, because nothing signals the tool never had traction to begin with. An on-call engineer checking dashboards mid-incident sees a healthy, zero-triggered retry budget and reasonably concludes that layer is fine. Exactly backwards: a layer that structurally cannot see the problem is not the same thing as a layer confirming there isn’t one.</p>
+<p>All three assume either that failure is observable before it’s expensive, or that a bad admission can be undone. Definition 1 rules out both assumptions by construction. This isn’t a case for better tuning any of the three. None of them were ever the right category of tool.</p>
+<h2 id="would-a-centralized-scheduler-change-any-of-this">Would a Centralized Scheduler Change Any of This?</h2>
+<p>Worth answering before this series builds a single mechanism, because the answer draws a line the rest of the series has to respect. Give the admission decision to one logically-central authority, with a perfect, real-time, zero-staleness view of every task and every node: does Proposition A’s impossibility bound move?</p>
+<p>It doesn’t, and the reason matters. Proposition A’s adversary exploits a specific fact: a task’s true execution duration is unknown at admission and stays unknown until completion: Definition 1’s own first property, ingress blindness. That’s an information problem about the <em>future</em>. A centralized scheduler, however perfectly it knows <em>current</em> state (every queue depth, every slot, every headroom fraction, zero lag) still doesn’t know how long a task about to be admitted will actually run. The adversary’s construction (extend whichever job the algorithm is currently running, since the algorithm can’t abandon it) works identically whether the algorithm computing “which job is currently running” lives on one central machine with a global view or is smeared across a fleet with stale local views. Centralizing the <em>observation</em> of present state does nothing to the <em>prediction</em> of future state. Proposition A’s bound is a statement about prediction, not observation.</p>
+<p>Centralized-versus-decentralized architecture is worth comparing for exactly the class of problem where the distinction matters, because most of what this series builds <em>is</em> an observation problem, not a prediction one: how much headroom does a node have right now, which of N nodes is closest to its own limit right now, has a redline been crossed right now. Those are staleness problems, and architecture genuinely changes the answer to them. Proposition A is not one of those, and no such comparison should be read as bearing on it. The two failure modes this series calls “imperfect information” aren’t the same failure mode. Conflating them is the single easiest way to overclaim what any architectural fix (centralized, decentralized, or hybrid) actually buys.</p>
+<h2 id="model-scope-and-failure-envelope">Model Scope and Failure Envelope</h2>
+<p>Five assumptions are doing work in this post that deserve to be named rather than left implicit.</p>
+<table><thead><tr><th style="text-align: left">Assumption</th><th style="text-align: left">What could break it</th><th style="text-align: left">Status</th></tr></thead><tbody>
+<tr><td style="text-align: left">Cost is a single scalar (duration)</td><td style="text-align: left">A task cheap in duration but expensive on a different, uninstrumented resource</td><td style="text-align: left">Named gap: the vector-valued generalization this would need isn’t built here</td></tr>
+<tr><td style="text-align: left">The true demand distribution <script type="math/tex">F</script>
+ is stationary</td><td style="text-align: left">A regime change, a seasonal shift, a genuine drift in the workload</td><td style="text-align: left">A different failure mode than the one this post proves, left open</td></tr>
+<tr><td style="text-align: left">Proposition A rules out the worst case</td><td style="text-align: left">The statistically ordinary case that reaches saturation without any adversary</td><td style="text-align: left">Real: 23% baseline occupancy, formalizing exactly where it tips into an incident is a distinct, unresolved question</td></tr>
+<tr><td style="text-align: left">Arrivals are independent enough for rate-and-duration quantities to be well-defined</td><td style="text-align: left">A correlated upstream trigger driving many arrivals at once</td><td style="text-align: left">Named gap, not resolved</td></tr>
+<tr><td style="text-align: left">The heavy class is one clean Pareto population</td><td style="text-align: left">A real mixture of distinct workload types, each with its own characteristic duration</td><td style="text-align: left">Checked directly: the crossover claim survives, the finer-grained machinery downstream of it does not</td></tr>
+</tbody></table>
+<p><em>Five assumption boundaries this post depends on, in the order the paragraphs below name them.</em></p>
+<p><strong>Cost is treated as a single scalar.</strong> Definition 1’s “true cost” is duration, and Proposition 0’s newsvendor framing collapses underage/overage into two dollar figures. Real workloads often spend multiple resources at once (CPU time, memory, network) and a task cheap on one axis can be expensive on another. The case study’s own 32-slot pool is already a mild simplification here: what actually binds is VRAM, and duration is a <em>proxy</em> for VRAM occupancy: accurate in this case because a generation never releases any of its KV cache early, so time-in-slot and time-holding-memory are the same clock. That proxy relationship isn’t guaranteed for every workload. A task could be short in duration but memory-hungry throughout, or long-running but nearly idle on the resource that’s actually scarce, and Definition 1’s single scalar has no vocabulary for that mismatch. This post’s model is the single-resource simplification on purpose, named here as exactly that: a task cheap in duration but expensive on a different, uninstrumented resource is invisible to everything this post builds. The vector-valued generalization that vocabulary would need (“heavy” as more than a scalar, the binding resource shifting depending on what else runs concurrently) is a real gap, not a hedge.</p>
+<p><strong>Proposition 0 assumes a stationary true distribution, misspecified or not.</strong> It says nothing about <script type="math/tex">F</script>
+ itself drifting over time: a regime change, a seasonal shift, a genuine change in the underlying workload. A capacity number can be exactly right for a stationary <script type="math/tex">F</script>
+ and still go stale the moment the world it was fit to stops holding still. That’s a different failure mode from the one this post proves, not a smaller version of it. Proposition 0 and Proposition A both reason about a fixed <script type="math/tex">F</script>
+; neither re-checks whether <script type="math/tex">F</script>
+ is still the distribution actually in effect. A capacity number computed once and defended forever inherits that blind spot by construction.</p>
+<p><strong>Proposition A rules out worst-case guarantees, not average-case ones.</strong> Easy to blur, and it matters. No non-preemptive algorithm can guarantee good performance against an adversary free to construct the worst possible input: a contrived, per-task adaptive construction, more extreme than anything the case study needed. That’s not the same claim as “every non-preemptive system fails on every real workload.” But the case study’s failure isn’t luck either: once offered load from heavy tasks alone (arrival rate times mean holding time) approaches the pool’s capacity, sedimentation is the expected steady-state outcome of Little’s Law, not a rare coincidence of timing. Put numbers to the case study’s own description, heavy tasks arriving at roughly one in two thousand, light tasks finishing in about half a second, heavy ones holding a slot for about five minutes, and Little’s Law gives an expected steady-state heavy occupancy of about 23%: real, persistent sedimentation, but not yet an incident on its own. What turns an ordinary day into an incident is a rate increase pushing that occupancy toward saturation, not an adversary and not bad luck. Proposition A explains why no algorithm can promise safety in the worst case. Formalizing exactly where that threshold sits (not the adversarial case, the statistically ordinary one that gets there anyway) is a distinct, narrower question this post leaves open.</p>
+<p><strong>Task arrivals are treated as regular enough for the underlying rate-and-duration quantities to be well-defined.</strong> Nothing here examines whether a surge like the case study’s is itself correlated with something upstream. The same upstream trigger (a new agentic workflow rollout, a batch of related requests) driving many correlated reasoning traces at once isn’t obviously the same statistical object as independent arrivals at an elevated rate, and this post doesn’t distinguish between them. A real, named gap, not resolved by assuming it away.</p>
+<p><strong>The heavy class is treated as a single Pareto population, and a real fleet’s own “heavy” traffic is rarely that clean.</strong> Harchol-Balter &amp; Downey’s finding, grounding property 1, is real and specific to what they measured: UNIX process lifetimes, one population, genuinely Pareto-shaped. A production fleet’s heavy traffic is more often a mixture of distinct workload types stacked together (a different tenant’s batch job, an automated report generator, a multi-step agentic loop) each with its own comparatively narrow characteristic duration, not a single smooth tail. That matters because a mixture of well-separated, low-variance sub-populations doesn’t, in general, inherit a single population’s clean decreasing-hazard shape. Worked concretely: mixing three quasi-deterministic sub-populations at characteristic lifetimes of 200s, 800s, and 2000s (weights 0.5/0.3/0.2, each with a modest 15% coefficient of variation around its own mean) produces a population hazard rate that rises, falls, rises again, and falls again before finally settling: four genuine reversals, not the single smooth decline a pure Pareto gives.</p>
+<blockquote>
+<p><strong>Finding.</strong> Definition 1b’s own crossover claim survives this intact. The finer-grained machinery built downstream of it does not.</p>
+</blockquote>
+<p><strong>Why the crossover claim survives.</strong> <script type="math/tex">P(\text{heavy}\mid\text{survived to }t)</script>
+ only has to resolve a coarse, two-class distinction (heavy versus light) and light decays on a sub-second timescale here, so the posterior saturates toward certainty well before any internal structure in the heavy class’s own hazard has a chance to matter. Checked directly against the three-component mixture above, at this post’s own <script type="math/tex">p=0.02</script>
+, <script type="math/tex">\mu_L=1</script>
+ worked-example parameters: the posterior crosses <script type="math/tex">\pi_0=0.3</script>
+ exactly once, at <script type="math/tex">t\approx6</script>
+, and never dips back below it: regardless of the heavy class’s own internal wiggling three hundred seconds later.</p>
+<p><strong>What does <em>not</em> survive.</strong> Computing how much longer a task already known to be heavy is expected to run operates <em>inside</em> the heavy class, and that quantity is exactly what a mixture’s internal structure can make genuinely non-monotonic:</p>
+<table><thead><tr><th style="text-align: left">Elapsed time <script type="math/tex">t</script>
+</th><th style="text-align: left">Mean residual life</th></tr></thead><tbody>
+<tr><td style="text-align: left">50s</td><td style="text-align: left">≈690s</td></tr>
+<tr><td style="text-align: left">150s</td><td style="text-align: left">≈602s</td></tr>
+<tr><td style="text-align: left">300s</td><td style="text-align: left">≈978s</td></tr>
+<tr><td style="text-align: left">700s</td><td style="text-align: left">≈671s</td></tr>
+<tr><td style="text-align: left">1,000s</td><td style="text-align: left">≈928s</td></tr>
+</tbody></table>
+<p><em>Mean residual life under the three-component mixture model: four non-monotonic reversals a single, pure Pareto tail wouldn’t produce.</em></p>
+<div style="margin:1.5em 0;">
+<canvas id="graph-mixture-reversals" aria-label="A chart plotting mean residual life against elapsed time from 0 to 2,200 seconds. A dashed line shows what a single, clean Pareto population produces: a simple V shape, falling in a straight line from 300 seconds at zero elapsed time down to a minimum around 136 seconds at the Pareto minimum near 164 seconds, then rising in a straight line forever after. A solid line shows the three-component mixture instead: it falls to a local minimum near 605 seconds at 150 seconds elapsed, rises to a local maximum near 1000 seconds at 268 seconds elapsed, falls again to a local minimum near 669 seconds at 692 seconds elapsed, rises again to a local maximum near 937 seconds at 1006 seconds elapsed, then finally settles into a decline. Four reversals, clearly visible as a genuinely wiggling curve, next to the clean single population's own simple, boring V." style="width:100%; aspect-ratio:760/420; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<script>
+(function(){
+var cv=document.getElementById('graph-mixture-reversals');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var W,H;
+function setup(){var r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.scale(d,d);W=r.width;H=r.height;}
+function erf(x){var s=x<0?-1:1;x=Math.abs(x);var a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;var t=1/(1+p*x);var y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);return s*y;}
+function Phi(x){return 0.5*(1+erf(x/Math.SQRT2));}
+function phiD(x){return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);}
+var POPS=[[200,0.5],[800,0.3],[2000,0.2]];
+function mMix(t){var S=0,num=0,i,mu,w,sig,z;for(i=0;i<POPS.length;i++){mu=POPS[i][0];w=POPS[i][1];sig=0.15*mu;z=(t-mu)/sig;S+=w*(1-Phi(z));num+=w*(sig*phiD(z)-(t-mu)*(1-Phi(z)));}if(S<1e-9)return null;return num/S;}
+var ALPHA=2.2,XM=163.6,ESH=300;
+function mClean(t){if(t<XM)return ESH-t;return t/(ALPHA-1);}
+var XMAX=2200,YMAX=1050;
+function draw(){
+ctx.clearRect(0,0,W,H);
+var fg='#333',grid='#eee',sub='#777';
+var mixColor='#b45309',cleanColor='#1d4ed8';
+var PL=56,PR=20,PT=36,PB=44,AW=W-PL-PR,AH=H-PT-PB;
+function SX(t){return PL+(t/XMAX)*AW;}
+function SY(v){return PT+AH-(Math.max(0,Math.min(v,YMAX))/YMAX)*AH;}
+var i;
+for(i=0;i<=8;i++){var gx=PL+i*AW/8;ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(gx,PT);ctx.lineTo(gx,PT+AH);ctx.stroke();}
+for(i=0;i<=6;i++){var gy=PT+i*AH/6;ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,gy);ctx.lineTo(PL+AW,gy);ctx.stroke();ctx.fillStyle=sub;ctx.font='9px sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(YMAX-i*YMAX/6),PL-6,gy+3);}
+ctx.strokeStyle=sub;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,PT+AH);ctx.lineTo(PL+AW,PT+AH);ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+AH);ctx.stroke();
+ctx.fillStyle=sub;ctx.font='9px sans-serif';ctx.textAlign='center';
+for(i=0;i<=8;i++){var xv=Math.round(i*XMAX/8);ctx.fillText(xv,SX(xv),PT+AH+14);}
+ctx.fillText('elapsed time t (seconds)',PL+AW/2,PT+AH+30);
+ctx.save();ctx.translate(16,PT+AH/2);ctx.rotate(-Math.PI/2);ctx.fillText('mean residual life (seconds)',0,0);ctx.restore();
+ctx.fillStyle=fg;ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+ctx.fillText('A Clean Pareto V, Next to a Mixture That Wiggles Four Times',PL+AW/2,16);
+ctx.save();ctx.beginPath();ctx.rect(PL,PT,AW,AH);ctx.clip();
+ctx.strokeStyle=cleanColor;ctx.setLineDash([5,3]);ctx.lineWidth=2;ctx.beginPath();
+var t,first=true,px,py;
+for(t=0;t<=XMAX;t+=10){px=SX(t);py=SY(mClean(t));if(first){ctx.moveTo(px,py);first=false;}else{ctx.lineTo(px,py);}}
+ctx.stroke();ctx.setLineDash([]);
+ctx.strokeStyle=mixColor;ctx.lineWidth=2.4;ctx.beginPath();
+first=true;
+for(t=0;t<=XMAX;t+=4){var v=mMix(t);if(v===null)continue;px=SX(t);py=SY(v);if(first){ctx.moveTo(px,py);first=false;}else{ctx.lineTo(px,py);}}
+ctx.stroke();
+ctx.restore();
+var revs=[[150,604.7],[268,1000.4],[692,669.1],[1006,937.2]];
+for(i=0;i<revs.length;i++){var rx=SX(revs[i][0]),ry=SY(revs[i][1]);ctx.fillStyle=mixColor;ctx.beginPath();ctx.arc(rx,ry,3.5,0,6.2832);ctx.fill();}
+ctx.fillStyle=cleanColor;ctx.font='10px sans-serif';ctx.textAlign='left';
+ctx.fillText('single clean Pareto: simple V',SX(1250),SY(mClean(1250))-8);
+ctx.fillStyle=mixColor;ctx.font='bold 10px sans-serif';ctx.textAlign='left';
+ctx.fillText('three-component mixture: four reversals',SX(80),SY(mMix(80))+16);
+}
+if('IntersectionObserver' in window){
+new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();setup();draw();}},{threshold:0.2}).observe(cv);
+}else{setup();draw();}
+window.addEventListener('resize',function(){setup();draw();});
+})();
+</script>
+<figcaption>Dashed: a single, clean Pareto population's own mean residual life, the simple V-shape a naive model assumes, falling to a minimum at the Pareto minimum and rising forever after. Solid: the same quantity under the three-component mixture worked above, computed densely rather than sampled at five scattered points, revealing the actual shape the sparse table only hints at: four genuine reversals, marked, before the curve finally settles into decline. The two curves share the same axes and the same units; only the population underneath differs.</figcaption>
+</div>
+<p>Four reversals in a quantity a real system would use to decide whether a task is still worth waiting on. Whether a real fleet’s own heavy traffic is close enough to unimodal for that kind of machinery to apply as stated, or genuinely splintered enough that it needs measuring (a multimodal check on the empirical duration distribution, not just a tail-index estimate), is named here as the assumption this post’s own property 1 rests on. It is not resolved here.</p>
+<p><pre class="mermaid">
+    
+    flowchart TD
+    A["Does the workload have<br/>ingress blindness?<br/>(cost unknown until completion)"] -->|No| Z1["Ordinary scheduling problem:<br/>admission control on cost works"]
+    A -->|Yes| B["Can a running task<br/>be preempted or evicted?"]
+    B -->|Yes| Z2["Ingress blindness alone:<br/>known mitigations apply, no need<br/>for this series' own machinery"]
+    B -->|No| C["Does the workload need<br/>shared-memory locality?<br/>(no horizontal escape)"]
+    C -->|No| Z3["Ingress blindness + non-preemption:<br/>Proposition A's territory,<br/>but sharding can spread the risk"]
+    C -->|Yes| D["All three Blood Oath properties hold."]
+    D --> E["Proposition A applies: no admission<br/>algorithm can bound the loss.<br/>Stop looking for a smarter rule.<br/>The fix has to be structural."]
+</pre>
+<em>Four questions to check against a real workload: whether it hits all three Blood Oath properties at once, or drops out early into a cheaper, conventional fix.</em></p>
+<p><strong>Compute it.</strong> Nothing here is a scheduling tip. Proposition 0 is a theorem about capacity, Proposition A is a theorem about algorithms, and together they rule out both answers an experienced engineer reaches for first: a better-tuned number, and a cleverer rule. Before trusting either on a real system, run the actual checks this post derived, not the intuitions that usually stand in for them.</p>
+<ul>
+<li><strong>Was <script type="math/tex">Q</script>
+ fit against the real tail?</strong> Pull the distribution your current <script type="math/tex">Q</script>
+ was fit against. Was tail weight, not just mean and variance, ever estimated, or was <script type="math/tex">Q</script>
+ implicitly fit under a light-tailed assumption nobody stated out loud? If nobody can answer that, assume the light-tailed case and treat the current <script type="math/tex">Q</script>
+ as a guess wearing the robust answer’s clothing.</li>
+<li><strong>Does the workload actually have all three Blood Oath properties, or only some?</strong> Ingress blindness alone is an ordinary scheduling problem with known mitigations. Ingress blindness plus non-preemption is Proposition A’s territory. All three together, including the locality lock ruling out horizontal escape, is the specific combination this post’s entire argument turns on.</li>
+<li><strong>If all three hold:</strong> stop looking for a smarter admission rule. Proposition A already proved none exists; a structural fix (changing what’s allowed to happen to a running task, not computing a better threshold) is the only category left.</li>
+<li><strong>If only one or two hold:</strong> the fix may be cheaper than this series’ full machinery. A workload with ingress blindness, but where preemption is available <em>and</em> the task’s own accumulated state can genuinely be relocated rather than only discarded, doesn’t need Proposition A’s response at all. Pricing that cheaper fix properly is a different, strictly easier problem than the one this post’s own non-preemptive machinery solves.</li>
+</ul>
+<p>Exactly where this post’s case study crossed from ordinary sedimentation into an incident, and what a structural response actually costs to run, are questions this post leaves open. Knowing which of these four checks your own system fails is something to establish before those questions matter, not after.</p>
+<h2 id="what-this-post-actually-proved">What This Post Actually Proved</h2>
+<p>Two theorems, not one, and it matters that they’re separate. Proposition 0 is about a number: given a demand distribution, however it behaves, there is a single correct capacity, and the classical machinery for finding it has never been broken. What breaks is the finite-sample habit of fitting the wrong family to it. A mistake ordinary sampling noise makes for free and heavy tails punish specifically. Nothing about that theorem is new; Arrow, Harris &amp; Marschak closed it in 1951. What’s new here is showing exactly how much a light-tailed guess costs when the world underneath it is heavier than assumed, not “unstable,” a number: checkable at 24.5% over the true optimum, on a structural shape error rather than a magnitude one. Even a perfectly-estimated mean cannot save you from it.</p>
+<p>Proposition A is about something the first theorem cannot see. Once “how much capacity” becomes “which arriving task gets the capacity,” a workload can acquire three properties (ingress blindness, execution immortality, locality lock) that together aren’t a harder instance of the same problem. They’re a different problem, one where no admission algorithm, however clever, can promise a bounded loss against the worst case. Not a weak guarantee. No guarantee: the gap unbounded, verified above with an adversary that needs nothing but the freedom to keep extending whichever job is currently running.</p>
+<p>The Constraint Sequence Framework is why both theorems had to be proven, not just one. A team that only knew Proposition 0 would respond to the case study’s incident by re-fitting <script type="math/tex">Q</script>
+, watch the pool sediment again on the next reasoning-trace surge, and conclude the fractile needs even more margin: chasing a capacity number that was never the binding constraint once a task got admitted. A team that only knew Proposition A would conclude no algorithm can help and stop looking for structural responses too, missing that Definition 1b’s crossover time is itself a real, physical signal a non-algorithmic response could act on, not just a proof of impossibility. Both theorems are required before “add backpressure, not a smarter admission rule” is a conclusion rather than an assertion. That’s the Constraint Sequence Framework’s own point, applied to itself: neither result, alone, would have sequenced correctly to the fix.</p>
+<p>What this post proves is where the number stops being enough, and where no algorithm can rescue what’s left. No safe number exists for a workload with all three Blood Oath properties. That claim is proven, not asserted: an adversary construction and a closed-form fractile, both checked against real numbers rather than left symbolic.</p>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>Provisioning by precedent (trusting a number because it has always worked) is exactly the property that stops being informative the day a heavy tail finally tests it. Proposition 0 proves precisely where the stability ends: a light-tailed <script type="math/tex">Q^*</script>
+ can run 24.5% over the true robust optimum, not from bad luck but from fitting the wrong distributional family to begin with.</li>
+<li>Definition 1 names three properties (ingress blindness, execution immortality, locality lock) that, together, remove every lever a scheduler normally has: no admission control on unknown cost, no correcting a bad admission after the fact, no spreading the risk across more machines.</li>
+<li>Definition 1b shows a fixed pre-admission classifier is real, useful lead time, not a permanent edge: an elapsed-time posterior overtakes any fixed confidence eventually, because one signal keeps improving without bound and the other doesn’t.</li>
+<li>Proposition A proves the three Blood Oath properties together aren’t a harder version of ordinary scheduling. They’re a different problem: no admission algorithm, however clever, can promise a bounded loss against the worst case: verified with an adversary that needs nothing but the freedom to keep extending whichever job is currently running.</li>
+<li>The Constraint Sequence Framework is why both theorems had to be proven, not just one: a team that only knew Proposition 0 keeps re-fitting a number that was never the binding constraint; a team that only knew Proposition A stops looking for the structural response that’s actually available.</li>
+<li>No safe number exists for a workload with all three properties. What replaces the number is a structural response, not a smarter admission rule: a category of fix, not a specific mechanism this post itself derives.</li>
+<li>Property 1’s decreasing-hazard-rate claim leans on two separate pieces of evidence for two separate jobs. A 1997 UNIX process-lifetime study earns the general scheduling argument: elapsed time predicts remaining time, for any decreasing-hazard-rate distribution. A 2025 extreme-value-theory study fitting real LLM response lengths earns the domain-specific one: this workload’s own duration is genuinely heavy-tailed, not by analogy to a different generative process.</li>
+</ol>
+</blockquote>
+<hr />
+<p><sup>[1]</sup> Arrow, K.J., Harris, T. &amp; Marschak, J. (1951). <em>Optimal Inventory Policy.</em> Econometrica, 19(3), 250–272.</p>
+<p><sup>[2]</sup> Das, B., Dhara, A. &amp; Natarajan, K. (2021). <em>On the Heavy-Tail Behavior of the Distributionally Robust Newsvendor.</em> Operations Research, 69(4), 1077–1099.</p>
+<p><sup>[3]</sup> Harchol-Balter, M. &amp; Downey, A. (1997). <em>Exploiting Process Lifetime Distributions for Dynamic Load Balancing.</em> ACM Transactions on Computer Systems, 15(3), 253–285.</p>
+<p><sup>[4]</sup> Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C.H., Gonzalez, J.E., Zhang, H. &amp; Stoica, I. (2023). <em>Efficient Memory Management for Large Language Model Serving with PagedAttention.</em> Proceedings of the 29th Symposium on Operating Systems Principles (SOSP 2023).</p>
+<p><sup>[5]</sup> Jiao, L., Gao, C., Yang, Y., Zhou, C., Huang, Y., Chen, X. &amp; Li, Y. (2025). <em>Analyzing and Modeling LLM Response Lengths with Extreme Value Theory: Anchoring Effects and Hybrid Distributions.</em> Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing (EMNLP), 32992–33002.</p>
+<p><sup>[6]</sup> Lindermayr, A. &amp; Megow, N. (2022). <em>Permutation Predictions for Non-Clairvoyant Scheduling.</em> arXiv preprint.</p>
+<p><sup>[7]</sup> Motwani, R., Phillips, S. &amp; Torng, E. (1994). <em>Nonclairvoyant scheduling.</em> Theoretical Computer Science, 130(1), 17–47.</p>
+<p><sup>[8]</sup> Little, J.D.C. (1961). <em>A Proof for the Queuing Formula: L = λW.</em> Operations Research, 9(3), 383–387.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+        
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/no-safe-number/" class="series-link">
+            Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption
+          </a>
+          
+            <span class="series-progress">Part 1/7</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;no-safe-number-part2-provisioning-window&#x2F;" title="The Phase MAPE-K Usually Skips">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>

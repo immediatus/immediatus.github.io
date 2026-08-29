@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="Every post in this series so far has priced one pool, one resource, one task&#x27;s decision. Real fleets run hundreds of pools at once, and this post checks whether scale changes what the earlier four posts prove is needed, not by assumption, but by an exact classical queueing result precise enough to price a real number: how many gigabytes pooling a fleet&#x27;s own memory margin actually frees, and exactly where that pooling stops working. It also opens a question its own routing mechanism begs and never argues for: why push-based sampling, when a design that removes staleness by construction, instead of sampling around it, already exists. This post prices that specific tradeoff, and leaves the fuller comparison against a fully centralized alternative for the post built to make it." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="The Square Root That Doesn&#x27;t Cover Routing - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part5-square-root-routing&#x2F;" />
+  <meta property="og:description" content="Every post in this series so far has priced one pool, one resource, one task&#x27;s decision. Real fleets run hundreds of pools at once, and this post checks whether scale changes what the earlier four posts prove is needed, not by assumption, but by an exact classical queueing result precise enough to price a real number: how many gigabytes pooling a fleet&#x27;s own memory margin actually frees, and exactly where that pooling stops working. It also opens a question its own routing mechanism begs and never argues for: why push-based sampling, when a design that removes staleness by construction, instead of sampling around it, already exists. This post prices that specific tradeoff, and leaves the fuller comparison against a fully centralized alternative for the post built to make it." />
+
+  <title>The Square Root That Doesn&#x27;t Cover Routing - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part5-square-root-routing&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>The Square Root That Doesn&#x27;t Cover Routing</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-08-16T00:00:00+00:00" pubdate>16 August 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/queueing-theory/">#queueing-theory</a>
+              <a class="tag" href="https://e-mindset.space/tags/scheduling/">#scheduling</a>
+              <a class="tag" href="https://e-mindset.space/tags/capacity-planning/">#capacity-planning</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<h2 id="one-pool-then-one-resource-then-one-task-s-decision">One Pool, Then One Resource, Then One Task’s Decision</h2>
+<p>A capacity planner staring at Post 3’s own <script type="math/tex">9.7\%</script>
+ figure for the first time reacts to it the same way, almost every time: that can’t be the best a whole fleet can do. Thirty-two decode nodes, each independently reserving nearly a tenth of its own memory against a burst that, on any given node, almost never actually lands: surely a fleet that size doesn’t need to carry that same fraction thirty-two separate times over. The instinct is right. It’s also not, by itself, an argument. “Surely volume helps” is exactly the kind of claim this series has spent four posts refusing to accept on instinct alone. <a href="/blog/no-safe-number-part1-blood-oath/#prop-0">Proposition 0</a> made the same mistake possible once already: “the mean is right, so the shape probably doesn’t matter”, reasonable-sounding, and wrong by 24.5% once checked. The instinct that a big fleet needs less relative margin than one node gets the same treatment here: priced, not trusted.</p>
+<p>Four posts, and every single one of them has been about one unit at a time. Post 1 priced one 32-slot pool’s own capacity number. Post 2 built one pool’s own Physical Redline and its own buffer. Post 3 opened that one pool into three separately-scaled resources on a real disaggregated architecture, still one node’s worth of decode memory, one node’s worth of prefill compute, one link’s worth of bandwidth. Post 4 took one checkpointable task’s own eviction decision and asked whether running that decision as a policy, across one pool, was safe.</p>
+<p>A real deployment doesn’t run one pool. It runs however many the traffic and the budget justify: tens, on a modest service; hundreds, on anything a hyperscaler operates. That’s not a detail this series has been quietly ignoring. It’s a question none of the first four posts were built to answer, because every formal object in them (<script type="math/tex">H_{\min}</script>
+, <script type="math/tex">\rho_h</script>
+, <script type="math/tex">t^*</script>
+) was sized against exactly one pool’s own risk.</p>
+<p>The question worth asking precisely, not rhetorically: does volume make the first four posts’ machinery less necessary, because a big enough fleet smooths out what any one pool’s own worst day looks like? Or does it just move the same problem to a different scale, the way Post 3 found the multi-resource problem waiting one level down from Post 2’s single-resource redline? The honest answer, priced below rather than asserted, is neither extreme. Volume buys something real and computable: this post derives exactly how much, against this series’ own numbers, not a hand-wave about “economies of scale.” It does not buy everything a naive reading of that phrase would suggest. The boundary of what it doesn’t buy is exactly as sharp, and exactly as costly to miss, as every other boundary this series has priced so far.</p>
+<p>The specific version of the question a real capacity-planning conversation actually has is smaller and more concrete than “does scale help.” Post 3 found that a single decode node running this series’ own specimen needs <script type="math/tex">9.7\%</script>
+ of its own 31.80GB memory budget held in standing reserve. That’s a number large enough that a team reading it would reasonably ask the next question themselves: does a fleet of these nodes really need to reserve that same fraction on <em>every single one</em>? Or is there a cheaper way to buy the same protection, once there’s more than one node to spread it across? That’s not a rhetorical question this post is inventing to have something to answer. It’s the question Post 3’s own <script type="math/tex">9.7\%</script>
+ figure leaves standing the moment a reader generalizes past one node. It deserves the same standard of proof this series has given every other question it’s raised: computed, not assumed, with the boundary of the answer priced as carefully as the answer itself.</p>
+<h2 id="the-specimen-multiplied">The Specimen, Multiplied</h2>
+<p>The specimen is Post 3’s own disaggregated architecture, unchanged in every particular that made it real: Llama-2-70B, 4<script type="math/tex">\times</script>
+A100 40GB per decode node, a 31.80GB per-node KV-cache budget once weights are subtracted on a consistent decimal basis, the same <script type="math/tex">\alpha=2.2</script>
+ Pareto duration this whole series has used since Post 1, multiplied, not replaced. <script type="math/tex">N</script>
+ decode nodes, identical in configuration, each independently facing the same heavy-task arrival process Post 2 and Post 3 already priced: <script type="math/tex">\lambda_h</script>
+ per pool, the same <script type="math/tex">E[S_h]=300</script>
+s, the same 1.824GB heavy-task footprint Post 3 derived from this series’ own duration distribution, not Splitwise’s ordinary-traffic median.</p>
+<p>What’s new is that these <script type="math/tex">N</script>
+ nodes don’t have to be managed as <script type="math/tex">N</script>
+ independent islands. A real disaggregated fleet sits behind a routing layer. Post 3 already named two real ones, NVIDIA Dynamo and the vLLM Router <a href="#ref-1" class="cite-ref" data-def="NVIDIA (2025) — Introducing NVIDIA Dynamo, technical blog" aria-label="NVIDIA (2025) — Introducing NVIDIA Dynamo, technical blog">[1]</a>
+, checked there against <a href="/blog/no-safe-number-part3-bottleneck-moves/#def-4">Definition 4</a>’s own single-node mechanism. It found them doing a different, complementary job: an optimizing scheduler picking which worker serves a given request, not a safety backstop. That router is exactly the mechanism this post needs, used for a second, distinct purpose from its first appearance. Not choosing which worker minimizes latency for one request, but deciding which of <script type="math/tex">N</script>
+ decode nodes a heavy-flagged task should be routed to while it’s still genuinely free to choose: before it’s running anywhere at all, not merely while its state is still small. That has to mean routing on <a href="/blog/no-safe-number-part1-blood-oath/#def-1b">Definition 1b</a>’s own <script type="math/tex">\pi_0</script>
+, the pre-classifier available at admission, not on the elapsed-time posterior “newly-detected” would otherwise suggest. Detection in the stronger sense needs real decode time to fire: <script type="math/tex">t^*\approx3.4</script>
+s at this specimen’s own <script type="math/tex">\pi_0=0.3</script>
+. A task that has already decoded for 3.4 seconds is already running on some specific node. Routing it elsewhere at that point is a relocation, not an admission decision: a real distinction Proposition 6b below prices, rather than glosses over here. Same citation, second and genuinely distinct use, the same discipline Post 3 applied when it drew a different property out of Ghodsi et al.’s Dominant Resource Fairness paper than Post 2 had.</p>
+<p>Thirty-two is this post’s own primary worked fleet size for the rest of what follows. It’s worth saying plainly why, rather than letting the echo of the pool’s original 32 slots pass as a coincidence. It isn’t one. The choice is deliberate, precisely because it invites the direct comparison the rest of this post makes. The same number that was once thirty-two <em>slots</em> inside one pool is now thirty-two <em>nodes</em> inside one fleet. Whether the same reserve fraction survives that change of unit is exactly the question this post exists to answer with a number, rather than an intuition.</p>
+<p><strong>Watch out for</strong>: pooling, in everything that follows, means routing <em>new</em> admissions to whichever node currently has headroom. It does not mean moving a task’s accumulated state between nodes after the fact: that’s a different mechanism, priced separately, with a different cost, in Proposition 6b below. Conflating the two is the single easiest way to overclaim what this post actually proves.</p>
+<p><span id="def-6a"></span></p>
+<details>
+<summary>Definition 6a -- Fleet Achievable Region: a standing reserve traded against usable aggregate capacity, the same frontier shape as every earlier achievable region in this series</summary>
+<p><strong>Definition 6a</strong> (Fleet Achievable Region). Given <script type="math/tex">N</script>
+ decode nodes, each with per-node capacity <script type="math/tex">C</script>
+, and a shared routing layer capable of directing new admissions to any node, a fleet-wide reserved margin <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ maps to a point <script type="math/tex">(R(H_{\min}^{\text{fleet}}),\ E[\text{failure} \mid H_{\min}^{\text{fleet}}, G_N])</script>
+. That point trades usable aggregate capacity, <script type="math/tex">R(H_{\min}^{\text{fleet}}) = NC - H_{\min}^{\text{fleet}}</script>
+, against the expected cost of that reserve proving insufficient during a bridging window, where <script type="math/tex">G_N</script>
+ is the distribution of additional slot-equivalents demanded, fleet-wide, during that window. This is <a href="/blog/no-safe-number-part2-provisioning-window/#def-2a">Definition 2a</a>’s own achievable region, reconstructed for the fleet rather than assumed to carry over by analogy: raising <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+decreases failure cost and decreases usable aggregate capacity, and no choice improves one without worsening the other.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> This is the same object Definition 2a priced for one node, at one remove. Instead of asking how much of one pool’s own capacity to hold back, it asks how much of the <em>fleet’s</em> aggregate capacity to hold back, given that the routing layer can move the reservation to wherever the risk actually lands, rather than pre-committing it per node. Whether that flexibility is worth anything: whether <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ can genuinely be smaller than <script type="math/tex">N \cdot H_{\min}</script>
+, Post 2’s own per-node number multiplied out, is Proposition 6’s claim, not this Definition’s. This Definition only establishes that the tradeoff is real, and has the same frontier shape as every earlier one in this series. It says nothing yet about where the frontier actually sits.</p>
+</blockquote>
+<p>This is not a new problem, the same way Post 2 found its own buffer wasn’t a new problem the first time this series generalized the critical fractile past Post 1’s original demand quantity. <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ carries exactly Proposition 0’s cost structure, once more: an underage cost if the fleet’s shared reserve is exhausted before a bridging window closes, an overage cost for capacity reserved and unusable for productive admission. The optimal margin is the same formula that opened this series, applied a third time to a third random variable:</p>
+<script type="math/tex;mode=display">H_{\min}^{\text{fleet}*} = G_N^{-1}\!\left(\frac{C_u}{C_u + C_o}\right)</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">H_{\min}^{\text{fleet}*}</script>
+ - the optimal fleet-wide reserved margin</li>
+<li><script type="math/tex">G_N</script>
+ - the pooled bridging-window demand across all <script type="math/tex">N</script>
+ nodes</li>
+<li><script type="math/tex">C_u, C_o</script>
+ - the same 32:1 underage-to-overage cost ratio Definition 2a derived</li>
+</ul>
+<p>This is <a href="/blog/no-safe-number-part1-blood-oath/#def-0">Definition 0</a>’s fractile. <a href="/blog/no-safe-number-part2-provisioning-window/#prop-3">Proposition 3</a> gave its own instance of it, for one node’s bridging window. Now this one is for the fleet’s pooled bridging-window demand <script type="math/tex">G_N</script>
+, at the identical <script type="math/tex">32{:}1</script>
+ cost ratio Definition 2a derived from the pool’s own structure, and Post 3 carried forward unchanged. What’s new is only the distribution being inverted.</p>
+<p><strong>Worth checking, not just carrying forward, since this fleet’s own population isn’t necessarily the one that ratio was priced for.</strong> Definition 2a’s <script type="math/tex">32{:}1</script>
+ came from a specific underage event: node failure meaning <em>“the node dies with every immortal task still on it,”</em> Blood Oath’s own property 2, total and unrecoverable. Post 4’s own population, which this post’s footprint and eviction-cost numbers both reuse, escapes exactly that property: a checkpointable task’s state can be relocated at a real, finite cost, not lost outright. To the extent a real fleet’s population is checkpointable rather than immortal, the honest underage event isn’t total loss. It’s a forced eviction wave, priced by <a href="/blog/asymptotically-ruined-part4-eviction-crossover/#prop-5c">Proposition 5c</a>’s own emergency-batch machinery, not by <a href="/blog/no-safe-number-part1-blood-oath/#def-1">Definition 1</a>’s node-death scenario. This post retains <script type="math/tex">32{:}1</script>
+ as a deliberately conservative choice, not a re-verified one. A fleet running a genuine mix of Blood Oath and checkpointable tasks faces node failure as the worse of the two costs, and <script type="math/tex">32{:}1</script>
+ is that worse case, not the checkpointable population’s own number. A fleet known to be entirely checkpointable should re-derive the ratio against Proposition 5c’s own eviction-wave cost before trusting <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ as computed here. It would very likely come out smaller, since a recoverable loss is a cheaper underage event than an unrecoverable one by construction.</p>
+<h2 id="how-the-poisson-buffer-was-always-exact-not-just-convenient">How the Poisson Buffer Was Always Exact, Not Just Convenient</h2>
+<p>Before pricing the fleet, one loose end from three posts back is worth closing, because closing it is what makes Proposition 6’s own math exact rather than approximate. Definition 2a modeled <script type="math/tex">G</script>
+, the count of additional heavy-task arrivals during a bridging window, as <script type="math/tex">\text{Poisson}(2.22)</script>
+: called there “the standard baseline for a count of arrivals over a fixed window… a defensible starting model.” Defensible is weaker than what’s actually true. The gap between the two turns out to matter for what this post can claim.</p>
+<blockquote>
+<p><strong>Finding.</strong> The count of heavy tasks resident at any instant isn’t just approximately Poisson on average: it’s exactly Poisson, for any duration distribution with a finite mean, heavy tail included.</p>
+</blockquote>
+<p>The proof:</p>
+<details class="proof">
+<summary>Mathematical proof: why Poisson thinning gives an exact result, not an approximation</summary>
+<p>Consider the heavy-task arrival process as Poisson with rate <script type="math/tex">\lambda_h</script>
+, exactly as <a href="/blog/no-safe-number-part2-provisioning-window/#prop-1">Proposition 1</a> already treats it. A task that arrived at time <script type="math/tex">s</script>
+ is still resident at a later time <script type="math/tex">t</script>
+ with probability <script type="math/tex">P(S_h > t-s)</script>
+: some probability depending on how long the task has already run, whatever shape its duration distribution takes. This is precisely the setup for a classical result about Poisson processes under independent thinning. Given a Poisson process, and attached to each point an independent “still present” decision with probability determined by elapsed time, the set of still-present points is <em>itself</em> Poisson-distributed, with mean obtained by integrating the survival probability against the arrival rate. Concretely:</p>
+<script type="math/tex;mode=display">E[\text{resident at } t] = \lambda_h \int_0^\infty P(S_h > u)\, du = \lambda_h \cdot E[S_h]</script>
+<p>This holds because the integral of a survival function over its full range is exactly the distribution’s mean.</p>
+<p><em>Why thinning preserves the Poisson property at all, rather than merely its mean.</em> A Poisson process has a defining property that makes this work: the number of points falling in any collection of disjoint regions are independent of each other, and each is itself Poisson. Marking each arrival “resident” or “departed” at a fixed observation time <script type="math/tex">t</script>
+, independently across arrivals, splits the original process into exactly two disjoint sub-processes: the still-resident points and the already-departed ones. Splitting a Poisson process into independent categories this way is itself a Poisson process on each category. That fact doesn’t depend on the split being uniform across time. It only needs the marking decision for each point to be made independently of every other point’s marking decision, which “did this particular task’s own service time exceed this particular gap” manifestly is. The heavy tail lives entirely inside each individual marking probability, <script type="math/tex">P(S_h > t-s)</script>
+. It has no channel to affect whether the <em>marking decisions themselves</em> stay independent across arrivals, which is the only property the splitting theorem actually needs.</p>
+</details>
+<p>That’s Proposition 1’s own <script type="math/tex">\rho_h</script>
+, recovered here as more than an average: the <em>exact</em> distribution of how many heavy tasks are resident at any instant is Poisson with that mean, not merely a quantity whose average happens to equal it. This result, first established for the stationary case by Mirasol <a href="#ref-2" class="cite-ref" data-def="Mirasol, N.M. (1963) — Letter to the Editor: The Output of an M/G/∞ Queuing System is Poisson" aria-label="Mirasol, N.M. (1963) — Letter to the Editor: The Output of an M/G/∞ Queuing System is Poisson">[2]</a>
+ and later generalized to time-varying arrival rates by Eick, Massey &amp; Whitt <a href="#ref-3" class="cite-ref" data-def="Eick, S.G., Massey, W.A. & Whitt, W. (1993) — Mt/G/∞ Queues with Sinusoidal Arrival Rates" aria-label="Eick, S.G., Massey, W.A. & Whitt, W. (1993) — Mt/G/∞ Queues with Sinusoidal Arrival Rates">[3]</a>
+, holds for <em>any</em> duration distribution with finite mean: a decreasing hazard rate, a heavy Pareto tail, whatever shape Definition 1’s ingress blindness demands. The theorem doesn’t care about the shape, only that arrivals are Poisson and the mean holding time is finite.</p>
+<p>Applied to a short bridging window rather than to steady-state occupancy, the same argument gives Definition 2a’s own <script type="math/tex">G</script>
+: the count of <em>new</em> heavy arrivals during a window of length <script type="math/tex">T_{\text{scale}}</script>
+ is Poisson with mean <script type="math/tex">\lambda_h T_{\text{scale}}</script>
+, exactly the <script type="math/tex">2.22</script>
+ figure Post 2 computed. It was never a convenient approximation standing in for something messier. It’s the exact answer, for any heavy-task duration distribution this series could plausibly have chosen: a real, if quiet, confirmation of a modeling choice made three posts and one editorial “defensible” ago.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> This matters for exactly one reason this post needs. What’s true of one bridging window’s arrival count is true of a sum of them. A sum of independent Poisson random variables is itself exactly Poisson, with the means simply adding: an elementary, textbook fact, not something needing its own citation. That’s the entire mathematical engine behind pooling <script type="math/tex">N</script>
+ nodes’ worth of bridging-window risk into one shared number. It’s exact, not asymptotic: no large-<script type="math/tex">N</script>
+ limit, no diffusion approximation, no normal-approximation error term to worry about at small <script type="math/tex">N</script>
+.</p>
+</blockquote>
+<p><strong>Verified, not asserted.</strong> The theorem doesn’t care about the shape of the duration distribution. That claim is checkable directly, rather than taken purely on the theorem’s word: the same discipline Post 2 applied to <a href="/blog/no-safe-number-part2-provisioning-window/#prop-2b">Proposition 2b</a>’s own piecewise mean-residual-life formula. Two M/G/<script type="math/tex">\infty</script>
+ queues, both at offered load <script type="math/tex">\rho_h = \lambda_h E[S_h] = 6</script>
+, sampled at several thousand post-warmup instants:</p>
+<ul>
+<li>Exponential service: sampled mean occupancy <script type="math/tex">6.05</script>
+ (theory: <script type="math/tex">6.0</script>
+), variance-to-mean ratio <script type="math/tex">1.11</script>
+.</li>
+<li>Pareto<script type="math/tex">(163.6, 2.2)</script>
+ service: this series’ own heavy tail: sampled mean <script type="math/tex">5.98</script>
+ (theory: <script type="math/tex">6.0</script>
+), variance-to-mean ratio <script type="math/tex">1.02</script>
+.</li>
+</ul>
+<p>Both variance-to-mean ratios sit within ordinary sampling noise of Poisson’s own signature value of exactly <script type="math/tex">1.0</script>
+: the same signature regardless of which duration distribution generated the underlying holding times. A distribution whose own coefficient of variation is <script type="math/tex">1.51</script>
+, per Post 4’s own <a href="/blog/asymptotically-ruined-part4-eviction-crossover/#prop-5b">Proposition 5b</a> (nowhere near memoryless, nowhere near light-tailed) still produces an occupancy count indistinguishable from a system where every task’s duration were drawn from the same fixed exponential clock. The heaviness of the tail governs how long any one task takes to finish. It has no say at all over how many tasks are in the building at once, on average or in spread. That’s a real, if easy to miss, distinction: a fact about one task versus a fact about a population of them.</p>
+<p><strong>The same thinning machinery closes a gap Post 4 named and left open, not just this post’s own question.</strong> Proposition 5b’s own honest limit, stated there and repeated everywhere it’s cited since: “it has not simulated or analytically verified that this specimen’s own arrival pattern, layered on top of that duration distribution, actually avoids the resonance” a cited paper proves possible for threshold-triggered eviction. That’s a claim about <em>timing</em>: whether the moments at which tasks become individually eligible for Proposition 5’s own voluntary crossover cluster together or spread apart. The thinning theorem above answers exactly that, for the voluntary channel specifically, without needing a new proof. A task “crosses” Proposition 5’s own <script type="math/tex">t^*</script>
+ if and only if its own duration exceeds <script type="math/tex">t^*</script>
+, at a time exactly <script type="math/tex">t^*</script>
+ seconds after that task’s own arrival. That’s a fixed-probability thinning of the original Poisson arrival process (keep each arrival independently with probability <script type="math/tex">P(S_h > t^*)</script>
+, an elementary case of the same splitting property the theorem above proves for a time-varying marking rule) composed with a deterministic time shift, which preserves the Poisson property exactly: translating every point of a Poisson process by the same fixed delay is still a Poisson process, on the same elementary grounds. The sequence of times at which tasks cross <script type="math/tex">t^*</script>
+ is therefore <em>exactly</em> Poisson, with rate <script type="math/tex">\lambda_h \cdot P(S_h > t^*) = \lambda_h \cdot (x_m/t^*)^\alpha</script>
+, and a Poisson process has independent, exponentially-distributed gaps between events by definition: no periodicity, no clustering, no resonance, structurally impossible in the timing of voluntary-channel eligibility, not merely unlikely. Checked against this series’ own numbers rather than left as an abstract corollary: simulating <script type="math/tex">5{,}000{,}000</script>
+ seconds of this specimen’s own Poisson arrivals and Pareto durations gives an empirical crossing rate of <script type="math/tex">0.0006358</script>
+/s against a theoretical <script type="math/tex">0.0006351</script>
+/s, a coefficient of variation on the inter-crossing gaps of <script type="math/tex">0.989</script>
+ against the Poisson signature of exactly <script type="math/tex">1.0</script>
+, and a Kolmogorov-Smirnov statistic of <script type="math/tex">0.008</script>
+ against a <script type="math/tex">0.024</script>
+ critical value at the 5% significance level: comfortably failing to reject the Poisson hypothesis, consistent with the analytic result rather than merely not contradicting it. This closes Proposition 5b’s own named gap for the voluntary channel, analytically, not just structurally. It does not close it for Proposition 5c’s own emergency channel, and shouldn’t be read as if it did: an emergency wave is a <em>designed</em> batch, several candidates selected together in response to one shared redline-breach signal, not several independent tasks each independently crossing a fixed threshold on their own clock. The thinning argument’s own precondition, that each marked event depends only on that arrival’s own independent draw, doesn’t hold once a single shared trigger deliberately selects multiple tasks at once. Proposition 5c’s own resonance risk remains exactly as open as Post 4 and this post’s own Model Scope elsewhere already state.</p>
+<p><strong>The proof above has a second precondition worth stating as sharply as the first, because it’s the one most likely to actually fail in a real deployment: <script type="math/tex">\lambda_h</script>
+ has to be genuinely constant, not merely Poisson.</strong> A Poisson process with a time-varying rate is still, in the formal sense, Poisson: counts in any interval are Poisson-distributed, which is what the <script type="math/tex">G</script>
+ thinning result above needs and gets from Eick, Massey &amp; Whitt’s own generalization. But the <em>no-clustering</em> conclusion just derived needs more than that. It needs the gaps between crossing events to be independent and identically exponential, which is a property of a <em>constant</em>-rate Poisson process specifically, not a time-varying one. A real deployment where heavy-task demand has a genuine weekly or monthly rhythm, end-of-week reporting, end-of-month close, any recurring business cadence that shifts a real fraction of ordinary work into a narrow window, breaks that precondition directly. Checked rather than left as a theoretical worry: simulating this specimen’s own numbers with a sixfold rate elevation during a four-hour weekly window (an end-of-week surge, not an exotic scenario) reproduces the failure precisely. The crossing-gap coefficient of variation moves to <script type="math/tex">1.106</script>
+, away from the constant-rate signature of <script type="math/tex">1.0</script>
+. The Kolmogorov-Smirnov statistic against the exponential hypothesis comes out to <script type="math/tex">0.053</script>
+, well past the <script type="math/tex">0.011</script>
+ critical value at this sample size: a clear rejection, not a borderline one. Arrivals originating inside the four-hour surge window, only <script type="math/tex">2.4\%</script>
+ of the week, account for <script type="math/tex">12.7\%</script>
+ of all voluntary-channel crossings, over five times their share. The proof above is exact, and its scope is exactly this narrow: it rules out resonance arising from the duration distribution’s own heavy tail, holding the arrival process itself to a genuinely constant rate. It says nothing about resonance arising from the arrival process instead, which this series has already named as an open, unresolved risk since Post 1’s own Model Scope (a correlated upstream trigger isn’t obviously the same statistical object as independent arrivals at an elevated rate) and again in this post’s own discussion of a surge-elevated <script type="math/tex">\lambda(t)</script>
+ for a different quantity. A team whose own heavy-task demand has a real, predictable business rhythm should not read this section’s own analytic result as covering that case. It doesn’t, and the gap between the two is exactly the gap a constant-rate assumption always carries, named here rather than left for a reader to discover by surprise.</p>
+<p><strong>What “exact” actually covers, stated here rather than three sections from now.</strong> Both the theorem and the simulation above are for the <em>unconstrained</em> system: M/G/<script type="math/tex">\infty</script>
+, admission always succeeds, no capacity ever blocks. That is not, strictly, the system Post 2 built. Proposition 1 explicitly scoped the pool as a loss system: <em>“a bounded pool with no queue is a loss system: once every slot is taken, the next arrival of either kind is rejected outright.”</em> It named the offered-load formula <script type="math/tex">\rho_h = \lambda_h E[S_h]</script>
+ an approximation that <em>“degrades exactly where the stakes are highest,”</em> near saturation. Proposition 6’s own exactness inherits that same scope, not just its convenience. It is exact for the unconstrained system this specimen’s finite capacity <script type="math/tex">C</script>
+ approximates well below saturation: the same regime Post 2 already flagged as the one place the approximation gets worse, not better, right as it matters most. Nothing downstream in this post claims otherwise. The claim is worth stating here, at the point “exact” is first earned, rather than leaving a reader to discover the scope only once Proposition 6b’s own comparison against a true blocking system (below) raises it indirectly.</p>
+<p><strong>The direction of that degradation is worth naming rather than left as “gets worse,” and it isn’t <script type="math/tex">G</script>
+ itself that the loss-system caveat above actually threatens.</strong> <script type="math/tex">G</script>
+, the bridging-window arrival count <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ is sized against, counts arrivals in a fixed future window. That’s a fact about when a Poisson process’s own points land, true regardless of what the system downstream does with them, and the reserve exists specifically so those arrivals are admitted, not rejected. The caveat bites a different, related quantity instead: the steady-state resident-occupancy count the M/G/<script type="math/tex">\infty</script>
+ thinning proof establishes first, before this post ever reaches <script type="math/tex">G</script>
+. For that quantity, the real, capacity-bounded system is an M/G/c/c loss process. A classical insensitivity result for exactly that process says its own equilibrium state probabilities are the Poisson(<script type="math/tex">\rho</script>
+) pmf, truncated to {0,…,C} and renormalized, not a separately-shaped distribution: a result that holds for general service-time distributions, not only the exponential case. Renormalizing scales every probability below <script type="math/tex">C</script>
+ up by the same constant factor. That raises the cumulative distribution at every point below <script type="math/tex">C</script>
+. A higher cumulative distribution at a given point means a given fractile, the <script type="math/tex">97\%</script>
+ target this post uses, is reached at a smaller value, not a larger one. Where this approximation degrades, it degrades in the conservative direction: the untruncated Poisson tail this post leans on overstates, not understates, how much margin the true, capacity-bounded system actually needs. That’s a real, checkable claim, not an assumption swapped in for the honest “gets worse” this section already states. A deployment running closer to saturation than this specimen’s own numbers do should still verify it against a real Erlang-B correction, rather than trust the direction asserted here without checking.</p>
+<h2 id="proposition-6-what-pooling-actually-buys">Proposition 6: What Pooling Actually Buys</h2>
+<p><span id="prop-6"></span></p>
+<details>
+<summary>Proposition 6 -- Fleet Pooling: a shared reserve, sized against the pooled bridging-window memory demand, needs a strictly smaller fraction of aggregate capacity than N independent per-node reserves</summary>
+<blockquote>
+<p><strong>Finding.</strong> Pooling a fleet’s own reserve needs a strictly smaller fraction of aggregate capacity than <script type="math/tex">N</script>
+ siloed per-node reserves: real, computed, not asserted.</p>
+</blockquote>
+<p><strong>Proposition 6</strong> (Fleet Pooling). For <script type="math/tex">N</script>
+ decode nodes sharing a routing layer capable of directing new admissions to any node with headroom, the fleet-wide bridging-window <em>arrival count</em> is <script type="math/tex">G_N \sim \text{Poisson}(N\lambda_h T_{\text{scale}})</script>
+: exact, by the sum-of-independent-Poissons identity applied to Definition 2a’s own per-node result. The reserve that actually has to be sized, <script type="math/tex">H_{\min}^{\text{fleet}}(N)</script>
+, is not this count directly. It is the <script type="math/tex">32{:}1</script>
+ critical fractile of the <em>memory</em> those <script type="math/tex">G_N</script>
+ arrivals hold by the time the bridging window closes (Post 3’s own accumulating-occupancy correction, applied at fleet scale): a compound Poisson sum of independent, age-weighted per-task footprints, not <script type="math/tex">G_N</script>
+ copies of a fixed number. <script type="math/tex">H_{\min}^{\text{fleet}}(N)</script>
+, sized this way, is strictly smaller as a <em>fraction</em> of aggregate fleet capacity <script type="math/tex">NC</script>
+ than <script type="math/tex">N</script>
+ independently-sized per-node reserves, for every <script type="math/tex">N > 1</script>
+. The pooling saving is real regardless of which of the two ways <script type="math/tex">H_{\min}</script>
+ gets computed, task-equivalents or bytes; only the <em>size</em> of the saving depends on getting the byte-level accounting right.</p>
+</details>
+<p><strong>Computed, not left as a shape claim.</strong> At this series’ own numbers, decode’s own age-weighted footprint (prompt tokens resident from handoff plus output tokens accumulating one at a time, the same <a href="/blog/no-safe-number-part3-bottleneck-moves/#prop-4">Proposition 4</a> correction Post 3 derived), the 31.80GB per-node budget, <script type="math/tex">\lambda_h T_{\text{scale}} = 2.22</script>
+ per node, the pool’s own 32:1 cost ratio fixing the same <script type="math/tex">32/33 \approx 0.970</script>
+ target Proposition 3 used, and a fleet of <script type="math/tex">N=32</script>
+ nodes (itself a deliberate echo of the pool’s own original 32 slots) together give a real, checkable pair of numbers. Reserving independently, per node: <script type="math/tex">32 \times 3.08\text{GB} = 98.56</script>
+GB, <script type="math/tex">9.7\%</script>
+ of the fleet’s <script type="math/tex">1{,}017.6</script>
+GB aggregate capacity. That’s the same <script type="math/tex">9.7\%</script>
+ Post 3 found for one node, unchanged by fleet size, because siloed reserves don’t know about each other. Reserving against the pooled distribution instead: <script type="math/tex">G_{32} \sim \text{Poisson}(71.04)</script>
+ newly-arrived tasks, each holding <script type="math/tex">P + \sigma A</script>
+ for its own age <script type="math/tex">A \sim \text{Uniform}(0, T_{\text{scale}})</script>
+ at window’s close, is a compound Poisson sum with mean <script type="math/tex">39.60</script>
+GB and variance <script type="math/tex">23.23</script>
+GB<script type="math/tex">^2</script>
+. The <script type="math/tex">32{:}1</script>
+ fractile of that sum, checked directly by simulation rather than solved in closed form, is <script type="math/tex">48.90</script>
+GB: <script type="math/tex">4.8\%</script>
+ of aggregate capacity.</p>
+<p><strong>Why this doesn’t need the neighbor-check Proposition 3 ran for its own <script type="math/tex">H_{\min}=5</script>
+.</strong> The single-node margin was an integer count of task-equivalents, so clearing a continuous fractile target meant rounding up to the next whole arrival and checking the two neighboring integers weren’t secretly cheaper. The pooled fleet margin is a real-valued quantity (bytes, not a count), so the <script type="math/tex">32{:}1</script>
+ fractile equation is exact at the value it’s solved for. That’s the same reason Proposition 0’s own continuous critical fractile never needed a neighbor check either. The discreteness that made Proposition 3’s verification step necessary was a property of counting tasks, not of the underlying economics. It disappears once the quantity being reserved is priced in the unit it’s actually consumed in.</p>
+<p>That’s a <script type="math/tex">49.66</script>
+GB gap between the two numbers, not a rounding difference: <script type="math/tex">4.88</script>
+ percentage points of the fleet’s entire aggregate decode capacity. It’s freed by nothing but routing new admissions to wherever headroom currently sits, instead of pre-committing a reserve per node. Translated into something concrete, rather than left as a byte count: at Post 3’s own ordinary-traffic footprint, <script type="math/tex">377</script>
+MB per conversation-profile sequence, that’s room for roughly <script type="math/tex">132</script>
+ additional ordinary requests. Served by a fleet that changed nothing about its hardware, its model, or its traffic. Only how its own standing margin is accounted for.</p>
+<p><strong>The shape, not just the one number.</strong> The gap isn’t a quirk of <script type="math/tex">N=32</script>
+. Solving for <script type="math/tex">H_{\min}^{\text{fleet}}(N)</script>
+ across a range of fleet sizes and tracking the <em>excess</em> over the pooled mean: <script type="math/tex">H_{\min}^{\text{fleet}}(N) - N\lambda_h T_{\text{scale}} \cdot E[M(A)]</script>
+, the actual safety margin above what the fleet expects on average, in gigabytes, against <script type="math/tex">\sqrt{N\lambda_h T_{\text{scale}} \cdot E[M(A)^2]}</script>
+, the compound sum’s own standard deviation:</p>
+<table><thead><tr><th style="text-align: left">Fleet size <script type="math/tex">N</script>
+</th><th style="text-align: left"><script type="math/tex">\Lambda=N\lambda_h T_{\text{scale}}</script>
+</th><th style="text-align: left">Pooled <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ (GB)</th><th style="text-align: left">Excess <script type="math/tex">/</script>
+ SD (<script type="math/tex">\beta</script>
+)</th><th style="text-align: left">Pooled margin, % of fleet capacity</th></tr></thead><tbody>
+<tr><td style="text-align: left">1</td><td style="text-align: left">2.22</td><td style="text-align: left">3.08</td><td style="text-align: left">2.15</td><td style="text-align: left">9.69%</td></tr>
+<tr><td style="text-align: left">4</td><td style="text-align: left">8.88</td><td style="text-align: left">8.39</td><td style="text-align: left">2.02</td><td style="text-align: left">6.60%</td></tr>
+<tr><td style="text-align: left">8</td><td style="text-align: left">17.76</td><td style="text-align: left">14.67</td><td style="text-align: left">1.98</td><td style="text-align: left">5.77%</td></tr>
+<tr><td style="text-align: left">16</td><td style="text-align: left">35.52</td><td style="text-align: left">26.45</td><td style="text-align: left">1.95</td><td style="text-align: left">5.20%</td></tr>
+<tr><td style="text-align: left">32</td><td style="text-align: left">71.04</td><td style="text-align: left">48.90</td><td style="text-align: left">1.93</td><td style="text-align: left">4.81%</td></tr>
+<tr><td style="text-align: left">128</td><td style="text-align: left">284.16</td><td style="text-align: left">176.76</td><td style="text-align: left">1.91</td><td style="text-align: left">4.34%</td></tr>
+<tr><td style="text-align: left">200</td><td style="text-align: left">444.00</td><td style="text-align: left">270.35</td><td style="text-align: left">1.90</td><td style="text-align: left">4.25%</td></tr>
+</tbody></table>
+<p><em>Pooled reserve as a percentage of aggregate fleet capacity across fleet sizes from 1 to 200 nodes, converging toward the asymptotic floor as <script type="math/tex">N</script>
+ grows.</em></p>
+<p>The ratio in the fourth column holds within a narrow band across two orders of magnitude of fleet size: the excess reserve above the pooled mean grows as <script type="math/tex">\beta\sqrt{\text{Var}}</script>
+ for a roughly constant <script type="math/tex">\beta</script>
+, not linearly with <script type="math/tex">N</script>
+. <strong>Checked at every sampled point in the table above, not asserted from the endpoints alone</strong>: <script type="math/tex">\beta</script>
+ runs from <script type="math/tex">2.15</script>
+ at <script type="math/tex">N=1</script>
+ down to <script type="math/tex">1.90</script>
+ at <script type="math/tex">N=200</script>
+, tightening as <script type="math/tex">N</script>
+ grows. The small-<script type="math/tex">N</script>
+ value is real, not sampling noise, since the compound-Poisson sum is furthest from its own normal approximation exactly where the Poisson count itself is smallest. This isn’t a coincidence this post is claiming credit for discovering. It’s the square-root staffing law <a href="#ref-4" class="cite-ref" data-def="Borst, S., Mandelbaum, A. & Reiman, M.I. (2004) — Dimensioning Large Call Centers" aria-label="Borst, S., Mandelbaum, A. & Reiman, M.I. (2004) — Dimensioning Large Call Centers">[4]</a>
+, the economically-optimal dimensioning rule for large many-server systems that falls out of the Halfin-Whitt heavy-traffic regime <a href="#ref-5" class="cite-ref" data-def="Halfin, S. & Whitt, W. (1981) — Heavy-Traffic Limits for Queues with Many Exponential Servers" aria-label="Halfin, S. & Whitt, W. (1981) — Heavy-Traffic Limits for Queues with Many Exponential Servers">[5]</a>
+, reached here by a different, exact route. Halfin and Whitt’s own result is an asymptotic diffusion limit for finite-server loss and delay systems, as both server count and offered load grow together. This post’s own architecture, following Proposition 1’s own setup since Post 2, is the unlimited-admission offered-load approximation, where the exact Poisson identity above applies directly, with no large-<script type="math/tex">N</script>
+ limit needed. Two genuinely different derivation routes, one an asymptotic economic-optimality argument for a harder problem, one an exact quantile computation for this series’ own simpler one. Landing on the same functional form is a real, if modest, cross-check, not a claim that the two results are the same theorem.</p>
+<p><strong>What the byte-level correction costs the previous version of this claim, named rather than quietly dropped.</strong> The task-equivalent version of <script type="math/tex">H_{\min}^{\text{fleet}}(N)</script>
+ was an integer-valued Poisson quantile. An earlier pass through this post checked it at every integer <script type="math/tex">N</script>
+ from 1 to 300, finding a real, if small, non-monotonic sawtooth: individual steps where a discrete ceiling-rounding jump temporarily overshot the smooth downward trend. <script type="math/tex">H_{\min}^{\text{fleet}}(N)</script>
+, corrected to price memory the way Proposition 4 requires, is a fractile of a compound Poisson sum (a real-valued gigabyte quantity, not an integer count). Whether <em>that</em> function has its own non-monotonic steps as <script type="math/tex">N</script>
+ varies is a different question the discrete sweep above doesn’t answer, and this post hasn’t re-checked at the same resolution. The two claims that actually matter, pooling always beats siloed reserves, and the long-run trend falls toward the <script type="math/tex">3.89\%</script>
+ floor, aren’t in doubt at the sampled points in the table above. Whether the byte-valued curve is perfectly smooth between those points, or has its own small irregularities the old discrete analysis simply can’t speak to anymore, is left open here rather than asserted either way.</p>
+<p>The margin’s percentage floor as <script type="math/tex">N \to \infty</script>
+ is <script type="math/tex">\lambda_h T_{\text{scale}} \cdot E[M(A)] / C = 2.22 \times 0.5574 / 31.80 \approx 3.89\%</script>
+: the mean bridging-window demand alone, with the shrinking safety term vanishing in relative terms. A fleet large enough eventually needs a reserve close to its own mean bridging-window demand, and very little more, in relative terms. Real economies of scale, computed against this series’ own numbers, rather than asserted as a general property of “scale.”</p>
+<p><strong>A smaller, more realistic fleet size, checked the same way.</strong> Thirty-two nodes is a large deployment; plenty of real services run this specimen at a fraction of that scale. At <script type="math/tex">N=8</script>
+ (a modest fleet, not a hyperscaler’s) the pooled math still holds: <script type="math/tex">G_8 \sim \text{Poisson}(17.76)</script>
+, pooled reserve <script type="math/tex">14.67</script>
+GB against a siloed <script type="math/tex">24.64</script>
+GB: <script type="math/tex">5.77\%</script>
+ of aggregate capacity instead of <script type="math/tex">9.69\%</script>
+, a <script type="math/tex">9.97</script>
+GB saving. Smaller than <script type="math/tex">N=32</script>
+’s own <script type="math/tex">49.7</script>
+GB in absolute terms, because there’s less aggregate capacity to save against. But the <em>fraction</em> saved is already most of the way to the asymptotic floor. Pooling’s real economies of scale show up fast, not only at hyperscaler volume. A team running eight nodes doesn’t need to wait for a thirty-two-node fleet to see this saving; it needs a routing layer capable of directing admissions to whichever of the eight currently has headroom, the same requirement at any <script type="math/tex">N > 1</script>
+.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> <script type="math/tex">9.69\%</script>
+ was never wrong at <script type="math/tex">N=1</script>
+: Post 3 computed it correctly, for the problem it was actually solving. What changes at fleet scale isn’t the per-node arithmetic; it’s that a <em>shared</em> reserve, backed by routing flexibility that didn’t exist for a single node, has to cover the aggregate’s own variability rather than each node’s own worst case independently. Aggregate variability, as a fraction of aggregate demand, shrinks. That’s a real, computable consequence of the Poisson identity above, not folklore about scale being generically forgiving. What it does <em>not</em> do is make the underlying risk disappear. The <script type="math/tex">49.7</script>
+GB this post just freed up is capacity that would otherwise sit idle, reserved against a bridging-window burst that, pooled or not, remains exactly as real as Definition 2a first found it.</p>
+</blockquote>
+<h2 id="proposition-6b-pooling-stops-at-the-admission-boundary">Proposition 6b: Pooling Stops at the Admission Boundary</h2>
+<p>Proposition 6’s saving is real. It would be a mistake to read it as “volume solves the memory problem,” full stop. It solves a narrower problem than that phrasing suggests. The boundary is worth pricing as precisely as the saving itself.</p>
+<p><strong>What was actually pooled, and which signal it has to run on.</strong> Proposition 6’s routing layer redirects a heavy task to whichever node currently has headroom. For that redirection to be genuinely free (no state to move, nothing to relocate), it has to fire at admission, <script type="math/tex">t \approx 0</script>
+, before the task has been assigned to any decode node at all. That rules out one signal this series has spent five posts building: Definition 1b’s own elapsed-time posterior, the “newly-detected” language this post has used loosely up to here. It needs real decode time to fire: <script type="math/tex">t^*\approx3.4</script>
+s at this specimen’s own <script type="math/tex">\pi_0=0.3</script>
+, per Post 1. A task that has already decoded for 3.4 seconds has already been assigned to, and is already running on, some specific decode node. Routing it <em>anywhere else</em> at that point isn’t an admission decision anymore; it’s exactly the relocation named below, <a href="/blog/asymptotically-ruined-part4-eviction-crossover/#prop-5">Proposition 5</a>’s own machinery, applied to a task whose <script type="math/tex">S(t)</script>
+ happens to still be small. The only signal actually available at genuine <script type="math/tex">t=0</script>
+ is Definition 1b’s <em>other</em> half: <script type="math/tex">\pi_0</script>
+, the pre-classifier, weaker than the elapsed-time posterior by exactly the amount Post 1’s own crossover analysis quantifies, but the only one that hasn’t required any decode time to exist. Free pooled routing runs on <script type="math/tex">\pi_0</script>
+, not on “detection” in the stronger sense this series has otherwise used that word.</p>
+<p>That has a real, previously unpriced consequence this post’s own <script type="math/tex">49.7</script>
+GB saving doesn’t account for. <script type="math/tex">\pi_0</script>
+ is a weaker signal than the elapsed-time posterior <em>by construction</em>. That gap is the entire reason Definition 1b combines the two, rather than using <script type="math/tex">\pi_0</script>
+ alone. A real deployment routing on <script type="math/tex">\pi_0</script>
+ at admission will misroute some fraction of tasks: ones <script type="math/tex">\pi_0</script>
+ rated comfortably light that the elapsed-time posterior later reclassifies as heavy, sitting on a node chosen without that information. Correcting that once the stronger signal fires is not free reassignment. It is Proposition 5’s own relocation: Post 4’s <script type="math/tex">C_{\text{evict}}(S)</script>
+ formula, on a task whose <script type="math/tex">S(t^*)</script>
+ is genuinely tiny (<script type="math/tex">\sigma \cdot t^* \approx 4.97\text{MB/s} \times 3.4\text{s} \approx 16.9</script>
+MB). But its cost is dominated by the <em>fixed</em> overhead <script type="math/tex">c_0</script>
+ regardless, the same <script type="math/tex">\approx\$0.50</script>
+ this series has priced at every elapsed time from zero to ten thousand seconds. That per-task cost is small; the rate it’s paid at is not obviously small. At this specimen’s own baseline, roughly <script type="math/tex">89</script>
+ heavy-task detections per node per hour, <script type="math/tex">32</script>
+ nodes fleet-wide is on the order of <script type="math/tex">2{,}800</script>
+ detections an hour. If a meaningful fraction of those turn out to be corrections rather than confirmations of an already-good <script type="math/tex">\pi_0</script>
+ placement, the aggregate relocation bill is not a rounding error against a multi-gigabyte reserve saving. It’s a real, recurring operating cost this post has never priced, because it never separated “routed on <script type="math/tex">\pi_0</script>
+” from “routed on detection” until now. What fraction of admissions <script type="math/tex">\pi_0</script>
+ actually misplaces, relative to what the elapsed-time posterior later confirms, is a real, measurable property of a deployment’s own classifier, not one this series has data for. Proposition 6’s own saving should be read net of that correction cost, not gross, until a real deployment has measured it.</p>
+<p>Once a task’s own state has genuinely accumulated past the point where a mistaken placement is worth fixing, moving it to a <em>different</em> node remains what it always was: not a routing decision but a relocation. Proposition 5’s own crossover rule and Post 4’s <script type="math/tex">C_{\text{evict}}(S)</script>
+ formula make it a real, non-zero, size-dependent cost, not a free reassignment. A fleet’s routing layer can move <em>risk</em> freely, before it lands, and only while it’s still small enough that “before it lands” is actually true. It cannot move <em>already-accumulated state</em> for free after it has, no matter how small the correction looks in isolation.</p>
+<p><span id="prop-6b"></span></p>
+<details>
+<summary>Proposition 6b -- Pooling's Own Boundary: fleet-wide pooling covers new admissions; already-running tasks still cost a real relocation, priced by Post 4's own machinery</summary>
+<p><strong>Proposition 6b</strong> (Pooling’s Boundary). Proposition 6’s saving applies exactly to the admission-time decision, which of <script type="math/tex">N</script>
+ nodes a newly-detected heavy task is routed to. It does not extend to redistributing memory pressure from an already-running population of tasks across nodes after admission; doing that requires Proposition 5’s own eviction-crossover machinery, paid once per relocated task at Post 4’s own <script type="math/tex">C_{\text{evict}}(S)</script>
+ cost, not absorbed for free by the routing layer. A fleet whose per-node populations have already diverged (one node holding an unlucky cluster of long-running heavy tasks, another comfortably idle) cannot rebalance that divergence through Proposition 6’s mechanism at all.</p>
+</details>
+<p><strong>Checked against real fleet-planning research, not asserted from first principles.</strong> A March 2026 paper builds exactly this kind of fleet capacity planner for LLM inference, combining analytical queueing with discrete-event simulation, run against real Azure and LMSYS production traces. Its own headline finding is precise about where naive analysis breaks: “queueing dynamics that turn ugly under heavy-tailed workloads.” Existing tools that “optimize per-engine configuration for a fixed GPU count” miss “the upstream question of how many GPUs to buy and how to arrange them” <a href="#ref-6" class="cite-ref" data-def="Chen, H., Liu, X., Liu, Y., Jiang, J., He, B. & Liu, X. (2026) — inference-fleet-sim: A Queueing-Theory-Grounded Fleet Capacity Planner for LLM Inference" aria-label="Chen, H., Liu, X., Liu, Y., Jiang, J., He, B. & Liu, X. (2026) — inference-fleet-sim: A Queueing-Theory-Grounded Fleet Capacity Planner for LLM Inference">[6]</a>
+. Their own reason for building a joint simulator rather than trusting closed-form analysis alone is the same reason Proposition 6b exists here: routing, topology, and per-node state accumulation interact in ways a pure aggregate-arrival-rate argument, however exact, doesn’t capture on its own. Proposition 6 gets the admission-time saving right, and gets it exactly, not approximately. The paper’s own finding is that the admission-time saving alone still isn’t the whole fleet-sizing answer, because it says nothing about what already-running, already-diverged populations cost to rebalance.</p>
+<p>Worth being precise about one more difference between their model and this post’s own, since conflating the two would overstate how directly comparable the two sets of numbers are: the same M/G/c-versus-M/G/<script type="math/tex">\infty</script>
+ distinction already flagged where Proposition 6’s own exactness was first claimed, now mattering again from a different direction. Their own queueing layer is M/G/c (finite server count, requests that queue rather than route elsewhere once every server is busy) matched against real P99 time-to-first-token SLOs. This post’s own model, following Proposition 1’s setup since Post 2, is the unlimited-admission offered-load approximation, M/G/<script type="math/tex">\infty</script>
+, with the pool’s own finite capacity <script type="math/tex">C</script>
+ entering separately as a threshold comparison rather than as a blocking or queueing constraint baked into the arrival process itself. The two frameworks answer related but not identical questions, theirs prices what happens once requests actually have to wait for a server; this post’s own prices how much standing reserve a fleet needs before that waiting would even start. That’s a real difference in scope, not a contradiction between the two, and it’s exactly why this post treats their paper as independent confirmation of the <em>boundary</em> Proposition 6b names (routing and topology genuinely matter, a finding that survives the difference in queueing model) rather than as a source to borrow specific numbers from.</p>
+<p>One of their own seven fleet-planning scenarios is worth naming specifically, because it’s exactly Proposition 6b’s own boundary showing up in someone else’s real experiment rather than this post’s derivation: “whether an apparently idle fleet is actually broken.” A fleet can look comfortable on every aggregate metric a dashboard would show (low average utilization, headroom to spare) while a specific subset of nodes sits saturated and a specific subset sits idle, invisible to any metric that only reports the fleet-wide average. That’s precisely the gap between Proposition 6’s own pooled <em>aggregate</em> margin and Definition 6’s own per-node <script type="math/tex">h_i(t)</script>
+: the aggregate number can look healthy by exactly the amount one severely diverged node is unhealthy, canceling out in the average the way Post 3’s own headroom-fraction comparison was built specifically to avoid doing for resources within one node. A fleet operator trusting only Proposition 6’s own <script type="math/tex">4.81\%</script>
+ aggregate figure, without also watching Definition 6’s own per-node fractions, is exposed to exactly the failure mode the fleet-sim paper’s own scenario names.</p>
+<p><strong>Priced concretely, not left as “a real cost” without a number.</strong> Moving one already-running heavy task from an overloaded node to a comfortable one, mid-flight, costs Post 4’s own <script type="math/tex">C_{\text{evict}}(S(t))</script>
+: dominated by the <script type="math/tex">\$0.50</script>
+ fixed overhead, not the transfer itself, which stays under a tenth of a percent of that figure at any elapsed time this series has priced. One relocation is genuinely cheap. A fleet trying to rebalance <em>many</em> diverged nodes at once, though, isn’t paying Proposition 5’s own naturally-sparse, individually-timed price, it’s paying Proposition 5c’s, the emergency-batch price, exactly the machinery Post 4 built for a single node’s own redline breach and never intended as a fleet-rebalancing tool. Post 4’s own numbers there are the honest ones to reuse: a <script type="math/tex">k=32</script>
+ relocation wave adds real transfer-time delay, <script type="math/tex">5.5</script>
+ seconds before the slowest relocation in the batch actually lands, and a real projected-consumption cost during that wait, <script type="math/tex">\approx820</script>
+MB burned by surviving tasks before the freed memory is actually usable. A fleet that lets per-node populations diverge badly enough to need many simultaneous relocations doesn’t pay Proposition 6b’s clean per-task price. It pays Proposition 5c’s, at Proposition 5c’s own pace, one more reason Definition 6’s own routing-first posture, keeping divergence from accumulating in the first place, is worth more than its clean admission-time savings alone suggest.</p>
+<p>This is Post 1’s own locality lock, reappearing at a different scale rather than resolved by it. Definition 1’s property 3 ruled out moving a Blood Oath task’s state for free because the memory bus that built it is categorically faster than any link a relocation could use. A checkpointable task, Post 4’s own population, escapes that specific prohibition. But escaping it doesn’t make relocation free, only finite. Finite is not the same as zero. Proposition 6’s routing layer sidesteps the cost entirely for admissions that haven’t happened yet. It has no lever at all over tasks that have already landed.</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart TD
+    classDef free fill:none,stroke:#22c55e,stroke-width:2px;
+    classDef costly fill:none,stroke:#ca8a04,stroke-width:2px;
+
+    T["Heavy task detected<br/>(Definition 1b crossover)"]
+
+    T -->|"not yet admitted"| A["Route to whichever node<br/>currently has headroom"]:::free
+    A --> A1["Proposition 6:<br/>free, exact, pooled"]:::free
+
+    T -->|"already admitted, accumulating<br/>KV cache on node i"| B["Move to a different node?"]
+    B --> C["Proposition 5's eviction crossover:<br/>C_evict(S) A real, size-dependent cost"]:::costly
+    C --> C1["Proposition 6b:<br/>finite, priced, not free"]:::costly
+</pre>
+<blockquote>
+<p><strong>Physical translation.</strong> The honest description of what this post proves is narrower and more useful than “pooling helps”: pooling helps <em>before</em> a task accumulates state, exactly and computably, by the amount Proposition 6 derives. After that point, the fleet is back to Post 4’s own economics, one task at a time, at Post 4’s own price. A team reading Proposition 6’s <script type="math/tex">49.7</script>
+GB and concluding the fleet no longer needs Post 4’s eviction machinery has the direction of the dependency backwards. The smaller a fleet’s standing reserve gets from pooling, the less room it has to absorb an already-diverged node without reaching for exactly that machinery.</p>
+</blockquote>
+<h2 id="definition-6-the-fleet-redline">Definition 6: The Fleet Redline</h2>
+<p><span id="def-6"></span></p>
+<details>
+<summary>Definition 6 -- The Fleet Redline: sample a small number of nodes at random and route to the better of the sample, the fleet-level generalization of Definition 4's per-resource rule</summary>
+<p><strong>Definition 6</strong> (Fleet Redline). Given per-node headroom <script type="math/tex">H_i(t)</script>
+ for node <script type="math/tex">i \in \{1, \ldots, N\}</script>
+, define the fleet’s own headroom fraction <script type="math/tex">h_i(t) = H_i(t)/C</script>
+ exactly as Definition 4 defines <script type="math/tex">h_r(t)</script>
+ per resource.</p>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">h_i(t) = H_i(t)/C</script>
+ - node <script type="math/tex">i</script>
+’s own headroom fraction</li>
+<li><script type="math/tex">d</script>
+ - number of nodes sampled per routing decision (2 captures nearly all the benefit)</li>
+<li><script type="math/tex">\sum_i H_i(t) < H_{\min}^{\text{fleet}}</script>
+ - the fleet-wide demotion trigger: a sum, not a per-node condition</li>
+</ul>
+<p>Route each new admission by sampling <script type="math/tex">d</script>
+ nodes uniformly at random and routing to whichever has the higher <script type="math/tex">h_i(t)</script>
+: never by computing a global <script type="math/tex">\arg\max</script>
+ over all <script type="math/tex">N</script>
+. Separately, trigger fleet-wide demotion, refusing new admissions everywhere, once the fleet’s own aggregate remaining headroom, <script type="math/tex">\sum_{i=1}^{N} H_i(t)</script>
+, drops below <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+. The same pooled margin Proposition 6 sizes, not a per-node condition. A single node crossing its own <script type="math/tex">H_{\min}</script>
+ is not, by itself, a fleet-wide event. It is exactly the condition the routing layer exists to route <em>around</em>.</p>
+</details>
+<p><strong>Why the fleet-wide trigger is a sum, not a unanimous vote.</strong> Proposition 6 sizes <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ against aggregate demand, <script type="math/tex">G_N</script>
+, a sum across all <script type="math/tex">N</script>
+ nodes’ own bridging-window risk. The trigger that protects that reserve has to be stated in the same terms it was sized in: <script type="math/tex">\sum_i H_i(t) < H_{\min}^{\text{fleet}}</script>
+, not <script type="math/tex">\min_i h_i(t)</script>
+ crossing some shared threshold. The two are not equivalent. The gap between them is exactly where Definition 6’s own sampled routing makes the difference matter more, not less. Randomized routing (below) produces <em>uneven</em> per-node occupancy by design, the same property that breaks herding. That also means the fleet can be genuinely, aggregately exhausted (most of its pooled reserve gone) while a majority of individual nodes still look comfortable, because the depletion concentrated on a minority rather than spreading evenly. A trigger requiring <em>every</em> node to cross its own share before reacting would almost never fire in time under exactly the routing behavior this Definition specifies. The aggregate sum is the only condition that matches what Proposition 6 actually priced.</p>
+<p><strong>Why sampling, not a global argmax: a real failure mode, not a hypothetical one.</strong> A pure <script type="math/tex">\arg\max_i h_i(t)</script>
+ rule has an obvious appeal and a real, checkable defect: every admission decided against the same observation of fleet state computes the <em>same</em> argmax, and routes to the <em>same</em> single node. That’s fine for one admission at a time. It’s a herding failure the moment more than one admission is decided concurrently against a snapshot that hasn’t yet updated to reflect the first one landing. That’s the ordinary case for any real control plane, not an edge case. Simulated directly rather than asserted: <script type="math/tex">N=32</script>
+ nodes, headroom fractions clustered realistically around a common operating point, <script type="math/tex">K=20</script>
+ admissions decided concurrently against one frozen snapshot.</p>
+<table><thead><tr><th style="text-align: left">Routing rule</th><th style="text-align: left">Mean worst-case load on one node (out of 20)</th><th style="text-align: left">Trials sending all 20 to one node</th></tr></thead><tbody>
+<tr><td style="text-align: left">Pure <script type="math/tex">\arg\max</script>
+</td><td style="text-align: left">20</td><td style="text-align: left">100% of 5,000</td></tr>
+<tr><td style="text-align: left">Sample <script type="math/tex">d=2</script>
+, route to better</td><td style="text-align: left">3.11</td><td style="text-align: left">0%</td></tr>
+</tbody></table>
+<p><em>Simulated herding under 20 concurrent admissions against one frozen snapshot: a pure global argmax sends every admission to the same node; sampling <script type="math/tex">d=2</script>
+ nearly eliminates it.</em></p>
+<p>Sampling <script type="math/tex">d=2</script>
+ nodes per decision and routing to the better of the two drops the mean worst-case load on any single node to <script type="math/tex">3.11</script>
+ out of 20, with zero trials reaching even half the admissions landing on one node. This is the power-of-two-choices result <a href="#ref-7" class="cite-ref" data-def="Mitzenmacher, M. (2001) — The Power of Two Choices in Randomized Load Balancing" aria-label="Mitzenmacher, M. (2001) — The Power of Two Choices in Randomized Load Balancing">[7]</a>
+, well-established for exactly this shape of problem: sampling a small constant number of options rather than checking every one reduces the worst-case imbalance from a scale that grows with the system to one that barely grows at all, and almost all of the benefit is already captured at <script type="math/tex">d=2</script>
+. Definition 6 needs this not as an optimization but as the difference between a routing rule that’s safe under concurrent decisions and one that provably isn’t.</p>
+<p>This is Definition 4’s own unit-normalized comparison, generalized once more. The same move Post 3 made from <a href="/blog/no-safe-number-part2-provisioning-window/#def-2">Definition 2</a>’s single-resource redline to Definition 4’s per-resource one, applied here across nodes instead of across resources. A fleet doesn’t need every node comfortable to stay safe; it needs the routing layer to keep steering new pressure toward whichever node can currently absorb it, exactly the way Proposition 6’s pooled reserve assumes it can. Definition 6 is what makes that assumption an operating mechanism rather than a modeling convenience. Proposition 6’s own math doesn’t care which specific node absorbs which admission, only that the aggregate arrival process is pooled. So switching from a global argmax to sampled comparisons changes nothing about the <script type="math/tex">49.7</script>
+GB figure already computed; it only changes how safely that figure is realized under real, concurrent load.</p>
+<p><strong>Worked concretely, on a small enough example to see by hand.</strong> Take four of this specimen’s own nodes at a single instant: node A at <script type="math/tex">h_A = 0.71</script>
+, node B at <script type="math/tex">h_B = 0.34</script>
+, node C at <script type="math/tex">h_C = 0.58</script>
+, node D at <script type="math/tex">h_D = 0.12</script>
+: D uncomfortably close to its own redline, A comparatively relaxed. A newly-detected heavy task samples <script type="math/tex">d=2</script>
+ of the four, say {A, C}, and routes to A. Not because A is “the best node” fleet-wide, which this decision never checks, but because A is the better of the two nodes this particular admission happened to sample. A second, concurrent admission sampling {B, D} instead routes to B, not A. The two decisions land on different nodes even though both were made against the identical frozen snapshot, exactly the property pure argmax doesn’t have. D isn’t refused new work by this rule alone. It simply becomes less likely, not impossible, to be sampled into a comparison it would lose, until its own <script type="math/tex">h_D(t)</script>
+ recovers. That recovery can come from tasks finishing naturally or, if it doesn’t recover in time, from Definition 4’s own local mechanism taking over on D specifically. Nothing here requires knowing <em>why</em> D is low: a recent burst, an unlucky cluster of long-running tasks, simple bad timing. The rule doesn’t need a cause. It only needs whichever two numbers each decision happens to sample.</p>
+<p><strong>Watch out for</strong> the same warning Definition 6a’s opening already gave, worth restating because it’s the mechanism’s actual failure mode rather than a footnote: Definition 6 only routes admissions. A node whose <script type="math/tex">h_i(t)</script>
+ is falling because of tasks already running on it, not because of new arrivals, gets no relief from this Definition at all. That node needs Proposition 6b’s relocation machinery, or Post 3’s own Definition 4 acting locally, not a fleet-level routing rule that only ever touches traffic that hasn’t arrived yet.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> Definition 4 asked which <em>resource</em>, on one node, is closest to trouble. Definition 6 asks which <em>node</em>, in the fleet, is closest to trouble: the same normalized comparison, one level up. It does real work for exactly the reason DRF’s own dominant-share idea was borrowed for Definition 4 in the first place. A GPU-slot count, a memory-byte count, and now a per-node headroom fraction all become comparable on one scale. “Which one needs attention right now” becomes a well-posed question instead of a guess across incomparable units.</p>
+</blockquote>
+<h2 id="what-real-fleet-management-systems-actually-do">What Real Fleet-Management Systems Actually Do</h2>
+<p>Checked against production practice rather than derived in isolation, the way every mechanism in this series has been: two real systems already reason about fleet-level LLM-serving pressure, from different angles than Definition 6 takes. Chiron uses hierarchical backpressure (queue size, utilization, and per-request SLOs combined) to decide when to scale serving instances and their batch sizes. It reports up to 90% higher SLO attainment and 70% better GPU efficiency against autoscalers that ignore request-level SLOs entirely <a href="#ref-8" class="cite-ref" data-def="Patke, A., Reddy, D., Jha, S., Narayanaswami, C., Kalbarczyk, Z. & Iyer, R. (2025) — Hierarchical Autoscaling for Large Language Model Serving with Chiron" aria-label="Patke, A., Reddy, D., Jha, S., Narayanaswami, C., Kalbarczyk, Z. & Iyer, R. (2025) — Hierarchical Autoscaling for Large Language Model Serving with Chiron">[8]</a>
+. QLM takes a different, complementary angle: a request-waiting-time estimator drives a global scheduler across heterogeneous GPUs and models, orchestrating pulling, eviction, load balancing, and model swapping jointly. It reports 40 to 90% better SLO attainment against systems that manage these decisions independently <a href="#ref-9" class="cite-ref" data-def="Patke, A., Reddy, D., Jha, S., Qiu, H., Pinto, C., Narayanaswami, C., Kalbarczyk, Z. & Iyer, R. (2024) — Queue management for slo-oriented large language model serving" aria-label="Patke, A., Reddy, D., Jha, S., Qiu, H., Pinto, C., Narayanaswami, C., Kalbarczyk, Z. & Iyer, R. (2024) — Queue management for slo-oriented large language model serving">[9]</a>
+.</p>
+<p>Neither system is doing exactly what Definition 6 does. The difference is worth being precise about rather than glossing over. Both Chiron and QLM optimize <em>scheduling</em>, which request goes where, right now, to meet a latency or throughput target. Definition 6, like Definition 4 before it, is a safety backstop underneath whatever scheduler a real deployment actually runs. It doesn’t decide which request minimizes latency; it decides when a node is close enough to its own memory limit that new admissions need to be steered elsewhere, regardless of what the scheduler’s own objective would otherwise prefer. A fleet running Chiron’s own hierarchical autoscaling, or QLM’s own queue management, still needs an answer to the question neither system is built to ask: what happens when the scheduler’s own assumptions about available headroom turn out to be wrong. That answer is Definition 6, not a system competing with either of the two real ones just cited.</p>
+<p>Worth being specific about <em>where</em> each system’s own reported gain actually comes from, rather than treating “hierarchical” and “SLO-aware” as interchangeable descriptions of the same improvement. Chiron’s own backpressure signal is explicitly hierarchical (combining queue size, GPU utilization, and per-request SLO slack into one scaling decision), which is a genuinely different axis from Definition 6’s own. Chiron decides <em>how many</em> instances a service needs and <em>when</em> to add or remove them: a capacity-provisioning decision on the same timescale as Post 2’s own <script type="math/tex">T_{\text{scale}}</script>
+, not a per-admission routing decision made continuously. QLM’s own request-waiting-time estimator, by contrast, operates at exactly the granularity Definition 6 does (per-request, continuously) but optimizes a different objective: minimizing SLO violations across a mix of interactive and batch requests, not keeping any single node’s memory headroom above a reserved line. A fleet could run all three mechanisms at once without conflict, because each answers a question the other two don’t ask: Chiron, how many nodes; QLM, which request goes where to meet its own deadline; Definition 6, which node a <em>heavy</em> admission should avoid because its own memory margin is closest to gone. Layering a safety backstop underneath an existing optimizing scheduler, rather than replacing it, is the same relationship Post 3 already established between Definition 4 and Dynamo’s own router. This post’s own version of that same, now-familiar distinction.</p>
+<h2 id="push-pull-or-neither-the-design-question-this-post-has-been-assuming-its-way-past">Push, Pull, or Neither. The Design Question This Post Has Been Assuming Its Way Past</h2>
+<p>Definition 6 samples <script type="math/tex">d</script>
+ nodes and pushes the admission to the better of the sample. That’s one point in a real design space this post hasn’t named, let alone argued for. The Model Scope gap already flagged it: sustained herding under a correlated burst arriving faster than telemetry refreshes, per Mitzenmacher’s own result on stale information. That gap exists specifically <em>because</em> this is a push design: the router commits based on a remote sample that’s already stale by the time the admission lands.</p>
+<p><strong>A decentralized alternative that removes the staleness window rather than shrinking it.</strong> A scheduler can fan out the same <script type="math/tex">d</script>
+-node sample as a <em>reservation probe</em> rather than a committed admission. Each sampled node holds the reservation at the end of its own local queue and, once that reservation reaches the front, asks the scheduler that sent it for a task. The scheduler assigns the task to whichever of the <script type="math/tex">d</script>
+ nodes asks first and cancels the rest. This is Sparrow’s own batch-sampling-plus-late-binding design, built for exactly this failure mode in a different domain <a href="#ref-10" class="cite-ref" data-def="Ousterhout, K., Wendell, P., Zaharia, M. & Stoica, I. (2013) — Sparrow: Distributed, Low Latency Scheduling" aria-label="Ousterhout, K., Wendell, P., Zaharia, M. & Stoica, I. (2013) — Sparrow: Distributed, Low Latency Scheduling">[10]</a>
+. Worth being precise about who decides what, since the two roles are easy to conflate: the signal that triggers a claim, a node’s own report that it has real, current capacity, is never a remote snapshot; it’s made at the instant that matters, not sampled ahead of it. The decision itself, which of the <script type="math/tex">d</script>
+ askers actually gets the task, is made once, by the one scheduler that issued that task’s own probes, off the order those asks arrive in. No staleness window exists for a burst to exploit, not a smaller one, and no race exists for a burst to win either: Sparrow’s own paper names a race condition as a real risk of naive sampling, two schedulers both landing a task on a worker that looked idle to both <a href="#ref-10" class="cite-ref" data-def="Ousterhout, K., Wendell, P., Zaharia, M. & Stoica, I. (2013) — Sparrow: Distributed, Low Latency Scheduling" aria-label="Ousterhout, K., Wendell, P., Zaharia, M. & Stoica, I. (2013) — Sparrow: Distributed, Low Latency Scheduling">[10]</a>
+, and late binding is specifically what closes it: because each worker serves its own reservation queue strictly in arrival order rather than answering off a queue-length snapshot, two different jobs’ schedulers probing the same worker still get a well-defined, non-conflicting answer, not a coin flip resolved after the fact. What it costs, that Definition 6 doesn’t pay: two extra network round trips (probe, claim, cancel) before a task actually starts. Sparrow’s own paper reports this cost precisely, not as an order-of-magnitude guess: a median queuing delay under 9ms at 80% cluster load, sub-10ms in the common case. Sparrow was built for sub-100ms analytics tasks, where 9ms is a meaningful fraction of the job itself. It’s tolerated there because it’s still smaller than the queueing delay a centralized scheduler would add at that same timescale, not because a meaningful-fraction overhead is itself a design goal. This series’ own heavy tasks run 300 or more seconds. The same 9ms is roughly 0.003% of that duration: noise, not a real cost. That weakens the strongest objection to adopting the idea here specifically, rather than validating it as a general improvement over push routing everywhere.</p>
+<p><strong>A third point sits between the two just named, closer to a bridge than to either extreme: a shared central backlog, pulled from lazily rather than pushed to at all.</strong> Instead of the router deciding where a task goes, admitted tasks wait in one shared queue and a node claims one only once its own local state, checked against Definition 4’s own multi-resource vector, says it’s actually ready. That structurally closes the exact gap the Model Scope section below names: a node that pulls only when it’s already clear of its own redline never receives an admission it then has to reject. So the retry-storm risk a stale push decision creates doesn’t exist by construction. It isn’t free. A queue that has to match multi-dimensional readiness against a multi-dimensional backlog isn’t a plain FIFO anymore, and keeping that match fast under concurrent writes is a real piece of unbuilt infrastructure. The queue itself becomes exactly the kind of shared, contended structure this series’ own Universal Scalability Law critique already warns against, unless sharded. Sharding reopens a load-imbalance question shaped like Definition 6’s own <script type="math/tex">d</script>
+-sampling, just moved to the pull side instead of the push side. And queueing delay before a task is even claimed is a direct, previously unpriced draw against Post 4’s own <script type="math/tex">T_{\text{timeout}}</script>
+ budget, worst exactly when the backlog is deepest. Priced in full below, not resolved here any more than push or Sparrow are.</p>
+<p><strong>A fully centralized alternative sits at the opposite end, and it isn’t one design. It’s a family with genuinely different answers to the same question: how does a single authority see fleet state without becoming the fan-in bottleneck this series has already priced once, for its own router, via the Universal Scalability Law.</strong> Google’s own Borg pushes state directly to a single active primary, replicated for availability but with one authoritative decision-maker at a time <a href="#ref-11" class="cite-ref" data-def="Verma, A., Pedrosa, L., Korupolu, M., Oppenheimer, D., Tune, E. & Wilkes, J. (2015) — Large-Scale Cluster Management at Google with Borg" aria-label="Verma, A., Pedrosa, L., Korupolu, M., Oppenheimer, D., Tune, E. & Wilkes, J. (2015) — Large-Scale Cluster Management at Google with Borg">[11]</a>
+. Omega inverts that: no single decision-maker at all, every scheduler reads a shared cell state and commits via optimistic concurrency, retrying on conflict rather than serializing through one process <a href="#ref-12" class="cite-ref" data-def="Schwarzkopf, M., Konwinski, A., Abd-El-Malek, M. & Wilkes, J. (2013) — Omega: Flexible, Scalable Schedulers for Large Compute Clusters" aria-label="Schwarzkopf, M., Konwinski, A., Abd-El-Malek, M. & Wilkes, J. (2013) — Omega: Flexible, Scalable Schedulers for Large Compute Clusters">[12]</a>
+. Mesos splits the difference again: a thin central layer offers resources to frameworks, which decide what to actually run on them, so the center never has to know enough to make the placement decision itself <a href="#ref-13" class="cite-ref" data-def="Hindman, B., Konwinski, A., Zaharia, M., Ghodsi, A., Joseph, A.D., Katz, R., Shenker, S. & Stoica, I. (2011) — Mesos: A Platform for Fine-Grained Resource Sharing in the Data Center" aria-label="Hindman, B., Konwinski, A., Zaharia, M., Ghodsi, A., Joseph, A.D., Katz, R., Shenker, S. & Stoica, I. (2011) — Mesos: A Platform for Fine-Grained Resource Sharing in the Data Center">[13]</a>
+. Three real, deployed answers to “how centralized,” none of them the same architecture. Definition 6 as stated is a fourth point in that space this post never argued for against the other three; it simply built the one that generalized most directly from Definition 4’s own per-resource comparison.</p>
+<p><strong>Why this post resolves none of it.</strong> Comparing these properly means pricing what each one costs to run (consensus latency, fan-in bandwidth, index contention on a shared queue, the failure behavior of a single point of decision under partition) against what it buys, staleness immunity of different strengths for different designs. That’s a full architectural comparison, not a paragraph. This post doesn’t attempt it here. What this section commits to is narrower and checkable: Definition 6 is a defensible point in this space for the workload this series defines (admission-time, latency-sensitive, locked once running) not the only point, and not argued here to be the best one.</p>
+<h2 id="model-scope-and-failure-envelope">Model Scope and Failure Envelope</h2>
+<p>Every earlier post named its own boundaries rather than leaving them implicit. This post owes at least as thorough an accounting, since generalizing to a fleet multiplies the places an unstated assumption can hide.</p>
+<table><thead><tr><th style="text-align: left">Assumption</th><th style="text-align: left">What could break it</th><th style="text-align: left">Status</th></tr></thead><tbody>
+<tr><td style="text-align: left">Arrivals are independent across all <script type="math/tex">N</script>
+ nodes</td><td style="text-align: left">A single upstream trigger driving a correlated surge</td><td style="text-align: left">Priced: 4.81% moves to 5.20% at 2x variance</td></tr>
+<tr><td style="text-align: left">The fleet-wide trigger fires the same way regardless of how the pressure is distributed</td><td style="text-align: left">The cost model has no term for “how bad” versus “how likely”</td><td style="text-align: left">Named, unpriced</td></tr>
+<tr><td style="text-align: left">Definition 6 (routing) and Definition 4 (local redline) compose safely</td><td style="text-align: left">A stale routing decision lands on a node whose own redline already fired</td><td style="text-align: left">Named; a structural fix (lazy pull) exists, priced with its own new costs</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">G_N</script>
+ stays exact once a bridging window opens</td><td style="text-align: left">A detected surge keeps arriving at an elevated rate through its own window, not the stationary baseline</td><td style="text-align: left">Unfinished, named</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">G_N</script>
+ sums <script type="math/tex">N</script>
+ nodes’ own windows as though all <script type="math/tex">N</script>
+ are simultaneously open</td><td style="text-align: left">Real windows open asynchronously, one per node’s own detection event, not in lockstep</td><td style="text-align: left">Priced as the conservative case; not stated as one</td></tr>
+<tr><td style="text-align: left"><script type="math/tex">T_{\text{scale}}</script>
+ is still the right recovery clock at fleet scale</td><td style="text-align: left">Routing gives a second option (route around) a single node never had</td><td style="text-align: left">A real refinement this post hasn’t made</td></tr>
+<tr><td style="text-align: left">The fleet is homogeneous: identical <script type="math/tex">N</script>
+, <script type="math/tex">C</script>
+, <script type="math/tex">\lambda_h</script>
+</td><td style="text-align: left">A real fleet serving more than one model, or unevenly sized nodes</td><td style="text-align: left">Named</td></tr>
+<tr><td style="text-align: left">Routing decisions are free and instantaneous</td><td style="text-align: left"><script type="math/tex">d</script>
+ probes per admission is a real message-rate cost, distinct from load-balance quality</td><td style="text-align: left">Named, unpriced</td></tr>
+<tr><td style="text-align: left">The router is always reachable</td><td style="text-align: left">A partition forces a CAP-style choice this post never states as a design decision</td><td style="text-align: left">Named, PACELC’s non-partitioned version too</td></tr>
+<tr><td style="text-align: left">The <script type="math/tex">K=20</script>
+ herding simulation covers sustained staleness</td><td style="text-align: left">A fast-arriving burst inside one <script type="math/tex">\Delta</script>
+ window, several admissions sharing one stale reading</td><td style="text-align: left">Distinguished, not yet checked</td></tr>
+<tr><td style="text-align: left">Pooling reduces individual-task tail risk</td><td style="text-align: left">Pooling reduces the <em>aggregate</em> reserve; any one task’s own risk hasn’t moved</td><td style="text-align: left">Named</td></tr>
+</tbody></table>
+<p><em>Eleven assumption boundaries this post depends on, grouped by topic rather than strictly ordered: the paragraphs below name each one, not always in this table’s own row order.</em></p>
+<p><strong>Pooling assumes independent, non-correlated arrivals across nodes: the same assumption Definition 2a already carried for one node, now doing more work because it has to hold across all <script type="math/tex">N</script>
+ of them simultaneously.</strong> Proposition 6’s exact Poisson-sum result depends on each node’s own bridging-window arrival process being independent of every other node’s. A single upstream event, the same “new agentic workflow rollout” Post 1’s own case study named as the realistic way traffic shifts, can drive correlated heavy-task surges across many nodes <em>at once</em>, rather than independently at each one. That breaks the sum-of-independent-Poissons identity at its foundation, not just its edges. This isn’t only a qualitative risk; it’s computable the same way Post 2 already computed it for one node. Holding the fleet-wide arrival count’s own mean fixed at <script type="math/tex">71.04</script>
+ (this post’s own <script type="math/tex">N=32</script>
+ figure) and doubling <em>its</em> variance, a Negative Binomial with the same mean, twice the spread, is exactly Post 2’s own sensitivity test, reused rather than reinvented. It feeds through to the byte-valued margin two ways at once: more variance in how many tasks arrive, on top of the variance already present in how much memory each one holds by the time the window closes. Checked directly rather than propagated through an approximation, the pooled reserve moves from <script type="math/tex">48.90</script>
+GB to <script type="math/tex">52.90</script>
+GB, <script type="math/tex">5.20\%</script>
+ of aggregate capacity instead of <script type="math/tex">4.81\%</script>
+. Four gigabytes is a real, bounded cost of correlation, not a reason to distrust pooling altogether. Even doubled, the correlated fleet-wide reserve is still far below the <script type="math/tex">9.69\%</script>
+ siloed baseline, the same shape of finding Post 2 reached for one node: correlation costs something specific and computable, not something open-ended. A deployment with reason to expect tighter cross-node correlation than a 2x variance increase should re-run this same computation against its own measured dispersion, the same instruction Post 2 gave for a single node’s own arrival process.</p>
+<p><strong>A separate cost is worth pricing on its own, rather than folded into the correlation question above. Pooling changes not just how <em>likely</em> the reserve is to fail, but what failing <em>looks like</em> when it does, and Definition 6a’s own cost model is silent on that difference.</strong> Even granting fully independent per-node demand, Definition 6’s own trigger is a sum, <script type="math/tex">\sum_i H_i(t) < H_{\min}^{\text{fleet}}</script>
+, firing one fleet-wide response (refuse admissions everywhere) rather than <script type="math/tex">N</script>
+ independent per-node ones.</p>
+<table><thead><tr><th style="text-align: left"></th><th style="text-align: left">Siloed</th><th style="text-align: left">Pooled</th></tr></thead><tbody>
+<tr><td style="text-align: left">Failure unit</td><td style="text-align: left">one node’s own <script type="math/tex">H_{\min}</script>
+ breach</td><td style="text-align: left">fleet-wide sum breach</td></tr>
+<tr><td style="text-align: left">Blast radius</td><td style="text-align: left">local: other 31 nodes unaffected</td><td style="text-align: left">every tenant, simultaneously</td></tr>
+<tr><td style="text-align: left">Frequency</td><td style="text-align: left">many small, staggered incidents</td><td style="text-align: left">fewer, larger, simultaneous ones</td></tr>
+</tbody></table>
+<p><em>How a reserve breach differs in shape between siloed and pooled architectures, even holding the expected GB-equivalent shortfall constant.</em></p>
+<p><strong>The cost model doesn’t have a term for this difference.</strong> Definition 6a’s own expected-cost accounting, <script type="math/tex">E[\text{failure} \mid H_{\min}^{\text{fleet}}, G_N]</script>
+, prices the <em>aggregate</em> GB-equivalent shortfall against the same <script type="math/tex">32{:}1</script>
+ ratio Definition 2a priced for one node. A cost that’s linear in shortfall, with no term for whether that shortfall landed on one node or spread thin across all <script type="math/tex">N</script>
+ at once. A real operational incident doesn’t obviously scale that way. A fleet-wide admission freeze is a correlated, all-tenant-visible outage: every team served by this fleet degrades at the same moment, and incident response has one event to triage instead of <script type="math/tex">N</script>
+ smaller ones spread over time. Any downstream system that assumed at least some of the fleet stays reachable loses that assumption exactly when it can least afford to.</p>
+<p>Whether that correlated shape actually costs more per GB of shortfall than <script type="math/tex">N</script>
+ independent equivalents, and how much more, is a real question this post’s own cost model doesn’t have a term to answer. The <script type="math/tex">32{:}1</script>
+ ratio was derived once, for a single node’s own failure, and reused here by analogy rather than re-derived against what a simultaneous, fleet-wide version of that failure actually costs a real organization. A team pooling reserve this aggressively should price that difference explicitly, not assume the aggregate GB-equivalent number already captures it.</p>
+<p><strong>Proposition 6’s own coverage target (<script type="math/tex">97\%</script>
+ per bridging window, unchanged from Post 2’s single-node figure) may not be the right target once there’s a fleet’s worth of bridging windows happening continuously, rather than one node’s worth occasionally. This post has not resolved which.</strong> Post 2 fixed <script type="math/tex">32/33</script>
+ against a single node’s own occasional bridging window. A fleet of <script type="math/tex">N</script>
+ nodes, each generating its own bridging windows on its own schedule as heavy tasks are detected, faces something closer to <script type="math/tex">N</script>
+ times as many <em>opportunities</em> for a bad one over any given stretch of calendar time. Even so, Proposition 6’s own pooled-snapshot framing (what does the fleet need reserved at any given instant) is the right question for sizing a <em>shared</em> reserve, and doesn’t itself require adjusting the per-snapshot target. Whether a fleet operator should nonetheless size against a tighter target than <script type="math/tex">97\%</script>
+, to hold the <em>fleet’s own</em> long-run reliability across many bridging windows to the same standard a single node held across its rarer ones, is a genuine question this post’s own snapshot-based derivation doesn’t settle either way. It’s a real, structural question about long-run coverage under repeated exposure, distinct from the pooling result itself, named here rather than resolved.</p>
+<p><strong><script type="math/tex">G_N</script>
+‘s own exactness, proven above, holds for a Poisson process with a constant rate <script type="math/tex">\lambda_h</script>
+. The bridging window this post sizes against is, by Proposition 2b’s own definition, the interval <em>after</em> a heavy-task surge has already been detected, not an arbitrary stretch of ordinary time.</strong> That’s worth being precise about rather than letting the earlier “always exact, not just convenient” result cover more ground than it actually does. The M/G/<script type="math/tex">\infty</script>
+ thinning identity this post leaned on already has the tool for a genuinely time-varying rate: the same Eick, Massey &amp; Whitt result cited earlier for exactly this generalization <a href="#ref-3" class="cite-ref" data-def="Eick, S.G., Massey, W.A. & Whitt, W. (1993) — Mt/G/∞ Queues with Sinusoidal Arrival Rates" aria-label="Eick, S.G., Massey, W.A. & Whitt, W. (1993) — Mt/G/∞ Queues with Sinusoidal Arrival Rates">[3]</a>
+. But this post has never actually used it. <script type="math/tex">G_N</script>
+ is computed throughout against the <em>baseline</em> <script type="math/tex">\lambda_h</script>
+, the same constant rate Proposition 1 established for ordinary conditions, not against a surge-elevated <script type="math/tex">\lambda(t)</script>
+ specific to the window a real detection event opens. If the same upstream trigger that caused Definition 1b’s own crossover to fire in the first place keeps producing heavy-task arrivals at an elevated rate for the duration of the bridging window, this is the realistic case, not an edge one, since whatever caused the surge rarely resolves itself within milliseconds of being detected. Then <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ is sized against the wrong mean, in the wrong direction, at precisely the moment the reserve exists to protect against. This is a different gap from the correlated-arrivals check above: that one asks whether <script type="math/tex">N</script>
+ nodes’ own windows are independent of <em>each other</em>; this one asks whether a single window’s own rate is still <script type="math/tex">\lambda_h</script>
+ once the reason for opening that window is already in progress. Sizing <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ against a real, measured surge-conditional rate, Eick, Massey &amp; Whitt’s own machinery applied to this specimen’s own detected-surge profile, rather than the stationary baseline, is unfinished work this post names rather than closes.</p>
+<p><strong>What “the fleet-wide bridging window” actually means physically is never stated, and the two readings protect different things.</strong> <script type="math/tex">G_N \sim \text{Poisson}(N\lambda_h T_{\text{scale}})</script>
+ sums each node’s own <script type="math/tex">\lambda_h T_{\text{scale}}</script>
+ arrivals <script type="math/tex">N</script>
+ times over. But a real node’s own bridging window only opens after <em>that node’s own</em> detection event (Proposition 2b), not on a shared clock. At any given instant, most of the fleet is very likely not inside an open window at all, only however many nodes happen to have a heavy-task detection currently in flight. Read as a snapshot, one 90-second interval sampled once, with the sum taken over however many of the <script type="math/tex">N</script>
+ nodes happen to have a window open right then. The right <script type="math/tex">G_N</script>
+ depends on the fleet-wide detection rate, not simply <script type="math/tex">N</script>
+ times one node’s own figure. Read instead as this post actually computes it, <script type="math/tex">N</script>
+ independent windows summed as though every node’s own window were open simultaneously: that’s the conservative limit of that snapshot. The reserve it produces protects against the worst case where detections happen to cluster across the fleet, not the typical case where they don’t. That’s a defensible design choice for a <em>safety</em> margin: worse case, not average case. It mirrors the same worst-case framing Proposition 6’s own <script type="math/tex">T_{\text{scale}}</script>
+-versus-<script type="math/tex">\Delta</script>
+ discussion above already makes explicit for a different pair of clocks. It has never been stated as a choice here, though. A team implementing <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ by simulating real, staggered per-node detection times, rather than trusting the closed form, would find it consistently over-provisions relative to the <em>typical</em> instant, by a margin this post has not computed, precisely because the typical instant doesn’t have all <script type="math/tex">N</script>
+ windows open at once.</p>
+<p><strong><script type="math/tex">T_{\text{scale}}</script>
+ itself is reused for the fleet’s own bridging window without asking whether the thing it measures (cold-boot latency for new infrastructure) is still the right clock, once a router can move admissions across <script type="math/tex">N</script>
+ already-warm nodes. The honest answer is that it depends on which failure this reserve is actually covering.</strong> A siloed node has exactly one way to survive a surge past its own capacity: outlast it until new capacity finishes booting. That’s what makes <script type="math/tex">T_{\text{scale}}</script>
+ the right window for Definition 2a’s own single-node margin. A pooled fleet has a second option a single node never had: route the pressure to a node that isn’t under it. That option resolves on the router’s own reaction latency <script type="math/tex">\Delta</script>
+, a few hundred milliseconds per this post’s own earlier figure, not <script type="math/tex">T_{\text{scale}}</script>
+’s 90 seconds.</p>
+<table><thead><tr><th style="text-align: left">Pressure shape</th><th style="text-align: left">Right clock</th><th style="text-align: left">Why</th></tr></thead><tbody>
+<tr><td style="text-align: left">Uneven: some nodes hot, others comfortable (the ordinary case)</td><td style="text-align: left"><script type="math/tex">\Delta</script>
+</td><td style="text-align: left">routing relieves it on <script type="math/tex">\Delta</script>
+’s own timescale. A 90s reserve is oversized here</td></tr>
+<tr><td style="text-align: left">Correlated: every node hot at once</td><td style="text-align: left"><script type="math/tex">T_{\text{scale}}</script>
+</td><td style="text-align: left">routing has nowhere better to send anything; genuinely new capacity is needed</td></tr>
+</tbody></table>
+<p><em>Which recovery clock actually applies depends on whether pressure is uneven across the fleet (router-speed <script type="math/tex">\Delta</script>
+) or fleet-wide (autoscaler-speed <script type="math/tex">T_{\text{scale}}</script>
+); Proposition 6 prices only the slower, worse case.</em></p>
+<p><strong>Bottom line: Proposition 6’s own <script type="math/tex">48.90</script>
+GB figure implicitly prices the second, worse case as though it were the only one</strong>: conservative in the correlated scenario, likely a real over-provisioning in the uncorrelated one, which is the more common case by this post’s own admission elsewhere. Splitting <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ into two components, one sized against <script type="math/tex">\Delta</script>
+’s own short window for the routable case and one sized against <script type="math/tex">T_{\text{scale}}</script>
+ for the correlated one, rather than one number silently assuming the worse case throughout, is a real refinement this post hasn’t made. That’s distinct from the correlated-arrivals question above: that one asks how likely the correlated case is; this one asks whether the reserve is priced correctly for the far more common case where it isn’t.</p>
+<p><strong>Definition 6’s sampled routing needs only the <script type="math/tex">d</script>
+ nodes it draws per decision to be fresh, not the whole fleet. That’s a real reduction from the argmax version, not a full fix, and the reduction has a real, checkable limit rather than an open-ended one.</strong> A router acting on stale state (headroom readings a few hundred milliseconds old, the ordinary latency of any real control plane) can still route toward a sampled node whose headroom looked comfortable at the last observation and isn’t anymore by the time the admission lands. That’s the same failure Definition 2’s own EWMA smoothing exists to dampen at the single-node level. Sampling shrinks the blast radius of any one stale reading. A single bad observation can mislead at most the small comparison it’s part of, not an entire fleet’s worth of concurrent decisions. But it doesn’t eliminate the underlying staleness problem, only how far a single bad reading’s damage can spread. How far that reduction actually goes under sustained staleness, rather than one bad reading, is itself already characterized in the load-balancing literature, not just plausible. The same author who proved the power-of-two-choices result Definition 6 relies on separately proved that routing on stale information degrades performance and can produce sustained herding of its own, once the staleness interval approaches the system’s own inter-arrival time <a href="#ref-14" class="cite-ref" data-def="Mitzenmacher, M. (2000) — How Useful Is Old Information?" aria-label="Mitzenmacher, M. (2000) — How Useful Is Old Information?">[14]</a>
+. A correlated heavy-task surge arriving faster than the router’s own telemetry refreshes is exactly that regime: many admissions decided in quick succession against a snapshot old enough that none of them see each other’s effect. Sampling <script type="math/tex">d=2</script>
+ nodes per decision doesn’t repeal that result. It only starts from a better baseline than a global argmax would.</p>
+<p><strong>Definition 6 and Definition 4 are never composed explicitly, and the seam between them is exactly where a stale routing decision actually lands.</strong> A sampled routing decision, made against headroom that’s stale by up to <script type="math/tex">\Delta</script>
+, can route an admission to a node whose own <script type="math/tex">H_r(t)</script>
+ has crossed <script type="math/tex">H_{\min}^r</script>
+ in the interval since that reading was taken. Definition 4 doesn’t silently accept a task under those conditions. It refuses it, the same hard rejection it was built to issue at admission generally. Nothing in this post, or in Definition 6’s own statement, says what happens next. Does the router treat the rejection as a signal to resample against fresher state, retry against the same node, or fail the request outright? A resample-and-retry policy with no backoff is the standard shape of a retry storm. The correlated surge this mechanism exists to survive is also the moment the most nodes are near their own redlines simultaneously. A naive retry-on-reject policy amplifies admission traffic precisely when the fleet can least absorb it: a self-inflicted version of the same herding risk sampling was built to avoid in the first place. This is a real, unresolved composition gap between two mechanisms this series proves separately correct, a category of gap distinct from either mechanism’s own individual proof, not closed here.</p>
+<p><strong>One structural fix exists for this specific gap, priced honestly rather than offered as a free repair.</strong> Replacing push with a shared central backlog that nodes pull from lazily, claiming a task only once their own local, multi-resource state clears Definition 4’s own redline, removes the composition gap above by construction. A node that never pulls until it’s already ready never receives an admission it has to reject, so there’s no rejection left for a retry policy to mishandle. That’s real, and it’s the one property neither push nor Sparrow’s own probe-based pull has. It isn’t a free trade. Matching a multi-dimensional task against a multi-dimensional worker state isn’t a plain FIFO pop. The indexing structure needed to make that match fast under concurrent writes, resource-typed sub-queues, or a sparse index keyed on the dominant constraint, rather than a full scan, is itself a real, unbuilt piece of infrastructure. The shared backlog a lazy-pull design centralizes around is exactly the kind of contended structure this series’ own USL critique already prices for a fleet-wide router, now moved to a queue instead of a decision. Sharding it to survive that contention reopens a load-imbalance question shaped like Definition 6’s own <script type="math/tex">d</script>
+-sampling, just on the pull side rather than the push side. And a task waiting in a shared backlog before it’s even claimed burns real time against Post 4’s own <script type="math/tex">T_{\text{timeout}}</script>
+ budget, a draw push never makes since admission and placement are the same event there. Worst exactly when the backlog is deepest: the same correlated-surge regime where push’s own staleness problem bites hardest, just through a different mechanism. Lazy pull doesn’t dissolve this post’s own push-versus-staleness tradeoff. It trades a staleness cost and a retry-storm risk for an indexing cost, a contention cost, and a timeout cost, on a schedule this post hasn’t priced any more than the gap it closes.</p>
+<p><strong>Sampling <script type="math/tex">d</script>
+ nodes per decision costs more than the two extra round trips this series prices when it compares push against Sparrow’s own late-binding alternative, further down.</strong> That comparison weighs round-trip latency against a 300-second task and finds it negligible. It doesn’t weigh the other dimension: <script type="math/tex">d</script>
+ probes per admission is <script type="math/tex">d</script>
+ times the message volume at the router and at every sampled node’s own intake path, a throughput cost, not a latency one. It lands hardest during exactly the correlated, fast-arriving bursts named immediately above, where message rate rather than round-trip time is the resource actually under pressure. Definition 6’s own <script type="math/tex">d=2</script>
+, chosen because it captures nearly all of power-of-two-choices’ own benefit, was never checked against what doubled probe volume costs a control plane’s own event loop under sustained load: a distinct question from whether <script type="math/tex">d=2</script>
+ balances load well once a probe is actually processed.</p>
+<p><pre class="mermaid">
+    
+    sequenceDiagram
+    participant Burst as Correlated surge
+    participant Router as Router's telemetry snapshot
+    participant NodeA as Node A
+
+    Router->>Router: take snapshot: A looks comfortable
+    Note over NodeA: A's real headroom drops the instant<br/>it accepts a task, before the next snapshot
+
+    alt Single admission against one stale reading (K=20 simulation, already checked)
+        Burst->>Router: one admission: samples {A, B}, routes to A
+        Note over Router,NodeA: one decision, bounded damage:<br/>this is the case already validated
+    else Burst: several admissions land inside one Delta window (not checked anywhere in this series)
+        loop each admission inside the same Delta window
+            Burst->>Router: next admission arrives before the snapshot refreshes
+            Router->>NodeA: reads the same stale snapshot, still looks comfortable
+        end
+        Note over Router,NodeA: none of these decisions saw each other's effect:<br/>sustained herding on A, a different failure<br/>than the single-snapshot case
+    end
+</pre>
+<em>Two branches, not one sequence: the left is the single-snapshot case the K=20 simulation already validated. The right is what a fast-arriving burst actually does inside one Delta window, several admissions sharing one stale reading, and it’s the branch this series has never checked.</em></p>
+<p>This post’s own herding simulation, above, checked staleness within a single frozen snapshot. It has not checked the regime the cited result actually warns about: sustained staleness across a fast-arriving correlated burst. That gap should be read as open, not closed by the <script type="math/tex">K=20</script>
+-admission check already run.</p>
+<p><strong>That gap has a specific downstream consequence this post hasn’t traced through, one level past routing: sustained herding is exactly the mechanism that could turn Post 4’s own single-node limit-cycle protection into a fleet-wide one.</strong> Proposition 5b’s structural argument that Proposition 5c’s emergency channel avoids Ao et al.‘s own mass-simultaneous-eviction resonance rests on desynchronization: within one node, the tasks a redline breach evicts are spread out in elapsed time because the heavy tail is heavy. That argument was made, and only made, for evictions happening on one node in isolation. Sustained herding under a fast-arriving correlated burst routes disproportionately toward whichever nodes the router’s own stale sample keeps favoring, concentrating fresh admissions rather than spreading them. If that concentration pushes several nodes toward <script type="math/tex">H_{\min}</script>
+ at close to the same moment, each node fires its own Proposition 5c independently, on its own clock, with no knowledge of the others: not one node’s worth of desynchronized evictions, but several nodes’ worth of synchronized emergency waves landing together. Proposition 5b’s own desynchronization argument was never about <em>this</em> axis. It says nothing about whether the <em>triggering event</em> itself can synchronize across nodes, only that tasks within one already-triggered node don’t resonate with each other. A fleet where herding-driven admission concentration reliably pushes multiple nodes into their own emergency channels at once would be recreating, one level up, the exact recurring resonance Ao et al. prove possible and Proposition 5b argues against at the single-node level, through a channel Proposition 5b’s own proof never considered because it wasn’t the mechanism this post was checking staleness against at the time. Whether real herding under sustained staleness is severe enough to actually produce that cross-node synchronization, or stays mild enough that node-level breach timing remains effectively independent, is an empirical question neither this post’s own <script type="math/tex">K=20</script>
+ check nor Post 4’s own Proposition 5b addresses, because neither was built to.</p>
+<blockquote>
+<p><strong>Finding.</strong> This isn’t just Definition 6’s own gap. It’s the aggregate trigger’s gap too, and the wrong-direction correlation makes it worse than a fixed number suggests.</p>
+</blockquote>
+<p><strong>Why exact agreement isn’t achievable.</strong> Computing <script type="math/tex">\sum_i H_i(t)</script>
+ correctly means holding a consistent view of <script type="math/tex">N</script>
+ independently, asynchronously reporting nodes at a single logical instant. The classical result on exactly this question is not encouraging about <em>exact</em> answers: no deterministic algorithm can guarantee agreement in bounded time in an asynchronous system where even one participant might crash or fall silent <a href="#ref-15" class="cite-ref" data-def="Fischer, M.J., Lynch, N.A. & Paterson, M.S. (1985) — Impossibility of Distributed Consensus with One Faulty Process" aria-label="Fischer, M.J., Lynch, N.A. & Paterson, M.S. (1985) — Impossibility of Distributed Consensus with One Faulty Process">[15]</a>
+. The achievable target isn’t exact, real-time agreement: it’s <em>bounded</em> staleness under an assumption of partial synchrony, message delay bounded by some real, measurable <script type="math/tex">\Delta</script>
+ even if not zero <a href="#ref-16" class="cite-ref" data-def="Dwork, C., Lynch, N. & Stockmeyer, L. (1988) — Consensus in the Presence of Partial Synchrony" aria-label="Dwork, C., Lynch, N. & Stockmeyer, L. (1988) — Consensus in the Presence of Partial Synchrony">[16]</a>
+. Definition 6’s own aggregate condition should be read the same way: <script type="math/tex">\sum_i H_i(t)</script>
+, as the router computes it, is stale by at most <script type="math/tex">\Delta</script>
+, a real network property this post hasn’t measured. <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+’s own target coverage should be sized to absorb <script type="math/tex">\Delta</script>
+’s worth of additional worst-case demand, the same way Post 2 priced <script type="math/tex">\dot{H}(t)</script>
+’s own detection lag rather than assuming it away.</p>
+<p><strong>The correlation that makes this worse than a fixed number.</strong> Treating <script type="math/tex">\Delta</script>
+ as one fixed number to size against, rather than a distribution, understates the risk in a specific direction. Partial synchrony’s own bound is a worst case that has to hold, not a typical case that usually holds. A control-plane telemetry channel sharing infrastructure with the traffic it’s measuring has every reason to see its own <script type="math/tex">\Delta</script>
+ grow exactly when demand does: queued or dropped monitoring packets under the same congestion that’s stressing <script type="math/tex">H_i(t)</script>
+ in the first place, the control-plane analogue of the RoCEv2 incast risk already priced for Proposition 5c’s own data-plane transfers. That’s a correlation in the wrong direction: the moments <script type="math/tex">\Delta</script>
+ is most likely to widen are the same moments an accurate aggregate reading matters most, not independent moments that average out. Sizing <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ against a single worst-case <script type="math/tex">\Delta</script>
+ measured under ordinary load, rather than under the congested conditions a real breach would create, risks understating the reserve exactly when the reserve is load-bearing. A team with a shared control-and-data plane should measure <script type="math/tex">\Delta</script>
+ under synthetic load, not idle conditions, before trusting a single figure to hold through a real surge.</p>
+<p><strong>The fleet is assumed homogeneous: <script type="math/tex">N</script>
+ identical nodes, identical <script type="math/tex">C</script>
+, identical <script type="math/tex">\lambda_h</script>
+.</strong> A real fleet mixes hardware generations, GPU types, and regional deployments with genuinely different capacities and different local traffic mixes. Proposition 6’s own Poisson-sum identity survives heterogeneous rates cleanly: a sum of independent Poissons with different means is still Poisson, with the means adding, no new theory required. But the <em>fractional</em> margin result, and the clean square-root-staffing form it reduces to, was computed against identical per-node capacity. A fleet where <script type="math/tex">C</script>
+ itself varies node to node needs Proposition 6’s arithmetic re-derived against its own real capacity distribution, not this post’s uniform one.</p>
+<p><strong>A fleet serving more than one model is a sharper version of the same homogeneity gap, worth naming on its own terms rather than folded into the capacity caveat above.</strong> Everything in this post reuses Llama-2-70B’s own 1.824GB heavy-task footprint, the same number Post 3 derived and Post 4 reused. A fleet that serves several models simultaneously (a smaller model on some nodes, a larger one on others) doesn’t just have heterogeneous <script type="math/tex">C</script>
+; it has heterogeneous <em>footprint per heavy task</em>, which changes what “headroom” even means when comparing two nodes running different models. Definition 6’s own <script type="math/tex">h_i(t) = H_i(t)/C</script>
+, a fraction of raw capacity, is silent on this by construction: it compares how full two nodes are, not how much marginal risk either one is carrying per admitted task. This post’s own <script type="math/tex">N=32</script>
+ worked example sidesteps the question by assuming one model fleet-wide; a genuinely multi-model deployment needs Definition 6 re-derived with a per-model footprint term, not reused as stated.</p>
+<p><strong>Why memory-only projection isn’t enough.</strong> The correction keeps Definition 6’s own convention (route toward higher headroom, not lower load), and has to stay consistent with the reason Definition 4 compares resources by their <em>dominant</em> one in the first place, rather than picking a single resource and reasoning about it alone. A node can clear a projected memory check comfortably and still be the wrong choice if the model it serves has a heavy prefill ratio that would push its GPU-compute headroom past its own line instead. Projecting only the memory dimension, <script type="math/tex">h_i(t) - m_i/C_i</script>
+, reintroduces exactly the single-resource blindness Definition 4 was built to close, one level up, at the routing layer instead of the redline.</p>
+<p><strong>The corrected formula.</strong> The formula needs the same per-resource vector Definition 4 already tracks, projected forward by one admission and reduced by the same dominant-share logic:</p>
+<script type="math/tex;mode=display">\arg\max_{i \in d} \left( \min_r \left( h_{r,i}(t) - m_{r,i}/C_{r,i} \right) \right)</script>
+<p><strong>Pinning down <script type="math/tex">m_{r,i}</script>
+.</strong> This post’s own specimen has already shown “the footprint a task costs” is ambiguous between two real numbers that differ by more than <script type="math/tex">3\times</script>
+:</p>
+<table><thead><tr><th style="text-align: left">Candidate for <script type="math/tex">m_{r,i}</script>
+</th><th style="text-align: left">Value</th><th style="text-align: left">Correct?</th></tr></thead><tbody>
+<tr><td style="text-align: left">1.824GB: task’s <em>peak</em> resident footprint, reached only after its full mean duration</td><td style="text-align: left">reused throughout this post</td><td style="text-align: left">No, Post 3’s Proposition 4 already corrected this exact mistake for aggregate accounting</td></tr>
+<tr><td style="text-align: left">Proposition 4’s own <script type="math/tex">E[M_r]</script>
+: expected draw at a random point in residency</td><td style="text-align: left">0.5574GB, the age-weighted figure Proposition 6 already derived</td><td style="text-align: left">Yes</td></tr>
+</tbody></table>
+<p><em>Two candidate values for a task’s memory footprint, differing by more than 3x: only the age-weighted expected draw is correct for the routing formula above.</em></p>
+<p><script type="math/tex">m_{r,i}</script>
+ is <script type="math/tex">E\left[\int_0^{S_r} m(a)\,da\right]/E[S_r]</script>
+: the same per-task average <script type="math/tex">\rho_r = \lambda_r \cdot E[M_r] \cdot E[S_r]</script>
+ already uses to say what one more admitted task contributes to a node’s own long-run occupancy. It’s reused here for a single hypothetical admission’s own marginal contribution, instead of the whole population’s aggregate one. Using the peak figure would overstate a single admission’s true marginal cost by more than <script type="math/tex">3\times</script>
+, pushing the routing rule to reject nodes that a correctly-priced projection would still call comfortable. A genuinely heterogeneous fleet compounds this rather than sidestepping it: <script type="math/tex">E[M_r]</script>
+ is computed from node <script type="math/tex">i</script>
+’s own model’s duration distribution, not this specimen’s <script type="math/tex">E[S_h]=300</script>
+s reused blind. A node serving a model with a longer mean output length has a genuinely larger <script type="math/tex">m_{r,i}</script>
+ for the identical resource, even before its own <script type="math/tex">C_{r,i}</script>
+ is accounted for.</p>
+<p><strong>How the formula works.</strong> The inner <script type="math/tex">\min_r</script>
+ is Definition 4’s own dominant-resource selection, evaluated <em>after</em> the hypothetical admission rather than at the current instant. The outer <script type="math/tex">\arg\max</script>
+ then picks whichever sampled node’s own worst projected resource is least bad, rather than whichever node’s memory alone looks best. A node comfortable on memory but tight on GPU compute for its own model now loses on the dimension that actually threatens it, which a memory-only projection has no way to see.</p>
+<blockquote>
+<p><strong>Scope of what follows.</strong> The next several sections work through a real gap in Definition 6’s own comparison, and a chain of candidate responses to it, in real technical depth. None of it is built here. None of it is recommended here. The gap itself is real and previously unnamed; whether it’s severe enough in a real fleet’s own traffic to be worth any of the machinery sketched below is an open, unmeasured question this post states plainly and does not answer. Read what follows as design-space exploration, not as an addition to this post’s own proven architecture.</p>
+</blockquote>
+<p><strong>Every correction above still leaves <script type="math/tex">h_i(t)</script>
+ blind to one thing neither Definition 4’s per-resource vector nor the multi-model correction touches: what kind of population is occupying that headroom, not just how much of it.</strong> A fleet mixing Blood Oath’s own immortal population with Post 4’s checkpointable one, the realistic shape this series has named repeatedly without routing around it, has two nodes at the identical <script type="math/tex">h_i(t)</script>
+ carrying genuinely different risk. A node whose occupied memory is mostly checkpointable has a real lever if pressure rises: Proposition 5c can evict, relocate, and free real headroom on demand. A node whose occupied memory is mostly Blood Oath has none. Definition 1’s own property 2 rules eviction out for that population entirely, and Post 3 already showed what’s left once eviction isn’t available: Definition 4’s own admission-refusal alone, which “is not much once the pressure comes from work already in flight.” Two nodes reporting the same number to the router carry structurally different amounts of that lever, and the router has no way to see the difference, because <script type="math/tex">h_i(t)</script>
+ never asked.</p>
+<p><strong>The drift this creates isn’t symmetric, and that asymmetry is the actual mechanism worth naming, not just the blindness itself.</strong> A checkpointable task can leave a node two ways: completing normally, or being relocated by Proposition 5c. A Blood Oath task can only leave one way: completing normally. Nothing in this series’ own machinery can evict, relocate, or otherwise move a Blood Oath task off whatever node it landed on. That means a node’s own Blood-Oath fraction is a one-directionally sticky quantity: routing can only ever add to it, by landing a new Blood Oath admission there, and only the passage of time, specifically that task’s own remaining duration, ever removes from it. A node that draws an unlucky run of Blood Oath admissions, purely by the ordinary variance of a routing rule that never distinguishes task type in the first place, has no mechanism to rebalance that fraction back down except waiting. Its own <script type="math/tex">h_i(t)</script>
+ can look identical to a comfortably mixed node’s the entire time its real resilience is quietly draining away underneath that number.</p>
+<p><strong>What a fix would need to do, named as a real design requirement rather than solved here.</strong> Closing this gap means Definition 6’s own comparison has to read composition, not just headroom: something closer to <script type="math/tex">h_i(t)</script>
+ penalized by node <script type="math/tex">i</script>
+’s own current Blood-Oath-occupied fraction, so a routing decision between two nodes at equal raw headroom prefers the one with more real eviction slack behind it, the same instinct behind the multi-model correction above, applied to population type instead of resource type. Whether that correction is worth its own added routing complexity, whether the drift it corrects for is severe enough in a real fleet’s own traffic to matter, and how fast a node’s Blood-Oath fraction can plausibly ratchet up under this specimen’s own arrival numbers are all real, checkable questions this post hasn’t run. Naming the mechanism precisely is not the same as pricing it.</p>
+<p><strong>A symmetric penalty on <script type="math/tex">h_i(t)</script>
+ has a real failure mode of its own, worth naming before it’s mistaken for the finished fix.</strong> Discouraging <em>all</em> new admissions from a Blood-Oath-heavy node, of either type equally, doesn’t stop the ratchet, it just slows how fast new traffic arrives while it keeps turning. Checkpointable tasks already resident on that node still leave faster than Blood Oath ones do, two exit paths against one, regardless of what’s arriving. A node starved of new traffic across the board drains its own checkpointable population toward zero at the same underlying rate it always would, just with less new checkpointable traffic ever arriving to replace what leaves. The fix has to be asymmetric by admission type, not just present. A Blood Oath admission is an irreversible placement: once it lands, nothing in this series’ own machinery can move it again, which is exactly why routing it away from an already-Blood-Oath-heavy node is worth being careful about. A checkpointable admission is a reversible one: Proposition 5c can always correct a bad initial placement later, which is exactly what makes it safe to route <em>toward</em> a Blood-Oath-heavy node on purpose, specifically to rebuild the eviction liquidity that node’s own composition has been draining. Penalize the irreversible decision; use the reversible one as the fleet’s own repair mechanism for the node the irreversible decisions already hurt. That inversion is what actually closes the starvation risk a naive, type-blind penalty would otherwise create.</p>
+<p><strong>What that asymmetric version doesn’t close either, named with the same discipline as everything else in this section.</strong> It reduces the odds of a Blood-Oath-heavy node facing a correlated surge with no eviction liquidity left. It doesn’t eliminate them: a surge can still land before replenishment routing has had time to rebuild what drained away, the same timing-dependent risk this series has priced, never solved, everywhere else it appears. And a routing rule that biases in opposite directions for two task types is a new, real source of the same flapping risk already named for <script type="math/tex">\eta</script>
+, for the Hill estimator, and for Post 4’s own mixture-hazard control loop: a node’s Blood-Oath fraction sitting near whatever threshold flips the routing bias from one direction to the other would see admissions of both types oscillate in and out of favor on nothing but noise around that threshold, not a real change in the node’s own state. Naming the correct shape of the fix is not the same as having tuned it.</p>
+<p><strong>A single threshold has a known, standard remedy for exactly this shape of flapping, and it’s worth being precise about what it fixes and what it doesn’t before treating it as the finished answer.</strong> Replace the single crossing point with two, a repair threshold <script type="math/tex">\gamma_{\text{high}}</script>
+ that engages the checkpointable-preferring bias, and a strictly lower release threshold <script type="math/tex">\gamma_{\text{low}}</script>
+ the fraction has to fall back beneath before that bias disengages: a Schmitt trigger, the same classical fix a physical relay or a thermostat uses to stop chattering at a single setpoint. This is a genuinely different mechanism from <script type="math/tex">\eta</script>
+’s own smoothing, not the same trick reused. <script type="math/tex">\eta</script>
+ reduces flapping by making the <em>signal</em> less noisy before anything reads it. A Schmitt trigger doesn’t touch the signal at all; it widens the <em>decision boundary</em> so ordinary noise around one point stops mattering, leaving the signal exactly as noisy as it already was. Both reduce flapping. They do it by acting on different objects, and knowing which one is which matters for sizing either correctly.</p>
+<p><strong>The gap between the two thresholds isn’t free to pick, and picking it too narrow makes the fix decorative rather than functional.</strong> Composition doesn’t drift continuously; it jumps once per task arrival or departure, by roughly <script type="math/tex">1/n</script>
+ where <script type="math/tex">n</script>
+ is how many tasks the node is currently holding. At this specimen’s own baseline occupancy, <script type="math/tex">20.55</script>
+GB against the age-weighted <script type="math/tex">0.5574</script>
+GB per-task figure Proposition 6 already established, that’s roughly <script type="math/tex">37</script>
+ tasks, so a single task landing or leaving moves the fraction by about <script type="math/tex">2.7</script>
+ percentage points in one step, not a smooth wobble. A hysteresis band narrower than a few multiples of that figure doesn’t damp noise the way it’s supposed to; a single task event vaults across the entire gap in one move and triggers the flip anyway, the exact failure a Schmitt trigger exists to prevent. Sized correctly, <script type="math/tex">\gamma_{\text{high}} - \gamma_{\text{low}}</script>
+ comfortably wider than this specimen’s own per-task jump, ordinary single-task noise stops crossing both boundaries in one step. It still doesn’t bound switching frequency unconditionally, only against noise of that size. A correlated surge large enough to move the fraction across the whole band in one burst, several tasks landing together rather than one at a time, the same regime already named as a phase-locking risk elsewhere in this post, can still walk the state across both thresholds and back. Hysteresis is the right fix for the noise this section actually worried about. It was never a fix for a surge large enough to jump its own width in a single move, and shouldn’t be read as one.</p>
+<p><strong>Whether pull changes any of this is worth asking directly, since a shared backlog nodes claim from lazily already sits in this post as a structural fix for a different gap.</strong> It helps for a real, specific reason, not a general one: the asymmetric fix above needs a router that knows each sampled node’s own current Blood-Oath fraction, which means broadcasting composition fleet-wide as a second telemetry channel alongside headroom, carrying its own staleness window. A node deciding for itself which task to claim next needs no such broadcast. Its own composition is local state, known with zero staleness, the same advantage pull already has for headroom. A Blood-Oath-heavy node preferring the next checkpointable task in the backlog over the next Blood-Oath one achieves the identical asymmetric effect the push-side fix needs, against strictly fresher information, and without a new channel to keep consistent. That’s real. It isn’t the whole answer. A claiming rule that never distinguishes task type is exactly as blind under pull as a routing rule that never does under push; pull relocates where the fix has to live, it doesn’t supply the fix. And pull adds a failure mode of its own, specific to this exact scenario, that push doesn’t share in the same shape: if several nodes are simultaneously Blood-Oath-heavy, the same correlated-surge regime already named as a phase-locking risk elsewhere in this post, and each is actively declining Blood-Oath tasks to protect its own liquidity, a Blood-Oath admission can end up with no node willing to claim it at all. Push never has that failure mode, because push assigns rather than waits for a volunteer. The cost shows up as admission latency, not a memory-safety breach, but it lands directly on the same <script type="math/tex">T_{\text{timeout}}</script>
+ budget this post has already flagged as pull’s own worst-case draw, worst exactly when the backlog is deepest. Composition-aware claiming is a real third dimension added to an indexing cost this post has already named as unbuilt infrastructure, not a free property of choosing pull over push.</p>
+<p><strong>Definition 6’s routing rule is stated as though the fleet has one coordinated decision-maker. Post 3’s own Price-of-Anarchy analysis is a direct, already-cited reason to doubt that a real deployment does.</strong> Georgiou’s 2026 analysis of NVIDIA Dynamo’s own prefill/decode split (already load-bearing in Post 3, not a new citation reached for here) found the efficiency gap between a selfish, uncoordinated equilibrium and a centrally-coordinated optimum invariant across topology below saturation. That gap then jumps roughly 8.9-fold once the system actually saturates, on the same topology, same hardware, same model, no change except how close to the edge it’s running. Definition 6 implicitly assumes routing decisions are made by one coordinating layer acting in the fleet’s own collective interest: exactly the centrally-coordinated side of that comparison, not the selfish-equilibrium side the Price of Anarchy prices. A real fleet where different services, teams, or tenants each run their own routing logic against a shared pool of decode nodes is closer to the selfish-equilibrium case. Post 3’s own finding says precisely what to expect there: fine margins below saturation, a real and specifically nonlinear penalty once utilization climbs toward it. This post’s own <script type="math/tex">49.7</script>
+GB saving at <script type="math/tex">N=32</script>
+, and the pooled curve’s whole shape, assumes coordination Definition 6 states as a design requirement rather than proves a real deployment will have. That’s the same caveat Post 3 attached to its own Definition 4, now inherited at fleet scale rather than resolved by it.</p>
+<p><strong>Proposition 6b names the boundary between routing and relocation; it doesn’t size how often a real fleet actually needs to cross it.</strong> How frequently does a real deployment’s per-node population diverge enough, under Proposition 6’s own pooled-margin sizing, to need Proposition 5’s relocation machinery rather than Definition 6’s routing alone? That’s an empirical question about how correlated per-node divergence actually is in practice, not a question this post’s closed-form math can answer on its own: the same category of gap Post 4 left standing for its own emergency-channel batching risk, now inherited one level up.</p>
+<p><strong>The routing decision itself is treated as instantaneous and free, and neither is strictly true.</strong> Directing a newly-detected heavy task to a specific node is a real network hop and a real scheduling decision, not a zero-cost pointer update. It’s small against the multi-hundred-second scale of a heavy task’s own duration, almost certainly negligible the way Post 3 found the prefill-node KV-cache handoff negligible against its own duty cycle. But it’s not verified as negligible here, the way Post 3 verified it there with a real, computed 700<script type="math/tex">\times</script>
+ bandwidth margin. A team running this mechanism on infrastructure with genuinely slow or contended routing decisions, a control plane under its own load, a routing layer several hops removed from the nodes it’s directing traffic to, should check this margin explicitly rather than assume it inherits Post 3’s own comfortable number for a physically different operation.</p>
+<p><strong>One decision’s own cost is the smaller question; whether that cost stays flat as <script type="math/tex">N</script>
+ grows is the one this post’s own scaling table never asks.</strong> Proposition 6’s own table shows the memory-margin benefit holding, even improving, out to <script type="math/tex">N=200</script>
+: but it prices only one side of the ledger. The router itself is a shared resource that every one of <script type="math/tex">N</script>
+ nodes reports to and every admission decision queries. Coordinating a consistent-enough view across a growing <script type="math/tex">N</script>
+ is exactly what the Universal Scalability Law formalizes: relative capacity <script type="math/tex">C(N) = N / (1 + \alpha(N-1) + \beta N(N-1))</script>
+, where <script type="math/tex">\beta</script>
+ prices the coherency cost of keeping distributed state consistent, growing quadratically in <script type="math/tex">N</script>
+ where contention alone only grows linearly <a href="#ref-17" class="cite-ref" data-def="Gunther, N.J. (2007) — Guerrilla Capacity Planning: A Tactical Approach to Planning for Highly Scalable Applications and Services" aria-label="Gunther, N.J. (2007) — Guerrilla Capacity Planning: A Tactical Approach to Planning for Highly Scalable Applications and Services">[17]</a>
+. USL’s own prediction for a system where <script type="math/tex">\beta</script>
+ matters isn’t a plateau. It’s an eventual <em>decrease</em> in effective capacity as coordination overhead outgrows the benefit coordination was bought for. This post’s own <script type="math/tex">N=128</script>
+-to-<script type="math/tex">200</script>
+ table entries treat the router as costless at every scale checked; nothing in this post estimates its own <script type="math/tex">\beta</script>
+, or checks whether the fleet sizes this post’s own table extends to are still on the rising side of USL’s own curve rather than past its peak.</p>
+<p><strong>This isn’t only a throughput question at large <script type="math/tex">N</script>
+; it’s a second, previously unnamed channel for exactly the staleness risk priced above.</strong> <script type="math/tex">\beta</script>
+’s own coherency cost doesn’t just cap how many admissions the router can process a second. It’s coordination latency: the time a consistent-enough view actually takes to assemble across a growing <script type="math/tex">N</script>
+, which is the same <script type="math/tex">\Delta</script>
+ the correlation above already flagged as prone to widening under congestion. USL gives that widening a second driver, scale itself, independent of demand. A fleet large enough to sit past USL’s own knee would see <script type="math/tex">\Delta</script>
+ grow from node count alone, compounding whatever congestion-driven widening already occurs during a real surge. That happens at the same moment the composition gap named above turns a stale reading into a rejection, and the correlated-arrivals sensitivity already priced (4.81% to 5.20% at 2x variance) is least forgiving of extra correlated admission pressure. None of this changes what any single mechanism above proves on its own; it’s a real, unpriced interaction between three separately-named gaps, not a fourth new one.</p>
+<p><strong>When the router itself is unreachable, this post’s own mechanism has an implicit answer it never states as a design choice.</strong> A partitioned or down router leaves each node with only its own local view: Definition 4’s own per-node redline, still running, still correct on its own terms, but no longer able to pool risk across the fleet. The honest options are exactly the two the CAP theorem frames for any system holding replicated or coordinated state across an unreliable network <a href="#ref-18" class="cite-ref" data-def="Gilbert, S. & Lynch, N. (2002) — Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services" aria-label="Gilbert, S. & Lynch, N. (2002) — Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services">[18]</a>
+: block new admissions until the router is reachable again (consistency preserved, availability sacrificed) or let each node keep admitting against its own local, possibly-stale view, availability preserved, the fleet-wide consistency Proposition 6 assumes given up for the duration. This post has never named which side of that choice Definition 6 takes. The two sides have sharply different failure modes: blocking during a partition means a fleet-wide outage triggered by the coordinator, not by memory pressure at all; admitting locally means silently falling back toward the siloed <script type="math/tex">9.69\%</script>
+ regime, with the <script type="math/tex">49.7</script>
+GB saving temporarily gone and no signal saying so unless one is built. The finer version of the same tradeoff, absent any partition at all, is how much latency a fresh read costs versus how stale a cached one is allowed to be: PACELC’s own extension of CAP to the ordinary, non-partitioned case <a href="#ref-19" class="cite-ref" data-def="Abadi, D.J. (2012) — Consistency Tradeoffs in Modern Distributed Database System Design: CAP is Only Part of the Story" aria-label="Abadi, D.J. (2012) — Consistency Tradeoffs in Modern Distributed Database System Design: CAP is Only Part of the Story">[19]</a>
+. Definition 6’s own sampled routing already makes an implicit choice there too, favoring latency (route on whatever’s cached) over consistency (block for a fresh read), without ever stating it as one.</p>
+<p><strong>Individual-task tail risk has not gone anywhere, and this post has not been building toward the claim that it has.</strong> Every task Blood Oath excludes still needs Posts 1 and 2’s own treatment, on whatever single node it lands on. Every checkpointable task still faces Proposition 5’s own crossover rule, priced exactly as Post 4 derived it, whichever node the fleet routes it to. Pooling changes how much <em>standing reserve</em> the fleet needs to hold against aggregate bridging-window risk. It changes nothing about what any single task, once admitted, is actually worth continuing to run versus evicting. That calculation is Post 4’s, untouched. This post’s own <script type="math/tex">49.7</script>
+GB saving is real precisely because it comes from a different place than anything Post 4 already priced.</p>
+<p><strong>Compute it.</strong> Before trusting Proposition 6’s specific saving on a real fleet, check whether the mechanism its arithmetic actually assumes is the one your deployment actually has.</p>
+<ul>
+<li><strong>Does a real routing layer sit in front of your nodes, capable of directing a newly-detected heavy task to whichever one currently has headroom?</strong> Or is admission effectively pinned to whichever node a request happens to land on first, with no rebalancing lever at all? If the latter, Proposition 6 doesn’t apply, and the honest number to plan against is Post 3’s own siloed <script type="math/tex">9.69\%</script>
+, not this post’s pooled <script type="math/tex">4.81\%</script>
+.</li>
+<li><strong>If a router does exist, does it route by sampling a small number of nodes per decision rather than computing a single fleet-wide argmax?</strong> That’s the difference between a rule that’s safe under concurrent admissions and one that reliably herds them onto the same node. Is its view of the sampled nodes’ headroom actually fresh enough to route on, or is it working from state that’s stale by the time a decision lands?</li>
+<li><strong>When a routed admission hits a node whose local redline has already fired, does your router resample and retry, or does it fail the request?</strong> Have you checked what a resample-and-retry policy with no backoff does to admission traffic during the exact correlated surge it’s most likely to fire under?</li>
+<li><strong>Has anyone priced what <script type="math/tex">d</script>
+ probes per admission costs your own control plane’s message rate under sustained load</strong>, separately from whether <script type="math/tex">d=2</script>
+ balances the load those probes describe?</li>
+<li><strong>Is that routing layer actually one coordinating decision-maker, or several independent ones each acting on their own slice of the fleet?</strong> Post 3’s own Price-of-Anarchy finding says the gap between those two is small below saturation and real, nonlinear trouble above it.</li>
+<li><strong>Is your fleet’s own heavy-task arrival process genuinely independent across nodes, or does a single upstream trigger</strong> (a workflow rollout, a scheduled batch job, a client-side retry storm) drive correlated surges across many nodes simultaneously, the fleet-scale version of the correlation Post 2 already priced for one?</li>
+<li><strong>Does your fleet serve one model or several?</strong> If several, has Definition 6’s raw headroom-fraction comparison been corrected for the fact that a heavy task costs a different number of gigabytes depending on which node’s model it lands on?</li>
+<li><strong>Once pooling has done what it can do at the admission boundary, does your fleet have Proposition 5’s own relocation machinery available for the population that’s already landed unevenly?</strong> Or is an already-diverged node stuck with whatever it already has, the same as Blood Oath always was?</li>
+</ul>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>Every mechanism through Post 4 priced one pool, one resource, one task’s decision. This post asks what changes at fleet scale, not by assumption, but by an exact classical queueing result.</li>
+<li>Definition 2a’s own <script type="math/tex">G \sim \text{Poisson}(2.22)</script>
+ was never a convenient approximation. It’s the exact distribution of a bridging-window arrival count, for any heavy-task duration shape with finite mean: a consequence of the classical M/G/<script type="math/tex">\infty</script>
+ thinning identity, confirmed here three posts after the fact.</li>
+<li>Proposition 6: pooling <script type="math/tex">N</script>
+ nodes’ bridging-window risk behind a shared routing layer needs a strictly smaller <em>fraction</em> of aggregate capacity than <script type="math/tex">N</script>
+ independent per-node reserves. At <script type="math/tex">N=32</script>
+, the fleet’s own size, that’s <script type="math/tex">9.69\%</script>
+ against <script type="math/tex">4.81\%</script>
+: <script type="math/tex">49.7</script>
+GB, or roughly 132 ordinary sequences’ worth of capacity, freed by routing alone.</li>
+<li>The excess reserve above the pooled mean scales as <script type="math/tex">\beta\sqrt{\text{offered load}}</script>
+ for <script type="math/tex">\beta \approx 1.9</script>
+, matching the classical square-root staffing law’s own functional form: reached here by an exact route rather than the asymptotic one that law was originally derived from.</li>
+<li>Proposition 6b: pooling only covers admissions that haven’t landed yet. Redistributing pressure from an already-running, already-diverged population requires Post 4’s own relocation machinery, at Post 4’s own real cost: a boundary a March 2026 fleet-capacity-planning study, built against real production traces, independently confirms naive aggregate analysis misses.</li>
+<li>Definition 6 generalizes Definition 4’s per-resource headroom comparison to a per-node one across the fleet, routing new admissions toward whatever headroom currently exists rather than treating any single node’s own redline as a fleet-wide event. It does this by sampling a small number of nodes per decision rather than a global argmax, which simulation confirms is the difference between never herding and herding every concurrent admission onto the same node.</li>
+<li>None of this changes what a single task, once admitted, is worth continuing to run. Posts 1 through 4’s own machinery is exactly as necessary as it always was, on whichever node the fleet happens to route a task to.</li>
+<li>The instinct that started this post (a big enough fleet should need less relative margin than one node) turns out to be right, computably right, and also narrower than the instinct itself would have guessed: right at the admission boundary, silent past it.</li>
+<li><script type="math/tex">G_N</script>
+’s exactness is proven for a constant-rate Poisson process. This post has never sized <script type="math/tex">H_{\min}^{\text{fleet}}</script>
+ against a surge-elevated rate specific to the detected-surge window the bridging period actually is, even though the machinery to do so (Eick, Massey &amp; Whitt’s own time-varying generalization) was cited two sections earlier for a different purpose.</li>
+<li>Definition 6’s own herding simulation checked staleness within one frozen snapshot. It hasn’t checked the regime a real correlated burst produces: sustained staleness across many fast-arriving decisions, which a separate, already-cited result on stale-information load balancing says degrades differently than single-snapshot staleness does.</li>
+<li>Definition 6 and Definition 4 are never explicitly composed: a stale routing decision can land an admission on a node whose own redline has already fired, and this post never states what the router does with that rejection. Retry-without-backoff on exactly that failure is a standard retry-storm shape, and it fires hardest during the same correlated surge the whole mechanism exists to survive.</li>
+<li>Sampling <script type="math/tex">d</script>
+ nodes per decision has a throughput cost this post never separates from the round-trip latency cost priced later against Sparrow. <script type="math/tex">d</script>
+ probes per admission is <script type="math/tex">d</script>
+ times the message volume at the router and at every sampled node, unchecked against what sustained load does to a control plane’s own event loop.</li>
+<li>A shared central backlog, pulled from lazily instead of pushed to, closes the routing-versus-redline composition gap by construction: a node that never pulls until it’s already ready never receives an admission it has to reject. It doesn’t dissolve the underlying tradeoff. It relocates it: an indexing cost to match multi-dimensional readiness against a multi-dimensional backlog, the same USL contention this series already prices for a fleet-wide router now centered on a queue, and a new, direct draw against Post 4’s own <script type="math/tex">T_{\text{timeout}}</script>
+ that push never makes at all.</li>
+<li><script type="math/tex">G</script>
+’s own exactness never needed the loss-system caveat this post already names for a different quantity: <script type="math/tex">G</script>
+ counts arrivals in a fixed window, unaffected by downstream blocking, while the caveat bites the steady-state occupancy count instead. Where that occupancy approximation degrades, a classical insensitivity result for M/G/c/c loss systems says it degrades toward a <em>smaller</em> true fractile, not a larger one: the untruncated Poisson tail this post leans on is conservative near saturation, not dangerous.</li>
+</ol>
+</blockquote>
+<hr />
+<p><sup>[1]</sup> NVIDIA (2025). <em>Introducing NVIDIA Dynamo, technical blog.</em></p>
+<p><sup>[2]</sup> Mirasol, N.M. (1963). <em>Letter to the Editor: The Output of an M/G/∞ Queuing System is Poisson.</em> Operations Research, 11(2), 282–284.</p>
+<p><sup>[3]</sup> Eick, S.G., Massey, W.A. &amp; Whitt, W. (1993). <em>Mt/G/∞ Queues with Sinusoidal Arrival Rates.</em> Management Science, 39(2), 241–252.</p>
+<p><sup>[4]</sup> Borst, S., Mandelbaum, A. &amp; Reiman, M.I. (2004). <em>Dimensioning Large Call Centers.</em> Operations Research, 52(1), 17–34.</p>
+<p><sup>[5]</sup> Halfin, S. &amp; Whitt, W. (1981). <em>Heavy-Traffic Limits for Queues with Many Exponential Servers.</em> Operations Research, 29(3), 567–588.</p>
+<p><sup>[6]</sup> Chen, H., Liu, X., Liu, Y., Jiang, J., He, B. &amp; Liu, X. (2026). <em>inference-fleet-sim: A Queueing-Theory-Grounded Fleet Capacity Planner for LLM Inference.</em> arXiv:2603.16054.</p>
+<p><sup>[7]</sup> Mitzenmacher, M. (2001). <em>The Power of Two Choices in Randomized Load Balancing.</em> IEEE Transactions on Parallel and Distributed Systems, 12(10), 1094–1104.</p>
+<p><sup>[8]</sup> Patke, A., Reddy, D., Jha, S., Narayanaswami, C., Kalbarczyk, Z. &amp; Iyer, R. (2025). <em>Hierarchical Autoscaling for Large Language Model Serving with Chiron.</em> arXiv:2501.08090.</p>
+<p><sup>[9]</sup> Patke, A., Reddy, D., Jha, S., Qiu, H., Pinto, C., Narayanaswami, C., Kalbarczyk, Z. &amp; Iyer, R. (2024). <em>Queue management for slo-oriented large language model serving.</em> arXiv:2407.00047.</p>
+<p><sup>[10]</sup> Ousterhout, K., Wendell, P., Zaharia, M. &amp; Stoica, I. (2013). <em>Sparrow: Distributed, Low Latency Scheduling.</em> Proceedings of the 24th ACM Symposium on Operating Systems Principles (SOSP ’13).</p>
+<p><sup>[11]</sup> Verma, A., Pedrosa, L., Korupolu, M., Oppenheimer, D., Tune, E. &amp; Wilkes, J. (2015). <em>Large-Scale Cluster Management at Google with Borg.</em> Proceedings of the European Conference on Computer Systems (EuroSys).</p>
+<p><sup>[12]</sup> Schwarzkopf, M., Konwinski, A., Abd-El-Malek, M. &amp; Wilkes, J. (2013). <em>Omega: Flexible, Scalable Schedulers for Large Compute Clusters.</em> Proceedings of the 8th ACM European Conference on Computer Systems (EuroSys ’13).</p>
+<p><sup>[13]</sup> Hindman, B., Konwinski, A., Zaharia, M., Ghodsi, A., Joseph, A.D., Katz, R., Shenker, S. &amp; Stoica, I. (2011). <em>Mesos: A Platform for Fine-Grained Resource Sharing in the Data Center.</em> Proceedings of the 8th USENIX Symposium on Networked Systems Design and Implementation (NSDI ’11).</p>
+<p><sup>[14]</sup> Mitzenmacher, M. (2000). <em>How Useful Is Old Information?</em> IEEE Transactions on Parallel and Distributed Systems, 11(1), 6–20.</p>
+<p><sup>[15]</sup> Fischer, M.J., Lynch, N.A. &amp; Paterson, M.S. (1985). <em>Impossibility of Distributed Consensus with One Faulty Process.</em> Journal of the ACM, 32(2), 374–382.</p>
+<p><sup>[16]</sup> Dwork, C., Lynch, N. &amp; Stockmeyer, L. (1988). <em>Consensus in the Presence of Partial Synchrony.</em> Journal of the ACM, 35(2), 288–323.</p>
+<p><sup>[17]</sup> Gunther, N.J. (2007). <em>Guerrilla Capacity Planning: A Tactical Approach to Planning for Highly Scalable Applications and Services.</em> Springer.</p>
+<p><sup>[18]</sup> Gilbert, S. &amp; Lynch, N. (2002). <em>Brewer’s Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services.</em> ACM SIGACT News, 33, 51–59.</p>
+<p><sup>[19]</sup> Abadi, D.J. (2012). <em>Consistency Tradeoffs in Modern Distributed Database System Design: CAP is Only Part of the Story.</em> IEEE Computer, 45(2), 37–42.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/no-safe-number/" class="series-link">
+            Asymptotically Ruined: Capacity Planning Beyond the Light-Tailed Assumption
+          </a>
+          
+            <span class="series-progress">Part 5/7</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+            <a class="series-nav-item series-nav-prev" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part4-eviction-crossover&#x2F;" title="Optimal Stopping at the Edge of a Limit Cycle">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;asymptotically-ruined-part6-meta-constraint&#x2F;" title="The Meta-Constraint This Series Never Priced">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>
