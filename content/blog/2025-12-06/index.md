@@ -6,7 +6,7 @@ date = 2025-12-06
 slug = "microlearning-platform-part3-creator-pipeline"
 
 [taxonomies]
-tags = ["video-encoding", "gpu-acceleration", "creator-economy", "microlearning"]
+tags = ["video-streaming", "optimization", "economics", "microlearning"]
 series = ["engineering-platforms-at-scale"]
 
 [extra]

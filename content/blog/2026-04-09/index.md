@@ -7,7 +7,7 @@ slug = "architecture-compromise-part5-reality-tax"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "trade-offs", "observability", "production-engineering", "architecture"]
+tags = ["distributed-systems", "trade-offs", "observability", "engineering-principles", "architecture"]
 series = ["architecture-of-compromise"]
 
 [extra]

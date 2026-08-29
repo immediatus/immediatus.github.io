@@ -7,7 +7,7 @@ slug = "ads-platform-part-4-production"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "fraud-detection", "multi-region-deployment", "ads-tech"]
+tags = ["distributed-systems", "anomaly-detection", "architecture", "ads-tech"]
 series = ["architecting-ads-platforms"]
 
 [extra]

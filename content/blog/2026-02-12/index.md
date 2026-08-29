@@ -7,7 +7,7 @@ slug = "autonomic-edge-part5-antifragile-decisions"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "edge-computing", "anti-fragile", "decision-making"]
+tags = ["distributed-systems", "edge-computing", "resilience", "decision-making"]
 series = ["autonomic-edge-architectures"]
 
 [extra]

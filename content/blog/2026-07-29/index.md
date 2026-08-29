@@ -7,7 +7,7 @@ slug = "borrowed-guarantees-part4-ceiling-no-retry-clears"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "ai", "formal-methods", "complexity-theory"]
+tags = ["distributed-systems", "ai", "formal-methods"]
 series = ["borrowed-guarantees"]
 
 [extra]

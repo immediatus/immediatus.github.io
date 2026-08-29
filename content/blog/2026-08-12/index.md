@@ -7,7 +7,7 @@ slug = "asymptotically-ruined-part4-eviction-crossover"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "scheduling", "queueing-theory", "dynamical-systems"]
+tags = ["distributed-systems", "scheduling", "queueing-theory", "control-theory"]
 series = ["no-safe-number"]
 
 [extra]

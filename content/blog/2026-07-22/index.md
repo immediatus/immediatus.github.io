@@ -7,7 +7,7 @@ slug = "borrowed-guarantees-part3-one-bit-of-trust"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "ai", "formal-methods", "verification"]
+tags = ["distributed-systems", "ai", "formal-methods"]
 series = ["borrowed-guarantees"]
 
 [extra]

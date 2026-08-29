@@ -6,7 +6,7 @@ date = 2025-12-13
 slug = "microlearning-platform-part4-ml-personalization"
 
 [taxonomies]
-tags = ["machine-learning", "personalization", "cold-start", "microlearning"]
+tags = ["ai", "personalization", "microlearning"]
 series = ["engineering-platforms-at-scale"]
 
 [extra]

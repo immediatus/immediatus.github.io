@@ -7,7 +7,7 @@ slug = "architecture-compromise-part4-ai-changes-map"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "ai", "trade-offs", "pareto", "reinforcement-learning"]
+tags = ["distributed-systems", "ai", "trade-offs", "optimization", "reinforcement-learning"]
 series = ["architecture-of-compromise"]
 
 [extra]

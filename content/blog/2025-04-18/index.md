@@ -8,7 +8,7 @@ draft = false
 slug = "engineering-mindset-distributed-intelligence"
 
 [taxonomies]
-tags = ["mindset", "ai", "cognitive-translation"]
+tags = ["mindset", "ai"]
 
 [extra]
 toc = false

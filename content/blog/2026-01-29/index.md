@@ -6,7 +6,7 @@ date = 2026-01-29
 slug = "autonomic-edge-part3-self-healing"
 
 [taxonomies]
-tags = ["distributed-systems", "edge-computing", "self-healing", "control-theory"]
+tags = ["distributed-systems", "edge-computing", "resilience", "control-theory"]
 series = ["autonomic-edge-architectures"]
 
 [extra]

@@ -7,7 +7,7 @@ slug = "no-safe-number-part3-bottleneck-moves"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "resource-allocation", "queueing-theory", "game-theory"]
+tags = ["distributed-systems", "capacity-planning", "queueing-theory", "game-theory"]
 series = ["no-safe-number"]
 
 [extra]

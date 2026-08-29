@@ -7,7 +7,7 @@ slug = "architecture-compromise-part6-deciding-deliberately"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "trade-offs", "decision-framework", "architecture", "safe-rl"]
+tags = ["distributed-systems", "trade-offs", "decision-making", "architecture", "reinforcement-learning"]
 series = ["architecture-of-compromise"]
 
 [extra]

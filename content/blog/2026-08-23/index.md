@@ -7,7 +7,7 @@ slug = "asymptotically-ruined-part7-building-the-proof"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "capacity-planning", "engineering", "scheduling"]
+tags = ["distributed-systems", "capacity-planning", "engineering-principles", "scheduling"]
 series = ["no-safe-number"]
 
 [extra]

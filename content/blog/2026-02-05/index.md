@@ -6,7 +6,7 @@ date = 2026-02-05
 slug = "autonomic-edge-part4-fleet-coherence"
 
 [taxonomies]
-tags = ["distributed-systems", "edge-computing", "eventual-consistency", "consensus"]
+tags = ["distributed-systems", "edge-computing", "consistency", "consensus"]
 series = ["autonomic-edge-architectures"]
 
 [extra]

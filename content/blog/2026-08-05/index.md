@@ -7,7 +7,7 @@ slug = "no-safe-number-part2-provisioning-window"
 draft = false
 
 [taxonomies]
-tags = ["distributed-systems", "queueing-theory", "autonomic-computing", "control-theory"]
+tags = ["distributed-systems", "queueing-theory", "control-theory"]
 series = ["no-safe-number"]
 
 [extra]
