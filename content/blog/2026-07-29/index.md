@@ -14,7 +14,7 @@ series = ["borrowed-guarantees"]
 toc = false
 series_order = 4
 series_title = "Theorems Out of Warranty"
-series_description = "Every multi-agent verification design runs on a theorem borrowed from somewhere else — the Condorcet Jury Theorem, Byzantine fault tolerance, the Universal Scalability Law, computational complexity bounds. Each one shipped with a warranty: conditions the proof depends on, fine print nobody reads until something breaks. Stochastic LLM committees operate outside several of those conditions by default, and a guarantee doesn't fail loudly when it lapses — it just quietly stops covering what it was never proven to cover. This series finds exactly where coverage runs out, and builds what replaces it."
+series_description = """<div class="series-lede">The most dangerous thing about an abstraction is that it never tells you when it stops covering what you assumed still held.</div><br/>Every multi-agent verification design runs on a theorem borrowed from somewhere else — the Condorcet Jury Theorem, Byzantine fault tolerance, the Universal Scalability Law, computational complexity bounds. Each one shipped with a warranty: conditions the proof depends on, fine print nobody reads until something breaks. Stochastic LLM committees operate outside several of those conditions by default, and a guarantee doesn't fail loudly when it lapses — it just quietly stops covering what it was never proven to cover. This series finds exactly where coverage runs out, and builds what replaces it."""
 +++
 
 Picture a distributed-systems liveness proof that exhausts a four-retry budget and returns nothing — zero usable characters on every attempt, not a near-miss, not a partially-correct draft slowly improving wave over wave.

@@ -72,7 +72,7 @@
 
           {% if series_posts[0].extra.series_description %}
             <div class="series-block-description">
-              {{ series_posts[0].extra.series_description }}
+              {{ series_posts[0].extra.series_description | safe }}
             </div>
           {% endif %}
 

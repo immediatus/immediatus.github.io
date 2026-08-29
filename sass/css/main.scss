@@ -1988,6 +1988,33 @@ aside code {
   margin: var(--space-1) 0;
 }
 
+/* The only box on the site with a gradient fill rather than a flat one —
+   deliberate: every other highlight device here (blockquote, details, pre)
+   uses a solid color, so a soft fade is what makes this one read as its own
+   thing instead of a duplicate. Fades out before the text ends so it never
+   turns into a hard-edged block. */
+.series-lede {
+  display: block;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: linear-gradient(to right, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0) 70%);
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+
+/* Inside the /series/ index, the description already sits in a
+   .series-index-item card with its own surface, border and shadow — a second
+   gradient box nested inside reads as clutter, not a highlight. Keep only
+   the accent bar there. */
+.series-index-item .series-lede {
+  padding: 0 0 0 var(--space-4);
+  border-radius: 0;
+  background: none;
+}
+
 .series-description {
   margin: var(--space-2) 0 var(--space-4);
   padding: 0;

@@ -24,7 +24,7 @@
           {% for post in series_posts %}
             {% if loop.index0 == 0 and post.extra.series_title %}
               <h2> <a href="{{ term.permalink }}">{{ post.extra.series_title }}</a></h2>
-              <p class="series-index-description">{{ post.extra.series_description }}</p>
+              <div class="series-index-description">{{ post.extra.series_description | safe }}</div>
             {% endif %}
           {% endfor %}
 

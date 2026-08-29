@@ -14,7 +14,7 @@ series = ["architecture-of-compromise"]
 toc = false
 series_order = 4
 series_title = "The Architecture of Compromise: A Geometric Framework for Pricing Distributed Trade-offs"
-series_description = """A standalone thinking framework for distributed engineers. Perfect systems do not exist — not because engineers fail to build them, but because impossibility is formally provable. This series turns that formal result into a practical instrument: the achievable region that defines what is possible, the Pareto frontier where genuine trade-offs live, and a decision framework for choosing your operating point deliberately."""
+series_description = """<div class="series-lede">A common illusion in distributed systems design is that you get to choose whether to pay the tax, when a formal proof already decided the only real choice is which currency it's paid in.</div>A standalone thinking framework for distributed engineers. Perfect systems do not exist — not because engineers fail to build them, but because impossibility is formally provable. This series turns that formal result into a practical instrument: the achievable region that defines what is possible, the Pareto frontier where genuine trade-offs live, and a decision framework for choosing your operating point deliberately."""
 katex = true
 +++
 
