@@ -348,6 +348,8 @@ Every earlier post named its own boundaries. This one, being the reconciliation 
 > 13. An unresolved ROI sign isn't a reason to guess. Information value theory gives the "go measure {% katex() %}C_{\text{workflow}}{% end %}" advice a formal justification: the value of resolving the sign is real and boundable, and measuring it is cheap next to guessing wrong for years.
 > 14. Whether {% katex() %}\tau=3.0{% end %}, borrowed from feature-development economics, is even the right bar for reliability work's own asymmetric downside has not been checked. Neither has this post's own expansion against the value-of-computation standard it argues Knowledge should be held to.
 
+**A later note, added after a different series on this blog needed the same result.** Item 12's regress, and Russell and Wefald's resolution of it, generalize past this series' own Knowledge phase. [The Portable Mind](@/blog/2026-09-05/index.md#falsification-criteria) later asks the same question of a different machinery, external loops that verify an AI agent's own cognitive properties rather than a capacity-planning system's tuning, and the answer is unchanged: deciding how much verification is enough is itself a decision with its own cost, and the honest response is the same cheap, fixed, approximate cap this post already reaches for here. One regress, two unrelated domains, the same correct answer both times.
+
 ---
 <sup>[1]</sup> Rasmussen, J. (1997). *Risk Management in a Dynamic Society: A Modelling Problem.* Safety Science, 27, 183-213.
 

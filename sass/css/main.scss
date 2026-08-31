@@ -1756,6 +1756,8 @@ aside code {
   font-size: 0.938rem;
   line-height: 1.65;
   color: var(--text-tertiary);
+  text-align: justify;
+  hyphens: auto;
 }
 
 .series-posts-list {
@@ -2003,6 +2005,7 @@ aside code {
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.7;
+  text-align: left;
 }
 
 /* Inside the /series/ index, the description already sits in a
@@ -2022,6 +2025,7 @@ aside code {
   line-height: 1.7;
   color: var(--text-secondary);
   text-align: justify;
+  hyphens: auto;
 }
 
 .series-index-description {
@@ -2031,6 +2035,7 @@ aside code {
   line-height: 1.7;
   color: var(--text-secondary);
   text-align: justify;
+  hyphens: auto;
 }
 
 .series-count {

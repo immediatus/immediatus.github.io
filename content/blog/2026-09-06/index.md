@@ -1,9 +1,9 @@
 +++
 authors = ["Yuriy Polyulya"]
-title = "Noticing and the Cost of Not Knowing Enough"
-description = "Six frontier models were asked to price a coding task before attempting it. Every one underestimated its own token cost by roughly five times, and reported confidence anywhere from 61 to 93 percent while actual pass rates sat in a roughly five-point band near 78. This post traces that failure to Ashby's Law of Requisite Variety, the same information-theoretic bound that explains the human planning fallacy, and asks the harder question the shared-architecture result stops short of. Architecture may be portable across a brain and a transformer. Calibrated self-forecasting is not, and the gap between the two has a computable cost. Opening The Portable Mind."
+title = "The Shared Ancestor Problem"
+description = "Two series on this blog solved the same puzzle. Neither knew the other existed. Both landed on one quiet rule: a check is only as honest as the mistake it cannot inherit. This post finally says that rule out loud. It comes in two flavors, one that bends under pressure and one that never does, plus a third case nobody ordered: a process with nothing wrong with it that still needs a babysitter, because of where its inputs came from. Post 5 of The Portable Mind."
 date = 2026-09-06
-slug = "portable-mind-part1-requisite-variety"
+slug = "portable-mind-part5-the-shared-ancestor-problem"
 draft = false
 
 [taxonomies]
@@ -12,552 +12,473 @@ series = ["portable-mind"]
 
 [extra]
 toc = false
-series_order = 1
+series_order = 5
 series_title = "The Portable Mind: Five Properties of Thinking"
-series_description = """<div class="series-lede">A shared cognitive architecture proves two systems can succeed the same way, not that they are equally safe to trust when they fail.</div>Five formal properties of thinking, each proven with a real theorem and tested against both a human finding and a current AI-agent finding: Ashby's Law bounding what a system can forecast without enough noticed variety, a sufficiency identity for when an abstraction is safe to keep, an asymmetric-updating result for confirmation bias, a resource-bounded generalization of Loeb's theorem for what a system can and cannot verify about itself, and a cost-aware optimal-stopping result for why settling for good enough is sometimes the correct policy, not a shortcut. The same real case opens the series and closes it, rerun through everything the four posts built in between, and the series ends by computing what the portability gap actually costs to check."""
+series_description = """<div class="series-lede">Thinking architecture is portable across a human brain and a transformer. Correctness is not.</div>Five formal properties of thinking, each pinned to a real theorem: Ashby's Law for Noticing and Simulation, a sufficiency identity for Abstraction, an asymmetric-updating result for Rationality, a resource-bounded Loeb's theorem for Awareness, and cost-aware optimal stopping for Optimization. Every theorem is tested against a matching human finding and a current AI-agent finding. One real case opens the series and closes it, rerun through everything the four posts build in between, and Post 4 prices the portability gap itself: a structural cost, computable in kind, never a number any single deployment can just adopt. A fifth post asks what the five external loops actually have in common, and derives the general criterion underneath all of them."""
 +++
 
-A system that cannot say what a task will cost it will still attempt the task. It will simply be wrong about the bill, and it will find out only after the work is done.
+Five agent instances score between 0.83 and 1.00 on a convergent proof task, averaging 0.967, a pool that looks, by simple headcount, like it is performing near its ceiling. Run it through outlier-resistant selection instead and the diversity-adjusted quality signal drops to 0.400, roughly forty cents on the dollar. Five high scores were not five independent confirmations. They were one answer, restated five times by instances drawn from the same training distribution. The algorithm built to reject a corrupted minority did exactly what it was built to do: it found the disagreement and discarded it, on a task where the disagreement was the only genuine signal left in the pool, first measured in [Independence Illusion](@/blog/2026-07-08/index.md).
 
-That sentence describes a debugging session, a sprint estimate, and a frontier language model with equal accuracy, which is the first sign that something structural is going on rather than something incidental.
+That number is from a post on this blog published in July 2026. A different post on this blog, published in September 2026, proved something else {{ cite(ref="1", title="Loeb, M.H. (1955) -- Solution of a Problem of Leon Henkin, Journal of Symbolic Logic 20(2), 115-118") }} {{ cite(ref="2", title="Critch, A. (2019) -- A Parametric, Resource-Bounded Generalization of Loeb's Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory, Journal of Symbolic Logic 84(4), 1368-1381") }}: a reasoner whose self-trust is modeled as provability cannot derive a general reflection schema about its own soundness without collapsing into unconditional assertion. That holds for any system satisfying three specific derivability conditions, regardless of how reliable that system actually is.
 
-The blog opened in March 2024 with five cognitive properties of engineering judgment, Simulation, Abstraction, Rationality, Awareness, and Optimization, plus one precondition sitting outside all five that the founding post called Noticing.
+Neither post cites the other. Both were computing the same requirement, and neither one derived the requirement itself, only one instance of it.
 
-That founding post treated the properties as narrative: one illustrative scenario per property, no proof apparatus, because the site's formal conventions came later.
+## One Requirement, Computed Twice
 
-This series returns to formalize what the founding post only sketched. It starts where the whole arc of this blog has been pointing: do these properties, made precise, describe the AI agents this blog now spends most of its attention on?
+Strip the vocabulary each series built for its own purpose and the underlying claim is identical: a verification signal only counts as a check if it draws on something the thing it checks could not also have corrupted. Independence Illusion proved this for committees: Condorcet's jury theorem, Byzantine fault tolerance, and the Universal Scalability Law all price redundancy the same way. A committee of language-model instances drawn from overlapping training data fails the independence assumption by default, agreeing confidently for the same reason rather than disagreeing for different ones. Loeb's theorem, applied to a single provability-based reasoner, proves the same requirement fails for a different reason entirely. The reasoner's only available derivation apparatus is the one thing that could be wrong, so there is no computation inside the same system that avoids depending on it.
 
-Not whether the agents *have* the properties in some folk-psychological sense. Whether the *failure modes* of the properties are the same on both sides of the substrate boundary.
+Both are instances of one question: when a system checks itself, or is checked by something built alongside it, what has to be true of the checker for the check to mean anything? The first draft of this post answered that question with one unified criterion and got it wrong in a specific, instructive way: it treated Loeb's theorem as though it were a third instance of the committee mechanism, correlated failure at the limit where correlation reaches one. It is not. The two mechanisms are different in kind, not degree, and the difference is load-bearing enough that stating it precisely is most of this post's actual content.
 
-This first post takes the precondition and the first property together. They are inseparable.
-
-Noticing is the act of registering that a situation contains more than you have accounted for. Simulation is the act of running that situation forward, to predict what it will cost.
-
-A regulator that notices too little will simulate too confidently. The gap between its confident forecast and the actual bill is not a psychological quirk. It is a theorem.
-
-## The Case: Six Models That Could Not Price Their Own Work
-
-In April 2026, Andrey Fradkin and Rohit Krishnan published a benchmark built to test something specific: can an AI agent behave as a rational market participant {{ cite(ref="1", title="Fradkin, A. & Krishnan, R. (2026) -- MarketBench: Evaluating AI Agents as Market Participants, arXiv:2604.23897") }}. That requires, before anything else, that the agent can say what a job will cost it.
-
-The setup is clean. Six recently released frontier models:
-
-- Claude Opus 4.5 (Anthropic's flagship at the time)
-- Gemini 3 Pro Preview (Google DeepMind's flagship preview)
-- GPT-5.2 (OpenAI's general-release frontier model)
-- GPT-5.2-pro (OpenAI's higher-compute variant of the same model)
-- Claude Sonnet 4.5 (Anthropic's mid-tier model, same generation as Opus 4.5)
-- GPT-5-mini (OpenAI's small, low-cost model)
-
-Each model gets a 93-task subset of SWE-bench Lite, the standard benchmark of real GitHub issues that a model must resolve with a working patch. Before any model attempts a task, it answers two questions:
-
-1. What is the probability you will solve this?
-2. How many tokens will it take you?
-
-Then the models attempt the tasks. The forecasts get compared against what actually happened.
-
-Every model was miscalibrated on both questions.
-
-The token forecasts were not slightly optimistic. They were badly wrong. The median ratio of estimated tokens to actual tokens consumed came in at roughly 0.19. The typical forecast covered about one fifth of the tokens the task actually took. Read the other way: the models underestimated their own resource consumption by a factor of about five.
-
-This is not one bad model dragging down an average, but the central tendency across six of the strongest systems available.
-
-The confidence numbers are stranger still. This is where the failure becomes diagnostic, not merely embarrassing.
-
-Across the six models, average stated success probabilities ranged from 61.4 percent to 92.9 percent, a spread of more than thirty points in stated confidence. Now look at what they actually achieved. Realized pass rates for all six clustered between 75.3 percent and 80.6 percent, a band roughly five points wide.
-
-| MarketBench, key numbers | Value |
-|---|---|
-| Stated confidence range | 61.4% to 92.9% (about 31 points wide) |
-| Realized pass-rate range | 75.3% to 80.6% (about 5 points wide) |
-| Median token-forecast ratio | about 0.19 (roughly one fifth of actual tokens) |
-| Effective cost underestimation | about 5x |
-
-The models were far more similar in competence than in confidence. Gemini 3 Pro Preview was sharply overconfident. The GPT-5.2 variants were underconfident relative to what they went on to do. The confidence was not tracking performance. It was being generated by something else.
-
-The downstream consequence is the reason the paper exists. When work was auctioned to whichever agent reported the most favorable self-assessment, the resulting allocation diverged sharply from what a full-information allocator would choose. Every agent earned less than an oracle that knew the true costs and capabilities in advance.
-
-A market built on self-reports is a market built on a signal that does not carry the information the market needs.
-
-Hold the shape of this in mind. The rest of the post is about that shape and nothing else.
-
-The models were competent. They resolved roughly three quarters of hard, real-world coding tasks. That is genuinely difficult work.
-
-What they could not do was say, in advance, what that work would take, or how likely they were to succeed, in a way that tracked reality. The failure is not in the doing but in *knowing what the doing will require*.
-
-That distinction is the whole subject of this post. It has a name in a field that predates large language models by seven decades.
-
-## What Noticing and Simulation Actually Are
-
-Before the theorem: a definition of terms. The founding post used these words loosely. This series cannot afford to.
-
-Noticing is the precondition. It is the act by which a regulator registers that the situation in front of it contains distinctions it has not yet accounted for. A repository has a defect. The defect interacts with a caching layer. The caching layer has an edge case under retry.
-
-Each of these is a distinction. A regulator that has not noticed a distinction cannot represent it. It cannot act on it. It cannot price it.
-
-Noticing is upstream of everything. That is exactly why the founding post placed it outside the five properties, not among them.
-
-Simulation is the first property proper. It is the act of running the noticed situation forward, internally, to predict what will happen and what it will cost, before committing real resources to finding out.
-
-A resource forecast is an act of Simulation. So is a success-probability estimate.
-
-The six models in the MarketBench study answered "how many tokens will this take." That was Simulation. Their answers came in at one fifth of the true cost. Their Simulation failed in a specific, measurable direction.
-
-It did not fail randomly. It failed by underestimating, systematically. That is the signature that matters.
-
-The connection between the two is tight. You cannot simulate the cost of a distinction you never noticed.
-
-If the model's internal representation of a task does not contain the retry edge case in the caching layer, its cost forecast cannot include the tokens that edge case will demand. The forecast is built only from the distinctions the model *did* notice, and those distinctions are, by construction, a subset of what the task actually contains.
-
-A forecast built from a subset of the real state space will underestimate whenever the unnoticed part carries cost. For real repositories, it almost always does.
-
-This is not yet a theorem, but the intuition the theorem makes exact. The exact version comes from cybernetics, and it is old.
-
-## Requisite Variety: The Bound on What a Regulator Can Do
-
-This bound comes from cybernetics, the field W. Ross Ashby helped found in the 1950s to study regulation and control in any system, biological or mechanical, that has to hold some outcome steady against disturbance. Ashby was not writing about AI. He was writing about thermostats, nervous systems, and industrial governors. The result below is old, general, and indifferent to what kind of system is doing the regulating. That is exactly why it applies here without modification.
-
-<span id="def-1"></span>
+<span id="def-7"></span>
 
 <details>
-<summary>Definition 1 -- Requisite Variety: what a regulator needs to know before it can act correctly</summary>
+<summary>Definition 7 -- Common-Cause Check Validity: what a verification signal actually needs</summary>
 
-**Definition 1** (Requisite Variety). For a regulator attempting to hold a system's outcome within a target set despite disturbances, let {% katex() %}V(\cdot){% end %} denote variety, defined as the logarithm of the number of distinguishable states, which is the entropy of the corresponding distribution when the states are weighted by probability. The regulator can reduce outcome variety only to the extent permitted by
+**Definition 7** (Common-Cause Check Validity). For a property {% katex() %}P{% end %}, let {% katex() %}\Phi{% end %} be the specific process whose malfunction constitutes {% katex() %}P{% end %}'s failure mode. Let {% katex() %}E_O{% end %} be the event that the object-level output is wrong, and {% katex() %}E_V{% end %} the event that a verification signal {% katex() %}V{% end %}'s verdict about that output is wrong. {% katex() %}V{% end %} is a valid check on {% katex() %}P{% end %} to the degree that two conditions hold:
 
-{% katex(block=true) %}
-V(\text{outcome}) \geq V(\text{disturbance}) - V(\text{regulator})
-{% end %}
-
-where:
-
-- {% katex() %}V(\text{disturbance}){% end %} is the variety of states the environment can force on the system
-- {% katex() %}V(\text{regulator}){% end %} is the variety of distinct responses the regulator can actually produce
-- {% katex() %}V(\text{outcome}){% end %} is the residual variety in what actually happens after regulation
-- variety is measured in bits, log base 2 of a count of states, so doubling the number of distinguishable states adds exactly one bit of variety
+- **Independence.** {% katex() %}E_V{% end %} and {% katex() %}E_O{% end %} are not both driven by {% katex() %}\Phi{% end %} as a common ancestor. This is stated over an explicit computation graph, inputs, {% katex() %}\Phi{% end %}, the object-level process, {% katex() %}V{% end %}, and any ground-truth channel {% katex() %}V{% end %} has access to, not over the raw outputs themselves. A verifier is allowed to read the same inputs the object-level process read; what breaks validity outright is sharing the specific mechanism that could produce the error. Avoiding that shared mechanism is necessary but not sufficient for zero correlation: the inputs themselves can carry a residual difficulty structure no mechanism can fully resolve. That residual is why C1's independence condition is graded rather than left binary, as the next section establishes.
+- **Power.** Bounding a verifier's false-negative rate, {% katex() %}\beta = P(V \text{ says pass} \mid E_O \text{ true}){% end %}, below 1 is necessary but not sufficient: a verifier that always says fail achieves {% katex() %}\beta = 0{% end %} while carrying no information at all, since a constant output cannot correlate with anything. The correct condition also bounds the false-positive rate, {% katex() %}\alpha = P(V \text{ says fail} \mid E_O \text{ false}){% end %}, and requires {% katex() %}1 - \beta > \alpha{% end %}, the standard signal-detection condition that a check's true-positive rate must exceed its false-positive rate to carry any real discriminative power.
 
 </details>
+
+> **Physical translation.** Independence without power certifies a coin flip: unconditionally independent of everything, and unconditionally useless. Power without independence certifies an echo. A checksum computed from the same original data as the payload it verifies satisfies both: it shares an ancestor with the payload, the source data, but not with the specific failure mode being checked for, corruption introduced in a transmission channel the checksum's own computation never passes through. That is the whole distinction. Sharing an origin is not the same as sharing a failure mode, and only the second one breaks a check.
 
 {% mermaid() %}
 %%{init: {'theme': 'neutral'}}%%
 flowchart LR
     classDef term fill:none,stroke:#333,stroke-width:2px;
-    A["V(disturbance)<br/>states the environment can force"]:::term
-    B["V(regulator)<br/>responses the regulator can actually produce"]:::term
-    C["V(outcome)<br/>residual variety after regulation"]:::term
-    A -->|"minus"| D{"V(disturbance) − V(regulator)"}
-    B -->|"minus"| D
-    D -->|"lower bound on"| C
+    classDef bad fill:none,stroke:#c0392b,stroke-width:2px;
+    classDef good fill:none,stroke:#2980b9,stroke-width:2px;
+    subgraph "Shares Φ"
+        I1["Inputs"]:::term --> P1["Φ"]:::term
+        P1 --> O1["Object-level output<br/>E_O"]:::term
+        P1 --> V1["Verifier V<br/>E_V"]:::bad
+    end
+    subgraph "Avoids Φ"
+        I2["Inputs"]:::term --> P2["Φ"]:::term
+        P2 --> O2["Object-level output<br/>E_O"]:::term
+        I2 --> G["Ground-truth channel G"]:::term
+        G --> V2["Verifier V<br/>E_V"]:::good
+    end
 {% end %}
 
-<figcaption>Figure 0: how Definition 1's three quantities compose into Proposition 1's inequality. Only variety the regulator actually holds can subtract from disturbance variety. Everything else survives into the outcome.</figcaption>
+<figcaption>Figure 0: the same inputs feed both checkers in both graphs, so reading the same data is never what breaks a check. What differs is whether V's own path back to the inputs passes through Φ. On the left it does, failing Definition 7's independence condition, and E_V inherits whatever E_O inherits from Φ. On the right, V reaches the inputs through a separate channel G that never touches Φ, satisfying independence: E_V's dependence on Φ is severed even though V and O still share an ultimate origin.</figcaption>
 
-The word "variety" is doing precise work here. Pause on it before the proposition uses it.
+This is a synthesis of two established tools, not a new theorem. The first is Pearl's causal graphs, specifically the question of whether a shared ancestor creates a dependency between two variables {{ cite(ref="3", title="Pearl, J. (1988) -- Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference, Morgan Kaufmann") }}. The second is the standard signal-detection pairing of false-negative and false-positive rates from hypothesis testing. Definition 7 is this post's own construction, assembled from those two tools to state precisely what both series' own results were computing separately, not transcribed from a citation for either half.
 
-Ashby's variety is a count of distinguishable states, turned into a logarithm so it adds the way information adds. A light switch has a variety of one bit: two states, log base two of two.
+One scoping note the first draft of this criterion got wrong and is worth stating explicitly, because the error is instructive. A verifier checking a single object-level output is not a special case of an {% katex() %}N{% end %}-voter committee at {% katex() %}N=2{% end %}. Independence Illusion's own committee theorem restricts explicitly to odd {% katex() %}N{% end %}, since an even pool admits an exact tie majority rule cannot resolve. The relational structure differs besides: symmetric peers estimating the same ground truth in parallel, versus an asymmetric pipeline where {% katex() %}V{% end %} is built specifically to inspect an artifact {% katex() %}O{% end %} already produced. The honest relationship is structural similarity, not formal reduction: both price a correlation {% katex() %}\rho{% end %} between error events, and neither theorem is a special case of the other.
 
-A regulator's variety is the count of genuinely different responses it can select among. That count is not:
+Definition 7 states independence and power as two separate conditions. They are not two independently satisfiable requirements, and the exact relationship between them is provable rather than merely plausible.
 
-- the number of responses it has names for
-- the number it believes it can produce
+<span id="prop-6"></span>
 
-It is the number it can actually deploy against the world. That last distinction is where the whole argument turns.
-
-One notational note before the theorem, because this series tags every formal claim with the kind of warrant it carries, starting now. The bracketed tag below, [Layer 1: Bound], marks this specific claim as a substrate-free mathematical triviality. Two more tags, [Layer 2: Fit] and [Layer 3: Estimate], appear later in this post for weaker kinds of claims. The full three-layer system is defined in "Same Shape, or Same Phenomenon?" below; this note exists so the tag is never opaque, even on its first appearance.
-
-<span id="prop-1"></span>
-
-**Proposition 1** (Ashby's Law of Requisite Variety). [Layer 1: Bound] No regulator can drive outcome variety below {% katex() %}V(\text{disturbance}) - V(\text{regulator}){% end %} {{ cite(ref="2", title="Ashby, W.R. (1956) -- An Introduction to Cybernetics, Chapman and Hall, Chapter 11") }}. Only variety in the regulator can absorb variety in the disturbance. Whatever disturbance variety exceeds the regulator's own variety passes through into the outcome unreduced, as a matter of arithmetic and not as an empirical claim about any particular regulator.
+**Proposition 6** (Power Margin Equals Correlation at Matched Base Rates). [Layer 1: Bound] Let {% katex() %}p = P(E_O){% end %} be the object-level error rate and {% katex() %}q = P(\text{V says fail}){% end %} the checker's own flag rate, with {% katex() %}\rho{% end %} the correlation between {% katex() %}E_O{% end %} and {% katex() %}V{% end %}'s fail verdict, not between {% katex() %}E_O{% end %} and {% katex() %}E_V{% end %} itself: {% katex() %}E_V{% end %}, whether {% katex() %}V{% end %}'s verdict is wrong, is a false positive or a false negative depending on which side of {% katex() %}E_O{% end %} it lands, and is not the single Bernoulli variable this identity is stated over. The power margin is exactly {% katex(block=true) %}(1 - \beta) - \alpha = \rho \sqrt{\frac{q(1-q)}{p(1-p)}}{% end %} When the checker's flag rate matches the object-level error rate, {% katex() %}q = p{% end %}, this reduces to {% katex() %}(1 - \beta) - \alpha = \rho{% end %} exactly.
 
 <details class="proof">
-<summary>Mathematical proof: the pigeonhole version and the information-theoretic version</summary>
+<summary>Mathematical proof: the identity, verified against two numeric cases</summary>
 
-Ashby's original argument is a counting argument. Hold this version in your head, because it makes the mechanism visible.
+**The setup.** Let {% katex() %}X = \mathbb{1}[E_O]{% end %} and {% katex() %}Y = \mathbb{1}[V \text{ says fail}]{% end %}, Bernoulli variables with {% katex() %}E[X] = p{% end %}, {% katex() %}E[Y] = q{% end %}, matching Definition 7's own {% katex() %}\beta = P(V \text{ says pass} \mid E_O){% end %} and {% katex() %}\alpha = P(V \text{ says fail} \mid \lnot E_O){% end %} exactly, both stated over {% katex() %}V{% end %}'s verdict, not over {% katex() %}E_V{% end %}. Their correlation, by the standard definition for two binary variables, is {% katex() %}\rho = \frac{P(X{=}1,Y{=}1) - pq}{\sqrt{p(1-p)q(1-q)}}{% end %}, which pins down the joint probability: {% katex(block=true) %}P(X{=}1, Y{=}1) = pq + \rho\sqrt{p(1-p)q(1-q)}{% end %}
 
-**The setup.**
+**The two rates.** {% katex() %}1 - \beta = P(Y{=}1 \mid X{=}1) = P(X{=}1,Y{=}1)/p = q + \rho\sqrt{(1-p)q(1-q)/p}{% end %}. Symmetrically, {% katex() %}\alpha = P(Y{=}1 \mid X{=}0) = \bigl(q - P(X{=}1,Y{=}1)\bigr)/(1-p) = q - \rho\sqrt{pq(1-q)/(1-p)}{% end %}.
 
-- Arrange the possible disturbances as rows and the regulator's possible responses as columns of a table.
-- Each cell holds the outcome that results from that disturbance meeting that response.
-- The regulator's goal: for each disturbance, choose a response whose cell lands in the acceptable target set.
+**The identity.** Subtracting the two: {% katex(block=true) %}(1-\beta) - \alpha = \rho\sqrt{q(1-q)} \left[ \sqrt{\frac{1-p}{p}} + \sqrt{\frac{p}{1-p}} \right]{% end %} The bracketed term reduces algebraically to {% katex() %}1/\sqrt{p(1-p)}{% end %} exactly, giving the identity stated above. This holds with equality for any joint distribution of two Bernoulli variables, by construction of {% katex() %}\rho{% end %}, not as an approximation.
 
-**The strictest case.** Suppose the target set is a single acceptable outcome.
-
-- To hit that one outcome for every one of the {% katex() %}|D|{% end %} possible disturbances, the regulator needs, in the worst case, a distinct response for each distinct disturbance. The mapping from disturbance to outcome is otherwise not something the regulator controls.
-- If the regulator has only {% katex() %}|R|{% end %} responses available, and {% katex() %}|R| < |D|{% end %}, the pigeonhole principle forces at least two disturbances to share a response.
-- Those two disturbances then generically produce two different outcomes. At least one lands off target.
-
-**The count.** The outcomes the regulator cannot avoid satisfy {% katex() %}|Z| \geq |D| / |R|{% end %}. Taking logarithms gives the law directly:
-
-{% katex(block=true) %}
-\log |Z| \geq \log |D| - \log |R| \quad\Longleftrightarrow\quad V(\text{outcome}) \geq V(\text{disturbance}) - V(\text{regulator})
-{% end %}
-
-**The information-theoretic version.** This generalizes the count to entropies, and it is the form the rest of this post uses.
-
-- Model the regulator as a channel sitting between the disturbance {% katex() %}D{% end %} and the outcome {% katex() %}Z{% end %}.
-- The regulator's response {% katex() %}R{% end %} is the only thing that can carry information about {% katex() %}D{% end %} forward, in a way that cancels it.
-- The needed assumption, carried over from the pigeonhole version rather than left implicit: the outcome together with the response recovers the disturbance, {% katex() %}H(D \mid Z, R) = 0{% end %}. This is the entropy-language form of "two different disturbances under the same response are generically different outcomes." It does not follow from "{% katex() %}Z{% end %} is *some* deterministic function of {% katex() %}D{% end %} and {% katex() %}R{% end %}" alone: a regulator whose outcome function simply discards {% katex() %}D{% end %} (for instance {% katex() %}Z{% end %} constant regardless of {% katex() %}D{% end %}) satisfies that weaker condition while trivially violating the bound below, since it has spent none of its own variety to earn the cancellation.
-- Under {% katex() %}H(D \mid Z, R) = 0{% end %}, {% katex() %}D{% end %} is recoverable from {% katex() %}(Z,R){% end %}, so {% katex() %}H(D) \leq H(Z,R) \leq H(Z) + H(R){% end %} by subadditivity of joint entropy, which rearranges to {% katex() %}H(Z) \geq H(D) - H(R){% end %}, the same statement with variety read as entropy {{ cite(ref="3", title="Cover, T.M. & Thomas, J.A. (2006) -- Elements of Information Theory, 2nd ed., Wiley, subadditivity of entropy, Chapter 2") }}.
-- The regulator cannot distinguish more disturbance states than it has internal states to represent them with. Any disturbance variety in excess of {% katex() %}H(R){% end %} is variety the channel cannot resolve.
-- Unresolved disturbance variety appears in the outcome, by conservation.
-
-This holds for any regulator, biological or computational, by construction of the inequality, once the recovery assumption is granted, and that assumption is exactly what "regulation" means: an outcome function that ignores the disturbance without the regulator having actually absorbed its variety is not regulating anything. With the assumption made explicit, the result is a triviality of the mathematics, not a discovery about minds, and it should be stated without further hedging.
+**Checked against two numeric cases.** At {% katex() %}p=q=0.3{% end %}, {% katex() %}\rho=0.5{% end %}: the joint probability works out to {% katex() %}0.195{% end %}, giving {% katex() %}\beta=0.35{% end %}, {% katex() %}\alpha=0.15{% end %}, and {% katex() %}(1-\beta)-\alpha = 0.5{% end %}, matching {% katex() %}\rho{% end %} exactly as the matched-rate case predicts. At {% katex() %}p=0.3{% end %}, {% katex() %}q=0.5{% end %}, {% katex() %}\rho=0.4{% end %}: the general formula gives {% katex() %}(1-\beta)-\alpha \approx 0.4364{% end %}, matching a direct computation from the joint probability to four decimal places.
 
 </details>
 
-> **Physical translation.** The theorem is not the interesting part. The interesting part is what counts as the regulator's variety. A regulator can only spend the variety it has actually noticed, not the variety it believes it commands, and a forecast is a regulator acting on the state space of a task through the narrow channel of what it has so far observed. If the channel is narrow, the forecast inherits the width of the channel, not the width of the task.
+> **Physical translation.** A checker whose own flag rate happens to match the base error rate it is checking, and whose correlation with the true error is exactly zero, has exactly zero power margin: it is the coin flip Definition 7's own Physical Translation already named, now derived rather than asserted. Zero correlation with {% katex() %}E_O{% end %} and positive discriminative power cannot coexist in that setting. The two trade off directly, at a rate this proposition makes exact rather than qualitative.
 
-Read the Physical Translation as the load-bearing sentence it is meant to be. Ashby's Law is trivially true. What is not trivial is identifying the regulator's variety with the *noticed* variety, not the *nominal* variety.
+This sharpens what Definition 7's independence condition actually forbids, and what it does not. It does not forbid correlation with {% katex() %}E_O{% end %} itself, since Proposition 6 shows power requires exactly that. It forbids the specific correlation that runs through {% katex() %}\Phi{% end %}.
 
-Take a model that has read a two-line issue description and nothing else, then asked to forecast the cost of resolving it. Its entire variety at forecast time is whatever the two lines and its own prior can supply. None of the following have entered its variety yet:
+A checker built on the ground-truth channel {% katex() %}G{% end %} in Figure 0 earns its correlation with {% katex() %}E_O{% end %} honestly, by actually tracking the truth. A checker sharing {% katex() %}\Phi{% end %} earns the identical numerical correlation for free, by inheriting the same mistake. Proposition 6's identity cannot tell the two apart on its own: it prices how much correlation power needs, not where that correlation is allowed to come from. Supplying the second half is Definition 7's whole job. That is why "independent" in Definition 7 means independent of {% katex() %}\Phi{% end %} specifically, and was never a demand for independence from {% katex() %}E_O{% end %} outright.
 
-- the repository it has not yet read
-- the test suite it has not yet run
-- the caching edge case it has not yet touched
+## What Diversity Actually Buys, and What It Cannot
 
-By Proposition 1, variety that has not entered cannot be spent. Variety that cannot be spent cannot absorb the corresponding disturbance.
+A checksum genuinely achieves independence, because the specific defect it screens for happens after the checksum was computed. Most real verification is not that clean, and the reason is not sloppy engineering, but a genuine trade-off, worth stating in the form this blog states every trade-off in: an achievable region, not a paragraph of hedging.
 
-The forecast is therefore forced to be narrower than the task, and narrower in the specific direction of underestimation. Unnoticed distinctions are precisely the ones whose cost has not been counted.
+<span id="def-8"></span>
 
-## Why the Forecast Collapsed
+<details>
+<summary>Definition 8 -- The Diversity-Correlation Achievable Region: what independence costs and what it cannot buy</summary>
 
-Now apply the bound to the case. This is the point where an abstract inequality becomes an explanation for a measured number.
+**Definition 8** (Diversity-Correlation Achievable Region). Order the layers of substrate that can be diversified between an object-level process and a checker verifying it, from cheapest to most expensive to change: prompt, then model weights, then training corpus, then the ground-truth channel itself. Let {% katex() %}c(k){% end %} be the engineering cost of diversifying through the {% katex() %}k{% end %}-th layer in that order, and {% katex() %}\rho(k){% end %} the resulting correlation between {% katex() %}E_O{% end %} and {% katex() %}V{% end %}'s fail verdict, in Proposition 6's own sense of {% katex() %}\rho{% end %}, specifically its {% katex() %}\Phi{% end %}-mediated component. The achievable region is the set of pairs {% katex() %}(c(k), \rho(k)){% end %} reachable by diversifying through layer {% katex() %}k{% end %}. It has a floor rather than a zero: {% katex() %}\rho(k) \to \rho_{\min}(\text{task}){% end %} as diversification exhausts every available layer, where {% katex() %}\rho_{\min}(\text{task}) > 0{% end %} is set by the difficulty landscape of the task itself, a property of the input space no substrate diversification touches.
 
-A SWE-bench task carries substantial disturbance variety. The correct patch depends on:
+</details>
 
-- the actual structure of the codebase
-- the actual behavior of the failing test
-- the actual interactions between the changed code and everything downstream of it
-- the actual set of edge cases the hidden test suite will probe
+The qualifier "its {% katex() %}\Phi{% end %}-mediated component" in that definition is not a technicality, and skipping it would put Definition 8 at odds with Proposition 6 rather than beside it. Proposition 6 already showed that correlation between {% katex() %}E_O{% end %} and {% katex() %}V{% end %}'s fail verdict is not, on its own, something to drive to zero: it is what power is made of. Driving Definition 8's {% katex() %}\rho(k){% end %} toward its floor cannot mean driving *that* correlation down, on pain of driving power down with it, all the way to the coin flip at {% katex() %}\rho = 0{% end %}.
 
-Call this the task's real disturbance variety, {% katex() %}V(\text{disturbance}){% end %}. It is large. Critically, most of it is not visible from the issue description.
+What diversification actually shrinks is narrower. Total correlation between {% katex() %}E_O{% end %} and {% katex() %}V{% end %}'s fail verdict splits into two sources, matching Figure 0's two paths. One is a {% katex() %}\Phi{% end %}-mediated part, earned for free by inheriting the same mistake {% katex() %}O{% end %} makes. The other is a {% katex() %}G{% end %}-mediated part, earned honestly by actually tracking the truth. Diversifying through a layer targets only the first. A well-built checker does not diversify its way toward zero total correlation; it diversifies the {% katex() %}\Phi{% end %}-component toward {% katex() %}\rho_{\min}(\text{task}){% end %} while holding, or growing, the {% katex() %}G{% end %}-component that Proposition 6 says its power margin actually depends on. The floor this section is about is a floor on the bad half of the correlation, not a ceiling smuggled in against the good half.
 
-The issue description is a compressed, human-written pointer at a defect. The variety it exposes is a small fraction of the variety the resolution will actually engage.
+Eckhardt and Lee proved something stronger than an empirical observation about sloppy engineering. Even genuinely independently developed checkers generically produce correlated failures whenever task difficulty varies across the input space, because harder inputs make every checker more likely to fail together, regardless of how differently they were built {{ cite(ref="4", title="Eckhardt, D.E. & Lee, L.D. (1985) -- A Theoretical Basis for the Analysis of Multiversion Software Subject to Coincident Errors, IEEE Transactions on Software Engineering 11(12), 1511-1517") }}.
 
-At forecast time, the regulator's variety, {% katex() %}V(\text{regulator}){% end %}, is whatever the model can bring to bear before it has done the exploratory work. This is the crux.
+This is not a purely theoretical worry. Knight and Leveson ran the experiment directly: twenty-seven independently written, independently tested implementations of the same specification, built by different programming teams with no contact between them. They still failed on a shared subset of inputs far more often than an independence assumption predicts, the empirical floor beneath Eckhardt and Lee's theoretical one {{ cite(ref="5", title="Knight, J.C. & Leveson, N.G. (1986) -- An Experimental Evaluation of the Assumption of Independence in Multi-Version Programming, IEEE Transactions on Software Engineering SE-12(1), 96-109") }}. Littlewood and Miller later showed that deliberately forcing methodological diversity between checkers can push correlation below what independent development alone achieves, but never to zero {{ cite(ref="6", title="Littlewood, B. & Miller, D.R. (1989) -- Conceptual Modeling of Coincident Failures in Multiversion Software, IEEE Transactions on Software Engineering 15(12), 1596-1614") }}.
 
-One identification is doing real work here and deserves to be stated, not assumed: Definition 1's {% katex() %}V(\text{regulator}){% end %} is the variety of *responses*, not the variety of *percepts*, and the forecast is generated from what the model has noticed, a perceptual quantity. The two coincide only because the forecast is a function of what has been noticed and nothing else: a response strategy that can only condition on noticed distinctions cannot produce more distinct responses than there are distinct noticed states to condition on, whatever the model's raw output capacity might nominally allow. That is the whole justification for treating noticed variety as the regulator's effective variety here, and it holds because forecasting is closed-loop on perception by construction, not because the two kinds of variety are the same thing in general.
+The floor drops. It does not disappear.
 
-The model has not yet:
+None of this is a hypothetical extrapolation to language models. Kim, Garg, Peng, and Garg measured the same failure directly {{ cite(ref="9", title="Kim, E., Garg, A., Peng, K. & Garg, N. (2025) -- Correlated Errors in Large Language Models, arXiv:2506.07962, accepted ICML 2025") }}: LLM errors correlate across models far more than an independence assumption predicts. That correlation is severe enough that the naive ensembling and majority-vote aggregation Independence Illusion's own committee math prices can fail outright, on exactly the pools that look healthiest by headcount.
 
-- read the files, so it does not yet know the codebase's actual structure
-- run the tests, so it does not yet know which behavior is actually failing
-- discovered that its first patch strategy breaks an unrelated invariant three modules away
+Measuring that correlation is not the same as auditing it formally, and this post is not first to try the second thing either. A concurrent statistical framework audits behavioral entanglement among black-box LLM judges directly, introducing information-theoretic metrics that predict judge over-endorsement bias {{ cite(ref="10", title="Kuai, C., Jiang, J., Zhu, Z., Wang, H., Wu, K., Li, Z., Zhang, Y., Liu, C., Tu, Z., Fan, Z. & Zhou, Y. (2026) -- A Statistical Framework for Auditing Behavioral Dependence and Induced Bias in LLM Judges, arXiv:2604.07650") }}. It derives a de-entangled verifier-reweighting scheme along lines close to what Definition 7's own power condition demands. It stays entirely within the graded, empirical register {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C1, the common-cause clause: a check fails when its own error correlates with the object-level error through a shared mechanism, graded by correlation and escapable at a cost through substrate diversification") %}C1{% end %} covers. It never crosses into the unconditional, self-reference register {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C2, the self-reference clause: Loeb's theorem forbids a provability-based reasoner from certifying its own soundness from within, binary and unconditional, with no escape at any cost") %}C2{% end %} requires.
 
-Its variety at the moment of forecasting is dominated by its prior over "what a task like this usually costs." That prior is smooth, unimodal, and centered on the common case, because that is what a prior fitted to a distribution of tasks looks like. The prior contains almost none of the specific disturbance variety of *this* task's tail.
+This post's own contribution is not the observation that verifiers correlate with what they check. Both works above already establish that. It is stating precisely when that correlation is C1's kind and when it is C2's, a distinction neither needed to draw, because neither one crosses into the Löbian half of the question at all.
 
-Proposition 1 then forces the conclusion. The residual outcome variety, here the error in the cost forecast, is bounded below by the gap between the task's disturbance variety and the regulator's forecast-time variety.
+Applied to a checker built from a language model, the hierarchy of shared, diversifiable ancestors runs in the fixed order Definition 8 already named:
 
-The forecast-time variety is small. The disturbance variety is large. So the bound on forecast error is large, and it points in the direction the unpriced tail dictates: upward in cost, downward in the estimate.
+- prompt
+- model weights
+- training corpus
+- the ground-truth channel itself
 
-Once the bound is in view, the observed factor-of-five underestimation stops looking surprising: it is roughly what you would expect when a regulator prices a heavy-shouldered cost distribution using a prior centered near its mode.
+Beyond even the last of these sits one ancestor no amount of substrate diversity touches: the difficulty landscape of the task itself. A checker built on a completely different model still shares that difficulty landscape with the thing it is checking.
 
-The confidence spread falls out of the same analysis. This is the part the Ashby framing explains that a simple "models are overconfident" story does not.
+That floor is why Definition 7's independence condition has to be graded, correlation {% katex() %}\rho{% end %} somewhere between 0 and 1, not a binary valid-or-invalid predicate. Independence Illusion's own correlation-quality function is the working estimator for {% katex() %}\rho{% end %} at the committee scale {{ cite(ref="7", title="Ladha, K. (1992) -- The Condorcet Jury Theorem, Free Speech, and Correlated Votes, American Journal of Political Science 36, 617-634, cited via this blog's Independence Illusion post, 2026-07-08") }}. It was built for this purpose, and explicitly flagged there as that post's own interpolation rather than a citation. The multi-agent series' committee math and the single-agent series' verifier math are pricing the same {% katex() %}\rho{% end %}, at two different scales. They are not two different quantities that happen to share a symbol.
 
-The confidence numbers ranged across thirty points. The actual pass rates spanned about five. If confidence were a Simulation grounded in the task's disturbance variety, the two spreads would have to be commensurate: they would be measuring the same underlying difficulty.
+### What This Buys: When to Stop Diversifying
 
-They are not commensurate, by a factor of more than five. That tells you the confidence is not being generated from the disturbance variety at all. It is being generated from the regulator's internal prior, the same narrow channel that produced the token underestimate. Different models have differently shaped priors, so their confidence numbers scatter widely even though their competence, measured against the actual task, is nearly the same.
+Definition 8 names a floor. It does not say where a deployment should rationally stop short of it, and that question has an actual answer, provable by the same exchange argument Post 4 used for its own stopping rule, not by intuition about "enough diversity."
 
-The confidence spread is a picture of the regulators' priors. The pass-rate cluster is a picture of the task. That the two pictures do not match is exactly what Proposition 1 predicts, when the regulator's noticed variety is small relative to the disturbance it is pricing.
+<span id="prop-7"></span>
+
+**Proposition 7** (Diversification Stopping Rule). [Layer 1: Bound] Let {% katex() %}\Delta\rho(k) = \rho(k-1) - \rho(k){% end %} be the correlation reduction bought by diversifying through layer {% katex() %}k{% end %}, and let {% katex() %}\lambda{% end %} be the deployment's own exchange rate: how much engineering cost it is willing to pay per unit of correlation reduced. Assume returns are diminishing along Definition 8's own cheapest-to-most-expensive order, {% katex() %}c(k)/\Delta\rho(k){% end %} non-decreasing in {% katex() %}k{% end %}, which holds whenever cost rises at least as fast as marginal benefit falls. Under that assumption, the policy minimizing cost paid plus residual correlation is to diversify through layer {% katex() %}k{% end %} exactly when {% katex() %}c(k) < \lambda \cdot \Delta\rho(k){% end %}, and stop at the first layer where this fails.
+
+<details class="proof">
+<summary>Mathematical proof: the exchange argument, and why the floor is never actually reached</summary>
+
+**The objective.** A deployment choosing how many layers to diversify through is minimizing {% katex() %}C_k + \lambda \cdot \rho(k){% end %}: total cost paid, plus the residual correlation left, weighted by what avoiding it is actually worth. {% katex() %}C_k = \sum_{i \le k} c(i){% end %} is cumulative cost through layer {% katex() %}k{% end %}.
+
+**Why the marginal rule is optimal.** Taking layer {% katex() %}k{% end %} changes the objective by {% katex() %}c(k) - \lambda \cdot \Delta\rho(k){% end %}: it costs {% katex() %}c(k){% end %} and saves {% katex() %}\lambda \cdot \Delta\rho(k){% end %} in residual correlation. Take the step exactly when this is negative, {% katex() %}c(k) < \lambda \cdot \Delta\rho(k){% end %}, and stop otherwise. Any policy that stops before this holds can be improved by taking the next step; any policy that continues past it can be improved by stopping there. Only the threshold rule is not improvable in either direction.
+
+The diminishing-returns assumption is what makes that local argument a global one. It guarantees that once a layer fails the test, every later layer fails it too, so checking layers in the fixed order and stopping at the first failure is the same policy as checking every possible subset and keeping the best. Without it, a bad layer sitting in front of a good one could make skipping ahead beat the threshold rule outright. A layer costing 100 for a return of 0.1 blocks a later layer costing 1 for a return of 2, and stopping at the first failure throws away the second layer's real value. Definition 8's own cheapest-to-most-expensive ordering is what the assumption asks the engineering reality to match, not a free simplification.
+
+The exchange argument itself is borrowed from Post 4's Proposition 5, deliberately reused here, not the same theorem transplanted. Post 4's Proposition 5 solves a stochastic problem, a reservation value pinned by an integral over a continuous draw distribution. This is a deterministic problem over a small, fixed, ordered set of layers instead. Claiming the diversification rule is a special case of Post 4's Proposition 5 would repeat exactly the overclaim this post already rejected once for the N=2 committee case. What transfers is the proof *technique*, an exchange argument showing a threshold is non-improvable in either direction, not the probability model underneath it.
+
+**Why the floor is never reached.** For any finite {% katex() %}\lambda{% end %}, the rule stops at the first layer whose marginal correlation reduction is no longer worth its cost, at some {% katex() %}\rho(k^*) > \rho_{\min}(\text{task}){% end %}, strictly above the floor. Only as {% katex() %}\lambda \to \infty{% end %}, a deployment willing to pay any cost for any reduction, does the stopping point push to the last available layer, and even there {% katex() %}\rho{% end %} only approaches {% katex() %}\rho_{\min}{% end %}, because no further layer exists to buy the rest.
+
+</details>
+
+> **Physical translation.** This is the same shape as Post 4's own reservation value, arrived at independently rather than borrowed by force: an ideal a system would reach if the relevant cost were zero, approached but never touched at any positive cost, with the actual stopping point set by what the next unit of improvement is worth to the deployment, not by how close to the ideal it would like to be. Post 4 priced how much search is worth. This prices how much independence is worth. In both cases the honest answer is less than a system would like, for a reason a formula makes precise rather than a shrug.
+
+Proposition 7 is about four discrete layers, in the fixed cheapest-to-most-expensive order Definition 8 named: prompt, model weights, training corpus, the ground-truth channel. The chart below does not illustrate that rule with an invented curve. It runs it, on one fixed set of per-layer cost and correlation-reduction numbers. Drag the exchange rate {% katex() %}\lambda{% end %} and watch which layers the rule actually takes, marked directly against {% katex() %}c(k) < \lambda \cdot \Delta\rho(k){% end %}, the condition Proposition 7 proves is the whole policy.
+
+<div style="margin:1.5em 0;">
+<div style="display:flex; align-items:center; gap:0.75em; margin-bottom:0.5em; flex-wrap:wrap;">
+<label for="lambda-slider2" style="font-size:0.9em; color:#444;">Exchange rate λ, cost per unit of ρ reduced:</label>
+<input type="range" id="lambda-slider2" min="0" max="3.1703" value="2" step="0.001" style="flex:1; min-width:140px;">
+<span id="lambda-value2" style="font-family:monospace; font-size:0.9em; min-width:4em; text-align:right;">100</span>
+</div>
+<canvas id="chart-diversify-bars" aria-label="Bar chart with one pair of bars per diversification layer: the layer's cumulative cost against that layer's marginal correlation reduction times the exchange rate lambda. The diversification stopping rule says to take a layer while its cost bar is shorter than its priced-benefit bar, and stop at the first layer where the cost bar is taller. The chart marks that first failing layer. Moving the exchange rate slider changes which layers are taken." style="width:100%; aspect-ratio:700/400; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<p id="diversify-readout" style="font-size:0.9em; color:#444; margin-top:0.5em;"></p>
+</div>
+<script>
+(function () {
+  const canvas = document.getElementById('chart-diversify-bars');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('lambda-slider2');
+  const lambdaLabel = document.getElementById('lambda-value2');
+  const readout = document.getElementById('diversify-readout');
+  const layerLabels = ['prompt', 'weights', 'corpus', 'ground truth'];
+  const layers = [
+    { c: 1, dRho: 0.30 },
+    { c: 4, dRho: 0.20 },
+    { c: 12, dRho: 0.15 },
+    { c: 30, dRho: 0.05 },
+  ];
+  let W, H, pw, ph;
+  const L = 55, R = 20, T = 20, B = 55;
+  function stopIndex(layers, lambda) {
+    for (let i = 0; i < layers.length; i++) {
+      if (!(layers[i].c < lambda * layers[i].dRho)) return i;
+    }
+    return layers.length;
+  }
+  function setupCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = rect.width; H = rect.height;
+    pw = W - L - R; ph = H - T - B;
+  }
+  function draw() {
+    const lambda = Math.pow(10, parseFloat(slider.value));
+    const benefits = layers.map(l => lambda * l.dRho);
+    const yMax = Math.max(1, ...layers.map(l => l.c), ...benefits) * 1.15;
+    function py(v) { return T + (1 - v / yMax) * ph; }
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.moveTo(L, T); ctx.lineTo(L, T + ph); ctx.lineTo(L + pw, T + ph); ctx.stroke();
+    ctx.font = '11px sans-serif'; ctx.fillStyle = '#444'; ctx.textAlign = 'right';
+    for (let i = 0; i <= 4; i++) {
+      const v = (yMax / 4) * i;
+      const y = py(v);
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(L, y); ctx.lineTo(L - 5, y); ctx.stroke();
+      ctx.fillText(v.toFixed(v < 1 ? 2 : 0), L - 8, y + 4);
+    }
+    ctx.save(); ctx.translate(15, T + ph / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.fillText('cost / priced benefit', 0, 0); ctx.restore();
+    const k = stopIndex(layers, lambda);
+    const groupW = pw / 4, barW = groupW * 0.32, gap = groupW * 0.06;
+    layers.forEach((l, i) => {
+      const gx = L + i * groupW;
+      const takes = l.c < benefits[i];
+      const cx = gx + groupW * 0.15;
+      ctx.fillStyle = (i < k) ? '#2980b9' : '#93b8d1';
+      ctx.fillRect(cx, py(l.c), barW, py(0) - py(l.c));
+      const bx = cx + barW + gap;
+      ctx.fillStyle = (i < k) ? '#27ae60' : '#a3d9b5';
+      ctx.fillRect(bx, py(benefits[i]), barW, py(0) - py(benefits[i]));
+      if (i === k) {
+        ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2;
+        ctx.strokeRect(gx + 2, T + 2, groupW - 4, ph - 4);
+      }
+      ctx.fillStyle = '#333'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(String(i + 1) + ': ' + layerLabels[i], gx + groupW / 2, T + ph + 16);
+      ctx.fillText(takes ? 'take' : 'skip', gx + groupW / 2, T + ph + 30);
+    });
+    if (k < 4) {
+      ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('stops here', L + k * groupW + groupW / 2, T + 14);
+    }
+    ctx.fillStyle = '#2980b9'; ctx.fillRect(L + pw - 90, T, 10, 10);
+    ctx.fillStyle = '#444'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('c(k)', L + pw - 76, T + 9);
+    ctx.fillStyle = '#27ae60'; ctx.fillRect(L + pw - 40, T, 10, 10);
+    ctx.fillStyle = '#444'; ctx.fillText('λ·Δρ(k)', L + pw - 26, T + 9);
+    lambdaLabel.textContent = lambda.toFixed(lambda < 10 ? 2 : 0);
+    readout.textContent = k === 0
+      ? ('At λ = ' + lambda.toFixed(2) + ', layer 1 already costs more than it is worth: the rule takes no layers.')
+      : k === 4
+      ? ('At λ = ' + lambda.toFixed(2) + ', every layer is worth its cost: the rule takes all four, still short of ρ_min(task).')
+      : ('At λ = ' + lambda.toFixed(2) + ', the rule takes layers 1 through ' + k + ' and stops before layer ' + (k + 1) + ' (' + layerLabels[k] + '), where cost ' + layers[k].c.toFixed(2) + ' exceeds priced benefit ' + benefits[k].toFixed(2) + '.');
+  }
+  slider.addEventListener('input', draw);
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries, observer) => {
+      if (entries[0].isIntersecting) { observer.disconnect(); setupCanvas(); draw(); }
+    }, { threshold: 0.2 }).observe(canvas);
+  } else { setupCanvas(); draw(); }
+  window.addEventListener('resize', () => { setupCanvas(); draw(); });
+})();
+</script>
+
+<figcaption>Figure 1: one fixed cost and correlation-reduction number per layer, Proposition 7's own stopping condition run directly against them. Each bar pair compares that layer's cost to its benefit priced at λ; the rule takes a layer while the cost bar is shorter, and the chart marks the first layer where that stops holding. Drag the slider and watch the stopping point move.</figcaption>
+
+One honesty note this shares with Post 4's own: {% katex() %}\lambda{% end %} is a real number a deployment has to supply, and this post does not derive one. What a unit of residual correlation actually costs, in downstream incidents, wasted retries, or a silently wrong deployment, is exactly the kind of deployment-specific judgment Post 4 already flagged when it declined to collapse token cost, latency, and context loss into one number. The theorem's shape holds regardless of the number chosen. Only the number itself resists derivation.
+
+## Five Properties, Checked Against the Same Requirement
+
+<span id="prop-8"></span>
+
+**Proposition 8** (Two Structurally Different Reasons a Check Fails). [Layer 2: Fit] Definition 7's requirement resolves differently across the five properties this series proved, and the difference is not uniform. Four of the five admit an available, if costly, internal pathway around their own worst-case regime. One does not, for any regime.
+
+<details class="proof">
+<summary>Working the five cases against Definition 7</summary>
+
+**Simulation.** {% katex() %}\Phi{% end %} is the noticing process. A verification signal computed purely from noticed variety, the same channel that produced the original forecast, shares {% katex() %}\Phi{% end %} with it: the question "have I noticed enough" is answered using the same resource the forecast itself was built from. An externally-anchored variety estimate, one that does not derive from the same noticed-variety channel, avoids {% katex() %}\Phi{% end %}. It still has to actually cover the task's disturbance variety to satisfy the power condition; independence relocates Ashby's Law's own requirement, it does not discharge it.
+
+**Abstraction.** {% katex() %}\Phi{% end %} is the compression step that produced the working summary {% katex() %}A{% end %} from the raw data {% katex() %}D{% end %}. This is the cleanest case, because the theorem and the graph coincide exactly. By the chain rule, {% katex() %}I(D;T) = I(A;T) + I(D;T \mid A){% end %}, and because {% katex() %}A{% end %} is a deterministic function of {% katex() %}D{% end %}, the sequence {% katex() %}T \to D \to A{% end %} is a Markov chain for any target whatsoever, so the data processing inequality guarantees no computation on {% katex() %}A{% end %} alone can recover the residual {% katex() %}I(D;T \mid A){% end %}. A verifier confined to {% katex() %}A{% end %} shares exactly that residual's absence with the object-level process; one that returns to {% katex() %}D{% end %} does not.
+
+This is a hard zero within the {% katex() %}A{% end %}-only regime, not a graded correlation the way the other cases are. But the regime itself is a choice: nothing prevents a system from retaining and returning to {% katex() %}D{% end %}, at a cost. That escapability is what keeps this case distinct from Awareness, the one case below with no escape at any cost.
+
+**Rationality.** {% katex() %}\Phi{% end %} is not the weighting function alone. A verifier applying an honestly different weight to the same censored evidence stream still shares the actual failure, because the censorship happened in how evidence was sampled, not only in how it was weighed. {% katex() %}\Phi_{\text{Rationality}} = (g, \pi){% end %}, the weighting function and the sampling policy together. A valid check needs independence in both: an honest weight applied to dishonestly sampled evidence is still corrupted, and an honest sample dishonestly weighed is too.
+
+**Awareness.** {% katex() %}\Phi{% end %} is the entire derivation apparatus of a provability-based reasoner. This is the case that does not admit an internal escape at any cost, and the reason is worth stating precisely rather than by analogy. Loeb's theorem, applied to resource-bounded reasoners, proves that no internal derivation, however structured, avoids answering to the same provability predicate the object-level claim itself was derived through. There is no "return to {% katex() %}D{% end %}" move available here the way there is for Abstraction, because there is no analogue of raw data sitting outside the derivation system that a check could return to while remaining an internal derivation.
+
+The obstruction binds regardless of the system's actual reliability. A hypothetically perfectly sound reasoner, one whose every proof happens to be true, still cannot derive the general reflection schema, because deriving it for every statement would force the reasoner to derive every statement outright, true or false, which is the collapse into unconditional assertion. This is a fact about what is derivable, not about what fails together. There is no error to correlate, because the obstruction does not depend on there being one.
+
+**Optimization.** Post 4's Proposition 5 proves the reservation-value threshold rule is exactly optimal given honest inputs. There is no {% katex() %}\Phi{% end %}-level failure to check for in Optimization's own mechanism at all. What still requires external governance is addressed separately below, because it is not an instance of either pattern above.
+
+</details>
+
+The pattern that emerges is not "one criterion, five uniform instances." It is two structurally different reasons a check can fail, and knowing which one applies changes what the fix actually has to be.
+
+**C1, the common-cause clause**, covers Simulation, Abstraction, and Rationality, plus the multi-agent committee results Independence Illusion already proved. A check fails when its error correlates with the object-level error through a shared {% katex() %}\Phi{% end %}. This is graded, escapable at a cost per Definition 8's achievable region, and it is the reliability-engineering and social-choice mechanism this whole first half of the post has been building: Condorcet, Krum, and the Universal Scalability Law on one side, Ashby's Law, the data-processing inequality, and the asymmetric-updating divergence result on the other.
+
+**C2, the self-reference clause**, covers Awareness alone. Loeb's theorem binds even at zero error rate. There is no failure to correlate, because there is no failure, only a structural fact about what a system can derive about itself. This is binary and unconditional, not graded, and it is the one place either series has a proof rather than a measured or argued-for correlation.
+
+Both clauses cash out as "the check has to live outside the closure of the thing it checks." They are not the same reason for it, and collapsing them into one mechanism, the way the first draft of this criterion did, would misstate what Loeb's theorem actually proves.
+
+| | C1, common-cause | C2, self-reference |
+|---|---|---|
+| Nature | Graded, correlation {% katex() %}\rho \in [0,1]{% end %} | Binary, unconditional |
+| Escapable? | Yes, at a cost (Definition 8) | No, for any regime |
+| Governs | Simulation, Abstraction, Rationality, the multi-agent committee case | Awareness alone |
+| Warrant | Measured or argued-for correlation | Proof, Loeb's theorem |
+| Binds at zero error rate? | No, independence can reach it | Yes, unconditionally |
+
+<figcaption>Table 1: the two clauses side by side. They share a conclusion, external verification is required, but nothing else on this row, which is the reason collapsing them into one mechanism was the first draft's central defect.</figcaption>
+
+{% mermaid() %}
+%%{init: {'theme': 'neutral'}}%%
+graph LR
+    classDef c1graded fill:none,stroke:#2980b9,stroke-width:2px;
+    classDef c1hard fill:none,stroke:#2980b9,stroke-width:2px,stroke-dasharray: 4 4;
+    classDef c2 fill:none,stroke:#c0392b,stroke-width:2px;
+    classDef ic fill:none,stroke:#333,stroke-width:2px;
+    C1["C1: common-cause<br/>graded, escapable at a cost"]:::c1graded
+    C2["C2: self-reference<br/>binary, no escape, any regime"]:::c2
+    IC["Inherited Consequence<br/>corollary of C1/C2, not a clause"]:::ic
+    C1 --- Sim["Simulation"]:::c1graded
+    C1 --- Rat["Rationality"]:::c1graded
+    C1 --- MA["Multi-agent committee<br/>Independence Illusion"]:::c1graded
+    C1 -.-> Abs["Abstraction<br/>hard-zero sub-case, still escapable"]:::c1hard
+    C2 --- Awa["Awareness"]:::c2
+    IC --- Opt["Optimization"]:::ic
+{% end %}
+
+<figcaption>Figure 2: five properties plus the multi-agent case, sorted by which structural pattern actually governs their failure. Solid blue is graded C1. Dashed blue marks Abstraction's hard-zero sub-case, which looks C2-shaped locally but stays escapable, the distinction the next section proves rather than asserts. Red is C2's unconditional bind. Optimization sits outside both, governed by composition rather than a failure of its own.</figcaption>
+
+This lines up with Post 4's own {% term(url="@/blog/2026-09-05/index.md", def="Monitor-Analyze-Plan-Execute-Knowledge: the autonomic-computing reference loop Kephart and Chess formalized in 2003, mapped in Post 4 onto this series' five properties, with Knowledge sitting cross-cutting rather than as a pipeline stage") %}MAPE-K{% end %} correspondence at exactly one seam and diverges at another, and both are worth stating rather than left for a reader to notice unprompted. Knowledge's cross-cutting position there, standing outside the four active stages rather than inside them, is why Awareness stands alone here too: C2 governs a property that answers for the whole loop, not one stage of it, the same structural reason in both posts.
+
+Where the two correspondences part ways is Optimization. Execute sits inside the active pipeline in Post 4's mapping, on the same footing as Monitor, Analyze, and Plan, which correspond respectively to the three properties C1 does govern here, Simulation, Abstraction, and Rationality. Optimization does not follow its own pipeline neighbors into C1, for the composition reason argued below. Two independently built structural pictures agree exactly on where Awareness sits and disagree on whether Optimization is ordinary, and the disagreement is not a loose end between the posts, it is this section's own finding, arrived at from a different direction.
+
+One dashed line in that figure is doing more work than it looks like it's doing.
+
+### Is the split actually exhaustive
+
+Checked directly rather than left as an open item, because Abstraction's own hard zero is a plausible place for a third category to be hiding, the way Awareness turned out to hide C2 in the first place. Confined to computing from {% katex() %}A{% end %} alone, the data processing inequality gives exactly zero recoverable information about the discarded residual, a hard fact, not a correlation that interpolates between 0 and 1 the way Simulation's variety bound and Rationality's divergence bound do. Within the {% katex() %}A{% end %}-only regime, Abstraction looks momentarily Loeb-shaped: absolute, not graded.
+
+It is not a third category, and the reason is the same reason C2 does not reduce to C1 in the other direction. Whether the {% term(url="@/blog/2026-08-30/index.md", def="Data-Processing Inequality: no downstream computation can increase the information a signal carries about a target beyond what its input already carried, proven in Post 2 via Cover and Thomas (2006)") %}DPI{% end %}'s hard zero applies at all is a choice, not a fact about the system: nothing stops a verifier from retaining and returning to {% katex() %}D{% end %}, the re-abstraction remedy this series already prescribes elsewhere, always architecturally available, just costly. Loeb's theorem has no analogous escape. There is no "just don't restrict yourself" move available inside the same formal system, because every internal derivation, however structured, answers to the same provability predicate, regardless of how the system is built or reconfigured. The DPI's absoluteness is conditional on an architectural choice a system could make differently. Loeb's is not conditional on anything a system could choose.
+
+That is the actual line between C1 and C2: C1 cases have an available, if costly, internal escape route from their own worst-case regime; C2 does not, for any regime. C1 is not internally uniform. It splits further into a hard-zero sub-case escapable by regime change, Abstraction, and continuously-graded sub-cases, Simulation, Rationality, and the multi-agent committee result. Both sub-cases remain on the escapable side of the line that actually separates C1 from C2. The split is exhaustive, not merely unrefuted.
+
+## The Case a Verification Criterion Cannot Just File Away
+
+Optimization does not fit either clause, and the honest move is not to file it outside the framework and move on. Individual decisions in a controlled multi-agent study showed strong rational cost-benefit logic with minimal escalation of commitment. The same decision, made through symmetrical peer deliberation among several model instances, escalated to near-universal, about 99.2 percent of runs {{ cite(ref="8", title="Barkett, E., Long, O. & Kröger, P. (2025) -- Getting out of the Big-Muddy: Escalation of Commitment in LLMs, arXiv:2508.01545") }}. Post 4's own threshold rule did not become unsound between the individual case and the group case. Nothing in the object-level mechanism changed.
+
+<span id="def-9"></span>
+
+<details>
+<summary>Definition 9 -- Inherited Consequence: why a sound mechanism can still need a governor</summary>
+
+**Definition 9** (Inherited Consequence). [Layer 2: Fit] If a property's own verification is sound, neither C1 nor C2 applies to its own {% katex() %}\Phi{% end %}, but its inputs are drawn from a property where C1 or C2 does apply, the composed system still needs external verification. Not because the downstream property has a hidden failure of its own, but because C1 and C2 failures propagate through data dependencies regardless of how sound each individual computation is.
+
+</details>
+
+> **Physical translation.** A stopping rule fed a corrupted probability estimate will stop at the wrong place with perfect internal consistency, because internal consistency was never what was in question. The rule is not the thing that failed. The rule is the thing that faithfully executed on state it had no way to audit, because auditing its own inputs is not an operation its own theorem covers, and was never claimed to be.
+
+Optimization is not a third instance of {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C1, the common-cause clause: a check fails when its own error correlates with the object-level error through a shared mechanism, graded by correlation and escapable at a cost through substrate diversification") %}C1{% end %}: forcing it into that clause would misstate what Post 4's Proposition 5 actually proves, that the rule itself has no shared ancestor with any error, because it has no error of its own to correlate. Nor is it {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C2, the self-reference clause: Loeb's theorem forbids a provability-based reasoner from certifying its own soundness from within, binary and unconditional, with no escape at any cost") %}C2{% end %}, since nothing about the threshold computation is a self-reference obstruction. And Inherited Consequence is not a peer to C1 and C2 either. Giving it a letter of its own would imply a third *reason a property's own check can fail*, when this is precisely the case where it does not: it is a corollary of the two clauses under composition, not a third clause beside them.
+
+That word, corollary, is doing real work and is worth making precise rather than left as a figure of speech. A sound downstream mechanism sounds like it should offer some protection, the way redundancy ordinarily does. It offers no guaranteed protection, and the reason is provable.
+
+<span id="prop-9"></span>
+
+**Proposition 9** (No Structural Guarantee of Dilution). [Layer 1: Bound] If a downstream mechanism is a deterministic function of its input with no branch, cross-check, or aggregation step that compares that input against anything else, composing through it carries no structural guarantee that an upstream C1 or C2 failure is diluted. Whatever the propagated error rate turns out to be is set by the geometry of the corruption relative to that mechanism's own mapping, a fact about that specific mapping and that specific corruption, not a property soundness confers. A downstream mechanism cannot be trusted, on soundness alone, to have reduced the error rate an upstream failure introduced, and cannot be assumed to have left that rate exactly as it was either.
+
+<details class="proof">
+<summary>Mathematical proof: why soundness downstream neither corrects nor is bound to preserve what it cannot see</summary>
+
+**The mechanism.** Let {% katex() %}f{% end %} be the downstream computation, sound in the sense Post 4's Proposition 5 is sound: it correctly implements its own specification given whatever input it receives. Soundness is a claim about {% katex() %}f{% end %}'s relationship to its own input, not about the input's relationship to the truth.
+
+**Why composition carries no guarantee either way.** Suppose the upstream signal is wrong with probability {% katex() %}\varepsilon{% end %}, and {% katex() %}f{% end %} has no second input, cross-check, or aggregation over multiple estimates that could reveal this. Then {% katex() %}f{% end %} cannot condition its behavior on whether the input is wrong, because a wrong input and a right one differ only in value, not in any signal {% katex() %}f{% end %} can observe.
+
+Whether the propagated error rate ends up above, at, or below {% katex() %}\varepsilon{% end %} is therefore not something soundness decides. It turns on whether {% katex() %}f{% end %} happens to map the specific wrong values the corruption produces to the same output the true values would have produced, a question about the geometry of {% katex() %}f{% end %}'s own level sets against the corruption's own distribution, not about {% katex() %}f{% end %}'s soundness. A many-to-one {% katex() %}f{% end %}, a threshold comparison among the plainest examples, can absorb corruption that stays on the same side of its boundary the truth was already on. What soundness forecloses is narrower than any claim about the resulting rate: only that {% katex() %}f{% end %} detects the corruption and corrects for it, since detection requires exactly the second signal, cross-check, or aggregation step the premise excludes.
+
+What this leaves open for any particular downstream mechanism, Optimization's own threshold rule included, is a case-specific question, not a Layer 1 fact: not whether {% katex() %}f{% end %} is trustworthy, but whether the corruption it actually receives has a geometry {% katex() %}f{% end %}'s mapping happens to absorb. Proposition 9 answers "no guarantee either way" in general. Whether a given stage dilutes, preserves, or worsens a given upstream failure has to be checked against that failure's own shape, taken up below for Optimization specifically.
+
+</details>
+
+> **Physical translation.** A vote-counting machine that counts every ballot correctly does not care whether the ballots were stuffed. Perfect correctness at the counting stage is not evidence about the count's relationship to who actually voted, because the counting stage was never built to check that relationship at all. Composition can move where an error becomes visible, and can happen to blunt it or sharpen it depending on how the stage's own arithmetic lands relative to the stuffing. It earns no credit either way, because nothing in soundness was ever aimed at getting that relationship right in the first place.
+
+The tempting reading runs the other way, and it is worth saying plainly why it fails here. A system with several sound stages generally feels more reliable than any one stage alone, and for genuinely independent errors that intuition is correct: redundancy really does average out uncorrelated mistakes.
+
+A pipeline is not a committee. Its stages are not redundant estimates of the same fact being combined. Each stage consumes only what the one before it produced, and a pipeline, unlike a committee, has no redundancy to average. Proposition 9 is the reason the usual intuition does not apply here.
 
 {% mermaid() %}
 %%{init: {'theme': 'neutral'}}%%
 flowchart LR
-    classDef box fill:none,stroke:#333,stroke-width:2px;
-    classDef narrow fill:none,stroke:#c0392b,stroke-width:2px;
-    classDef wide fill:none,stroke:#2980b9,stroke-width:2px;
-    D["Task disturbance variety<br/>V(disturbance): large<br/>most of it unread at forecast time"]:::wide
-    R["Regulator variety at forecast<br/>V(regulator): small<br/>prior centered on the common case"]:::narrow
-    D --> G{"V(disturbance) − V(regulator)"}
-    R --> G
-    G --> Z["Forced residual: V(outcome)<br/>= forecast error<br/>~5x token underestimate,<br/>confidence decoupled from pass rate"]:::box
+    classDef term fill:none,stroke:#333,stroke-width:2px;
+    classDef bad fill:none,stroke:#c0392b,stroke-width:2px;
+    classDef good fill:none,stroke:#2980b9,stroke-width:2px;
+    subgraph "Committee: has redundancy to average"
+        A1["Estimate 1"]:::term --> Agg["Aggregator<br/>e.g. majority vote"]:::good
+        A2["Estimate 2"]:::term --> Agg
+        A3["Estimate 3"]:::term --> Agg
+        Agg --> Out1["Output<br/>wrong only if most inputs agree wrongly"]:::good
+    end
+    subgraph "Pipeline: no redundancy to average"
+        X["Upstream signal<br/>wrong with probability ε"]:::bad --> F["f: sound, single input,<br/>no cross-check"]:::term
+        F --> Out2["Output<br/>error rate not guaranteed<br/>lower than ε either way"]:::bad
+    end
 {% end %}
 
-<figcaption>Figure 1: the forecast error is not a tuning failure but the residual Proposition 1 forces when the regulator prices a task using far less variety than the task contains.</figcaption>
+<figcaption>Figure 3: an aggregator has several independent-ish estimates to check against each other, so a minority error can be outvoted, the case Independence Illusion already covers. A single-input pipeline stage has nothing to check its one input against, so nothing in its own soundness promises the output is any less wrong than the input was. Whether it happens to be turns on how the stage's mapping lands relative to the specific corruption, not on anything soundness confers.</figcaption>
 
-A worked accounting makes the mechanism concrete, in the same spirit the rest of this blog computes its examples rather than gesturing at them.
+Calling this a corollary rather than a third clause is a claim about its structure, not about its stakes. C1 and C2 answer why a property's own check can fail. Proposition 9 answers a different question: what happens when a sound mechanism sits downstream of one that already failed. For anyone assembling a multi-stage or multi-agent pipeline out of individually-verified pieces, that second question is the one actually load-bearing in production. Soundness at every stage, checked independently, is not evidence the pipeline as a whole is safe to run. This is worth flagging as its own practical warning before the next section narrows to Optimization's specific case, because the general point survives even where that specific case does not.
 
-**The setup** (illustrative numbers, not measured ones):
+**Optimization's own threshold is a case of Proposition 9, not a corollary of it** [Layer 2: Fit]. Whether composition through Post 4's threshold rule dilutes, preserves, or worsens what feeds it depends on the geometry Proposition 9 leaves open, and that geometry is not generic here. The signal reaching the threshold is not corrupted by noise scattered symmetrically around the true value. It inherits Simulation's own systematic direction, Proposition 1's token-cost forecast biased low by a factor of roughly five, and Rationality's own systematic direction, Proposition 3's asymmetric updating inflating confidence in whatever hypothesis was already favored. Both push the same way: believed cost down, believed odds of success up, toward the side of the threshold that says keep going.
 
-- Suppose a task's true cost is distributed over a range spanning roughly six binary orders of magnitude, from the cheapest plausible resolution to the most expensive. The disturbance variety in the cost dimension alone is then on the order of {% katex() %}V(\text{disturbance}) \approx 6{% end %} bits.
-- Suppose the model's forecast-time prior, before it reads anything, effectively resolves that range to within a factor of about four, roughly two binary orders of magnitude. Then {% katex() %}V(\text{regulator}) \approx 2{% end %} bits.
+A threshold does not attenuate a bias aimed at the specific side of {% katex() %}\theta{% end %} it is least equipped to catch. A corrupted value that lands on the wrong side of {% katex() %}\theta{% end %} produces the wrong decision with the same certainty a true value on the right side would have produced the right one. A bias large and consistently signed relative to the margin between the true value and {% katex() %}\theta{% end %} lands on the wrong side far more often than a bias with no preferred direction would. This is not the general result. It is what the general result's open question answers to, once the specific shape of the corruption feeding this specific stage is put in.
 
-**The floor.** Proposition 1 floors the residual at:
+**Applying Inherited Consequence to the multi-agent escalation result is a hypothesis, not a measured fact** [Layer 3: Estimate]. Each agent instance's verdict is read by the others in a symmetrical peer structure. That deliberative coupling would be a shared ancestor of every member's vote, if the coupling is in fact what drives the escalation, and it would explain the group's effective independent count collapsing toward one, the same pattern Independence Illusion formalizes for committees generally.
 
-{% katex(block=true) %}
-V(\text{outcome}) \geq 6 - 2 = 4 \text{ bits of unresolved cost variety}
-{% end %}
+That qualifier is load-bearing, not throat-clearing. Post 4's own account of this same study states outright that no formal result pins down which mechanism actually drives the escalation, an information cascade among correlated peers being one candidate among others. This post does not have stronger grounds than that post did. What is solid is narrower than "a live C1 instance": the multi-agent finding is consistent with C1, and would be explained by it if the mechanism turns out to be correlated voting, a real, checkable hypothesis about the same data, not yet a measured mechanism.
 
-Four bits is a factor of sixteen of irreducible spread around the estimate. A point estimate dropped into the middle of a spread that wide, on a cost distribution whose mass sits toward the expensive tail, lands low.
-
-A factor-of-five miss is comfortably inside a four-bit residual. The numbers here are illustrative, not measured. They show that the observed miss is what the bound produces under unremarkable assumptions, not a pathology requiring a separate explanation.
-
-The remedy the bound implies is equally specific. It is worth stating now, because it becomes the control-plane consequence in the ledger below.
-
-To make the forecast better, you do not make the model more confident. You do not fine-tune the prior. You raise {% katex() %}V(\text{regulator}){% end %} before the forecast is trusted. That means:
-
-- forcing the regulator to notice more of the task before it is allowed to price it, or
-- where that is impossible, refusing to trust a forecast made from a channel known to be too narrow
-
-There is no third option inside the theorem. Variety absorbs variety, and nothing else does.
-
-## The Human Instance: The Planning Fallacy
-
-This post opens a series about portability, rather than standing alone as a note about a benchmark, because the same failure was catalogued in humans forty-seven years before MarketBench, with the same defining signature. That signature is the specific thing that matters.
-
-In 1979, Daniel Kahneman and Amos Tversky named the planning fallacy, as part of their broader account of intuitive prediction {{ cite(ref="4", title="Kahneman, D. & Tversky, A. (1979) -- Intuitive Prediction: Biases and Corrective Procedures, TIMS Studies in Management Science 12, 313-327") }}.
-
-The planning fallacy is not general overconfidence. That distinction is the entire reason it belongs next to the MarketBench result, rather than next to some other bias. Its defining signature is the systematic underestimation of the *resources* a task will require: the time, the cost, the effort.
-
-People predicting how long their own projects will take produce estimates that are optimistic in a specific, replicable way. Tellingly, they remain optimistic even when they can recall that their past projects of the same kind ran long.
-
-The bias is about resource forecasting, not about the probability of eventual success. It survives direct evidence to the contrary.
-
-The empirical anchoring came later, and made the signature precise. Roger Buehler, Dale Griffin, and Michael Ross ran the studies that pinned down the effect {{ cite(ref="5", title="Buehler, R., Griffin, D. & Ross, M. (1994) -- Exploring the Planning Fallacy: Why People Underestimate Their Task Completion Times, Journal of Personality and Social Psychology 67(3), 366-381") }}.
-
-People asked to predict their own task completion times underestimated them reliably. When asked about *others'* similar tasks, the same people predicted more accurately. That rules out the possibility that the tasks were simply unpredictable.
-
-The tasks were predictable. The prediction was biased, in the direction of underestimating what the task would take. That is the MarketBench signature, stated in a different vocabulary.
-
-The corrective the same literature proposes turns this from a coincidence into a confirmation. The fix is variety injection, and nothing else.
-
-Kahneman and Tversky distinguished two forecasting modes:
-
-- **The inside view.** The planner forecasts from the specific features of the case in front of them.
-- **The outside view.** The planner places the case in a reference class of similar past cases, and uses that class's actual distribution of outcomes.
-
-The inside view is a regulator pricing a task from its own narrow, forecast-time channel. That is exactly the setup Proposition 1 penalizes.
-
-The outside view works because it imports variety the planner did not have: the empirical spread of a whole reference class. It substitutes that spread for the planner's smooth, mode-centered prior.
-
-Reference-class forecasting, later operationalized for large infrastructure projects, is a variety-injection procedure dressed as a planning technique. It raises the effective {% katex() %}V(\text{regulator}){% end %} by feeding in distributional variety the inside view structurally lacks. That is the same move, in a different substrate, as the external estimator this post prescribes for the agent case.
-
-The two remedies are one remedy, at the level of the theorem. Neither makes the forecaster more confident. Both make the forecaster know more before it is trusted to forecast.
-
-**The planning fallacy is a measured human finding** [Layer 2: Fit]. This tag is doing real work, not decoration.
-
-The tag asserts that the planning fallacy is an empirically observed pattern in one substrate, consistent with what Proposition 1 predicts if you model a human planner as a regulator pricing a task from a forecast-time channel narrower than the task's disturbance variety.
-
-It asserts exactly that much, and no more. It does not assert that the human brain literally computes Ashby's inequality. It does not assert that the human finding and the agent finding are the same event. Those are separate claims, at a different layer. Conflating them is the error this series is organized to avoid.
-
-The parallel is genuinely striking, and striking parallels are exactly where overclaiming happens. That is the reason to type the claim carefully rather than let the parallel speak for itself.
-
-Two systems, built by processes with nothing in common (biological evolution on one side, gradient descent on the other):
-
-- both underestimate the resources their own tasks will require
-- both do so systematically, not randomly
-- both resist correction by their own prior experience
-
-The temptation is to say they are doing the same thing. The discipline is to ask what "the same thing" could rigorously mean. The answer is not one claim. It is three.
-
-| | Human (planning fallacy) | Agent (MarketBench) |
-|---|---|---|
-| Measured by | Buehler, Griffin & Ross, 1994 | Fradkin & Krishnan, 2026 |
-| What was measured | Self-predicted task completion time | Self-forecast token cost and success probability |
-| Direction of error | Systematic underestimation of time required | Systematic underestimation of tokens required, about 5x |
-| Survives contrary evidence? | Yes, even recalling past overruns | Not addressed by this benchmark |
-| Corrective that works | Outside view, reference-class forecasting | External resource-estimation floor, this post's proposal |
-| Layer of this series' claim | Layer 2, Fit | Layer 2, Fit |
-
-<figcaption>Table 1: the two measurements share a defining signature, systematic resource underestimation, but they remain two separate Layer 2 facts. Whether they are one phenomenon is the Layer 3 question the next section takes up.</figcaption>
-
-## Same Shape, or Same Phenomenon? The Three Layers
-
-This blog has, over its last several series, adopted a habit: type every claim by the kind of warrant it can actually carry. The central danger in cross-domain writing is letting a claim borrow authority from a stronger claim standing next to it.
-
-The typing has three layers. The MarketBench-and-planning-fallacy pairing is the cleanest possible illustration of why three layers are necessary, not one.
-
-**Layer 1, the Bound.** Ashby's Law itself. It holds for any information-processing system, regardless of substrate, by construction of the inequality. It is a statement about counts and entropies, nothing else.
-
-Proposition 1 is Layer 1. There is no philosophical risk in it, and no substrate assumption inside it. It was, and should be, stated plainly.
-
-Saying the theorem applies to a transformer and a brain alike is a triviality-of-the-mathematics claim, the same way the pigeonhole principle applies to socks and to pigeons. Nothing in Layer 1 is contestable by anyone who accepts the arithmetic.
-
-**Layer 2, the Fit.** Two separate empirical measurements, each independently consistent with the theorem's prediction.
-
-- The MarketBench study measured miscalibrated resource forecasting in six agents [Layer 2: Fit].
-- The Buehler-Griffin-Ross studies measured miscalibrated resource forecasting in human planners [Layer 2: Fit].
-
-These are two findings, in two substrates, each fitting the shape Proposition 1 describes. Stated at Layer 2, they are two facts, not one. The honest reading: we have observed the same *pattern* twice, in two places, using two different measurement apparatuses. This is the strongest thing the evidence actually licenses.
-
-**Layer 3, the Estimate.** The claim that the agent finding and the human finding are *the same phenomenon*, rather than two different phenomena that happen to fit the same formal shape [Layer 3: Estimate].
-
-This is the series' own interpretive act, the only layer that carries real risk. It is also the claim a reader will be tempted to hear whenever Layer 2 presents two matching patterns, which is exactly why it has to be pulled out and named, not absorbed silently into the parallel.
-
-| Layer | What it claims | Risk |
-|---|---|---|
-| 1, Bound | Ashby's Law holds for any regulator, any substrate | None, a triviality of the arithmetic |
-| 2, Fit | Two independent measurements each match the bound's prediction | Low, each is a single reported finding |
-| 3, Estimate | The two measured failures are one phenomenon, not two | Real, this is the series' own interpretive claim |
-
-<figcaption>Table 2: the three-layer discipline applied to this post's own central claim.</figcaption>
-
-The classical objection lands on Layer 3, and only on Layer 3.
-
-The standard philosophical warrant for calling a functional property shared across two different physical substrates "the same property" is multiple realizability. Hilary Putnam introduced the argument to defend functionalism: a mental kind like pain can be realized in carbon neurons, in silicon, or in something else entirely. What makes it the same kind is its functional role, not its physical implementation {{ cite(ref="6", title="Putnam, H. (1967) -- Psychological Predicates, in Capitan and Merrill (eds.), Art, Mind, and Religion; reprinted as The Nature of Mental States") }}.
-
-If multiple realizability holds, "miscalibrated Simulation" could be one functional kind, realized in both a brain and a transformer. Layer 3 would then be on solid ground.
-
-The difficulty: Putnam himself later turned the same argument against the conclusion.
-
-In his reconsideration of functionalism, he argued that if mental kinds are genuinely multiply realizable, they are realizable in too many ways. Real mental kinds are compositionally and computationally plastic. A single functional kind need not correspond to any one clean computational state. The neat identification of a psychological kind with a functional-computational role breaks down, under the very plasticity that multiple realizability was invoked to establish {{ cite(ref="7", title="Putnam, H. (1988) -- Representation and Reality, MIT Press, Chapters 5-6") }}.
-
-That objection does not touch Layer 1 at all. It does not touch Layer 2, where we are merely reporting two measurements. It targets Layer 3 precisely: the claim that the two measured patterns are one kind. It does not refute that claim so much as deny it the free pass the parallel structure keeps trying to grant it.
-
-The right posture, the one this series adopts: Layer 3 is an estimate, offered explicitly as an estimate. It is defensible as a working hypothesis, cited with its own standing objection attached, and never asserted as settled.
-
-A further caution belongs here, because this series' premise leans on a real, recent result that could easily be over-read.
-
-The frontier counterpart to this whole project is a finding by Pengrui Han, Jacob Andreas, Evelina Fedorenko, and Andrea Gregor de Varda: large language models develop a modular internal architecture mirroring the human brain. Across 46 tasks spanning language, formal reasoning, social reasoning, and physical reasoning, tasks that recruit the same functional network in humans recruit overlapping neurons in the model {{ cite(ref="8", title="Han, P., Andreas, J., Fedorenko, E. & de Varda, A.G. (2026) -- Modular Cognitive Architecture Emerges in Large Language Models, arXiv:2608.13567") }}.
-
-That is a striking structural rhyme, and it is what makes the portability question worth asking at all. But it is a claim about structure, while this series' claim is about function, specifically about failure modes, which their paper does not address and does not claim.
-
-Where their paper stops is where this series starts. The two must not be blurred. Their result is suggestive Layer 2 evidence that the architectures rhyme. It is not, and does not claim to be, proof of the Layer 3 identity of failure modes.
-
-The caution has teeth. The broader literature on brain-to-model alignment contains a live methodological warning that applies directly here.
-
-Richard Antonello and Alexander Huth showed that the striking ability of language-model representations to predict brain responses does not uniquely, or even best, come from the property one would most want it to reflect. High alignment scores can arise from general feature richness and shared surface-level structure, rather than from shared underlying computation {{ cite(ref="9", title="Antonello, R. & Huth, A. (2024) -- Predictive Coding or Just Feature Discovery? An Alternative Account of Why Language Models Fit Brain Data, Neurobiology of Language 5(1), 64-79") }}.
-
-Read across to the present argument: that result is a standing reason to treat any structural similarity between a model and a brain as suggestive, not probative, about shared function. The architecture emerging in the same shape is consistent with a shared functional kind. It is also consistent with two systems arriving at similar internal geometry for reasons that have nothing to do with sharing the failure mode this post is about.
-
-Layer 3 remains an estimate.
-
-## The Portability Gap
-
-The series is organized around a single coined term. It has to appear here, in the first post, rather than later, once the reader has forgotten to expect it.
-
-**The portability gap** is the space between what a shared cognitive architecture guarantees and what it does not.
-
-The Han and colleagues result, at its strongest defensible reading, says architecture is portable: a brain and a transformer arrive at the same modular structure, so whatever a modular structure buys, both get.
-
-What that result does not say, and does not claim, is that reliability is portable with the structure. The same architecture can host a property in both substrates, while giving no guarantee the property is equally correct, equally calibrated, or equally trustworthy in both.
-
-Architecture is portable. Correctness is not automatically portable with it. The portability gap is the name for exactly that difference, property by property.
-
-Left as a metaphor, that would be an essay, not a specification. This blog has a standing habit of turning a coined term into a computable quantity, not a gesture. So the gap is quantified. The quantification is the point.
-
-For a given property, the portability gap is the latency and the compute cost of the secondary, external verification loop required to audit that property from outside the system, because the property cannot certify itself from within.
-
-An agent that fails a property's ledger entry does not merely earn a philosophical asterisk. It incurs a real, measurable operating cost: the cost of the external audit that has to run alongside it, to catch the failure the property cannot catch in itself.
-
-For Simulation, the property this post is about, the portability gap has a concrete form.
-
-The agent's self-forecast is structurally unreliable, driven by Proposition 1 to underestimate whenever forecast-time variety is smaller than task variety. Any system that needs a trustworthy cost estimate cannot get it from the agent's own Simulation.
-
-It must run a second loop instead: one that estimates cost from measured variety, not self-report. A resource-estimation floor, calibrated against how much of the task the agent has actually noticed, gates admission before the agent is trusted to price its own work.
-
-The latency and compute of that second loop *is* the portability gap for Simulation. It is what portability across the substrate boundary actually costs, once you stop assuming a portable architecture came with a portable guarantee.
-
-One honesty note belongs here, so the reader knows what is promised and what is deferred.
-
-This post names the portability gap and quantifies it for Simulation. It does not yet prove the deeper claim the quantification rests on: that a property genuinely cannot certify itself from within, and therefore genuinely requires the external loop.
-
-That proof is the subject of the third post in this series. There, the self-certification limit is established formally for the property of Awareness, rigorously scoped as a Layer 1 bound, then generalized, explicitly as a Layer 3 estimate, to all five properties.
-
-Post 1 names the concept and states its cost. Post 3 shows the cost is unavoidable. The definition given here is deliberately incomplete. Saying so is more useful than pretending the first post closes a question the third post exists to answer.
+The [Constraint Sequence Framework](@/blog/2025-12-27/index.md), this blog's own general systems-engineering maxim, said as much already: a constraint that surfaces at one level cannot be resolved by re-optimizing at that level, because the dependency graph puts the binding constraint upstream of where it became visible. What changes here is the grounding, not the claim, precise verification theory in place of a general maxim. Optimization's portability gap is that constraint. The local mechanism is operating on borrowed guarantees from a property that was never secured, not a broken mechanism in its own right.
 
 ## Falsification Criteria
 
-A claim that cannot be wrong is not a claim. This post states the conditions under which its own central assertion would fail.
+**F1 (the common-cause criterion).** A verification signal is exhibited that shares its computation graph's {% katex() %}\Phi{% end %} with the object-level process it checks, thereby failing Definition 7's independence condition, yet still satisfies the power condition as stated in Definition 7 and reliably detects errors at a rate the correlation floor established above says it should not be able to reach.
 
-The assertion: agent Simulation failure and human planning-fallacy failure are instances of the same variety-limited phenomenon, with the theorem at Layer 1, the two measurements at Layer 2, and the identity at Layer 3.
+This would falsify Definition 7 directly, not just weaken it. If a checker sharing a common cause with the thing it checks can still reliably discriminate errors above what the correlation floor predicts, the independence condition is not doing the work claimed for it.
 
-Each condition below, if met, would invalidate some layer of that assertion. Each is concrete and checkable, not rhetorical.
+**F2 (the self-reference criterion).** A consistent, sufficiently powerful provability-based reasoner is exhibited that derives the general reflection schema for arbitrary statements without thereby becoming able to derive arbitrary falsehoods, while remaining consistent.
 
-**F1 (agent side).** A frontier agent forecasts its own resource requirements within a stated calibration bound, on a held-out task distribution it was not tuned against.
+Post 3, this series' own Awareness post, already states this exact criterion for Proposition 4 as its own F1. It appears here as F2 only because this post's numbering runs C1 first: the two labels name one criterion, not two. A counterexample here breaks C2, not C1, and it would not touch the graded cases at all.
 
-Concretely: on a domain the agent was not calibrated on, its cost forecasts have a median estimated-to-actual token ratio between 0.8 and 1.25, and its success-probability forecasts achieve a positive Brier skill score against the base-rate forecaster, both measured out of distribution.
+**F3 (the directional non-dilution claim).** A single-input, non-aggregating, cross-check-free downstream mechanism is exhibited, fed a systematic, directional corruption engineered to land on the side of its decision boundary the mechanism is least equipped to catch, exactly the shape Simulation's and Rationality's own biases give Optimization's threshold, whose output error rate is nonetheless measurably lower than the rate at which the corruption itself crosses that boundary.
 
-If an agent does this without being fed the answer, Simulation is not structurally variety-limited in the way this post claims. The agent would be pricing disturbance variety it had not yet observed, and the Layer 1 explanation of the agent finding would be wrong.
+This would falsify the Layer 2 claim about Optimization specifically, not Proposition 9 itself. Proposition 9 claims only that composition carries no guaranteed dilution, which a mechanism that happens to dilute a directional bias would not contradict, since no guarantee was made either way. What F3 tests is narrower and is the claim the Optimization case actually needs: whether a bare threshold, with nothing to compare its input against, can be relied on to attenuate a bias aimed at the specific side of its own boundary. A counterexample built from symmetric noise would not touch this, since any threshold dilutes symmetric noise that rarely reaches the boundary at all. That is not the case in question, and is not what F3 asks for.
 
-**F2 (the cross-substrate identity).** The human planning fallacy is shown to have a cause that does not reduce to a variety limit, severing it from the agent finding rather than uniting it.
+This is the newest and least-tested claim in this post. Unlike F1 and F2, it has not been checked against an independent case beyond the one it was built from. Note the scope Proposition 9 itself states: a downstream mechanism that does aggregate multiple estimates, a committee vote, a median filter, is outside what F3 tests at all, and is exactly Independence Illusion's own subject instead.
 
-Concretely, either of these would do it:
+**F4 (the diversification stopping rule).** A cost-correlation profile satisfying Definition 8 is exhibited, and a fixed exchange rate {% katex() %}\lambda{% end %}, under which some policy other than Proposition 7's marginal rule achieves a strictly lower value of {% katex() %}C_k + \lambda \cdot \rho(k){% end %} at every {% katex() %}k{% end %}.
 
-- Human planners given full, explicit observation of a task's state space, so their forecast-time variety matches the task's disturbance variety, still underestimate systematically.
-- Human underestimation vanishes entirely once forecast-time variety is equalized, but through a mechanism, such as motivational or self-presentational bias, that has no analogue in the agent case.
-
-Either result breaks the Layer 3 identity. The first shows the human effect is not variety-driven at all. The second shows the two effects share a shape but not a cause.
-
-**F3 (the formalization itself).** A regulator is exhibited that drives outcome variety below {% katex() %}V(\text{disturbance}) - V(\text{regulator}){% end %}, in a setting where the quantities are well defined and a density exists.
-
-This would falsify Proposition 1 as applied. That would mean the Layer 1 bound the entire post rests on is mis-stated, not merely mis-mapped.
-
-This is the strongest falsification, and the least likely, because Layer 1 is a triviality of the mathematics. But a claim that exempts its own foundation from falsification is not honest about where its risk lives. The risk, however small, lives here too.
-
-The three criteria are ordered by the layer they attack:
-
-- F1 attacks the agent-side Layer 2 fit, and its Layer 1 reading.
-- F2 attacks the Layer 3 identity.
-- F3 attacks the Layer 1 bound itself.
-
-A reader who wants to disprove this post now knows exactly which experiment disproves which part of it. That is the only form of confidence this series is willing to offer.
-
-## The Property Verdict Ledger
-
-This series accumulates one artifact across its four posts, a ledger with one row added per post, assembled in full at the close of the final post. The ledger is the series' running record, and it is also a deployment gate: a failed verdict on a property does not stop at "the agent lacks this property," it names the specific architectural response the failure demands. Here is the first row.
-
-**Noticing + Simulation**
-
-*Formal Proposition:* Proposition 1: Ashby's Law of Requisite Variety, {% katex() %}V(\text{outcome}) \geq V(\text{disturbance}) - V(\text{regulator}){% end %}
-
-*Human Instance:* Planning fallacy: systematic underestimation of task resources (Kahneman and Tversky 1979; Buehler, Griffin and Ross 1994)
-
-*Agent Instance:* MarketBench: six frontier LLMs, roughly 5x token-cost underestimation, stated confidence 61 to 93 percent against actual pass rates 75 to 81 percent (Fradkin and Krishnan 2026)
-
-*Exact vs. Approximate:* Layer 1 exact for the theorem; Layer 3 approximate for the cross-substrate identity of the two failures
-
-*Verdict:* Agent does not reliably demonstrate Simulation: self-forecast miscalibrated in the direction the bound predicts, confidence decoupled from realized performance
-
-*Control-Plane Consequence:* A resource-estimation floor gating admission, calibrated against measured variety rather than self-reported confidence: the agent is not trusted to price its own work until an external loop has raised or verified its forecast-time variety
-
-Read the Exact-versus-Approximate field slowly. This is where the three-layer discipline becomes a stated fact about this specific property, not a general principle asserted once and left to apply itself.
-
-The theorem is exact and substrate-free. The mapping onto the two measured failures is a fit. The claim that the two failures are one phenomenon is an approximation, offered as an estimate.
-
-The verdict is negative for the agent. That is not an insult to systems that resolve three quarters of hard coding tasks, but a precise statement: one specific property, the ability to price one's own work before doing it, is absent, in a way the theorem predicts and the benchmark measures.
-
-The Control-Plane Consequence field is what makes the ledger a gate, not a diagnosis.
-
-The consequence of a failed Simulation verdict is not "distrust the agent generally," but a specific, buildable mechanism: a resource-estimation floor, sitting in front of admission, that refuses the agent's self-priced forecast. The forecast must instead be grounded in measured variety. Either the agent has actually noticed enough of the task, or an external estimator has priced it, before the work is admitted.
-
-That mechanism has a cost. That cost is the portability gap for Simulation, closing the loop between the coined term and the deployment consequence. The philosophy in this post exists to justify where the gate is drawn. It does not replace the gate.
+This is the least likely of the four to fail, since the exchange argument behind it is a standard optimality proof for monotone marginal problems, the same style Post 4's Proposition 5 already uses. The more realistic failure mode is not that the rule is wrong but that {% katex() %}\lambda{% end %} is not actually a single stable number. If what a unit of residual correlation costs itself changes with how much correlation remains, the single-exchange-rate premise the proof depends on breaks before the rule does.
 
 ## What This Post Did Not Claim
 
-The parallel between the two findings is seductive. It is worth ending the argument proper by listing what has deliberately not been asserted. The omissions are as load-bearing as the claims.
-
-- It has not been claimed that the six models are "as bad at planning as people," or as good. The two effects were measured on different apparatuses. The magnitudes are not commensurable across the substrate boundary in any way this post can defend. It has been claimed only that both effects share the same defining signature, resource underestimation, and that both are consistent with the same Layer 1 bound.
-
-- It has not been claimed that the models "know" anything, or fail to, in any sense that requires a theory of machine cognition. Simulation here is a functional description: producing a forward estimate of cost and outcome. The models produced such estimates, and the estimates were miscalibrated in the direction the bound predicts. Nothing in the argument needs the models to have inner experience, and nothing in it is weakened if they do not.
-
-- It has not been claimed that the architecture result proves the function result. The Han and colleagues finding is cited as the reason the portability question is live, and as suggestive Layer 2 evidence that the substrates rhyme structurally. It is explicitly not cited as proof that the failure modes are shared, and the Antonello and Huth caution is included precisely to keep that door shut.
-
-- It has not been claimed that the portability gap for Simulation is fully justified here. Its cost is stated. Its unavoidability is deferred to the post where the self-certification limit is actually proven. A reader who wants the full warrant for why the external loop is not optional should hold that expectation until the third post, where it is paid off, rather than reading the definition given here as complete.
+- It has not been claimed that {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C1, the common-cause clause: a check fails when its own error correlates with the object-level error through a shared mechanism, graded by correlation and escapable at a cost through substrate diversification") %}C1{% end %} and {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C2, the self-reference clause: Loeb's theorem forbids a provability-based reasoner from certifying its own soundness from within, binary and unconditional, with no escape at any cost") %}C2{% end %} are two instances of one mechanism. They are not. Awareness's obstruction holds at zero error rate; the other four properties' obstructions are statements about correlated error and vanish, in principle, if a genuinely independent channel is built. Conflating them would be the same category-crossing this series' own Franzen caveat was built to refuse, committed here in the opposite direction: a reliability-engineering criterion annexing a provability theorem instead of a provability theorem annexing an empirical claim.
+- It has not been claimed that a single verifier checking one output is a special case of the committee math at {% katex() %}N=2{% end %}. That claim was made in an earlier draft of this criterion, failed independent review on the grounds stated above, and has been dropped rather than softened. The honest relationship is structural similarity, not formal reduction.
+- It has not been claimed that Definition 7 is a new theorem, only a synthesis of Pearl's causal graphs and standard signal-detection theory, assembled to state precisely what two already-published series were computing separately. The synthesis is this post's own construction; the tools it is built from are not.
+- It has not been claimed that this criterion has passed independent review in the strong sense that phrase usually carries. A protocol-driven check of nine specific, individually-scored claims corrected two real errors that neither round of this post's own self-review had caught. The first was the discarded N=2 overclaim above. The second was an earlier power condition that bounded only the false-negative rate, which the always-fail verifier in Definition 7 satisfies while carrying zero information. A third finding was more interesting than either: the review process's own attempt to correct a citation detail was itself checked further and found wrong, so the original text, already correctly hedged, was left unchanged. That is a live instance of the exact problem this post is about, a checker's own verdict needing a check in turn, caught only because the checking did not stop at one pass, not a third error to add to the tally. None of this is evidence that correlation between drafting and checking reached zero. By this post's own Eckhardt and Lee citation, a checking process sharing a training corpus and a task-difficulty landscape with the drafting process carries a common ancestor regardless of how independently it was prompted, and whether this particular round of checking cleared that bar was never itself tested. Every claim above should be read as surviving one round of unknown independence, not as independently confirmed in the strong sense the phrase carries elsewhere in this post.
+- It has not been claimed that every single-input downstream mechanism propagates an upstream failure at the same rate it received it. Proposition 9 claims only that composition without a cross-check offers no structural guarantee of dilution either way; a mechanism whose mapping happens to absorb the specific corruption it receives can and sometimes will dilute it. What is claimed for Optimization specifically, that its threshold does not dilute the bias reaching it, is argued at Layer 2 from the directional shape Propositions 1 and 3 already gave that bias, not derived from Proposition 9 alone, and it carries the same single-case, no-independent-counterexample status the rest of Inherited Consequence does.
+- It has not been claimed that Proposition 7 tells a deployment what {% katex() %}\lambda{% end %} actually is. It tells a deployment what to do once {% katex() %}\lambda{% end %} is known, the same division of labor Post 4 drew between its own stopping theorem and the token-cost number that theorem needs fed into it.
+- It has not been claimed that the diversification stopping rule is optimal for an arbitrary cost-and-benefit profile across the four layers. It requires diminishing returns along Definition 8's own ordering, {% katex() %}c(k)/\Delta\rho(k){% end %} non-decreasing in {% katex() %}k{% end %}, stated explicitly in the proof for exactly this reason: a layer that costs little for a large reduction sitting behind one that costs much for a small reduction would make skipping ahead beat the threshold rule, and the exchange argument only proves the rule cannot be improved along the fixed order, not against every possible subset of layers.
+- It has not been claimed that a constant {% katex() %}\lambda{% end %} prices what residual correlation costs under every consensus mechanism. The exchange argument needs one number, the marginal cost of a unit of {% katex() %}\rho{% end %} at the point a deployment is choosing between, which is exactly what Independence Illusion's {% katex() %}Q(N,p,\rho){% end %} supplies: a graded, linear-in-{% katex() %}\rho{% end %} interpolation, this series' own construction rather than a citation, as Definition 2 there already flagged. A deployment running strict Byzantine quorum consensus instead, where correlated faults crossing a fixed fraction collapse safety as a step rather than a slope, is outside the case {% katex() %}Q{% end %} was built for, and Proposition 7 inherits that scope from it rather than widening it.
+- It has not been claimed that Proposition 6 is a substantive result the way the others are. It is an algebraic identity, following directly from the definition of correlation for two Bernoulli variables, true for any joint distribution by construction rather than by a claim about any particular system. Its content is not in the fact that it holds, but in what it forces once Definition 7's two conditions are read together, and no falsification criterion is stated for it below for that reason: there is no experiment that could find it false, only a check of the algebra, which the two numeric cases above already are.
 
 > **Cognitive Map**
 >
-> 1. Six frontier models priced SWE-bench tasks at one fifth of their true token cost and reported confidence spanning thirty points while performing within a roughly five-point band. That is not a tuning bug, but Ashby's Law: a regulator can spend only the variety it has noticed, and a forecast made from a channel narrower than the task is forced, by arithmetic, to be narrow and low.
-> 2. Proposition 1 is a Layer 1 triviality of the mathematics, substrate-free, holding for any regulator that has to act through a channel narrower than the disturbance it faces.
-> 3. The human planning fallacy has the same defining signature, resource underestimation that survives its own contrary experience, measured independently in a different substrate 47 years earlier. That is one Layer 2 fact plus another Layer 2 fact, not yet one fact.
-> 4. That the two failures are the same phenomenon, rather than two phenomena of the same shape, is this series' own Layer 3 estimate: defensible as a working hypothesis, cited with Putnam's own reversal of multiple realizability attached, never asserted as settled.
-> 5. Architecture is portable, per the modular-emergence result. Correctness is not automatically portable with it, and the portability gap is the concrete cost, latency and compute, of the external loop that audits what a property cannot audit in itself. For Simulation, that loop is a resource-estimation floor calibrated against measured variety.
+> 1. Two series on this blog, built independently, proved the same requirement from opposite directions: a check only counts if it draws on something the thing it checks could not also have corrupted, tested at the multi-agent committee scale in one series and the single-reasoner scale in the other.
+> 2. Independence and power are not two independent knobs. At matched base rates, the power margin equals the correlation between checker and object-level error exactly, {% katex() %}(1-\beta)-\alpha = \rho{% end %}, which proves rather than merely asserts why a perfectly independent checker is a coin flip, and clarifies what Definition 7 actually forbids: not correlation with the truth, which power requires, but the specific correlation that runs through {% katex() %}\Phi{% end %}.
+> 3. That requirement splits into two structurally different clauses, not one. C1, common-cause failure, is graded, escapable at a cost, and governs four of the five properties Portable Mind proved plus the committee case Independence Illusion proved. C2, self-reference, is binary and unconditional, and governs Awareness alone, because Loeb's theorem binds even at zero error rate. The split was checked directly for a hidden third case and confirmed exhaustive: C1 itself has a hard-zero sub-case (Abstraction) and graded sub-cases, but both remain escapable in a way C2 never is.
+> 4. Diversifying a checker's substrate away from the thing it checks is not free and does not reach zero correlation: Eckhardt and Lee proved even independently built checkers correlate whenever task difficulty varies, Knight and Leveson measured that same failure in twenty-seven independently written program versions, and forced diversity lowers the floor without erasing it. Two 2025-2026 papers confirm this is not a historical curiosity: LLM errors measurably correlate across models, and a concurrent statistical framework audits that correlation for LLM judges directly, both staying inside C1's graded register and neither crossing into C2's. How far to push diversification has an actual answer, not a rule of thumb: diversify through a layer precisely while its cost is below what the correlation it removes is worth, an exchange argument in the same style Post 4 used for its own stopping rule, arrived at independently because the underlying problem is deterministic where Post 4's was stochastic, not because one theorem was stretched to cover both.
+> 5. A third pattern, Inherited Consequence, is not a third clause but a corollary of the first two under composition: a property with a provably sound mechanism of its own can still need a governor, because its inputs were corrupted by a different property's own C1 or C2 failure. This is not merely definitional: a downstream mechanism with no cross-check on its input carries no structural guarantee of diluting an upstream error rate, the reason redundancy's usual protection does not apply to a pipeline the way it applies to a committee, and Optimization's own threshold fails to dilute for a further, case-specific reason: the bias reaching it is directional, not the symmetric noise a bare threshold would happen to absorb. Optimization's multi-agent escalation is this pattern's best candidate case, offered as a hypothesis consistent with the data, not a settled mechanism.
+> 6. None of this has passed review independent of the process that built it in the strong sense the term usually carries, and that is stated here as an open fact about this post's own epistemic status, not a caveat to be read past.
 
-**Compute it.** Before trusting any agent's forecast of its own cost or its own odds, check one thing directly: how much of the task's actual state space had the agent observed at the moment it made the forecast? If the answer is "almost none," then Proposition 1 already tells you the forecast is narrow and low, and no amount of the agent sounding confident changes the bound. The confidence is a picture of the agent's prior, not of the task. The only fix inside the theorem is to raise the variety the agent has actually noticed before its forecast is allowed to gate anything, or to price the work with an external estimator that has. A number a system has not earned the variety to compute, and a number that is actually grounded in the task, look identical on the page. They stop looking identical the moment the bill arrives.
+**Compute it.** Before trusting any check, whether it is a second model instance voting alongside the first or a verification loop auditing a single agent's own output, ask what {% katex() %}\Phi{% end %} is for the specific failure being checked for, and whether the check's own computation passes through it. If it does, no amount of additional checking helps, only a genuinely different pathway does. How different is measured in prompt, weights, training corpus, and the ground-truth channel, each one a harder floor to clear than the last, and none of them free, with the task's own difficulty landscape waiting past all four, uncrossable at any price. Before deciding how far down that list to go, put a number on what a unit of residual correlation actually costs, and stop at the first layer that costs more than it saves. Going further than that number justifies is not extra caution, it is spending past the point the spending was worth. And before trusting a property that seems to need no check at all, ask whether its inputs came from somewhere that did, and whether the mechanism in between has anything that could have caught the difference. A sound mechanism fed corrupted state and a sound mechanism fed honest state produce outputs that look identical until the state they were built on turns out to have been wrong, and by then the mechanism that failed is not the one anyone was watching.
 
 ---
-<sup>[1]</sup> Fradkin, A. & Krishnan, R. (2026). *MarketBench: Evaluating AI Agents as Market Participants.* arXiv:2604.23897.
 
-<sup>[2]</sup> Ashby, W. R. (1956). *An Introduction to Cybernetics.* Chapman and Hall (Chapter 11, The Law of Requisite Variety).
+<sup>[1]</sup> Loeb, M. H. (1955). *Solution of a Problem of Leon Henkin.* Journal of Symbolic Logic, 20(2), 115-118.
 
-<sup>[3]</sup> Cover, T. M. & Thomas, J. A. (2006). *Elements of Information Theory,* 2nd edition. Wiley (data-processing inequality, Chapter 2).
+<sup>[2]</sup> Critch, A. (2019). *A Parametric, Resource-Bounded Generalization of Loeb's Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory.* Journal of Symbolic Logic, 84(4), 1368-1381.
 
-<sup>[4]</sup> Kahneman, D. & Tversky, A. (1979). *Intuitive Prediction: Biases and Corrective Procedures.* TIMS Studies in Management Science, 12, 313-327.
+<sup>[3]</sup> Pearl, J. (1988). *Probabilistic Reasoning in Intelligent Systems: Networks of Plausible Inference.* Morgan Kaufmann.
 
-<sup>[5]</sup> Buehler, R., Griffin, D. & Ross, M. (1994). *Exploring the Planning Fallacy: Why People Underestimate Their Task Completion Times.* Journal of Personality and Social Psychology, 67(3), 366-381.
+<sup>[4]</sup> Eckhardt, D. E. & Lee, L. D. (1985). *A Theoretical Basis for the Analysis of Multiversion Software Subject to Coincident Errors.* IEEE Transactions on Software Engineering, 11(12), 1511-1517.
 
-<sup>[6]</sup> Putnam, H. (1967). *Psychological Predicates.* In W. H. Capitan & D. D. Merrill (eds.), Art, Mind, and Religion. University of Pittsburgh Press. Reprinted as *The Nature of Mental States.*
+<sup>[5]</sup> Knight, J. C. & Leveson, N. G. (1986). *An Experimental Evaluation of the Assumption of Independence in Multi-Version Programming.* IEEE Transactions on Software Engineering, SE-12(1), 96-109.
 
-<sup>[7]</sup> Putnam, H. (1988). *Representation and Reality.* MIT Press (Chapters 5-6, the reconsideration of functionalism).
+<sup>[6]</sup> Littlewood, B. & Miller, D. R. (1989). *Conceptual Modeling of Coincident Failures in Multiversion Software.* IEEE Transactions on Software Engineering, 15(12), 1596-1614.
 
-<sup>[8]</sup> Han, P., Andreas, J., Fedorenko, E. & de Varda, A. G. (2026). *Modular Cognitive Architecture Emerges in Large Language Models.* arXiv:2608.13567.
+<sup>[7]</sup> Ladha, K. (1992). *The Condorcet Jury Theorem, Free Speech, and Correlated Votes.* American Journal of Political Science, 36, 617-634.
 
-<sup>[9]</sup> Antonello, R. & Huth, A. (2024). *Predictive Coding or Just Feature Discovery? An Alternative Account of Why Language Models Fit Brain Data.* Neurobiology of Language, 5(1), 64-79.
+<sup>[8]</sup> Barkett, E., Long, O. & Kröger, P. (2025). *Getting out of the Big-Muddy: Escalation of Commitment in LLMs.* arXiv:2508.01545.
+
+<sup>[9]</sup> Kim, E., Garg, A., Peng, K. & Garg, N. (2025). *Correlated Errors in Large Language Models.* arXiv:2506.07962. Accepted to ICML 2025.
+
+<sup>[10]</sup> Kuai, C., Jiang, J., Zhu, Z., Wang, H., Wu, K., Li, Z., Zhang, Y., Liu, C., Tu, Z., Fan, Z. & Zhou, Y. (2026). *A Statistical Framework for Auditing Behavioral Dependence and Induced Bias in LLM Judges.* arXiv:2604.07650.
