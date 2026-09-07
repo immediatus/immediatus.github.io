@@ -65,6 +65,18 @@ The Situational Awareness Dataset is a benchmark of over thirteen thousand quest
 
 The shadow-mode pattern is the operational face of the same difficulty. A system asked to report on the state of its own reasoning produces a report whose reliability is not governed by how capable the system is at the task. It is governed by something else.
 
+## The Instrumentation a Real Version Would Need
+
+The case above states plainly that it is illustrative, and the honest next step is to say what a real version of it would have to measure, not just to note that this one does not.
+
+A live deployment would need the agent's own confidence and correctness claim logged as a sealed, immutable record, finalized before the independent ground-truth verdict for the same task is computed, and the reason is narrower than it might sound: the two steps here already run in strict sequence, the agent finishes and reports, then the check runs against whatever state its work actually left behind, so what has to be ruled out is not two systems racing across a network but a single one-directional leak, the self-report quietly absorbing something from the check it exists to be compared against, whether by revision after the fact or by continuing past the point it was supposed to be fixed.
+
+One such gap on one such task would prove nothing beyond itself. The pattern only becomes a rate worth trusting once it is measured across enough independent tasks, spanning more than one task family, that a reader can tell a real reconciliation gap from a run of bad luck.
+
+A third condition belongs here even though this post cannot fully discharge it: the ground-truth channel doing the checking has to clear an independence bar the series only states precisely in its fifth post, that a check counts as external only when it does not share the specific mechanism that produced the error it is checking for, not merely when it happens to sit outside the agent's own weights.
+
+None of this runs here. The case above remains exactly the illustration it was introduced as, and everything above is what would have to exist before it could be read as more than that.
+
 ## What Awareness Actually Is
 
 Before the theorem, a definition of terms, because the founding post used the word Awareness narratively and this series cannot afford to.

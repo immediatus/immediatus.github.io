@@ -1107,6 +1107,18 @@ This is the payoff the series was structured to deliver. Post 1 introduced the p
 
 This post sums the five loops into the total and states the number. In doing so it closes the arc. The coined term began as a name for a difference, became a per-property cost, and ends as a computable total. That total says, in a single fraction, what it costs to trust an agent's five cognitive properties when the agent cannot verify any of them from within.
 
+## What a Real Version of This Table Would Require
+
+Table 5 prices five loops as if their costs simply summed, and the honest next step is to say what a live measurement of that sum would actually have to do, not just to assert that the illustrative figures fall short of one.
+
+A real version would instrument a live control plane and log, per task, which of the five loops fired, what latency and compute each one actually spent, and whether the outcome was correct against a matched control run with that loop disabled, correctness checked the same way Post 3's reconciliation loop checks it, against ground truth the agent did not generate.
+
+A single pass comparing all loops enabled against all loops disabled cannot tell a reader anything about any one loop's own contribution, because the five loops are not independent switches: Post 2 already found Abstraction's re-derivation and Rationality's falsification sharing one substrate, and this post's own cascade traced a single undersimulation through all five stages in one run. The tool built for exactly this situation is a full factorial ablation across the thirty-two on/off configurations, run because the loops interact and not despite it: a factorial design measures interaction effects directly, where a single before/after comparison would only ever measure their sum.
+
+Those interactions have a name already established in this series rather than a new one this post would need to invent. Disabling an upstream loop does not remove the downstream property's own ability to run; per Post 5's Proposition 9, a downstream mechanism fed corrupted input carries no structural guarantee that it dilutes what it received, it simply computes over whatever state actually reaches it. A downstream loop's own marginal contribution, measured this way, will differ depending on which upstream loops were enabled when it ran, and a factorial ablation is what surfaces that difference instead of averaging it away.
+
+What such a study would produce, run honestly, is a real Pareto frontier of token-cost overhead against error-rate reduction, per property and for the loops in combination, in place of the single illustrative number Table 5 supplies. No such study has been run here. The 0.73 stays exactly what it was introduced as, an illustrative sum, for the reasons already given above.
+
 ## Which Loops Sit on the Critical Path
 
 The cost accounting above answers what these five loops spend. It does not answer when they have to spend it, and for a deployment serving a live caller, the two questions have different owners. A loop that adds fifteen percent to the compute bill is a budget conversation. A loop that adds itself to the caller's wait time is a user-experience conversation, and the two are not the same fifteen percent.
