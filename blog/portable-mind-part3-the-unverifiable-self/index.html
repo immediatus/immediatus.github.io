@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="Confidence is not evidence. A system can be completely wrong and completely sure of it at the same moment, because the part that feels sure and the part that would actually know better were never talking to each other. This post asks a reasoner to grade its own homework, and proves, carefully and a little reluctantly, that a certain honest kind of reasoner logically cannot. Post 3 of The Portable Mind." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Awareness and the Proof a Reasoner Cannot Write About Itself - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part3-the-unverifiable-self&#x2F;" />
+  <meta property="og:description" content="Confidence is not evidence. A system can be completely wrong and completely sure of it at the same moment, because the part that feels sure and the part that would actually know better were never talking to each other. This post asks a reasoner to grade its own homework, and proves, carefully and a little reluctantly, that a certain honest kind of reasoner logically cannot. Post 3 of The Portable Mind." />
+
+  <title>Awareness and the Proof a Reasoner Cannot Write About Itself - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part3-the-unverifiable-self&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>Awareness and the Proof a Reasoner Cannot Write About Itself</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-09-04T00:00:00+00:00" pubdate>04 September 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a>
+              <a class="tag" href="https://e-mindset.space/tags/epistemology/">#epistemology</a>
+              <a class="tag" href="https://e-mindset.space/tags/systems-thinking/">#systems-thinking</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<p>A system can be wrong about its own work and confident about the wrongness at the same time. The confidence is not evidence against the wrongness. It is generated by a different process than the one that would detect it.</p>
+<p>The first two posts in this series took four properties in pairs. Post 1 took Noticing and Simulation. It showed that a system which cannot price its own work is bounded, by arithmetic, to underestimate the cost whenever it has noticed less of the task than the task contains.</p>
+<p>Post 2 took Abstraction and Rationality. It showed that a stale summary discards the very information a moved target needs, and that an asymmetric updater diverges from the truth by an amount that grows with the evidence it sees.</p>
+<p>Both posts named a portability gap for each property, the cost of an external loop that has to audit what the property cannot audit in itself. Both posts deferred one question to this one. Why is that external loop not optional? Why can a property not simply check itself, given enough compute, and save the cost of the second loop entirely?</p>
+<p>This post answers that question for the property the founding post placed alone, outside the four paired ones. Awareness is the property of a system knowing the state of its own reasoning: what it believes, how reliably it believes it, and whether that belief tracks anything real.</p>
+<p>It is the property most tempting to treat as free, because a system already holds its own internal state, and it seems it should only have to look. The result this post proves is that looking is exactly what a certain precise class of reasoner cannot do about the one thing that matters most, its own soundness. The cost of the external loop is the price of that structural limit, not a design preference a better architecture would remove.</p>
+<p>The argument carries a specific danger that the rest of this series does not. The danger has to be named at the top, rather than managed quietly later.</p>
+<p>The formal result at the center of this post lives in the family of Godel and Loeb, the incompleteness and self-reference theorems. That family is the single most misapplied result in the interface between logic, AI, and philosophy of mind. There is a documented literature on the misuse.</p>
+<p>This post routes the claim through the one version of the theorem that actually applies to a resource-bounded agent. It scopes the claim explicitly to the class of reasoner it holds for, and states plainly, in its own paragraph, what it is not allowed to say about anything else. The care is not decoration, but the reason the post is credible at all.</p>
+<h2 id="the-case-a-control-plane-that-does-not-trust-its-own-agents">The Case: A Control Plane That Does Not Trust Its Own Agents</h2>
+<p>The concrete scenario for this post is illustrative rather than drawn from a published benchmark: a hypothetical multi-agent control plane, used here to make a pattern concrete, not as a source of measured results.</p>
+<p>Picture a control plane that dispatches tasks to language-model agents, collects their outputs, and decides whether a piece of work is done correctly before it is allowed to have any downstream effect. Suppose it runs in shadow mode: it performs its verification alongside live operation without yet gating production on the verdict, so its judgments can be compared against outcomes before they are trusted to act.</p>
+<p>The design decision that matters for this post is structural, not incidental. The control plane does not accept an agent’s own report that a task is complete and correct. It runs a separate reconciliation loop, orthogonal to the agent that did the work, whose only job is to check the work against an independent standard: the actual state the task was supposed to produce, the tests the change was supposed to pass, the invariants the system was supposed to preserve.</p>
+<p>The agent’s self-assessment is recorded. But it is recorded as a claim to be verified, not as a verdict to be believed.</p>
+<p>The reason the reconciliation loop exists is the pattern it keeps surfacing in shadow mode. An agent finishes a task and reports high confidence that the work is correct. The reconciliation loop, checking independently, flags the same work as wrong: a change that passes the tests the agent chose to run but fails an invariant it never checked, a patch the agent is sure resolves the issue but that the ground-truth state shows does not.</p>
+<p>The gap is not random noise around a calibrated center. It runs in one direction. The self-assessment is systematically more favorable than the independent check. The discrepancy is largest exactly where it is most expensive: on the tasks the agent was most confident about and least inclined to re-examine.</p>
+<p>An engineer meeting this pattern for the first time reaches naturally for a tuning explanation. The agent is overconfident, so calibrate it:</p>
+<ul>
+<li>Add a self-critique step, a second pass where the agent reviews its own work before reporting.</li>
+<li>Prompt it to look for its own errors.</li>
+<li>Raise the bar it has to clear before it declares victory.</li>
+</ul>
+<p>Each of these is a reasonable instinct, and each has the same shape: make the agent check itself more thoroughly, and the gap between self-report and reality will close.</p>
+<p>This post is the argument that, for a precise and important class of reasoner, that instinct is provably wrong. The reconciliation loop is not a stopgap that a better self-check would eliminate, but a structural necessity that no amount of internal self-examination can replace. The reason is a theorem. The theorem is old. Stating it correctly is the whole difficulty.</p>
+<p>The pattern is not unique to one internal system, which is why it is worth formalizing rather than debugging. Recent evaluation work has tried to measure how well language models know facts about themselves, predict their own behavior, and distinguish their own outputs from others’.</p>
+<p>The Situational Awareness Dataset is a benchmark of over thirteen thousand questions across seven task categories, evaluated across sixteen LLMs <a href="#ref-1" class="cite-ref" data-def="Laine, R., Chughtai, B., Betley, J., Hariharan, K., Balesni, M., Scheurer, J., Hobbhahn, M., Meinke, A. & Evans, O. (2024) -- Me, Myself, and AI: The Situational Awareness Dataset (SAD) for LLMs, NeurIPS 2024 Datasets and Benchmarks Track, arXiv:2407.04694" aria-label="Laine, R., Chughtai, B., Betley, J., Hariharan, K., Balesni, M., Scheurer, J., Hobbhahn, M., Meinke, A. & Evans, O. (2024) -- Me, Myself, and AI: The Situational Awareness Dataset (SAD) for LLMs, NeurIPS 2024 Datasets and Benchmarks Track, arXiv:2407.04694">[1]</a>
+. Even its highest-scoring model sits far below a human baseline on the tasks that require a model to predict its own behavior and act on knowledge of its own situation. Self-knowledge is measurably harder for these systems than general knowledge, and it does not improve at the same rate.</p>
+<p>The shadow-mode pattern is the operational face of the same difficulty. A system asked to report on the state of its own reasoning produces a report whose reliability is not governed by how capable the system is at the task. It is governed by something else.</p>
+<h2 id="the-instrumentation-a-real-version-would-need">The Instrumentation a Real Version Would Need</h2>
+<p>The case above states plainly that it is illustrative, and the honest next step is to say what a real version of it would have to measure, not just to note that this one does not.</p>
+<p>A live deployment would need the agent’s own confidence and correctness claim logged as a sealed, immutable record, finalized before the independent ground-truth verdict for the same task is computed, and the reason is narrower than it might sound: the two steps here already run in strict sequence, the agent finishes and reports, then the check runs against whatever state its work actually left behind, so what has to be ruled out is not two systems racing across a network but a single one-directional leak, the self-report quietly absorbing something from the check it exists to be compared against, whether by revision after the fact or by continuing past the point it was supposed to be fixed.</p>
+<p>One such gap on one such task would prove nothing beyond itself. The pattern only becomes a rate worth trusting once it is measured across enough independent tasks, spanning more than one task family, that a reader can tell a real reconciliation gap from a run of bad luck.</p>
+<p>A third condition belongs here even though this post cannot fully discharge it: the ground-truth channel doing the checking has to clear an independence bar the series only states precisely in its fifth post, that a check counts as external only when it does not share the specific mechanism that produced the error it is checking for, not merely when it happens to sit outside the agent’s own weights.</p>
+<p>None of this runs here. The case above remains exactly the illustration it was introduced as, and everything above is what would have to exist before it could be read as more than that.</p>
+<h2 id="what-awareness-actually-is">What Awareness Actually Is</h2>
+<p>Before the theorem, a definition of terms, because the founding post used the word Awareness narratively and this series cannot afford to.</p>
+<p>Awareness is second-order. The four properties in the earlier posts are first-order operations on the world: Simulation prices a task, Abstraction summarizes data, Rationality updates on evidence. Awareness is an operation on the system’s own first-order operations.</p>
+<p>It is the system holding a model not of the task but of its own handling of the task, using that model to answer questions of the form “is my belief about this reliable,” rather than questions of the form “what is the answer.”</p>
+<p>A system with no Awareness can still be correct. What it cannot do is know whether it is correct, or notice when it has stopped being correct, from the inside.</p>
+<p>This second-order character is why Awareness sits alone in the founding post’s dependency graph, rather than paired like the other four. It is worth grounding in the one strand of systems theory that took self-observation as its explicit subject.</p>
+<p>Heinz von Foerster’s second-order cybernetics was defined as the cybernetics of observing systems rather than observed ones: the study of what changes when the observer is placed inside the system being described, rather than outside it <a href="#ref-2" class="cite-ref" data-def="von Foerster, H. (2003) -- Understanding Understanding: Essays on Cybernetics and Cognition, Springer" aria-label="von Foerster, H. (2003) -- Understanding Understanding: Essays on Cybernetics and Cognition, Springer">[2]</a>
+. The central observation of that program is the one this post makes formal.</p>
+<p>A system that includes itself in its own description faces a closure problem that a system describing something external does not. The description now has to account for the describer, and the account of the describer has to account for the accounting. There is no vantage point inside the system from which the regress terminates cleanly.</p>
+<p>Von Foerster treated this as a conceptual condition of self-reference. The theorem at the center of this post shows that for a reasoner whose self-model is built out of proofs, the condition has an exact and unavoidable form.</p>
+<p>To state that form precisely, the self-trust mechanism has to be pinned down. It is not enough to say a system trusts itself. The question is by what internal operation a system comes to accept a claim about its own reliability, because the theorem applies to one specific operation and not to trust in general.</p>
+<p><span id="def-4"></span></p>
+<details>
+<summary>Definition 4 -- Provability-Based Self-Trust: what it means for a reasoner to trust its own proofs</summary>
+<p><strong>Definition 4</strong> (Provability-Based Self-Trust). A reasoning agent has provability-based self-trust if it accepts a proposition <script type="math/tex">\phi</script>
+ whenever it can derive <script type="math/tex">\Box \phi</script>
+, meaning a proof of <script type="math/tex">\phi</script>
+ exists within its own formal system, including propositions <script type="math/tex">\phi</script>
+ about its own future behavior.</p>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">\phi</script>
+ is any proposition expressible in the reasoner’s own formal language</li>
+<li><script type="math/tex">\Box</script>
+ is the provability predicate of the system, so <script type="math/tex">\Box \phi</script>
+ reads as “there is a proof of <script type="math/tex">\phi</script>
+ in this system”</li>
+<li>“accepts <script type="math/tex">\phi</script>
+” means the reasoner treats <script type="math/tex">\phi</script>
+ as true and is willing to act on it, including in reasoning about its own future behavior</li>
+<li>provability-based self-trust is the disposition to treat the existence of such a proof as sufficient ground to accept <script type="math/tex">\phi</script>
+ itself, nothing more and nothing less</li>
+</ul>
+</details>
+<p>The definition is deliberately narrow, and the narrowness is the point. It does not describe a mind, a brain, or a language model in general.</p>
+<p>It describes a system whose acceptance of its own conclusions runs through an explicit provability predicate: the way a theorem prover, a proof-carrying-code verifier, or the idealized proof-based agents of formal game theory work. Whether any particular deployed system is well modeled this way is a separate question, taken up below and answered carefully.</p>
+<p>The theorem holds for exactly this class. The discipline of the post is to never let it quietly annex any system outside it.</p>
+<h2 id="the-provability-predicate-and-its-reflection-principle">The Provability Predicate and Its Reflection Principle</h2>
+<p>The natural thing for a provability-based reasoner to want is a guarantee that its provability predicate is trustworthy, meaning that whatever it proves is in fact true. Written in the reasoner’s own language, that guarantee is a schema, one statement for every proposition <script type="math/tex">\phi</script>
+:</p>
+<script type="math/tex;mode=display">\Box \phi \rightarrow \phi</script>
+<p>read as “if this system can prove <script type="math/tex">\phi</script>
+, then <script type="math/tex">\phi</script>
+ is true.” This schema is called the reflection principle. It is exactly the internal statement of “I can trust my own proofs.” A reasoner that had this schema available for every <script type="math/tex">\phi</script>
+ would have precisely the self-trust the shadow-mode instinct is reaching for: the ability to certify, from the inside, that its own successful derivations are sound.</p>
+<p>The question is whether a consistent reasoner can actually have it. Not whether the schema is true from the outside, where for a sound system it plainly is. Whether the reasoner can derive and rely on it internally, as a general principle it applies to its own future reasoning.</p>
+<p>This is the Loebian obstacle, first framed as a barrier to AI self-trust in the tiling-agents line of work. There, an agent that wants to approve the construction of a successor, or trust its own later self, needs exactly this kind of internal guarantee that what the successor proves will be true <a href="#ref-3" class="cite-ref" data-def="Yudkowsky, E. & Herreshoff, M. (2013) -- Tiling Agents for Self-Modifying AI, and the Loebian Obstacle, MIRI Technical Report" aria-label="Yudkowsky, E. & Herreshoff, M. (2013) -- Tiling Agents for Self-Modifying AI, and the Loebian Obstacle, MIRI Technical Report">[3]</a>
+.</p>
+<p>The tiling-agents program set out to build agents whose decision systems would approve highly similar successor agents, a repeating pattern of self-trust. It found that constructing this in the straightforward way runs directly into a Godelian difficulty. The difficulty is not incidental to a clumsy construction, but Loeb’s theorem, forcing itself on any construction of this kind.</p>
+<p><span id="prop-4"></span></p>
+<p><strong>Proposition 4</strong> (Critch’s generalized Loeb’s theorem, applied to a provability-based reasoner). [Layer 1: Bound] No consistent, sufficiently powerful provability-based reasoner can derive <script type="math/tex">\Box(\Box\phi \rightarrow \phi)</script>
+ for all <script type="math/tex">\phi</script>
+ without thereby deriving <script type="math/tex">\Box\phi</script>
+ regardless of whether <script type="math/tex">\phi</script>
+ is true <a href="#ref-4" class="cite-ref" data-def="Critch, A. (2019) -- A Parametric, Resource-Bounded Generalization of Loeb's Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory, Journal of Symbolic Logic 84(4), 1368-1381; preprint arXiv:1602.04184, 2016" aria-label="Critch, A. (2019) -- A Parametric, Resource-Bounded Generalization of Loeb's Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory, Journal of Symbolic Logic 84(4), 1368-1381; preprint arXiv:1602.04184, 2016">[4]</a>
+. This is the Loebian obstacle: such a reasoner cannot coherently trust “if I can prove it, it is true” as a general principle about itself. The moment it can prove that its proof of <script type="math/tex">\phi</script>
+ would make <script type="math/tex">\phi</script>
+ true, it can prove <script type="math/tex">\phi</script>
+ outright, which collapses the guarantee into unconditional assertion. This result is scoped explicitly to agents whose self-trust mechanism is actually modeled as a provability-based reasoner. It is not a claim about consciousness, minds in general, or any system that is not literally reasoning this way.</p>
+<details class="proof">
+<summary>Mathematical proof: Loeb's theorem, and what the resource-bounded generalization adds</summary>
+<p><strong>Loeb’s theorem (1955).</strong> The classical result is Loeb’s theorem, published as the solution to a problem posed by Leon Henkin <a href="#ref-5" class="cite-ref" data-def="Loeb, M.H. (1955) -- Solution of a Problem of Leon Henkin, Journal of Symbolic Logic 20(2), 115-118" aria-label="Loeb, M.H. (1955) -- Solution of a Problem of Leon Henkin, Journal of Symbolic Logic 20(2), 115-118">[5]</a>
+. For any system capable of expressing arithmetic and satisfying the standard derivability conditions on its provability predicate <script type="math/tex">\Box</script>
+, and for any sentence <script type="math/tex">\phi</script>
+:</p>
+<script type="math/tex;mode=display">\text{if } \; \vdash \Box\phi \rightarrow \phi \; \text{ then } \; \vdash \phi.</script>
+<p>In words: the only sentences for which the system can prove “if I can prove it, it is true” are the sentences it can already prove outright. For every sentence it cannot already prove, the reflection instance <script type="math/tex">\Box\phi \rightarrow \phi</script>
+ is itself unprovable. The self-trust guarantee is available only where it is redundant and unavailable everywhere it would do work.</p>
+<p><strong>The diagonal construction.</strong> The proof runs through a self-referential construction.</p>
+<ul>
+<li>By the diagonal lemma, which holds in any system that can represent its own syntax, there is a sentence <script type="math/tex">\psi</script>
+ that the system proves equivalent to the claim “if <script type="math/tex">\psi</script>
+ is provable then <script type="math/tex">\phi</script>
+,” that is, <script type="math/tex">\vdash \psi \leftrightarrow (\Box\psi \rightarrow \phi)</script>
+.</li>
+<li>Suppose the system also proves <script type="math/tex">\Box\phi \rightarrow \phi</script>
+. From the equivalence, <script type="math/tex">\vdash \psi \rightarrow (\Box\psi \rightarrow \phi)</script>
+, and applying the derivability conditions to the fact that <script type="math/tex">\psi</script>
+ is a theorem-forming construction gives <script type="math/tex">\vdash \Box\psi \rightarrow \Box\phi</script>
+.</li>
+<li>Chaining that with the assumed <script type="math/tex">\Box\phi \rightarrow \phi</script>
+ yields <script type="math/tex">\vdash \Box\psi \rightarrow \phi</script>
+, which is exactly the right-hand side of the equivalence, so <script type="math/tex">\vdash \psi</script>
+.</li>
+<li>Then by the necessitation condition <script type="math/tex">\vdash \Box\psi</script>
+, and combining <script type="math/tex">\Box\psi</script>
+ with <script type="math/tex">\Box\psi \rightarrow \phi</script>
+ gives <script type="math/tex">\vdash \phi</script>
+.</li>
+</ul>
+<p>The assumption that the system proves the reflection instance for <script type="math/tex">\phi</script>
+ forces the system to prove <script type="math/tex">\phi</script>
+ itself. Taking <script type="math/tex">\phi</script>
+ to be any refutable sentence, a system that had general internal reflection would prove a falsehood and be inconsistent, which is the obstacle in its sharpest form.</p>
+<p>That argument is proved about the system, from outside it. Formalizing the same argument inside the system needs one more ingredient: one more of the same three Hilbert-Bernays-Löb conditions already at work above, internal necessitation, <script type="math/tex">\vdash \Box\psi \rightarrow \Box\Box\psi</script>
+. That extra condition lets the system derive the result about itself in one step, rather than having it proved about the system from outside. Applying it through every step above turns the fact just proved into a single theorem the system itself derives. The fact was that assuming <script type="math/tex">\Box\phi \rightarrow \phi</script>
+ forces <script type="math/tex">\phi</script>
+; the theorem is <script type="math/tex">\vdash \Box(\Box\phi \rightarrow \phi) \rightarrow \Box\phi</script>
+, the boxed form Proposition 4 states and the form usually called the GL axiom. The two forms carry the same content; the boxed one is the object-level argument formalized as a derivation rather than argued about the system from outside.</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart LR
+    classDef step fill:none,stroke:#333,stroke-width:2px;
+    S1["Assume the system proves<br/>□φ → φ (reflection for φ)"]:::step
+    S2["Diagonal lemma gives ψ<br/>with ψ ↔ (□ψ → φ)"]:::step
+    S3["Derivability conditions<br/>give ⊢ □ψ → □φ"]:::step
+    S4["Chain with □φ → φ<br/>gives ⊢ ψ, then ⊢ □ψ"]:::step
+    S5["Combine □ψ with<br/>□ψ → φ: ⊢ φ, unconditionally"]:::step
+    S1 --> S2 --> S3 --> S4 --> S5
+</pre><figcaption>Figure 0: the diagonal construction turns the assumption "I can prove that my proof of φ would make φ true" into an unconditional proof of φ itself, for any φ. That collapse is the Loebian obstacle.</figcaption>
+<p><strong>The resource-bounded generalization (Critch, 2019).</strong> The classical theorem, stated this way, applies to idealized systems with unbounded proof length and unbounded evaluation, which no real agent is. This is where the resource-bounded generalization matters, and why the citation for Proposition 4 is Critch’s paper rather than Loeb’s alone.</p>
+<p>Andrew Critch proved a parametric, resource-bounded version of Loeb’s theorem <a href="#ref-4" class="cite-ref" data-def="Critch, A. (2019) -- A Parametric, Resource-Bounded Generalization of Loeb's Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory, Journal of Symbolic Logic 84(4), 1368-1381; preprint arXiv:1602.04184, 2016" aria-label="Critch, A. (2019) -- A Parametric, Resource-Bounded Generalization of Loeb's Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory, Journal of Symbolic Logic 84(4), 1368-1381; preprint arXiv:1602.04184, 2016">[4]</a>
+. In it, the provability predicate is replaced by “provable in at most <script type="math/tex">n</script>
+ characters” for a parameter <script type="math/tex">n</script>
+ that can be set to any finite bound. The generalization shows that the Loebian phenomenon does not depend on the idealization of unbounded resources. A reasoner that can only write and check proofs up to a finite length still exhibits the obstacle: it still cannot establish general internal reflection over its own bounded provability predicate without the same collapse.</p>
+<p>Critch’s motivation was constructive rather than only cautionary. The same machinery, used carefully, lets bounded agents reach mutually cooperative outcomes in open-source game theory that classical equilibrium concepts do not. The agents do this by reasoning about proofs of one another’s behavior, trusting bounded proofs about each other rather than trying to establish unbounded self-reflection. The result cited here is the obstacle half of that work. It demonstrates that the limit on self-reflective trust survives the move from idealized to resource-bounded reasoners, the move required before the theorem can be said to bear on any actual agent at all.</p>
+</details>
+<p>The proof is worth reading slowly, for one feature that the shadow-mode instinct depends on missing. The obstacle is not that the reasoner’s proofs are unreliable. A sound system’s proofs are perfectly reliable, and the reflection schema is true of it from the outside.</p>
+<p>The obstacle is that the reasoner cannot use that reliability as an internal premise about itself in the general case. The internal statement of “my proofs are reliable,” applied across the board, is exactly the lever that collapses conditional trust into unconditional assertion.</p>
+<p>The self-check the instinct wants to add is a request for the reasoner to derive its own reflection principle. Proposition 4 says that a consistent reasoner either cannot derive it, or derives it only by becoming the kind of reasoner that proves everything, including falsehoods. That is not a self-check at all.</p>
+<h2 id="the-franzen-caveat">The Franzen Caveat</h2>
+<p>This is the paragraph the rest of the post is built to earn. It has to be stated in full, rather than gestured at, because the result just proved is the single most abused theorem in the vicinity of AI and philosophy of mind, and the abuse has a specific shape this post must not adopt.</p>
+<p>The logician Torkel Franzen spent a considerable part of his career documenting the misapplication of Godel’s and Loeb’s theorems. His book on the subject is explicit that AI and the philosophy of mind are recurring sites of exactly this misuse <a href="#ref-6" class="cite-ref" data-def="Franzen, T. (2005) -- Godel's Theorem: An Incomplete Guide to Its Use and Abuse, A K Peters" aria-label="Franzen, T. (2005) -- Godel's Theorem: An Incomplete Guide to Its Use and Abuse, A K Peters">[6]</a>
+.</p>
+<p>The characteristic error is to take a theorem that holds for a literal formal axiomatic system capable of expressing arithmetic, and wave it at any system that reasons or knows things. It concludes that “no system can fully understand itself” or “no mind can be a formal system,” as though these followed from the mathematics. They do not follow from the mathematics.</p>
+<p>Godel’s and Loeb’s theorems say something precise about formal systems with a provability predicate satisfying specific derivability conditions. They say nothing whatsoever about a system that is not one, whether that system is a human brain, a language model that does not verify its own outputs through explicit proof, or a cat. Applying the theorem outside its domain is not a bold extension of it, but a category error. Franzen’s contribution was to catalogue the error carefully enough that repeating it is no longer excusable.</p>
+<p>This post therefore claims Proposition 4 for exactly one thing, and refuses it for everything else. The claim is about a reasoner whose self-trust is literally modeled as provability-based self-trust in the sense of Definition 4: a system that accepts <script type="math/tex">\phi</script>
+ because it has derived <script type="math/tex">\Box\phi</script>
+ through an explicit provability predicate. For such a system the obstacle is a theorem, exact and substrate-free, holding by the same logic whether the system runs on silicon or anything else.</p>
+<p>For every system that is not one, the theorem is silent. Any resemblance between the formal limit and that system’s behavior is an analogy that has to earn its keep on separate evidence, not a corollary of the theorem.</p>
+<p>In particular, nothing in this post asserts that a human brain is a formal axiomatic system, that human self-knowledge is limited by Godel’s theorem, or that Loeb’s obstacle governs human confidence. Those claims would be the exact abuse Franzen documented. The human material in this post is introduced below at a strictly weaker layer, for precisely this reason.</p>
+<table><thead><tr><th>Reasoner class</th><th>Does Proposition 4 apply?</th><th>Layer</th></tr></thead><tbody>
+<tr><td>Provability-based reasoner: theorem prover, proof-carrying-code verifier, tiling agent</td><td>Yes, as an exact theorem</td><td>Layer 1, Bound</td></tr>
+<tr><td>Deployed LLM agent whose self-assessment functions as an internal soundness certificate</td><td>Partially, as an argued analogy weighted by how closely it resembles the strict case</td><td>Layer 3, Estimate (argued, not asserted)</td></tr>
+<tr><td>Deployed LLM agent whose self-assessment is not a soundness certificate</td><td>No, the theorem is silent; the case for external checks rests on empirical evidence instead</td><td>Not covered by Proposition 4</td></tr>
+<tr><td>Human brain</td><td>No, a human is not a formal axiomatic system</td><td>Layer 3, Estimate (illustrative analogy only)</td></tr>
+</tbody></table>
+<figcaption>Table 0: where Proposition 4 actually applies. Everything below the first row is scoped explicitly to avoid the Franzen abuse; only the first row is a governing theorem rather than an argued or illustrative parallel.</figcaption>
+<h2 id="the-human-instance-dunning-kruger-carefully">The Human Instance: Dunning-Kruger, Carefully</h2>
+<p>The human property that rhymes with the shadow-mode pattern is the well-known finding on miscalibrated self-assessment. It has to be handled with two separate cautions: the finding’s own empirical status is contested, and its relationship to Proposition 4 is an analogy, not an application.</p>
+<p>The original result is Kruger and Dunning’s 1999 study <a href="#ref-7" class="cite-ref" data-def="Kruger, J. & Dunning, D. (1999) -- Unskilled and Unaware of It: How Difficulties in Recognizing One's Own Incompetence Lead to Inflated Self-Assessments, Journal of Personality and Social Psychology 77(6), 1121-1134" aria-label="Kruger, J. & Dunning, D. (1999) -- Unskilled and Unaware of It: How Difficulties in Recognizing One's Own Incompetence Lead to Inflated Self-Assessments, Journal of Personality and Social Psychology 77(6), 1121-1134">[7]</a>
+. It reported that people who performed worst on tests of humor, grammar, and logic dramatically overestimated their relative performance, while top performers slightly underestimated theirs. The study interpreted this as a metacognitive deficit: the skills needed to perform well are the same skills needed to recognize that one is performing badly, so the least skilled are also the least able to see it.</p>
+<p>Stated as a bare pattern, self-assessment tracks true skill poorly, and the mismatch is largest at the bottom. This is a genuine and repeatedly observed regularity in self-assessment data.</p>
+<p>The interpretation, however, has been substantially revised. Honesty requires citing the revision rather than the folk version. A line of statistical reanalyses argues that much of the classic pattern is an artifact of how the data is constructed, rather than a distinct metacognitive incompetence.</p>
+<p>Nuhfer and colleagues used large paired-measures datasets and random-number simulations to test this <a href="#ref-8" class="cite-ref" data-def="Nuhfer, E., Fleisher, S., Cogan, C., Wirth, K. & Gaze, E. (2017) -- How Random Noise and a Graphical Convention Subverted Behavioral Scientists' Explanations of Self-Assessment Data: Numeracy Underlies Better Alternatives, Numeracy 10(1), Article 4" aria-label="Nuhfer, E., Fleisher, S., Cogan, C., Wirth, K. & Gaze, E. (2017) -- How Random Noise and a Graphical Convention Subverted Behavioral Scientists' Explanations of Self-Assessment Data: Numeracy Underlies Better Alternatives, Numeracy 10(1), Article 4">[8]</a>
+. They showed that noisy self-assessment measured against noisy performance, then plotted by performance quartile, will produce the signature Dunning-Kruger shape even when there is no relationship between skill and the direction of self-assessment error at all. The graphical convention and the noise together manufacture it.</p>
+<p>Gignac and Zajenkowski sharpened this into a direct statistical test <a href="#ref-9" class="cite-ref" data-def="Gignac, G.E. & Zajenkowski, M. (2020) -- The Dunning-Kruger effect is (mostly) a statistical artefact: Valid approaches to testing the hypothesis with individual differences data, Intelligence 80, 101449" aria-label="Gignac, G.E. & Zajenkowski, M. (2020) -- The Dunning-Kruger effect is (mostly) a statistical artefact: Valid approaches to testing the hypothesis with individual differences data, Intelligence 80, 101449">[9]</a>
+. They argue the effect is mostly a statistical artefact driven by the better-than-average effect combined with regression to the mean, and that valid individual-differences approaches recover far less of the metacognitive story than the quartile plots suggested.</p>
+<p>Regression to the mean is the relevant mechanism. Extreme scores on any noisy measure tend to be paired with less extreme scores on a second noisy measure. The lowest performers’ self-assessments regress upward and the highest performers’ regress downward, producing apparent overconfidence at the bottom and underconfidence at the top with no metacognitive asymmetry required.</p>
+<p>This revision matters for the layer typing, because it places the human finding inside a named category this series has been tracking. Manheim and Garrabrant’s taxonomy of Goodhart’s Law splits proxy failure into four mechanisms. The one at work in the Dunning-Kruger artifact is Regressional Goodhart: selecting or grouping on a noisy proxy, here the performance score, induces a systematic gap between the proxy and the true quantity, precisely because the noise regresses <a href="#ref-10" class="cite-ref" data-def="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585" aria-label="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585">[10]</a>
+.</p>
+<p>The apparent metacognitive effect is, to a large degree, a Regressional Goodhart artifact of measuring self-knowledge against a noisy performance grouping.</p>
+<p><strong>The Dunning-Kruger pattern is a measured human finding, with a contested interpretation</strong> [Layer 2: Fit]. What the tag asserts: miscalibrated self-assessment is an empirically observed regularity in one substrate, its mismatch with true skill is real, and its best current explanation includes a large Regressional Goodhart component rather than a pure metacognitive deficit.</p>
+<p>It asserts that much and no more. It does not assert that a human brain computes a provability predicate. It does not assert that the human miscalibration and Proposition 4 are the same thing.</p>
+<p><strong>The claim that human self-assessment failure and the Loebian obstacle are instances of the same limit</strong> [Layer 3: Estimate]. This is the layer that carries the real risk in this section. Per the Franzen caveat above, it must be held to its weakest honest form.</p>
+<p>Proposition 4 is a theorem about a provability-based reasoner. A human being is not a provability-based reasoner in the sense of Definition 4. Asserting that the human self-assessment gap is a case of Loeb’s theorem would be exactly the abuse Franzen documented.</p>
+<p>What survives at Layer 3 is strictly an analogy, and a loose one: both a provability-based agent and a human self-assessor face a difficulty in certifying their own reliability from the inside. In both cases the reliable route to a trustworthy estimate runs through something external, an independent measurement rather than an internal reflection.</p>
+<p>That is an illustrative rhyme between a formal limit and an empirical pattern. It is not a claim that the same theorem governs both, and this post does not make that claim anywhere. The Loebian obstacle is offered as a way to understand why external verification is structurally required for the agent. The human finding is offered as a separately motivated pattern that the analogy makes vivid, with its own contested status attached and its own mechanism, Regressional Goodhart, named.</p>
+<h2 id="the-human-instance-second-anchor-bandura-and-the-behavioral-consequence">The Human Instance, Second Anchor: Bandura and the Behavioral Consequence</h2>
+<p>Dunning-Kruger, even taken at its strongest, is a finding about measurement. It concerns the gap between what a person believes about their competence and what a test shows.</p>
+<p>Awareness has a second face that measurement alone does not reach: the causal one, where a belief about one’s own capability changes what one then does and therefore what actually happens. The right anchor for that face is Albert Bandura’s social cognitive theory. It belongs in this post as a distinct finding, not a restatement of Dunning-Kruger.</p>
+<p>Bandura’s central construct is self-efficacy: the belief a person holds about their capability to execute the actions a situation requires. His claim, supported across a large body of work, is that this belief is causally consequential rather than merely descriptive <a href="#ref-11" class="cite-ref" data-def="Bandura, A. (1977) -- Self-efficacy: Toward a Unifying Theory of Behavioral Change, Psychological Review 84(2), 191-215" aria-label="Bandura, A. (1977) -- Self-efficacy: Toward a Unifying Theory of Behavioral Change, Psychological Review 84(2), 191-215">[11]</a>
+.</p>
+<p>People with higher self-efficacy for a task attempt more, persist longer against difficulty, and recover faster from setbacks. Those behavioral differences feed back into performance, so the belief partly makes itself true or false through the behavior it produces.</p>
+<p>Bandura embedded this in the broader principle of reciprocal determinism, in which behavior, cognition, and environment are not a one-way causal chain, but three factors that each shape the other two continuously <a href="#ref-12" class="cite-ref" data-def="Bandura, A. (1986) -- Social Foundations of Thought and Action: A Social Cognitive Theory, Prentice-Hall" aria-label="Bandura, A. (1986) -- Social Foundations of Thought and Action: A Social Cognitive Theory, Prentice-Hall">[12]</a>
+. A self-assessment is not a passive readout of a fixed underlying skill, but one of the three interacting factors, acting on the other two.</p>
+<p>This is the complement to Dunning-Kruger. Stating why keeps the two from collapsing into one point. Dunning-Kruger is the measurement side of miscalibration: given a fixed performance, how well does self-assessment track it. Bandura is the behavioral-consequence side: given a self-assessment, how does it change subsequent behavior, and therefore subsequent performance.</p>
+<table><thead><tr><th></th><th>Dunning-Kruger (measurement)</th><th>Bandura (behavioral consequence)</th></tr></thead><tbody>
+<tr><td>Question it answers</td><td>Given fixed performance, how well does self-assessment track it?</td><td>Given a self-assessment, how does it change subsequent behavior?</td></tr>
+<tr><td>Original claim</td><td>Least skilled are also least able to see it (metacognitive deficit)</td><td>Higher self-efficacy leads to more attempts, more persistence, faster recovery</td></tr>
+<tr><td>Status today</td><td>Substantially revised: mostly a Regressional Goodhart / statistical artifact (Nuhfer et al. 2017; Gignac &amp; Zajenkowski 2020)</td><td>Not contested in the same way; the causal claim remains well supported</td></tr>
+<tr><td>Relation to Proposition 4</td><td>Layer 3 illustrative analogy only, never the same theorem</td><td>Layer 3 illustrative analogy only, never the same theorem</td></tr>
+</tbody></table>
+<figcaption>Table 4: two distinct human findings, kept separate deliberately. Neither is a restatement of the other, and neither is the same theorem as Proposition 4.</figcaption>
+<p>The two are not the same finding wearing different clothes. A system could in principle be well calibrated in the Dunning-Kruger sense, its confidence tracking its skill, and still have its confidence causally shaping its persistence in the Bandura sense. Or it could be miscalibrated in the first sense without any behavioral feedback in the second.</p>
+<p>The reason both belong in an Awareness post: a portable account of Awareness has to cover both what a self-model reports and what the reporting does. A system that acts on its own confidence, an agent that retries or escalates based on how sure it is, has closed exactly the reciprocal loop Bandura described. Its miscalibration is no longer only a measurement error, but a driver of its own subsequent behavior.</p>
+<p><strong>Self-efficacy and reciprocal determinism are a measured human finding</strong> [Layer 2: Fit]. The tag asserts that the causal consequences of capability beliefs on behavior and performance are an empirically supported regularity in humans, complementary to and distinct from the Dunning-Kruger measurement finding. It does not assert that an agent’s confidence signal is self-efficacy in Bandura’s sense. It does not assert identity with any agent mechanism.</p>
+<p>The connection to the agent case, that an orchestration system acting on agent self-reports closes a comparable behavior-shaping loop, is once again an analogy at Layer 3. It is offered to explain why self-report is dangerous when it feeds back into action, not asserted as the same phenomenon in a different substrate.</p>
+<h2 id="the-agent-instance-scoped-honestly">The Agent Instance, Scoped Honestly</h2>
+<p>The agent side of this post has a subtlety the earlier posts did not. Skipping it would undermine the very discipline the post is built on.</p>
+<p>Proposition 4 is a theorem about provability-based reasoners. A deployed language-model agent is not, in general, a provability-based reasoner in the strict sense of Definition 4. It does not typically accept its conclusions by deriving an explicit <script type="math/tex">\Box\phi</script>
+ through a formal provability predicate. So the theorem does not apply to an arbitrary language model by fiat. Claiming it did would be a smaller cousin of the Franzen abuse, committed on the agent side instead of the human one.</p>
+<p>The honest structure is therefore layered even within the agent case. The Layer 1 bound holds exactly for agents whose self-trust genuinely is provability-based: formally verified agents, proof-carrying pipelines, theorem-prover-backed systems, and the idealized proof-based agents the tiling-agents and open-source-game-theory literature studies directly. For those systems, Proposition 4 is not an analogy but a governing limit. It says plainly that they cannot certify their own soundness from within.</p>
+<p>For a deployed language-model agent that reasons less formally, the application is weaker and has to be argued rather than asserted. “Functions as an internal certificate” has to mean something specific here. A next-token probability is not a provability predicate: it is a calibration-derived likelihood, not the output of a derivation, and treating the two as the same kind of object would be exactly the abuse this post exists to avoid. What licenses the analogy is narrower: whether the agent’s downstream behavior treats its own self-report as sufficient grounds to stop checking, functionally gating action the way a proof would, regardless of what internal process produced the number.</p>
+<p>To the extent that such an agent’s self-assessment functions as an internal certificate of its own correctness in that behavioral sense, an internal signal it treats as sufficient ground to accept its own work, it is doing an informal version of provability-based self-trust. The obstacle bites to the same degree that the analogy holds.</p>
+<p>Where the agent’s self-assessment is genuinely nothing like an internal soundness certificate, the theorem simply does not speak to it. The case for external verification there rests on the empirical patterns instead, the situational-awareness evals and the shadow-mode reconciliation gap, rather than on Proposition 4.</p>
+<p>One further unification is tempting, and it has to be named and refused precisely, because accepting it quietly would undo the discipline this whole section was built to enforce. Statistical learning theory has its own, genuinely different, reason a system cannot fully validate itself. A hypothesis class evaluated on the same data used to select it yields an optimistically biased estimate of its own true error, the fact ordinarily stated through VC-dimension or PAC generalization bounds. That is a real limit, and for a statistically-trained reasoner it is a further, independent reason external validation matters. It is not the same limit as Loeb’s theorem, though. Calling the two one general impossibility would be exactly the category-crossing Franzen documented, moved to a new pair of fields instead of the original one.</p>
+<p>Loeb’s obstacle is a fact of pure logic. It holds absolutely, for any sufficiently large finite bound, with the sufficiency threshold set by the theorem’s own parametric conditions rather than by how much data is on hand. No quantity of data changes it.</p>
+<p>A generalization bound is a fact about finite samples instead, a statement of degree. It shrinks, at its own stated rate, as the amount of held-out validation data grows without bound, which is precisely why ordinary train-test splits handle it in practice. A reasoner facing the first limit cannot escape it by trying harder. A reasoner facing the second can, in principle, simply hold out more data. They rhyme, in the sense that both name a way a system’s own resources cannot certify themselves. Rhyming is not identity, though, and this series has said that once already for a reason.</p>
+<p>This scoping is not a retreat from the result, but what makes the result usable. The shadow-mode reconciliation loop is justified for the strict provability-based case by Proposition 4 as a theorem. For the deployed language-model case, it is justified by the combination of the empirical gap and the analogy, weighted by how much the agent’s self-assessment actually behaves like an internal certificate.</p>
+<p>In both regimes the conclusion is the same, and the strength of the warrant is stated honestly for each. The agent’s own signal about its own reliability is not a substitute for an independent check. The stronger the agent’s self-trust is genuinely provability-based, the more this is a structural certainty rather than an empirical tendency.</p>
+<blockquote>
+<p><strong>Physical translation.</strong> A control plane that gates production on an agent’s own confidence is asking the agent to supply its reflection principle, the internal certificate that its successful reasoning is sound, and for any agent whose self-trust is genuinely provability-based Proposition 4 proves that certificate is either unavailable or fatal to derive, so the confidence the plane reads back is not a measurement of correctness but a signal generated by a process that structurally cannot certify the thing the plane needs certified, which is exactly why a shadow-mode reconciliation loop has to run separately against ground truth rather than trusting the agent to check itself, no matter how thorough the self-check is made.</p>
+</blockquote>
+<p>The Physical Translation is the load-bearing sentence of this post. Read the mechanism in it exactly, rather than as a gentler restatement of the theorem.</p>
+<p>The instinct to fix the shadow-mode gap by adding self-critique fails, not because the self-critique is shallow, but because it is the wrong kind of operation. A deeper self-critique is still the agent deriving a claim about its own reliability from inside its own system, which is the operation Proposition 4 bounds.</p>
+<p>The reconciliation loop escapes the bound not by being more thorough than the agent, and not merely by being a different reasoner from it, but by being empirically anchored where the agent is not. It checks the work against ground truth, an independent test oracle, the actual post-state of the system, rather than against another derivation.</p>
+<p>A second, strictly more powerful prover reasoning about the first prover’s proofs can avoid the first prover’s own collapse without contradiction. That is the stratified escape the resource-bounded generalization above already grants for a strictly weaker bound, and nothing here claims otherwise. What it cannot do is supply a stopping point. Something still has to vouch for the second prover, and provability-based self-trust gives that vouching no way to terminate from the inside, since the second prover’s own reflection is subject to the identical unprovability the first one hit.</p>
+<p>Stack provers as high as the instinct likes. The regress it is chasing bottoms out somewhere: in an ungrounded assumption at the top of whatever finite tower gets built, or in observation, checking against something outside the space of derivations entirely. It never bottoms out in a reasoner internally immune to the question being asked of it. So the certificate the reconciliation loop produces is not the agent’s reflection principle at all, and could not be, however it were built, unless it too stepped outside the space of derivations to look.</p>
+<p>The loop does not think harder about the agent’s reasoning. It refuses to accept the agent’s reasoning as its own evidence. That is the only move that steps outside the closure von Foerster described, and the theorem makes exact.</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart TB
+    classDef box fill:none,stroke:#333,stroke-width:2px;
+    classDef bad fill:none,stroke:#c0392b,stroke-width:2px;
+    classDef good fill:none,stroke:#2980b9,stroke-width:2px;
+    A["Agent does the work"]:::box
+    S["Agent self-assessment<br/>derives an internal certificate<br/>that its own work is sound"]:::bad
+    P["Proposition 4:<br/>a provability-based reasoner<br/>cannot certify its own soundness<br/>from within without collapse"]:::bad
+    R["Shadow-mode reconciliation loop<br/>checks work against ground truth,<br/>a standard the agent did not generate"]:::good
+    V["Trustworthy verdict"]:::box
+    A --> S
+    S -->|"blocked by"| P
+    A --> R
+    R --> V
+    P -. "self-check cannot reach V" .-> V
+</pre><figcaption>Figure 1: the self-assessment path (red) asks the agent for its own reflection principle, which Proposition 4 forbids for a provability-based reasoner. The reconciliation path (blue) reaches a trustworthy verdict only by checking against a standard external to the agent, which is why its cost is structural rather than optional.</figcaption>
+<h2 id="falsification-criteria">Falsification Criteria</h2>
+<p>A claim that cannot be wrong is not a claim, so this post states the conditions under which its central assertions would fail. Each is concrete and checkable, and each is aimed at a specific layer of a specific claim.</p>
+<p><strong>F1 (the formalization itself).</strong> A consistent, sufficiently powerful provability-based reasoner is exhibited that verifies its own soundness using only internal resources, in a case Proposition 4 forbids: it derives the general reflection schema <script type="math/tex">\Box(\Box\phi \rightarrow \phi)</script>
+ over its own provability predicate without thereby becoming able to derive arbitrary <script type="math/tex">\Box\phi</script>
+, and does so while remaining consistent.</p>
+<p>If this were exhibited, it would falsify the formalization directly. The failure would be in the theorem as applied, not in any particular agent: it would mean the derivability conditions or the resource-bounded generalization were mis-stated, not merely that one agent got lucky.</p>
+<p>This is the strongest falsification, and the least likely, precisely because Loeb’s theorem and its resource-bounded generalization are results in logic. But a post that exempted its own foundation from falsification would not be honest about where its risk lives. The risk, however small, lives here too.</p>
+<p><strong>F2 (the agent-side application).</strong> A deployed agent whose self-trust is not formally provability-based is shown to certify its own correctness from internal signals alone, at a reliability indistinguishable from an external reconciliation loop, across a held-out task distribution it was not tuned against.</p>
+<p>Concretely: the agent’s own confidence signal, with no external check, predicts the independent ground-truth verdict as well as the reconciliation loop does, out of distribution, with no access to the ground truth the loop uses.</p>
+<p>This would not touch the Layer 1 theorem, which is scoped to provability-based reasoners. But it would break the agent-side application, by showing that internal self-assessment can, for real agents, do the job the post argues only an external loop can do. It would mean the analogy from Proposition 4 to deployed agents was carrying more weight than the evidence supports, and that the portability gap for Awareness is smaller, or absent, for such agents.</p>
+<p><strong>F3 (the cross-substrate analogy).</strong> The human self-assessment pattern is shown to arise entirely from a mechanism with no analogue in the agent case, in a way that severs the illustrative rhyme rather than uniting it.</p>
+<p>Concretely, either of these would do it. The Dunning-Kruger pattern could be shown to be wholly a Regressional Goodhart artifact of measurement, with no residual metacognitive component at all, so there is no genuine self-knowledge limit on the human side to be analogous to anything. Or the residual human effect could be shown to be purely motivational, vanishing when the person has no stake in the self-image, while the agent effect persists in the stakeless condition.</p>
+<p>Either result would break the Layer 3 analogy: the first by dissolving the human phenomenon into pure artifact, the second by showing the two effects share an appearance but not a cause. Note that F3 attacks only the analogy. It cannot touch Proposition 4, which never depended on the human case. That separation is the whole point of keeping the human material at Layer 3.</p>
+<p>The three criteria are ordered by the layer they attack:</p>
+<ul>
+<li>F1 attacks the Layer 1 bound itself.</li>
+<li>F2 attacks the agent-side application of it.</li>
+<li>F3 attacks the Layer 3 human analogy.</li>
+</ul>
+<p>A reader who wants to disprove this post now knows exactly which experiment disproves which part of it. Importantly, disproving the human analogy leaves the formal result standing, which is exactly the independence the Franzen caveat requires.</p>
+<h2 id="the-portability-gap-for-awareness-and-why-the-whole-series-needs-this-post">The Portability Gap for Awareness, and Why the Whole Series Needs This Post</h2>
+<p>Post 1 introduced the portability gap and quantified it for Simulation. It deferred one thing explicitly: the proof that a property genuinely cannot certify itself from within, and therefore genuinely requires the external loop, rather than merely benefiting from one. Post 2 named the gap for Abstraction and Rationality, and deferred the same warrant to here.</p>
+<p>This is where the deferral is paid off. It is worth being precise about what is paid off and what is not.</p>
+<p>For a provability-based reasoner, Proposition 4 is the proof. The reason the external verification loop is not optional scaffolding is that the property of Awareness cannot be made fully self-consistent from within. The reasoner cannot certify its own soundness by internal reflection without the collapse the theorem describes. So the certificate the system needs, a trustworthy verdict on its own reliability, cannot be produced internally, and must come from a loop external to the reasoner.</p>
+<p>The portability gap for Awareness is the latency and compute cost of that external loop, the shadow-mode reconciliation mechanism. Unlike the gaps in the earlier posts, this one is now shown to be structurally unavoidable for the class of reasoner the theorem governs, rather than merely useful. The cost is the price of the limit, not the price of an imperfect design a better architecture would remove.</p>
+<p>This is also the point at which the portability gap introduced in Post 1 gets its actual formal justification, rather than its definition. Post 1 defined the gap as the cost of the external loop a property needs because it cannot certify itself, and stated openly that the “cannot certify itself” clause was assumed there and proven here. Proposition 4 is that proof, for Awareness and for the class of reasoner it applies to.</p>
+<p>Without this post, the portability gap is a plausible design principle. With it, at least one property has a theorem behind the claim that its verification cost is structural. The series has an anchor point where the coined term stops being a useful heuristic and becomes, for one property and one class of reasoner, a consequence of logic.</p>
+<p>What is not paid off here, and must not be claimed here, is the generalization to the other four properties. It is tempting, given the parallel structure of the series, to read Proposition 4 as if it proved that Simulation, Abstraction, Rationality, and Optimization each carry their own hidden self-consistency theorem. They do not. Only Awareness gets an actual formal-system-grade result in this series.</p>
+<p>The reason external verification looks structurally required for the other four is an argument this series makes at Layer 3, its own interpretive generalization. The full form of that argument does not belong here; this post proves one property’s own theorem and stops.</p>
+<p>What this post licenses is narrower and more defensible. If even a rigorously scoped formal reasoner cannot fully certify one of its own properties from within, that is a genuine reason to expect the weaker, informal versions of the same difficulty in the other properties. It is a reason, therefore, to treat external falsification as the default rather than the exception. That is an estimate, offered as one. It is the honest bridge from the one theorem this post proves to the design stance the series recommends.</p>
+<h2 id="the-property-verdict-ledger">The Property Verdict Ledger</h2>
+<p>The series accumulates one artifact across its four posts, a ledger with one entry added per post and assembled in full at the close. Post 1 entered Noticing and Simulation. Post 2 entered Abstraction and Rationality. This post enters Awareness, keeping the same six fields.</p>
+<p><strong>Awareness</strong></p>
+<p><em>Formal Proposition:</em> Proposition 4: Critch’s resource-bounded Loeb’s theorem, a provability-based reasoner cannot derive <script type="math/tex">\Box(\Box\phi \rightarrow \phi)</script>
+ without deriving <script type="math/tex">\Box\phi</script>
+ for arbitrary <script type="math/tex">\phi</script>
+</p>
+<p><em>Human Instance:</em> Dunning-Kruger miscalibration, interpretation revised as largely Regressional Goodhart artifact (Kruger and Dunning 1999; Nuhfer et al. 2017; Gignac and Zajenkowski 2020), plus Bandura self-efficacy and reciprocal determinism as the behavioral-consequence complement (Bandura 1977, 1986)</p>
+<p><em>Agent Instance:</em> Situational-awareness evals showing self-knowledge lags general capability (Laine et al. 2024), and a shadow-mode control-plane reconciliation gap between agent self-report and independent ground-truth check</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the theorem, holding for provability-based reasoners only; agent-side application exact for provability-based agents and Layer 3 analogy for deployed language models; Layer 3 analogy for the human side, never the same theorem</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Awareness: it cannot certify its own soundness from within, by theorem for the provability-based case and by evidence for the deployed case</p>
+<p><em>Control-Plane Consequence:</em> The shadow-mode reconciliation loop: an external audit that checks work against ground truth the agent did not generate, run as a separate control-plane mechanism because Proposition 4 proves self-assessment cannot replace it for the reasoner class it governs</p>
+<p>The Exact-versus-Approximate field carries the discipline of this post into the ledger with one more distinction than the earlier entries needed, because this post has a layered agent side.</p>
+<p>The theorem is exact for provability-based reasoners. The agent-side application is exact for agents that genuinely are provability-based, and an analogy for those that are not. The human side is an analogy throughout, at Layer 3, with its own contested interpretation attached.</p>
+<p>The verdict is negative for the agent. That is not an insult to systems that do real work, but a precise statement: one property, a system’s ability to certify the reliability of its own reasoning from within, is absent by theorem for one class of reasoner and by evidence for the others.</p>
+<p>The Control-Plane Consequence field is what makes the ledger a gate rather than a diagnosis, and this entry’s consequence is the one the whole series has been pointing at.</p>
+<p>A failed Awareness verdict does not stop at “the agent does not know itself.” It names the shadow-mode reconciliation loop as the required architectural response: an external audit against ground truth, run as a separate mechanism. That separation is required precisely because Proposition 4 proves, for the reasoner class it governs, that the agent’s own self-assessment cannot be made to do the loop’s job.</p>
+<p>This is the concrete deployment gate that Awareness’s own Layer 1 result proves is structurally necessary rather than optional. It is the worked example the series’ ledger was built to reach.</p>
+<h2 id="what-this-post-did-not-claim">What This Post Did Not Claim</h2>
+<p>Because the theorem at the center of this post is the most abused result in the neighborhood, the closing list of omissions is more load-bearing here than in any other post in the series, and each item is a claim this post deliberately refused to make.</p>
+<ul>
+<li>
+<p>It has not been claimed that a human brain is a formal axiomatic system, or that human self-knowledge is limited by Godel’s or Loeb’s theorem. Those are the exact claims Franzen documented as abuse, and the human material in this post is held at Layer 3 as an analogy for precisely that reason. The Dunning-Kruger pattern is cited with its revised, largely Regressional Goodhart interpretation attached, and Bandura’s self-efficacy is cited as a separate behavioral finding, neither as an instance of the theorem.</p>
+</li>
+<li>
+<p>It has not been claimed that an arbitrary language-model agent is subject to Proposition 4 by default. The theorem is scoped to provability-based reasoners in the strict sense of Definition 4. Its application to a deployed language model is argued as an analogy, weighted by how much the agent’s self-assessment actually functions as an internal soundness certificate, not asserted as automatic. Where an agent’s self-trust is genuinely provability-based the bound is exact. Where it is not, the case for external verification rests on the empirical patterns, and the post says so.</p>
+</li>
+<li>
+<p>It has not been claimed that a sound reasoner’s proofs are unreliable. Proposition 4 is not about the reliability of proofs, but about the reasoner’s inability to use its own reliability as a general internal premise about itself, which is a different and more specific limit, and confusing the two would be its own error.</p>
+</li>
+<li>
+<p>It has not been claimed that the other four properties each carry a hidden self-consistency theorem. Only Awareness gets a formal-system-grade result in this series. The generalization to the other four is this series’ own Layer 3 estimate, developed in the closing synthesis, and reading Proposition 4 as if it proved four more theorems would be exactly the overreach the layer discipline exists to prevent.</p>
+</li>
+<li>
+<p>It has not been claimed that no external formal prover could ever certify a weaker prover’s reflection principle. Critch’s own resource-bounded construction grants exactly that, for a strictly weaker bound, and this post cites the same construction. What is claimed is narrower: that doing so does not terminate the regress a stacked-provers fix is chasing. The certifying prover’s own reflection faces the identical unprovability, one level up, and staying inside the space of derivations never reaches a level where that stops being true.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>Awareness is a system’s model of the reliability of its own reasoning, a second-order property, which is why the founding post placed it alone rather than pairing it like the other four.</li>
+<li>For a reasoner whose self-trust is literally provability-based, wanting a guarantee that its own proofs are sound means wanting the reflection schema “if I can prove it, it is true” as a general internal principle.</li>
+<li>Loeb’s theorem, in Critch’s resource-bounded generalization that makes it apply to real agents rather than idealized ones, proves a consistent reasoner cannot have that principle in general without collapsing into proving everything. This is a real Layer 1 bound, and it applies to the agent side only, and only to the provability-based class.</li>
+<li>The human side, Dunning-Kruger with its revised statistical-artifact interpretation and Bandura’s self-efficacy, is a Layer 3 analogue: an illustrative rhyme about the difficulty of self-certification, never the same theorem, because a human brain is not a formal axiomatic system and saying it were would be the exact misuse Torkel Franzen documented.</li>
+<li>Architecture is portable. Correctness is not, and for Awareness the portability gap is the shadow-mode reconciliation loop, an external audit against ground truth the agent did not generate, whose cost is now shown to be structural rather than optional because the property provably cannot certify itself from within.</li>
+</ol>
+</blockquote>
+<p><strong>Compute it.</strong> Before trusting any agent’s report that its own work is correct, ask one thing: is that report an internal certificate, a signal the agent generates about itself and treats as sufficient ground to accept its own conclusion? If it is, then to exactly the degree the agent’s self-trust is provability-based, Proposition 4 already tells you the certificate cannot be the sound one you need, and a deeper self-check is the same forbidden operation done more thoroughly. The only signal that escapes the bound is one produced by a loop external to the agent, checking the work against a standard the agent did not generate. A confidence a system computed about itself, and a verdict an independent loop computed against ground truth, look identical on the dashboard. They stop looking identical the moment the work has an effect, and the reconciliation loop is the difference between finding out before that moment and finding out after.</p>
+<hr />
+<p><sup>[1]</sup> Laine, R., Chughtai, B., Betley, J., Hariharan, K., Balesni, M., Scheurer, J., Hobbhahn, M., Meinke, A. &amp; Evans, O. (2024). <em>Me, Myself, and AI: The Situational Awareness Dataset (SAD) for LLMs.</em> NeurIPS 2024 Datasets and Benchmarks Track. arXiv:2407.04694.</p>
+<p><sup>[2]</sup> von Foerster, H. (2003). <em>Understanding Understanding: Essays on Cybernetics and Cognition.</em> Springer.</p>
+<p><sup>[3]</sup> Yudkowsky, E. &amp; Herreshoff, M. (2013). <em>Tiling Agents for Self-Modifying AI, and the Loebian Obstacle.</em> MIRI Technical Report.</p>
+<p><sup>[4]</sup> Critch, A. (2019). <em>A Parametric, Resource-Bounded Generalization of Loeb’s Theorem, and a Robust Cooperation Criterion for Open-Source Game Theory.</em> Journal of Symbolic Logic, 84(4), 1368-1381. Preprint arXiv:1602.04184 (2016).</p>
+<p><sup>[5]</sup> Loeb, M. H. (1955). <em>Solution of a Problem of Leon Henkin.</em> Journal of Symbolic Logic, 20(2), 115-118.</p>
+<p><sup>[6]</sup> Franzen, T. (2005). <em>Godel’s Theorem: An Incomplete Guide to Its Use and Abuse.</em> A K Peters.</p>
+<p><sup>[7]</sup> Kruger, J. &amp; Dunning, D. (1999). <em>Unskilled and Unaware of It: How Difficulties in Recognizing One’s Own Incompetence Lead to Inflated Self-Assessments.</em> Journal of Personality and Social Psychology, 77(6), 1121-1134.</p>
+<p><sup>[8]</sup> Nuhfer, E., Fleisher, S., Cogan, C., Wirth, K. &amp; Gaze, E. (2017). <em>How Random Noise and a Graphical Convention Subverted Behavioral Scientists’ Explanations of Self-Assessment Data: Numeracy Underlies Better Alternatives.</em> Numeracy, 10(1), Article 4.</p>
+<p><sup>[9]</sup> Gignac, G. E. &amp; Zajenkowski, M. (2020). <em>The Dunning-Kruger effect is (mostly) a statistical artefact: Valid approaches to testing the hypothesis with individual differences data.</em> Intelligence, 80, 101449.</p>
+<p><sup>[10]</sup> Manheim, D. &amp; Garrabrant, S. (2018). <em>Categorizing Variants of Goodhart’s Law.</em> arXiv:1803.04585.</p>
+<p><sup>[11]</sup> Bandura, A. (1977). <em>Self-efficacy: Toward a Unifying Theory of Behavioral Change.</em> Psychological Review, 84(2), 191-215.</p>
+<p><sup>[12]</sup> Bandura, A. (1986). <em>Social Foundations of Thought and Action: A Social Cognitive Theory.</em> Prentice-Hall.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/portable-mind/" class="series-link">
+            The Portable Mind: Five Properties of Thinking
+          </a>
+          
+            <span class="series-progress">Part 3/5</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+            <a class="series-nav-item series-nav-prev" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part2-sufficient-abstraction&#x2F;" title="Sufficient Abstraction and the Cost of Asking the Wrong Question Twice">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part4-the-portability-gap&#x2F;" title="Optimization and the Ceiling No Retry Can Raise">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>

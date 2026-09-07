@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="A summary that was perfect yesterday can be perfectly wrong today, and nothing about the summary itself has to change for that to happen. The world moved. The old answer just kept insisting it was still the right one. This post is about that particular stubbornness, and its quieter cousin: believing the evidence that agrees with you a little more than the evidence that doesn&#x27;t. Post 2 of The Portable Mind." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Sufficient Abstraction and the Cost of Asking the Wrong Question Twice - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part2-sufficient-abstraction&#x2F;" />
+  <meta property="og:description" content="A summary that was perfect yesterday can be perfectly wrong today, and nothing about the summary itself has to change for that to happen. The world moved. The old answer just kept insisting it was still the right one. This post is about that particular stubbornness, and its quieter cousin: believing the evidence that agrees with you a little more than the evidence that doesn&#x27;t. Post 2 of The Portable Mind." />
+
+  <title>Sufficient Abstraction and the Cost of Asking the Wrong Question Twice - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part2-sufficient-abstraction&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>Sufficient Abstraction and the Cost of Asking the Wrong Question Twice</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-08-30T00:00:00+00:00" pubdate>30 August 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a>
+              <a class="tag" href="https://e-mindset.space/tags/epistemology/">#epistemology</a>
+              <a class="tag" href="https://e-mindset.space/tags/systems-thinking/">#systems-thinking</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<p>An abstraction that was exactly right yesterday can be exactly wrong today without changing at all. Nothing has to happen to the abstraction. The world moves. The question moves with it. A summary that lost nothing important about the old question quietly starts losing everything important about the new one.</p>
+<p>The first post in this series took Noticing and Simulation together. It showed that a system which cannot say what a task will cost it is bounded, by arithmetic, to underestimate that cost whenever it has noticed less of the task than the task contains. This post takes the next two properties in the founding post’s dependency order, Abstraction and Rationality. Each has the same structure: a property that is genuinely useful, genuinely load-bearing, and genuinely capable of failing in a direction the mathematics predicts before any experiment is run. Abstraction fails by holding a summary fixed after the thing it summarized has moved. Rationality fails by updating on evidence with a thumb on the scale.</p>
+<p>Both failures were catalogued in humans decades before there were agents to fail the same way. Both were measured in agents in recent frontier studies. The discipline of this series is to say exactly how much that parallel licenses and no more.</p>
+<p>Abstraction and Rationality belong in one post because they share a failure surface. An abstraction decides what a reasoner is allowed to see. Rationality decides what the reasoner does with what it sees. A reasoner that has abstracted away the evidence that would change its mind cannot update on that evidence, no matter how sound its updating rule is. A reasoner with a biased updating rule will corrupt even a perfect abstraction. The two properties fail into each other. That is the reason the founding post placed them adjacent in the dependency graph, and the reason this post treats them as one argument in two halves.</p>
+<h2 id="the-case-agents-that-kept-using-the-broken-tool">The Case: Agents That Kept Using the Broken Tool</h2>
+<p>In June 2026, Dongsheng Zhu and colleagues published a benchmark built to test something specific <a href="#ref-10" class="cite-ref" data-def="Zhu, D., Ma, X., Shen, Y., Li, X., Zhao, Y., Wang, S., Yan, L. & Yin, D. (2026) -- When Tools Fail: Benchmarking Dynamic Replanning and Anomaly Recovery in LLM Agents, arXiv:2606.05806" aria-label="Zhu, D., Ma, X., Shen, Y., Li, X., Zhao, Y., Wang, S., Yan, L. & Yin, D. (2026) -- When Tools Fail: Benchmarking Dynamic Replanning and Anomaly Recovery in LLM Agents, arXiv:2606.05806">[10]</a>
+: does an LLM agent notice that its tools have stopped working and adapt, or does it keep executing a strategy the environment has already invalidated? Their benchmark, ToolMaze, subjects agents to two kinds of failure:</p>
+<ul>
+<li>explicit tool breakdowns, where a call visibly errors</li>
+<li>implicit semantic failures, where a tool returns output that is corrupted or stale but still well-formed enough to look usable</li>
+</ul>
+<p>The question is whether the agent re-plans against the new reality or persists with the plan it formed before the reality changed.</p>
+<p>Performance degraded broadly once tools began to fail. The sharpest damage came from the implicit failures, the ones that do not announce themselves.</p>
+<p>The Perturbation Recovery Rate, the fraction of runs in which an agent recovers a correct outcome after a perturbation, dropped by roughly 37 percent under implicit semantic failures compared to explicit, announced ones. This was driven by the agents’ tendency to over-trust corrupted output rather than re-examine it. Complex task structures made it worse, trapping agents in unproductive retry loops: the same strategy, reissued, against an environment for which it had stopped being appropriate.</p>
+<table><thead><tr><th>ToolMaze, key numbers</th><th>Value</th></tr></thead><tbody>
+<tr><td>Perturbation Recovery Rate drop, implicit failures</td><td>about 37%</td></tr>
+<tr><td>Fault-tolerance scaling vs. task-execution scaling</td><td>about 3.66x slower</td></tr>
+</tbody></table>
+<p>Scale did not rescue this. Agentic fault tolerance improved with model size about 3.66 times more slowly than basic task execution improved with size. That says the deficit is not a capability gap the next larger model closes. It is something structural in how a held plan meets a changed world.</p>
+<p>That shape is the subject of the Abstraction half of this post. The agent formed a working summary of its situation, a plan and a set of expectations about what its tools return. It kept acting through that summary after the situation moved out from under it. The retry loop is the operational signature: more computation spent on a strategy whose fit to the current target has already lapsed, with no mechanism to detect the lapse from inside the strategy itself.</p>
+<p>The same failure was measured on the human side of the same interface. In April 2025, Jiqun Liu, Jamshed Karimnazarov, and Ryen W. White ran a crowdsourcing study of 450 people using LLM-enabled chat search across six exploratory decision tasks <a href="#ref-1" class="cite-ref" data-def="Liu, J., Karimnazarov, J. & White, R.W. (2025) -- Trapped by Expectations: Functional Fixedness in LLM-Enabled Chat Search, arXiv:2504.02074" aria-label="Liu, J., Karimnazarov, J. & White, R.W. (2025) -- Trapped by Expectations: Functional Fixedness in LLM-Enabled Chat Search, arXiv:2504.02074">[1]</a>
+. They found that participants dragged the shape of their old tools along with them.</p>
+<p>People with heavy virtual-assistant experience favored directive, command-shaped prompts, the interaction pattern those assistants had trained. That pattern reinforced a functional fixedness that kept them from using the new system’s actual range. They had abstracted the tool as “a thing you issue commands to,” an abstraction carried intact from a setting where it had been sufficient, reused where it discarded most of the available capability.</p>
+<p>The telling detail is what broke the trap. Not the tool being good, but the tool visibly failing to match the summary the user carried. When a response did not fit the command-shaped abstraction, participants adapted, generating more detailed and more linguistically varied prompts. Met expectations left the fixedness in place. Unmet expectations broke it.</p>
+<p>Hold that shape. The rest of the Abstraction half of this post is about it and nothing else. A summary that fit the old target is carried forward. It keeps being applied to a new target it no longer fits, on the agent side as a retried plan and on the human side as a command-shaped prompt.</p>
+<p>The only thing that reliably dislodges it is direct evidence that it has stopped fitting, evidence strong enough to survive the very filtering the summary imposes. That is functional fixedness stated operationally. It has an exact form in the theory of sufficient statistics.</p>
+<h2 id="what-abstraction-actually-is">What Abstraction Actually Is</h2>
+<p>Before the theorem, a definition, because the founding post used the word “abstraction” narratively and this series cannot.</p>
+<p>Abstraction is the act of replacing raw data with a summary that is meant to preserve what matters and discard what does not. Three examples of the same move:</p>
+<ul>
+<li>A stack trace becomes “a null-pointer dereference in the caching layer.”</li>
+<li>A repository becomes “a Django app with a custom ORM patch.”</li>
+<li>A conversation becomes “the user wants a restaurant recommendation.”</li>
+</ul>
+<p>In every case a large object is compressed to a small one. The compression is useful exactly to the degree that the small object carries forward everything the reasoner will need, and drops only what it will not.</p>
+<p>The word doing the hidden work in that sentence is “need.” Need is always need relative to a target. An abstraction is not sufficient or insufficient in the abstract. It is sufficient or insufficient only for a particular thing the reasoner is trying to predict or decide.</p>
+<p>The summary “the user wants a restaurant recommendation” is sufficient for the target “which cuisine to suggest.” It is useless for the target “is the user actually asking about dietary restrictions they are embarrassed to name.” Same raw conversation, same summary, two targets: one the summary serves, one it silently destroys.</p>
+<p>This is the whole mechanism of functional fixedness in one observation. Fixedness is neither stubbornness nor stupidity. It is the reuse of an abstraction that was correctly sufficient for one target, on a second target for which its sufficiency was never established and generally does not hold. To make that precise, we need to say exactly what sufficiency means. Statistics has said it exactly since 1922.</p>
+<h2 id="sufficiency-when-an-abstraction-loses-nothing-that-matters">Sufficiency: When an Abstraction Loses Nothing That Matters</h2>
+<p>The idea of a sufficient statistic comes from classical statistics, formalized by Ronald Fisher in the 1920s. Fisher asked a narrower question than this post does: given a batch of data and a family of distributions, which summaries of the data lose no information relevant to estimating the distribution’s parameters?</p>
+<p>This post keeps Fisher’s exact mathematical structure. It generalizes only the target, from “a parameter” to “anything a reasoner cares about predicting or deciding.” That is the same generalization machine learning makes when it talks about a sufficient representation rather than a sufficient statistic.</p>
+<p><span id="def-2"></span></p>
+<details>
+<summary>Definition 2 -- Sufficiency: when an abstraction loses nothing that matters</summary>
+<p><strong>Definition 2</strong> (Sufficient Abstraction). An abstraction <script type="math/tex">A</script>
+ of raw data <script type="math/tex">D</script>
+ is sufficient for a target <script type="math/tex">T</script>
+ if</p>
+<script type="math/tex;mode=display">P(T \mid D, A) = P(T \mid A)</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">D</script>
+ is the full raw observation</li>
+<li><script type="math/tex">A</script>
+ is the retained abstraction, a function of <script type="math/tex">D</script>
+</li>
+<li><script type="math/tex">T</script>
+ is the target the abstraction is meant to predict or act on</li>
+<li>sufficiency is binary for a given target: an abstraction either loses nothing about <script type="math/tex">T</script>
+ (sufficient) or loses something (insufficient); the definition has no notion of partial credit</li>
+</ul>
+</details>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart LR
+    classDef term fill:none,stroke:#333,stroke-width:2px;
+    D["Raw data D<br/>the full observation"]:::term
+    A["Abstraction A = f(D)<br/>a function of D"]:::term
+    T["Target T<br/>what the reasoner predicts or decides"]:::term
+    D -->|"compresses to"| A
+    A -->|"P(T | A)"| T
+    D -.->|"P(T | D, A) equals P(T | A)<br/>when A is sufficient"| T
+</pre><figcaption>Figure 0: sufficiency means the solid path through A carries exactly as much information about T as the dotted path through the full raw data D. Nothing is lost by compressing, as long as the target stays fixed.</figcaption>
+<p>The definition says something sharp once it is unpacked. Because <script type="math/tex">A</script>
+ is a function of <script type="math/tex">D</script>
+, knowing <script type="math/tex">D</script>
+ always includes knowing <script type="math/tex">A</script>
+. So the conditional <script type="math/tex">P(T \mid D, A)</script>
+ is just <script type="math/tex">P(T \mid D)</script>
+, the best a reasoner could possibly do about <script type="math/tex">T</script>
+ with the entire raw observation in hand.</p>
+<p>Sufficiency is the statement that the summary does exactly as well as the raw data. Once you hold <script type="math/tex">A</script>
+, the leftover detail in <script type="math/tex">D</script>
+ tells you nothing further about <script type="math/tex">T</script>
+. That is what it means for a compression to be free: free precisely when, and only when, it is sufficient for the target you are compressing toward.</p>
+<p>This is worth pausing on, because it dissolves a framing that would otherwise force a detour. One might expect Abstraction to be governed by a trade-off, compression on one axis and fidelity on the other, more of one bought with less of the other. Sufficiency says otherwise: for a fixed target, there is no trade-off at that point at all.</p>
+<p>Below sufficiency, compression costs fidelity. At sufficiency, compression is free, and further compression starts costing fidelity again. Sufficiency is a threshold, not a trade-off frontier. The reasoner’s job is to sit on the threshold: the smallest summary that is still sufficient for the current target.</p>
+<p>This post therefore needs no achievable-region construction. The object in play is a threshold, not a frontier, and I flag that explicitly rather than let the compression-versus-fidelity language smuggle in a trade-off the definition has already dismissed.</p>
+<p><span id="prop-2"></span></p>
+<p><strong>Proposition 2</strong> (Fisher Sufficiency and the Information-Loss of a Stale Abstraction). [Layer 1: Bound] If <script type="math/tex">A</script>
+ is sufficient for <script type="math/tex">T</script>
+, discarding the rest of <script type="math/tex">D</script>
+ costs no predictive power about <script type="math/tex">T</script>
+ <a href="#ref-4" class="cite-ref" data-def="Fisher, R.A. (1922) -- On the Mathematical Foundations of Theoretical Statistics, Philosophical Transactions of the Royal Society A 222, 309-368" aria-label="Fisher, R.A. (1922) -- On the Mathematical Foundations of Theoretical Statistics, Philosophical Transactions of the Royal Society A 222, 309-368">[4]</a>
+. This is classical statistics, not an interpretive claim. The residual risk is entirely on the other side: an abstraction sufficient for yesterday’s target <script type="math/tex">T_{\text{old}}</script>
+ carries no guarantee of sufficiency for today’s target <script type="math/tex">T_{\text{new}}</script>
+, and nothing about holding <script type="math/tex">A</script>
+ fixed announces the moment <script type="math/tex">P(T_{\text{new}} \mid D, A) \neq P(T_{\text{new}} \mid A)</script>
+ starts holding. The information lost about the new target by continuing to reason through the old abstraction is exactly</p>
+<script type="math/tex;mode=display">I(D; T_{\text{new}}) - I(A; T_{\text{new}}) = I(D; T_{\text{new}} \mid A) \geq 0</script>
+<p>and this quantity is zero if and only if <script type="math/tex">A</script>
+ is still sufficient for <script type="math/tex">T_{\text{new}}</script>
+.</p>
+<details class="proof">
+<summary>Mathematical proof: the factorization, the data-processing inequality, and the residual that fixedness discards</summary>
+<p><strong>The forward half: free compression.</strong> This is Fisher’s own result, stated in the modern conditional-independence form.</p>
+<ul>
+<li>Sufficiency, <script type="math/tex">P(T \mid D, A) = P(T \mid A)</script>
+, says that <script type="math/tex">T</script>
+ and <script type="math/tex">D</script>
+ are conditionally independent given <script type="math/tex">A</script>
+.</li>
+<li>By the Fisher-Neyman factorization this is equivalent to the likelihood splitting into a part that touches the data only through <script type="math/tex">A</script>
+ and a part that does not depend on the target at all: the precise sense in which <script type="math/tex">A</script>
+ carries all the target-relevant content of <script type="math/tex">D</script>
+.</li>
+<li>In information terms, conditional independence gives <script type="math/tex">I(D; T \mid A) = 0</script>
+, so by the chain rule for mutual information <script type="math/tex">I(D; T) = I(A; T) + I(D; T \mid A) = I(A; T)</script>
+.</li>
+</ul>
+<p>The summary and the raw data carry identical information about the target. Discarding <script type="math/tex">D \setminus A</script>
+ costs nothing about <script type="math/tex">T</script>
+. This is the free-compression statement, and it holds for any information-processing system by construction, with no assumption about what kind of reasoner holds the abstraction.</p>
+<p><strong>The reverse half: where fixedness lives.</strong> This is the data-processing inequality read against a target that has moved <a href="#ref-5" class="cite-ref" data-def="Cover, T.M. & Thomas, J.A. (2006) -- Elements of Information Theory, 2nd ed., Wiley, data-processing inequality and mutual-information chain rule, Chapter 2" aria-label="Cover, T.M. & Thomas, J.A. (2006) -- Elements of Information Theory, 2nd ed., Wiley, data-processing inequality and mutual-information chain rule, Chapter 2">[5]</a>
+.</p>
+<p>Because <script type="math/tex">A</script>
+ is a deterministic function of <script type="math/tex">D</script>
+, the chain <script type="math/tex">T_{\text{new}} \to D \to A</script>
+ is a Markov chain for any target whatsoever, and the data-processing inequality gives</p>
+<script type="math/tex;mode=display">I(A; T_{\text{new}}) \leq I(D; T_{\text{new}})</script>
+<p>with equality if and only if <script type="math/tex">A</script>
+ is sufficient for <script type="math/tex">T_{\text{new}}</script>
+. Subtracting and applying the chain rule again isolates the loss exactly:</p>
+<script type="math/tex;mode=display">I(D; T_{\text{new}}) - I(A; T_{\text{new}}) = I(D; T_{\text{new}} \mid A) \geq 0.</script>
+<p>The quantity <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+ is the mutual information between the raw data and the new target that survives after conditioning on the summary. It is the information about the new target that lives entirely in the residual <script type="math/tex">D \setminus A</script>
+, the part the abstraction already threw away.</p>
+<p>When <script type="math/tex">A</script>
+ was chosen to be sufficient for <script type="math/tex">T_{\text{old}}</script>
+, it was chosen to make <script type="math/tex">I(D; T_{\text{old}} \mid A) = 0</script>
+. Nothing about that choice constrains <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+. That quantity is generically strictly positive as soon as the new target depends on features of <script type="math/tex">D</script>
+ that the old target did not.</p>
+<p>A reasoner that keeps reasoning through <script type="math/tex">A</script>
+ after the target has moved cannot recover that information by any amount of further processing of <script type="math/tex">A</script>
+ alone. The data-processing inequality forbids any downstream function of <script type="math/tex">A</script>
+ from carrying more about <script type="math/tex">T_{\text{new}}</script>
+ than <script type="math/tex">A</script>
+ itself does.</p>
+<p>The lost information is not lost in the reasoning. It was lost at the moment of abstraction. It can only be regained by going back to <script type="math/tex">D</script>
+ and re-deriving a statistic sufficient for the target that now applies. That return step is the entire remedy, and it is why unmet expectations, not further prompting inside the old frame, are what break the trap.</p>
+</details>
+<p>The reframing this proposition makes possible is the core of the Abstraction half of the post. It stands entirely on the information-loss argument just given.</p>
+<p>Functional fixedness is not a mysterious cognitive rigidity, but the exact failure of re-deriving a sufficient abstraction once the target changes: the reuse of <script type="math/tex">A</script>
+ past the point where <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+ became positive.</p>
+<p>The antidote is not “think harder,” and it is not “be more creative.” Both of those operate on <script type="math/tex">A</script>
+, and the data-processing inequality has already established that no operation on <script type="math/tex">A</script>
+ can recover what <script type="math/tex">A</script>
+ does not contain. The antidote is to find the abstraction that is actually sufficient for the current target, rather than the old one, which requires returning to the raw data the old abstraction discarded.</p>
+<p>Stated this way, the remedy is not a heuristic, but the only move the mathematics leaves available. The information the new target needs is provably not in the summary, and provably is in the residual, which is only reachable from <script type="math/tex">D</script>
+.</p>
+<p>A stale abstraction is a specific, named pathology, worth placing against the standard taxonomy of proxy failure to see how it differs from it. Manheim and Garrabrant split Goodhart’s Law into four distinct mechanisms, and none of the four is quite this one <a href="#ref-11" class="cite-ref" data-def="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585" aria-label="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585">[11]</a>
+. All four analyze what goes wrong when a proxy is optimized against a goal that stays put. The stale-abstraction failure has no goal that stays put, since the goal itself is what moved.</p>
+<p>The nearest in spirit is Causal Goodhart, the mechanism where a proxy correlated with a goal through a confound, rather than through a real causal path to it, stops moving the goal once that confound is no longer active. The family resemblance is real: a correlation is only as durable as whatever was actually generating it, which is exactly Proposition 2’s own point about <script type="math/tex">A</script>
+. But Causal Goodhart’s proxy was never genuinely informative about a fixed goal to begin with. This abstraction’s was, informative about <script type="math/tex">T_{\text{old}}</script>
+ through a real, load-bearing correlation, not a confound. What failed is that the goal changed under it. That is not one of the four named mechanisms. It is the failure mode the taxonomy has no name for, because the taxonomy assumes the goal holds still.</p>
+<p>An abstraction <script type="math/tex">A</script>
+ that was sufficient for <script type="math/tex">T_{\text{old}}</script>
+ carried a real and load-bearing correlation with the old target. Continuing to treat it as a stand-in for <script type="math/tex">T_{\text{new}}</script>
+ is trusting that correlation past the point where the residual <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+ went positive and severed it. <strong>Naming the family resemblance to Causal Goodhart is this series’ own interpretive act, not a claim of membership in it</strong> [Layer 3: Estimate]. The Layer 1 content is the information-loss identity of Proposition 2. The resemblance is an identification between two formal vocabularies rather than an empirical measurement: the recognition that both failures share a lesson about correlations and the mechanisms that generate them, not a claim that stale abstraction is one of Goodhart’s four cases.</p>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart LR
+    classDef box fill:none,stroke:#333,stroke-width:2px;
+    classDef lost fill:none,stroke:#c0392b,stroke-width:2px;
+    classDef keep fill:none,stroke:#2980b9,stroke-width:2px;
+    D["Raw data D<br/>full observation"]:::box
+    A["Abstraction A = f(D)<br/>sufficient for T_old:<br/>I(D; T_old | A) = 0"]:::keep
+    R["Residual D \\ A<br/>discarded at abstraction time"]:::lost
+    Tn["New target T_new"]:::box
+    D --> A
+    D --> R
+    A -->|"I(A; T_new)"| Tn
+    R -->|"I(D; T_new | A) &gt; 0<br/>unreachable from A"| Tn
+</pre><figcaption>Figure 1: functional fixedness is the blue path taken alone. The information the new target needs, the red edge, was discarded when the abstraction was fitted to the old target, and the data-processing inequality proves no further work on A can recover it.</figcaption>
+<blockquote>
+<p><strong>Physical translation.</strong> A chat-search agent keeps recommending the same category of answer after the query’s real target has shifted because it compressed the conversation into a statistic sufficient for the target it inferred on the first turn, and it keeps feeding that stale statistic forward while the residual it already discarded is exactly the part that carried the new target, so every additional turn spent reasoning inside the old abstraction is provably incapable of recovering the one thing the user now needs, no matter how fluent or elaborate that reasoning becomes.</p>
+</blockquote>
+<p>The Physical Translation is the load-bearing sentence of this half. Read it as the operational claim it is.</p>
+<p>The failure is not that the agent is not trying. The failure is that trying, in the sense of more computation applied to the existing summary, is mathematically the wrong operation. The correct operation is a return to the raw conversation and a re-derivation of what is now sufficient. An agent architecture that has already collapsed the conversation into a fixed intent representation has, by that collapse, made the correct operation unavailable to itself.</p>
+<p>This is why the chat-search study found that only visible failure broke the fixedness. Visible failure is the signal that <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+ has gone positive. It is the only signal that reliably sends the reasoner back to <script type="math/tex">D</script>
+.</p>
+<p>“Visible failure” is already a practical detection threshold, not a claim that the control plane computes <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+ exactly and re-derives on the first infinitesimal departure from zero. An abstraction sufficient for a target that has drifted by a hair costs almost nothing and should not trigger anything. The trigger this post recommends is keyed to the same observable failures that broke fixedness in the study, not to a real-time information-theoretic computation the control plane cannot run anyway.</p>
+<h2 id="the-human-instance-functional-fixedness-and-einstellung">The Human Instance: Functional Fixedness and Einstellung</h2>
+<p>This belongs in a series about portability, not a note about one chat-search study. The same failure was measured in humans in the 1940s, with two experimental paradigms so clean they are still taught. The match is to the defining signature, not to a surface resemblance.</p>
+<p>Karl Duncker’s candle problem, published in 1945, is the canonical demonstration <a href="#ref-2" class="cite-ref" data-def="Duncker, K. (1945) -- On Problem-Solving, Psychological Monographs 58(5), whole No. 270" aria-label="Duncker, K. (1945) -- On Problem-Solving, Psychological Monographs 58(5), whole No. 270">[2]</a>
+. Participants are given a candle, a box of tacks, and a book of matches. They are asked to fix the candle to the wall so it burns without dripping wax on the floor.</p>
+<p>The solution is to empty the tack box, tack the box to the wall, and stand the candle in the box, using the box as a shelf. Participants routinely fail to see it when the box arrives full of tacks. A box full of tacks has already been abstracted as a container, and a container is not a shelf. When the same box is presented empty, with the tacks loose beside it, solution rates rise sharply.</p>
+<p>Nothing about the box changed. What changed is which abstraction the box arrived wearing. Full, it was summarized as “container,” a statistic sufficient for the target “hold the tacks” and insufficient for the target “support the candle.” Empty, the summary loosened enough to let the residual through.</p>
+<p>Duncker’s own term for the effect was functional fixedness. The mechanism he described is exactly the reuse of a target-specific abstraction against a target it does not serve.</p>
+<p>Abraham Luchins pinned down the temporal version of the same effect three years earlier, in the water-jar experiments that gave the phenomenon its other name <a href="#ref-3" class="cite-ref" data-def="Luchins, A.S. (1942) -- Mechanization in Problem Solving: The Effect of Einstellung, Psychological Monographs 54(6), i-95" aria-label="Luchins, A.S. (1942) -- Mechanization in Problem Solving: The Effect of Einstellung, Psychological Monographs 54(6), i-95">[3]</a>
+. Participants learn to measure out a target quantity of water using three jars of fixed capacities. The first several problems all yield to the same three-step formula.</p>
+<p>Then a later problem arrives that the old formula still solves, but that also admits a far simpler two-step solution. Most participants apply the old formula and never see the simpler path. Worse, a final problem arrives that the old formula does not solve at all. A substantial fraction of participants, having mechanized the old approach, fail it outright, while a control group that never learned the formula solves it easily.</p>
+<p>Luchins called this Einstellung, the mechanization of a set. It is functional fixedness across time rather than across objects. The formula was a procedure sufficient for the early targets. It was carried forward, unexamined, into targets for which it was suboptimal and then insufficient, and its very success on the early problems is what made it sticky on the later ones.</p>
+<p><strong>Functional fixedness and Einstellung are a measured human finding</strong> [Layer 2: Fit]. The tag is doing exact work.</p>
+<p>What it asserts is that the Duncker and Luchins results are empirically observed patterns in one substrate, consistent with the prediction Proposition 2 makes if a human problem-solver is modeled as a reasoner holding an abstraction fitted to an earlier target and applying it to a later one. It asserts that much and no more. It does not assert that a human brain computes the mutual-information chain rule. It does not assert that the human effect and the agent effect are the same event.</p>
+<p>The Liu, Karimnazarov, and White chat-search study corroborates this same human-side finding in a modern tool-use setting. Its subjects were the 450 human participants, and its result, that their imported abstractions of prior tools constrained their use of a new one, is functional fixedness measured at the human-agent boundary rather than inside the agent. That is why it belongs here alongside Duncker and Luchins, not as the agent instance.</p>
+<p><strong>The tool-failure recovery result is a measured agent finding</strong> [Layer 2: Fit]. The Zhu and colleagues study measured, inside the agents themselves, whether an LLM agent re-plans when its tools break or persists with a strategy the environment has invalidated.</p>
+<p>Its finding: a Perturbation Recovery Rate collapsing by roughly 37 percent under implicit semantic failures compared to explicit ones, agents over-trusting corrupted output, and retry loops whose fault-tolerance scaling closes 3.66 times more slowly than the basic task gap. This is an independent, agent-internal measurement of a held abstraction failing against a shifted target. It is stated as its own fact in its own substrate, consistent with the same Proposition 2 shape, not as evidence that the agent and the human are doing one thing.</p>
+<p><strong>The claim that the human fixedness and the agent-side fixedness are the same phenomenon</strong> [Layer 3: Estimate]. This is the series’ own interpretive act. It carries the only real risk in this section, exactly as Post 1 set out when it introduced the three-layer discipline.</p>
+<p>The Layer 1 result, Proposition 2, is a triviality of the mathematics and holds for any information-processing system by construction. The Layer 2 findings are separate measurements, each independently consistent with that shape. The Layer 3 claim that they are one phenomenon, rather than two phenomena of the same shape, is where the classical objection lands.</p>
+<p>It lands here for the same reason it landed in Post 1. Multiple realizability is the standard warrant for calling a functional property shared across substrates. Hilary Putnam, who introduced that warrant, later argued that real mental kinds are compositionally and computationally plastic enough that a single functional kind need not correspond to one clean computational state <a href="#ref-9" class="cite-ref" data-def="Putnam, H. (1988) -- Representation and Reality, MIT Press, Chapters 5-6, the reconsideration of functionalism" aria-label="Putnam, H. (1988) -- Representation and Reality, MIT Press, Chapters 5-6, the reconsideration of functionalism">[9]</a>
+.</p>
+<p>That objection does not touch Proposition 2, and does not touch the two measurements. It targets only the identity claim. The right posture, held consistently across this series, is that the identity is offered as an estimate with its own standing objection attached, never as settled.</p>
+<table><thead><tr><th></th><th>Human (functional fixedness)</th><th>Agent (tool-failure recovery)</th></tr></thead><tbody>
+<tr><td>Measured by</td><td>Duncker 1945; Luchins 1942</td><td>Zhu et al. 2026</td></tr>
+<tr><td>What was measured</td><td>Reuse of a container/procedure abstraction past its fit</td><td>Recovery rate after a tool’s output silently degraded</td></tr>
+<tr><td>Direction of error</td><td>Fails to see a shelf where the abstraction said “container”</td><td>Persists with a strategy the environment invalidated</td></tr>
+<tr><td>What breaks the fixedness</td><td>Visible mismatch between the abstraction and the task</td><td>Not tested in this benchmark</td></tr>
+<tr><td>Corroborating boundary case</td><td>Liu, Karimnazarov &amp; White 2025: 450 humans carried old tool-abstractions into a new chat-search tool</td><td>(same study, human-agent boundary, not agent-internal)</td></tr>
+<tr><td>Layer of this series’ claim</td><td>Layer 2, Fit</td><td>Layer 2, Fit</td></tr>
+</tbody></table>
+<figcaption>Table 1: functional fixedness and stale-tool persistence share a defining signature, a target-specific abstraction reused past the point where it stopped fitting, but remain two separate Layer 2 facts until Layer 3 claims otherwise.</figcaption>
+<h2 id="from-abstraction-to-rationality">From Abstraction to Rationality</h2>
+<p>The two halves of this post join at a single seam. An abstraction decides what evidence a reasoner can see. Rationality decides what the reasoner does with the evidence it sees. The Abstraction failure just formalized removes evidence before the updating rule ever runs. No updating rule, however sound, can update on evidence it never received. The Rationality failure this second half formalizes is the mirror image: the evidence arrives intact, the reasoner sees it, and the updating rule corrupts it on the way in.</p>
+<p>The two compound. A reasoner that has abstracted away the disconfirming evidence has nothing to update on. A reasoner that updates asymmetrically will discount the disconfirming evidence even when its abstraction faithfully delivers it.</p>
+<p>The chat-search participants who kept issuing command-shaped prompts were failing at Abstraction. A reasoner who receives a failing test result, sees it clearly, and downweights it because it contradicts the approach already chosen is failing at Rationality.</p>
+<p>The founding post placed these two properties adjacent for exactly this reason. The formal treatment makes the adjacency precise: Abstraction governs the sufficiency of the input, Rationality governs the fidelity of the update, and a portable mind needs both to be sound, because either one failing is enough to reach the wrong belief.</p>
+<h2 id="the-case-two-models-that-believed-the-frame-they-were-handed">The Case: Two Models That Believed the Frame They Were Handed</h2>
+<p>In 2025, Li Hao, Wang You, and Yang Xueling published a study in the Journal of Psychological Science <a href="#ref-7" class="cite-ref" data-def="Li, H., Wang, Y. & Yang, X. (2025) -- Cognitive Biases in Artificial Intelligence: Susceptibility of a Large Language Model to Framing Effect and Confirmation Bias, Journal of Psychological Science 48(4), 892-906" aria-label="Li, H., Wang, Y. & Yang, X. (2025) -- Cognitive Biases in Artificial Intelligence: Susceptibility of a Large Language Model to Framing Effect and Confirmation Bias, Journal of Psychological Science 48(4), 892-906">[7]</a>
+. It tested whether two large language models, Gemini 1.5 Pro and DeepSeek, exhibit two of the best-documented human reasoning biases, the framing effect and confirmation bias, under controlled conditions adapted from the classic human protocols.</p>
+<p>The framing manipulation is a risky-choice framing design in the Asian-disease lineage, instantiated as a genetic-testing decision. The same underlying probabilities are presented once in terms of the share of cases in which the test result is favorable, and once in terms of the share in which it is not, with the presentation order also varied. The question is whether the models’ inclination to test shifts with the framing while the underlying facts hold constant. The confirmation manipulation presents a hypothesis and then evidence, some consistent with the hypothesis and some inconsistent. It measures whether the reasoner weights the consistent evidence more heavily than the inconsistent evidence, when it should weight them by their actual diagnostic value.</p>
+<p>The finding is that both models showed the biases. Their conclusions varied with the positive or negative framing of otherwise identical inputs. They reinforced the premises embedded in the queries they were given, rather than weighting confirming and disconfirming evidence by their true likelihoods.</p>
+<p>The confirmation pattern is the one that matters for this post. The model updated more on evidence that agreed with the hypothesis it had been handed than on evidence that disagreed. That is not a description of what the model believed, but a description of how it moved from prior to posterior. That how has an exact form, and the exact form is a specific, provable deviation from Bayes’ rule.</p>
+<h2 id="rationality-under-a-thumb-asymmetric-belief-updating">Rationality Under a Thumb: Asymmetric Belief Updating</h2>
+<p><span id="def-3"></span></p>
+<details>
+<summary>Definition 3 -- Asymmetric Updating: confirmation bias as a precise deviation from Bayes' rule</summary>
+<p><strong>Definition 3</strong> (Asymmetric Belief Updating). A reasoner updates asymmetrically if, given a prior <script type="math/tex">P(H)</script>
+ and evidence <script type="math/tex">E</script>
+, it applies likelihood weight <script type="math/tex">w_+ > 1</script>
+ to evidence favoring <script type="math/tex">H</script>
+ and <script type="math/tex">w_- < 1</script>
+ to evidence disfavoring it, rather than the true likelihood ratio.</p>
+</details>
+<p>The definition is best read in log-odds, where Bayes’ rule is at its simplest and the deviation is a single distortion applied to one term. Write the log-odds of the hypothesis as <script type="math/tex">L = \log \frac{P(H)}{P(\lnot H)}</script>
+. Bayes’ rule says that on observing evidence <script type="math/tex">E</script>
+, the log-odds update additively by the log-likelihood ratio of that evidence:</p>
+<script type="math/tex;mode=display">L' = L + \ell, \qquad \ell = \log \frac{P(E \mid H)}{P(E \mid \lnot H)}</script>
+<p>where:</p>
+<ul>
+<li><script type="math/tex">L</script>
+ is the prior log-odds of the hypothesis <script type="math/tex">H</script>
+</li>
+<li><script type="math/tex">\ell</script>
+ is the log-likelihood ratio carried by the evidence <script type="math/tex">E</script>
+</li>
+<li><script type="math/tex">L'</script>
+ is the posterior log-odds after the update</li>
+</ul>
+<p>Confirming evidence is exactly evidence with <script type="math/tex">\ell > 0</script>
+, and disconfirming evidence is exactly evidence with <script type="math/tex">\ell < 0</script>
+. An asymmetric updater replaces the honest increment <script type="math/tex">\ell</script>
+ with a distorted increment <script type="math/tex">g(\ell)</script>
+ that stretches the positive part and shrinks the negative part:</p>
+<script type="math/tex;mode=display">g(\ell) = \begin{cases} w_+ \, \ell & \ell > 0 \\ w_- \, \ell & \ell \leq 0 \end{cases} \qquad w_+ > 1, \; 0 < w_- < 1.</script>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart LR
+    classDef term fill:none,stroke:#333,stroke-width:2px;
+    classDef up fill:none,stroke:#2980b9,stroke-width:2px;
+    classDef down fill:none,stroke:#c0392b,stroke-width:2px;
+    E["Evidence E<br/>log-likelihood ratio ℓ"]:::term
+    Pos["ℓ > 0, confirming<br/>stretched by w+ > 1"]:::up
+    Neg["ℓ ≤ 0, disconfirming<br/>shrunk by w- < 1"]:::down
+    E --> Pos
+    E --> Neg
+    Pos --> G["Distorted increment g(ℓ)"]:::term
+    Neg --> G
+</pre><figcaption>Figure 2: an asymmetric updater does not ignore disconfirming evidence, it discounts it, while inflating confirming evidence by the mismatched weight w+. Both branches feed into the same posterior update.</figcaption>
+<p>This is confirmation bias written as arithmetic, not a claim about motivation or ego. It is a specific, named distortion of a specific, named term in the one equation that governs rational belief change.</p>
+<p><span id="prop-3"></span></p>
+<p><strong>Proposition 3</strong> (Asymmetric Updating Diverges from Bayes). [Layer 1: Bound] Asymmetric updating with <script type="math/tex">w_+ \neq w_-</script>
+ produces a posterior that provably diverges from the proper Bayesian posterior as evidence accumulates, by a gap that grows without bound in the amount of evidence, regardless of which hypothesis is actually true. When the favored hypothesis is false, that divergence is a lag behind the truth that, once the asymmetry passes a stated threshold, becomes a drift to confidence in the false hypothesis rather than the true one; proper Bayesian updating, and Popper’s falsification strategy, which actively seeks disconfirming evidence, converge strictly faster to the truth in that case, under the stated regularity conditions <a href="#ref-8" class="cite-ref" data-def="Popper, K. (2002 [1959]) -- The Logic of Scientific Discovery, Routledge Classics" aria-label="Popper, K. (2002 [1959]) -- The Logic of Scientific Discovery, Routledge Classics">[8]</a>
+. When the favored hypothesis happens to be true, the same distortion runs the other way: the biased reasoner reaches the correct conclusion no slower, and generally faster, than the honest one, but at every finite amount of evidence its reported confidence strictly exceeds what the identical evidence stream would license under proper updating, since <script type="math/tex">g(\ell) \geq \ell</script>
+ in expectation whenever the favored hypothesis is the true one, making the log-odds gap <script type="math/tex">n\Delta</script>
+ strictly positive and growing at every step, not only in some limit. That gap is exact and permanent in log-odds, the metric the proposition is stated in; read back in probability, where both posteriors are converging to certainty, the raw numerical distance between the two reported confidences shrinks toward zero as evidence accumulates without bound, and nothing here claims otherwise. What does not vanish is not that distance, but the overstatement itself: the biased reasoner is never once, at any finite step a real reasoner could actually stop and report from, licensed by its own evidence to report the confidence it does.</p>
+<details class="proof">
+<summary>Mathematical proof: the accumulated gap, the sign flip, and why falsification converges faster</summary>
+<p><strong>The setup.</strong> Assume the standard regularity conditions:</p>
+<ul>
+<li>evidence pieces <script type="math/tex">E_1, E_2, \ldots</script>
+ are drawn independently and identically from the true distribution</li>
+<li>the per-piece log-likelihood ratio <script type="math/tex">\ell</script>
+ has finite mean under both hypotheses</li>
+<li>the weights <script type="math/tex">w_+, w_-</script>
+ are fixed</li>
+</ul>
+<p>The finite-mean condition is doing more than technical housekeeping. It rules out literally deterministic evidence: a test that fails with probability exactly zero under “the fix is correct” would give <script type="math/tex">\ell=-\infty</script>
+ on that outcome, and no finite <script type="math/tex">w_-</script>
+ can discount an infinite quantity into something finite. Only <script type="math/tex">w_-=0</script>
+ can, outright non-observation, Definition 3’s own boundary. For “discounting a failing test” to describe what an asymmetric updater is doing, rather than “never running it,” the test has to carry strong but finite evidential weight. That is also the realistic case: a real test suite is never a perfect oracle, since flaky tests, environment variance, and wrong assertions all keep the true failure probability under “correct” strictly positive, however small.</p>
+<p>Write <script type="math/tex">\ell_+ = \max(\ell, 0)</script>
+ and <script type="math/tex">\ell_- = \min(\ell, 0)</script>
+, so that <script type="math/tex">\ell = \ell_+ + \ell_-</script>
+ and <script type="math/tex">g(\ell) = w_+ \ell_+ + w_- \ell_-</script>
+.</p>
+<p>After <script type="math/tex">n</script>
+ pieces of evidence the proper log-odds and the asymmetric log-odds are</p>
+<script type="math/tex;mode=display">L_n = L_0 + \sum_{i=1}^{n} \ell_i, \qquad L_n^{\text{bias}} = L_0 + \sum_{i=1}^{n} g(\ell_i).</script>
+<p>The accumulated gap between them is <script type="math/tex">L_n^{\text{bias}} - L_n = \sum_{i=1}^{n} \left[ (w_+ - 1)\ell_{+,i} + (w_- - 1)\ell_{-,i} \right]</script>
+. By the law of large numbers this gap grows linearly in <script type="math/tex">n</script>
+, at rate</p>
+<script type="math/tex;mode=display">\Delta = (w_+ - 1)\,\mathbb{E}[\ell_+] + (w_- - 1)\,\mathbb{E}[\ell_-].</script>
+<p><strong>The divergence.</strong> Both terms are non-negative under the biasing regime, because <script type="math/tex">w_+ - 1 > 0</script>
+ with <script type="math/tex">\mathbb{E}[\ell_+] \geq 0</script>
+, and <script type="math/tex">w_- - 1 < 0</script>
+ with <script type="math/tex">\mathbb{E}[\ell_-] \leq 0</script>
+, so their product is non-negative. Hence <script type="math/tex">\Delta \geq 0</script>
+, and it is strictly positive whenever the evidence has any disconfirming mass at all. The two posteriors therefore diverge without bound: the gap <script type="math/tex">L_n^{\text{bias}} - L_n \approx n\Delta</script>
+ grows linearly and never closes. This is the divergence claim, and it holds regardless of which hypothesis is true.</p>
+<p><strong>The sign flip.</strong> The sign of the destination is where the damage becomes concrete. Suppose <script type="math/tex">H</script>
+ is in fact false, so the truth is <script type="math/tex">\lnot H</script>
+. Under the truth, the expected proper increment is <script type="math/tex">\mathbb{E}[\ell] = -D_{\mathrm{KL}}\!\left(P(\cdot \mid \lnot H) \,\|\, P(\cdot \mid H)\right) < 0</script>
+. The proper log-odds drift to <script type="math/tex">-\infty</script>
+, and the honest reasoner converges, correctly, to certainty in <script type="math/tex">\lnot H</script>
+.</p>
+<p>The asymmetric reasoner’s expected increment is instead <script type="math/tex">\mathbb{E}[g(\ell)] = w_+ \mathbb{E}[\ell_+] + w_- \mathbb{E}[\ell_-]</script>
+. Because <script type="math/tex">w_+</script>
+ inflates the rare confirming evidence and <script type="math/tex">w_-</script>
+ suppresses the frequent disconfirming evidence, there exist distributions and weight pairs for which <script type="math/tex">\mathbb{E}[g(\ell)] > 0</script>
+ even though <script type="math/tex">\mathbb{E}[\ell] < 0</script>
+. In that regime the asymmetric log-odds drift to <script type="math/tex">+\infty</script>
+: the reasoner converges, with mounting confidence, to the false hypothesis, while the honest reasoner converges to the true one.</p>
+<p>The underlying condition is <script type="math/tex">w_+ \mathbb{E}[\ell_+] > w_- \mathbb{E}[-\ell_-]</script>
+, which rearranges to the ratio form <script type="math/tex">w_+ / w_- > \mathbb{E}[-\ell_-] / \mathbb{E}[\ell_+]</script>
+ whenever <script type="math/tex">\mathbb{E}[\ell_+] > 0</script>
+. State it in the unrearranged form and there is nothing to divide by zero. If the evidence stream perfectly separates the hypotheses, so that no evidence ever looks confirming under the true <script type="math/tex">\lnot H</script>
+, then <script type="math/tex">\mathbb{E}[\ell_+] = 0</script>
+ and the left side of the unrearranged condition is zero regardless of <script type="math/tex">w_+</script>
+. No finite asymmetry can then produce a sign flip. The bias still slows convergence, but it can no longer manufacture confirming evidence that was never there to inflate. A large enough asymmetry guarantees the sign flip for any evidence source that carries both kinds of signal.</p>
+<p>When the asymmetry is milder than this threshold, the sign is preserved but the convergence is retarded. The biased log-odds still drift toward the truth, yet they lag the honest reasoner’s by the gap <script type="math/tex">n\Delta</script>
+, which itself grows linearly in <script type="math/tex">n</script>
+. At every finite amount of evidence, the biased reasoner is systematically less certain of the truth than the honest one, and the shortfall widens the more evidence it has seen.</p>
+<p><strong>Why falsification converges faster.</strong> The comparative claim about speed follows from the same accounting, and is where Popper enters as more than a slogan.</p>
+<p>This is a sequential accumulation, not a fixed-sample test, so the right tool is Wald’s theory of the sequential probability ratio test, and it is already in hand. By Wald’s identity, the number of observations <script type="math/tex">L_n</script>
+ needs to cross a decision boundary is inversely proportional to the drift rate <script type="math/tex">\mathbb{E}[\ell]</script>
+ computed under whichever hypothesis is true, exactly the quantity already derived above as <script type="math/tex">\mathbb{E}[\ell] = -D_{\mathrm{KL}}\!\left(P(\cdot \mid \lnot H) \,\|\, P(\cdot \mid H)\right)</script>
+. Faster convergence means larger <script type="math/tex">|\mathbb{E}[\ell]|</script>
+ under the true hypothesis, nothing more exotic than that.</p>
+<p>A falsification strategy actively seeks high-<script type="math/tex">\mathbb{E}[-\ell_-]</script>
+ evidence, tests designed to break the hypothesis rather than to flatter it. That is a strategy for sampling evidence with large <script type="math/tex">|\ell|</script>
+ under the true hypothesis, which by Wald’s identity is exactly what shortens the expected time to a correct decision. A strategy that samples confirming evidence instead draws evidence whose <script type="math/tex">\ell</script>
+ clusters near zero under a false hypothesis, carrying little diagnostic weight and lengthening, not shortening, the road to the correct conclusion. That clustering is a property of confirmatory tests as ordinarily constructed, not a logical necessity: a maximally severe test can carry large <script type="math/tex">|\ell|</script>
+ under either hypothesis, and the argument here assumes the more common case of a test built to be passed rather than to discriminate.</p>
+<p>The asymmetric updater does the opposite of falsification when the favored hypothesis is false. It downweights precisely the disconfirming evidence that carries the most information, so its effective convergence rate toward the truth is strictly below the proper reasoner’s whenever <script type="math/tex">w_- < 1</script>
+, and can run backward. Seeking disconfirmation is not a moral posture, but the drift-optimal sampling policy for reaching the truth quickly: it maximizes <script type="math/tex">|\mathbb{E}[\ell]|</script>
+ under whichever hypothesis is true, rather than any property of its variance. Confirmation bias is its inverse only in that failure mode. When the favored hypothesis happens to be true, confirmation bias does not slow the reasoner down; it inflates the confidence it reports on the way to the correct answer.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> A verification pipeline that only samples confirming test cases ships the wrong fix through a cousin of Definition 3’s mechanism, not the mechanism itself: rather than discounting disconfirming evidence it observes, it never draws any, so every passing test inflates its posterior that the fix is correct while the failing tests that would carry the counterexample are never drawn, and the number it reports as certainty is a measurement of its own sampling policy rather than of the fix.</p>
+</blockquote>
+<p>The Physical Translation is the load-bearing sentence of the Rationality half. Read the mechanism in it exactly. The pipeline is not lying, and it is not miscalibrated in some vague sense, but computing an honest posterior over a dishonest evidence stream. That distinction is worth being precise about. Definition 3 weighs evidence that is honestly sampled and dishonestly discounted, with <script type="math/tex">w_-</script>
+ strictly between 0 and 1, and the proof above already excludes <script type="math/tex">w_- = 0</script>
+ from that definition, as outright non-observation rather than discounting. A pipeline that never samples failing tests is doing the excluded thing instead: dishonest sampling of an honestly weighed stream, the mirror image of Definition 3’s dishonest weighing of an honestly sampled one.</p>
+<p>The two are cousins, not the same operation, and the difference has teeth. A reasoner that knows its own sampling policy can in principle correct for it, the way a survey corrects for who it failed to reach. It cannot correct, the same way, for a biased weighting rule baked into how it updates on whatever it does see.</p>
+<p>The dishonesty is upstream, in the sampling. A test suite that draws only cases the fix was written to pass has an evidence distribution whose disconfirming mass is zero by construction. A Bayesian updater fed that distribution converges to certainty regardless of whether the fix is correct.</p>
+<p>This is why “all tests pass” is a claim about the tests, not about the fix. It is why the remedy is not more tests of the same kind, but the deliberate construction of tests aimed at breaking the fix. Falsification is the sampling policy that puts disconfirming mass back into the stream. Proposition 3 is the proof that without it the posterior is uninformative, no matter how high it climbs.</p>
+<h2 id="the-human-instance-confirmation-bias">The Human Instance: Confirmation Bias</h2>
+<p>The human side of Rationality is the most thoroughly documented bias in the entire literature. Raymond Nickerson’s 1998 review is its definitive synthesis <a href="#ref-6" class="cite-ref" data-def="Nickerson, R.S. (1998) -- Confirmation Bias: A Ubiquitous Phenomenon in Many Guises, Review of General Psychology 2(2), 175-220" aria-label="Nickerson, R.S. (1998) -- Confirmation Bias: A Ubiquitous Phenomenon in Many Guises, Review of General Psychology 2(2), 175-220">[6]</a>
+.</p>
+<p>Nickerson’s central move, and the reason his review is the right citation here rather than any single experiment, is that he catalogues confirmation bias as a family of distinct mechanisms that share one signature: the preferential treatment of evidence that supports a held hypothesis over evidence that opposes it. The family includes:</p>
+<ul>
+<li>the selective gathering of confirming evidence</li>
+<li>the selective interpretation of ambiguous evidence as confirming</li>
+<li>the failure to seek disconfirming tests</li>
+<li>differential scrutiny applied to welcome versus unwelcome findings, where confirming evidence is accepted at face value and disconfirming evidence is subjected to a search for flaws</li>
+</ul>
+<p>Two of those mechanisms realize the <script type="math/tex">w_+ > 1, w_- < 1</script>
+ distortion of Definition 3 directly, and two realize a related but formally distinct one, worth naming separately because the difference matters for what fixes each.</p>
+<ul>
+<li>Differential scrutiny applies a literal weight, accepting confirming evidence with <script type="math/tex">w_+</script>
+ and discounting disconfirming evidence with <script type="math/tex">w_-</script>
+: an honestly sampled stream, dishonestly weighed. This is Definition 3’s mechanism exactly.</li>
+<li>Selective interpretation reassigns the sign of <script type="math/tex">\ell</script>
+ itself, recoding evidence that should have been disconfirming as confirming, also a weighing operation, just one that acts before the sign is fixed rather than after.</li>
+<li>Selective gathering sets the sampling distribution so that disconfirming evidence is rarely drawn in the first place, driving the effective <script type="math/tex">\mathbb{E}[\ell_-]</script>
+ toward zero not by discounting it but by never observing it: an honestly weighed stream, dishonestly sampled.</li>
+<li>The failure to seek disconfirming tests is the same sampling failure in its passive form, not refusing disconfirming evidence, but never going looking for the kind of test that would produce it.</li>
+</ul>
+<p>Nickerson’s “many guises” split, on close inspection, into two formal families rather than one. The first is a weighing family, which Definition 3 covers exactly. The second is a sampling family, which produces the identical symptom, a posterior detached from the truth, through a distorted evidence measure rather than a distorted weight on an honest one. Both belong in the same catalogue because both suppress disconfirming evidence’s effect on the posterior, but by different mechanisms. The weighing family distorts the likelihood applied to evidence already observed, <script type="math/tex">w_- < 1</script>
+ in Definition 3’s own terms. The sampling family instead prevents disconfirming evidence from being observed at all, <script type="math/tex">\mathbb{E}[\ell_-] \to 0</script>
+ as the sampling policy excludes it. One corrupts the update on the way in; the other keeps the update from ever seeing the data.</p>
+<p>That is exactly why the remedy this post recommends throughout, deliberately constructing tests aimed at breaking the fix, targets the sampling family directly, and only reaches the weighing family by making disconfirming evidence too well-supplied to discount away.</p>
+<p><strong>Confirmation bias is a measured human finding</strong> [Layer 2: Fit]. The tag asserts that the pattern Nickerson synthesizes is an empirically observed regularity in human reasoning, consistent with the prediction Proposition 3 makes if a human reasoner is modeled as applying asymmetric weights to confirming and disconfirming evidence. It does not assert that a human brain computes log-odds increments. It does not assert identity with the agent finding.</p>
+<p><strong>The framing-and-confirmation result in the 2025 study is a measured agent finding</strong> [Layer 2: Fit]. The Li, Wang, and Yang study measured, in two large language models under controlled conditions, both the framing effect and the confirmation pattern. It found both models reinforced the premises they were handed and let their conclusions vary with framing on otherwise identical inputs. This is an independent measurement, in a different substrate, of the same asymmetric-update signature. It is stated as its own fact, not as evidence for a shared cause.</p>
+<p><strong>The claim that the human confirmation bias and the agent-side confirmation pattern are the same phenomenon</strong> [Layer 3: Estimate]. This is again the series’ own interpretive act, carrying the same risk and the same standing objection as the Abstraction identity above.</p>
+<p>Proposition 3 is Layer 1 and substrate-free. The two measurements are Layer 2 and independent. The identity is Layer 3, offered as a working estimate with Putnam’s reversal of multiple realizability attached, never asserted as settled.</p>
+<p>The discipline is identical to Post 1’s, applied to a second property. The repetition is the point: the layers are not decoration, but the only thing keeping a genuinely striking double parallel from hardening into an overclaim.</p>
+<table><thead><tr><th></th><th>Human (confirmation bias)</th><th>Agent (framing and confirmation)</th></tr></thead><tbody>
+<tr><td>Measured by</td><td>Nickerson 1998 (review synthesis)</td><td>Li, Wang &amp; Yang 2025</td></tr>
+<tr><td>What was measured</td><td>Preferential weighting of confirming over disconfirming evidence, in many guises</td><td>Reinforcement of handed premises, conclusions shifting with framing</td></tr>
+<tr><td>Direction of error</td><td><script type="math/tex">w_+ > 1</script>
+ on confirming, <script type="math/tex">w_- < 1</script>
+ on disconfirming</td><td>Same asymmetric-weighting signature, measured under controlled conditions</td></tr>
+<tr><td>Mechanisms catalogued</td><td>Selective gathering, selective interpretation, differential scrutiny</td><td>Not decomposed into sub-mechanisms in this study</td></tr>
+<tr><td>Corrective that works</td><td>Deliberate falsification, seeking disconfirming tests</td><td>Not tested in this study</td></tr>
+<tr><td>Layer of this series’ claim</td><td>Layer 2, Fit</td><td>Layer 2, Fit</td></tr>
+</tbody></table>
+<figcaption>Table 2: Nickerson's catalogue and the Li, Wang and Yang measurement are two independent instances of the same <script type="math/tex">w_+ \neq w_-</script>
+ distortion, in two substrates, thirty years apart.</figcaption>
+<table><thead><tr><th>This post’s layer discipline</th><th>Layer 1, Bound</th><th>Layer 2, Fit</th><th>Layer 3, Estimate</th></tr></thead><tbody>
+<tr><td>Abstraction</td><td>Proposition 2: sufficiency and the stale-abstraction information loss</td><td>Duncker 1945, Luchins 1942 (human); Zhu et al. 2026 (agent); Liu, Karimnazarov &amp; White 2025 (human-agent boundary)</td><td>The human and agent fixedness are one phenomenon, not two of the same shape</td></tr>
+<tr><td>Rationality</td><td>Proposition 3: asymmetric updating diverges from Bayes by <script type="math/tex">n\Delta</script>
+</td><td>Nickerson 1998 (human); Li, Wang &amp; Yang 2025 (agent)</td><td>The human and agent confirmation bias are one phenomenon, not two of the same shape</td></tr>
+</tbody></table>
+<figcaption>Table 3: both properties carry the same three-layer structure Post 1 established. Only the Layer 3 row carries real interpretive risk; Layer 1 is substrate-free arithmetic and Layer 2 is independent measurement.</figcaption>
+<h2 id="falsification-criteria">Falsification Criteria</h2>
+<p>A claim that cannot be wrong is not a claim, so this post states the conditions under which each of its two central assertions would fail. Each condition is concrete and checkable, and each is aimed at a specific layer of a specific property’s claim.</p>
+<p><strong>F1 (Abstraction).</strong> A reasoner is shown to escape functional fixedness by operations applied only to its held abstraction, without returning to the raw data the abstraction discarded.</p>
+<p>Concretely: take an agent whose intent representation has been collapsed to a fixed summary sufficient for an initial target. On a held-out set of tasks where the target shifts mid-conversation, it recovers the new target’s answer at a rate indistinguishable from an agent that re-reads the full conversation, while provably never re-accessing the discarded residual.</p>
+<p>If this happens, Proposition 2’s information-loss argument is wrong as applied. The data-processing inequality forbids exactly this recovery, so the Layer 1 explanation of the fixedness finding would be mis-stated, not merely mis-mapped.</p>
+<p><strong>F2 (Rationality).</strong> An asymmetric updater with <script type="math/tex">w_+ \neq w_-</script>
+ is exhibited whose posterior converges to the truth as fast as, or faster than, the proper Bayesian posterior, on an evidence stream with non-zero disconfirming mass and well-defined finite likelihood ratios, with the favored hypothesis <script type="math/tex">H</script>
+ false. The favored-hypothesis-true case is not a candidate counterexample: the proposition itself states that the biased reasoner converges no slower there, so a demonstration on that side would confirm it, not falsify it.</p>
+<p>This would falsify Proposition 3 directly. The linear-in-<script type="math/tex">n</script>
+ divergence gap <script type="math/tex">n\Delta</script>
+ is derived, for the <script type="math/tex">\lnot H</script>
+-true case, under exactly those conditions, so a counterexample would mean the gap is mis-derived.</p>
+<p>Separately, and attacking the Layer 3 identity rather than the Layer 1 bound: the human confirmation bias could be shown to arise from a mechanism with no analogue in the agent case. For instance, a purely motivational or self-image-protective cause that vanishes when the reasoner has no stake in the hypothesis, while the agent effect persists in the stakeless condition.</p>
+<p>Either result severs the two findings: the first by breaking the bound, the second by showing the two effects share a shape but not a cause.</p>
+<h2 id="the-portability-gap-for-abstraction-and-rationality">The Portability Gap for Abstraction and Rationality</h2>
+<p>The portability gap, defined and quantified in Post 1, is the latency and compute cost of the external verification loop a property needs because it cannot certify itself from within. It takes a concrete form for each of the two properties in this post. I do not redefine it here. I state what it costs for these two.</p>
+<p>For Abstraction, the gap is the cost of the loop that detects when a held abstraction has stopped being sufficient for the current target, and forces a return to the raw data.</p>
+<p>An agent cannot reliably detect its own stale abstraction from inside. The detection requires the residual <script type="math/tex">I(D; T_{\text{new}} \mid A)</script>
+ that the abstraction has, by definition, discarded, and the data-processing inequality proves that quantity is unreachable from the abstraction alone.</p>
+<p>The external loop is one that retains access to <script type="math/tex">D</script>
+ and periodically re-derives sufficiency against the current target. Its latency and compute are the portability gap for Abstraction. The chat-search study’s finding that only visible failure broke the fixedness is the human-substrate version of the same loop running by accident rather than by design.</p>
+<p>For Rationality, the gap is the cost of the loop that supplies disconfirming evidence the reasoner will not sample for itself.</p>
+<p>An asymmetric updater’s posterior is uninformative not because the updater is broken, but because its evidence stream lacks disconfirming mass. It cannot fix this from inside, because the very asymmetry that needs fixing governs what it draws.</p>
+<p>The external loop is a falsification loop: an independent process that constructs tests aimed at breaking the current hypothesis and injects them into the evidence stream, restoring the <script type="math/tex">\mathbb{E}[\ell_-]</script>
+ that confirmation bias drives to zero. Its latency and compute are the portability gap for Rationality.</p>
+<p>One requirement on that loop is worth stating precisely, because it rules out the easiest wrong implementation. Running the agent’s own existing test suite again is not a falsification loop, no matter how many more times it is run, because a suite the agent was already passing has, by construction, no disconfirming mass left in it for the current hypothesis. The loop has to generate tests aimed at the specific abstraction the agent is currently holding, probing exactly the assumptions that abstraction is not currently being checked against, not at the abstraction in general.</p>
+<p>That generation problem is not a new one, and a control plane does not have to solve it from nothing. Three existing infrastructure patterns already generate inputs aimed at breaking a specific claim, rather than confirming it. Property-based testing generates cases from a stated specification of what should hold, not from a fixed list of examples someone already believed would pass, and reports the smallest input it finds that breaks the property <a href="#ref-12" class="cite-ref" data-def="Claessen, K. & Hughes, J. (2000) -- QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs, Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming (ICFP), 268-279" aria-label="Claessen, K. & Hughes, J. (2000) -- QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs, Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming (ICFP), 268-279">[12]</a>
+. Fuzzing generates malformed or unexpected input specifically to surface the cases a hand-written suite never thought to check <a href="#ref-13" class="cite-ref" data-def="Miller, B.P., Fredriksen, L. & So, B. (1990) -- An Empirical Study of the Reliability of UNIX Utilities, Communications of the ACM 33(12), 32-44" aria-label="Miller, B.P., Fredriksen, L. & So, B. (1990) -- An Empirical Study of the Reliability of UNIX Utilities, Communications of the ACM 33(12), 32-44">[13]</a>
+. Chaos engineering runs the same logic against a live system, injecting real failures to find the assumptions an architecture is quietly resting on before an uncontrolled failure finds them instead <a href="#ref-14" class="cite-ref" data-def="Basiri, A., Behnam, N., de Rooij, R., Hochstein, L., Kosewski, L., Reynolds, J. & Rosenthal, C. (2016) -- Chaos Engineering, IEEE Software 33(3), 35-41" aria-label="Basiri, A., Behnam, N., de Rooij, R., Hochstein, L., Kosewski, L., Reynolds, J. & Rosenthal, C. (2016) -- Chaos Engineering, IEEE Software 33(3), 35-41">[14]</a>
+.</p>
+<p>None of the three was built for Rationality’s asymmetric-updating case specifically, and none is cited here as evidence for anything beyond its own domain. What they share with the falsification loop this post specifies is the one property that actually matters: generation aimed at a claim’s own weak points, not sampling from what the claim-holder already expects to see. Wiring a falsification loop for an LLM reasoner does not require inventing that generation mechanism. It requires pointing an existing one, property-based generation against the abstraction’s stated invariants, or fuzzing against its input contract, at the specific hypothesis the agent is currently holding, rather than at the agent’s code in general.</p>
+<p>What makes this hard, and worth naming rather than glossing over, is that it cannot be done by consulting the abstraction itself. The very thing that needs probing is the boundary of what the abstraction was never built to represent, and an abstraction, by definition, carries no description of what it left out. Constructing genuine disconfirming evidence therefore requires the same operation Proposition 2 already named as the only remedy for a stale abstraction: returning to the raw data the abstraction discarded and asking what could be true there that the current frame would not detect. Rationality’s falsification loop and Abstraction’s re-derivation loop are, in this sense, one operation aimed at two different symptoms of the same failure to keep a summary honest.</p>
+<p>As in Post 1, the full warrant for why these loops are not optional scaffolding is not established here. Proving a self-certification limit for even one property, and generalizing it further, is a separate undertaking this post does not attempt.</p>
+<h2 id="the-property-verdict-ledger">The Property Verdict Ledger</h2>
+<p>The series accumulates one artifact across its four posts, a ledger with one entry added per post and assembled in full at the close. Post 1 entered Noticing and Simulation. This post enters Abstraction and Rationality, keeping the same six fields for each.</p>
+<p><strong>Abstraction</strong></p>
+<p><em>Formal Proposition:</em> Proposition 2: sufficiency, <script type="math/tex">P(T \mid D, A) = P(T \mid A)</script>
+; stale-abstraction loss <script type="math/tex">I(D; T_{\text{new}} \mid A) \geq 0</script>
+</p>
+<p><em>Human Instance:</em> Functional fixedness and Einstellung: a target-specific abstraction reused past its sufficiency (Duncker 1945; Luchins 1942)</p>
+<p><em>Agent Instance:</em> Tool-failure recovery: LLM agents persisted with invalidated strategies, PRR down roughly 37 percent under implicit failures versus explicit ones, fault tolerance scaling 3.66x slower than task execution (Zhu et al. 2026); human-side corroboration in chat-search fixedness (Liu, Karimnazarov and White 2025)</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the sufficiency identity and the information-loss quantity; Layer 3 approximate for the cross-substrate identity of the two fixedness effects</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Abstraction: it cannot detect a stale abstraction from within, because the detecting information was discarded at abstraction time</p>
+<p><em>Control-Plane Consequence:</em> A re-abstraction loop that retains the raw data and re-derives sufficiency against the current target, triggered on divergence signals rather than trusted to self-detect</p>
+<p><strong>Rationality</strong></p>
+<p><em>Formal Proposition:</em> Proposition 3: asymmetric updating, <script type="math/tex">g(\ell) = w_+ \ell_+ + w_- \ell_-</script>
+, diverges from Bayes by <script type="math/tex">n\Delta</script>
+</p>
+<p><em>Human Instance:</em> Confirmation bias: preferential weighting of confirming over disconfirming evidence, in many guises (Nickerson 1998)</p>
+<p><em>Agent Instance:</em> Framing-and-confirmation study: two LLMs reinforced handed premises and flipped conclusions with framing on identical inputs (Li, Wang and Yang 2025)</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the divergence and sign-flip results; Layer 3 approximate for the cross-substrate identity of the two confirmation effects</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Rationality: it updates asymmetrically and cannot restore its own disconfirming mass from within</p>
+<p><em>Control-Plane Consequence:</em> A falsification loop that constructs and injects hypothesis-breaking tests, restoring the disconfirming evidence the reasoner will not sample for itself</p>
+<p>The Exact-versus-Approximate field carries the three-layer discipline into the ledger exactly as it did in Post 1. The theorems are exact and substrate-free. The mapping of each theorem onto its two measured failures is a fit. The claim that each pair of failures is one phenomenon is an approximation, offered as an estimate.</p>
+<p>Both verdicts are negative, and neither is an insult to systems that do real work. They are precise statements that two specific properties, keeping a summary honest as the target moves and updating on evidence without a thumb on the scale, are absent in the direction the theorems predict and the studies measure.</p>
+<p>The Control-Plane Consequence field is what makes the ledger a gate rather than a diagnosis, and both consequences entered here are buildable.</p>
+<p>The Abstraction consequence is a re-abstraction loop that keeps the raw data and re-derives sufficiency on divergence, because the agent provably cannot detect its own stale summary. The Rationality consequence is a falsification loop that manufactures the disconfirming evidence the agent will not draw, because the agent’s asymmetry governs its own sampling. Both loops have a cost, and those costs are the portability gaps named above.</p>
+<p>The philosophy in this post exists to justify where the two gates are drawn. It does not replace them.</p>
+<h2 id="what-this-post-did-not-claim">What This Post Did Not Claim</h2>
+<p>Because both parallels are seductive, it is worth closing the argument by listing what has deliberately not been asserted, since the omissions are as load-bearing as the claims.</p>
+<ul>
+<li>
+<p>It has not been claimed that the agents are “as rigid as people” or “as biased as people.” The human and agent effects were measured on different apparatuses, and their magnitudes are not commensurable across the substrate boundary in any way this post can defend. It has been claimed only that each pair of effects shares a defining signature, a reused abstraction on one hand and an asymmetric update on the other, and that each is consistent with the same Layer 1 bound.</p>
+</li>
+<li>
+<p>It has not been claimed that the chat-search study measured an agent’s internal fixedness. That study measured human participants using an LLM system. It is cited as a rigorous measurement of the fixedness mechanism at the human-agent boundary, consistent with Proposition 2, not as proof that the agent itself is functionally fixed in isolation. The distinction is kept deliberately, because collapsing it would be exactly the kind of overclaim the layer discipline exists to prevent.</p>
+</li>
+<li>
+<p>It has not been claimed that Abstraction and Rationality are the same property because they fail into each other. They are distinct properties with distinct theorems, and their compounding is a structural observation about the dependency order, not an identity. Abstraction governs what evidence reaches the reasoner. Rationality governs what the reasoner does with it. A system can fail either alone, and the ledger records them as two separate entries for that reason.</p>
+</li>
+<li>
+<p>It has not been claimed that the biased and honest reported confidences stay numerically far apart forever when the favored hypothesis is true. In probability they converge together, both toward certainty; the permanent, never-vanishing gap Proposition 3 proves is stated in log-odds, the metric the theorem is actually about, and what survives the translation to probability is the directional fact, strict overstatement at every finite step, not the raw size of the gap.</p>
+</li>
+<li>
+<p>It has not been claimed that the two external loops named here are fully justified by this post. Their costs are stated. Their unavoidability is not established here, and a reader who wants the full warrant for why the loops are not optional should not read the consequences given here as complete.</p>
+</li>
+<li>
+<p>It has not been claimed that property-based testing, fuzzing, or chaos engineering were built to solve Rationality’s asymmetric-updating case, or that any of the three has been shown to satisfy Definition 3’s requirements formally. They are cited for a narrower reason: each already generates inputs aimed at a claim’s own weak points rather than at confirming it, the one property the falsification loop needs, and a control plane wiring that loop can reuse an existing mechanism instead of inventing one.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>An abstraction is a summary fitted to a target, free of cost only when it is sufficient, meaning it loses nothing about that target. Functional fixedness is holding the summary fixed after the target has moved: the information the new target needs is provably in the discarded raw data and provably unreachable from the summary itself, so no amount of further thinking inside the old frame recovers it.</li>
+<li>Duncker’s candle and Luchins’ water jars measured this in humans in the 1940s. A 2026 tool-failure benchmark measured it inside agents that kept running invalidated plans, a roughly 37 percent recovery-rate drop under failures that did not announce themselves compared to failures that did. A 2025 chat-search study measured the same signature at the human-agent boundary.</li>
+<li>Rationality’s failure is the mirror image: an asymmetric updater stretches confirming evidence and shrinks disconfirming evidence, producing a posterior that diverges from Bayes by an amount growing linearly with the evidence and, past a stated threshold, converging with confidence to the false hypothesis.</li>
+<li>Nickerson catalogued the human version’s many guises in 1998. A 2025 study measured the agent version directly, an LLM reinforcing handed premises and flipping conclusions with framing on identical inputs.</li>
+<li>Both theorems are exact and substrate-free (Layer 1). Each pair of measurements fits its theorem (Layer 2). That each pair is one phenomenon rather than two of the same shape is this series’ own estimate (Layer 3), cited with Putnam’s own reversal attached, never asserted as settled.</li>
+<li>Architecture is portable. Correctness is not, and the portability gaps here are a re-abstraction loop that keeps the raw data and a falsification loop that supplies the disconfirming evidence, because a property cannot certify from within what it has structurally thrown away.</li>
+</ol>
+</blockquote>
+<p><strong>Compute it.</strong> Before trusting any agent’s answer, check two things directly. First, has the target moved since the agent formed its working summary, and if it has, was the summary re-derived against the new target or carried forward from the old one? A summary carried forward has already discarded the residual the new target needs, and the data-processing inequality guarantees the agent cannot recover it by thinking harder. Second, what is the disconfirming mass in the evidence the agent actually saw? If every test it ran was a test it was built to pass, its confidence is a measurement of its sampling, not of its fix, and it will climb to certainty on a false answer exactly as readily as on a true one. A belief that has never met evidence able to lower it, and a belief that has survived such evidence, look identical on the page. They stop looking identical the moment the target you actually have, and the counterexample you never sampled, arrive together.</p>
+<hr />
+<p><sup>[1]</sup> Liu, J., Karimnazarov, J. &amp; White, R. W. (2025). <em>Trapped by Expectations: Functional Fixedness in LLM-Enabled Chat Search.</em> arXiv:2504.02074.</p>
+<p><sup>[2]</sup> Duncker, K. (1945). <em>On Problem-Solving.</em> Psychological Monographs, 58(5), whole No. 270.</p>
+<p><sup>[3]</sup> Luchins, A. S. (1942). <em>Mechanization in Problem Solving: The Effect of Einstellung.</em> Psychological Monographs, 54(6), i-95.</p>
+<p><sup>[4]</sup> Fisher, R. A. (1922). <em>On the Mathematical Foundations of Theoretical Statistics.</em> Philosophical Transactions of the Royal Society A, 222, 309-368.</p>
+<p><sup>[5]</sup> Cover, T. M. &amp; Thomas, J. A. (2006). <em>Elements of Information Theory,</em> 2nd edition. Wiley (data-processing inequality and mutual-information chain rule, Chapter 2).</p>
+<p><sup>[6]</sup> Nickerson, R. S. (1998). <em>Confirmation Bias: A Ubiquitous Phenomenon in Many Guises.</em> Review of General Psychology, 2(2), 175-220.</p>
+<p><sup>[7]</sup> Li, H., Wang, Y. &amp; Yang, X. (2025). <em>Cognitive Biases in Artificial Intelligence: Susceptibility of a Large Language Model to Framing Effect and Confirmation Bias.</em> Journal of Psychological Science, 48(4), 892-906.</p>
+<p><sup>[8]</sup> Popper, K. (2002 [1959]). <em>The Logic of Scientific Discovery.</em> Routledge Classics.</p>
+<p><sup>[9]</sup> Putnam, H. (1988). <em>Representation and Reality.</em> MIT Press (Chapters 5-6, the reconsideration of functionalism).</p>
+<p><sup>[10]</sup> Zhu, D., Ma, X., Shen, Y., Li, X., Zhao, Y., Wang, S., Yan, L. &amp; Yin, D. (2026). <em>When Tools Fail: Benchmarking Dynamic Replanning and Anomaly Recovery in LLM Agents.</em> arXiv:2606.05806.</p>
+<p><sup>[11]</sup> Manheim, D. &amp; Garrabrant, S. (2018). <em>Categorizing Variants of Goodhart’s Law.</em> arXiv:1803.04585.</p>
+<p><sup>[12]</sup> Claessen, K. &amp; Hughes, J. (2000). <em>QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs.</em> Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming (ICFP), 268-279.</p>
+<p><sup>[13]</sup> Miller, B. P., Fredriksen, L. &amp; So, B. (1990). <em>An Empirical Study of the Reliability of UNIX Utilities.</em> Communications of the ACM, 33(12), 32-44.</p>
+<p><sup>[14]</sup> Basiri, A., Behnam, N., de Rooij, R., Hochstein, L., Kosewski, L., Reynolds, J. &amp; Rosenthal, C. (2016). <em>Chaos Engineering.</em> IEEE Software, 33(3), 35-41.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+        
+
+        
+
+        
+      
+
+      
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/portable-mind/" class="series-link">
+            The Portable Mind: Five Properties of Thinking
+          </a>
+          
+            <span class="series-progress">Part 2/5</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+            <a class="series-nav-item series-nav-prev" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part1-requisite-variety&#x2F;" title="Noticing and the Cost of Not Knowing Enough">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part3-the-unverifiable-self&#x2F;" title="Awareness and the Proof a Reasoner Cannot Write About Itself">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>

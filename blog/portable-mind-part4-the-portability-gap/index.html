@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Generic Description Meta Tag -->
+  
+  <meta name="description" content="Ask one agent whether to keep funding a failing project and it usually says no. Put a small crowd of them in a room, agreeing with each other in a circle, and the answer flips to yes almost every time. This post is about knowing when to stop, why stopping on purpose is not the same as giving up, and why a crowd can talk itself out of the one instinct any of its members had alone. It also closes the series&#x27; running case, and puts an honest price on what all this trust-but-verify machinery actually costs. Post 4 of The Portable Mind." />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Mindset Footprint" />
+  <meta property="og:title" content="Optimization and the Ceiling No Retry Can Raise - Mindset Footprint" />
+  <meta property="og:url" content="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part4-the-portability-gap&#x2F;" />
+  <meta property="og:description" content="Ask one agent whether to keep funding a failing project and it usually says no. Put a small crowd of them in a room, agreeing with each other in a circle, and the answer flips to yes almost every time. This post is about knowing when to stop, why stopping on purpose is not the same as giving up, and why a crowd can talk itself out of the one instinct any of its members had alone. It also closes the series&#x27; running case, and puts an honest price on what all this trust-but-verify machinery actually costs. Post 4 of The Portable Mind." />
+
+  <title>Optimization and the Ceiling No Retry Can Raise - Mindset Footprint</title>
+
+  <link rel="canonical" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part4-the-portability-gap&#x2F;" />
+  <link rel="stylesheet" type="text/css" href="https://e-mindset.space/css/main.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="https://e-mindset.space/icon/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://e-mindset.space/icon/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://e-mindset.space/icon/favicon-16x16.png" />
+  <link rel="manifest" href="https://e-mindset.space/icon/site.webmanifest" />
+
+  
+
+    <!-- Cookie Consent by TermsFeed https://www.TermsFeed.com -->
+    <script type="text/javascript" src="https://e-mindset.space/js/cookie-consent-code.js" charset="UTF-8"></script>
+    <script type="text/javascript" charset="UTF-8">
+      document.addEventListener('DOMContentLoaded', function () {
+        cookieconsent.run({
+          "notice_banner_type":"simple",
+          "consent_type":"express",
+          "palette":"light",
+          "language":"en",
+          "page_load_consent_levels":["strictly-necessary"],
+          "notice_banner_reject_button_hide":false,
+          "preferences_center_close_button_hide":false,
+          "page_refresh_confirmation_buttons":false,
+          "website_name":"https://e-mindset.space/"
+        });
+      });
+    </script>
+
+    <!-- Google Analytics -->
+        <script type="text/plain" data-cookie-consent="tracking" async src="https://www.googletagmanager.com/gtag/js?id=G-X0M5X84BLR"></script>
+        <script type="text/plain" data-cookie-consent="tracking">
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-X0M5X84BLR');
+        </script>
+    <!-- end of Google Analytics-->
+
+    <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed Generator</a></noscript>
+  
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.css" integrity="sha384-Pu5+C18nP5dwykLJOhd2U4Xen7rjScHN/qusop27hdd2drI+lL5KvX7YntvT8yew" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/katex.min.js" integrity="sha384-2B8pfmZZ6JlVoScJm/5hQfNS2TI/6hPqDZInzzPc8oHpN5SgeNOf4LzREO6p5YtZ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, { strict: true });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.27/dist/contrib/mathtex-script-type.min.js" integrity="sha384-sg4gBRJTqTCyzYbB7e72xGs3dA2LK994XRZS6urZW6Uh6Mu3j2JJ3YG2s9HALO8U" crossorigin="anonymous"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.9.0/dist/mermaid.esm.min.mjs";
+
+    function getCSSVariable(variable, fallback) {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+      }
+      return fallback;
+    };
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: getCSSVariable('--mermaid-primary-color', '#ede9fe'),
+        primaryTextColor: getCSSVariable('--mermaid-primary-text-color', '#6d28d9'),
+        primaryBorderColor: getCSSVariable('--mermaid-primary-border-color', '#c4b5fd'),
+        lineColor: getCSSVariable('--mermaid-line-color', '#a78bfa'),
+        secondaryColor: getCSSVariable('--mermaid-secondary-color', '#f0fdf4'),
+        secondaryTextColor: getCSSVariable('--mermaid-secondary-text-color', '#047857'),
+        secondaryBorderColor: getCSSVariable('--mermaid-secondary-border-color', '#86efac'),
+        tertiaryColor: getCSSVariable('--mermaid-tertiary-color', '#fff7ed'),
+        tertiaryTextColor: getCSSVariable('--mermaid-tertiary-text-color', '#c2410c'),
+        tertiaryBorderColor: getCSSVariable('--mermaid-tertiary-border-color', '#fdba74'),
+        edgeLabelBackground: getCSSVariable('--mermaid-edge-label-background', '#ffffff'),
+        edgeLabelColor: getCSSVariable('--mermaid-edge-label-color', '#4a5568'),
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      flowchart: {
+        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        curve: 'basis'
+      },
+      sequence: {
+        diagramMarginX: 8,
+        diagramMarginY: 8,
+        actorMargin: 40,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 30
+      },
+      gantt: {
+        titleTopMargin: 15,
+        barHeight: 18,
+        barGap: 3,
+        topPadding: 40,
+        leftPadding: 60,
+        gridLineStartPadding: 30,
+        fontSize: 12
+      }
+    });
+  </script>
+
+</head>
+<body>
+  <header id="site-nav">
+    <nav aria-label="Main navigation">
+        <ul>
+            
+            <li>
+                <a href="https://e-mindset.space/">
+                    <i data-feather="coffee" class="ico"></i><span class="nav-text">&nbsp;Blog</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://github.com/immediatus/immediatus.github.io/discussions">
+                    <i data-feather="message-square" class="ico"></i><span class="nav-text">&nbsp;Discussions</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="https://e-mindset.space/about">
+                    <i data-feather="user" class="ico"></i><span class="nav-text">&nbsp;About</span>
+                </a>
+            </li>
+            
+        </ul>
+        <div id="cookies-preferences">
+            <a href="#" id="open_preferences_center" aria-label="Cookie preferences">
+                <i data-feather="settings" class="ico"></i>
+            </a>
+        </div>
+    </nav>
+</header>
+<div id="main" class="container">
+    
+<header class="post-header">
+  <h1>Optimization and the Ceiling No Retry Can Raise</h1>
+
+  <div class="post-meta">
+      <time datetime="2026-09-05T00:00:00+00:00" pubdate>05 September 2026</time>
+      <span class="meta-separator">•</span>
+      <span class="post-author">Yuriy Polyulya</span>
+
+    
+        <span class="meta-separator">•</span>
+        
+          <div class="post-tags">
+              <a class="tag" href="https://e-mindset.space/tags/distributed-systems/">#distributed-systems</a>
+              <a class="tag" href="https://e-mindset.space/tags/ai/">#ai</a>
+              <a class="tag" href="https://e-mindset.space/tags/epistemology/">#epistemology</a>
+              <a class="tag" href="https://e-mindset.space/tags/systems-thinking/">#systems-thinking</a>
+          </div>
+        
+
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<p>A system that has spent too much on a losing approach will keep spending. The extra spending is not a search for the exit. It is a defence of the entrance.</p>
+<p>That sentence describes a stalled project, a bad hire nobody will fire, and a language-model agent retrying a broken patch for the ninth time with equal accuracy. That is the first sign, as in every earlier post in this series, that something structural is running underneath the surface rather than something incidental to any one substrate.</p>
+<p>This is the fourth of five posts, and the last to introduce a new property. The first three took Noticing and Simulation, then Abstraction and Rationality, then Awareness alone. Each showed that a genuinely useful property fails in a direction the mathematics predicts before any experiment is run.</p>
+<p>This post takes the fifth property, Optimization. Then it does the thing the whole series was built to do: it reassembles the five findings into one object, reruns the opening case through all of them as a single causal chain, and states plainly what the completed picture licenses and what it does not.</p>
+<p>Optimization is the property of choosing well under cost. It is where the founding post placed the culmination of judgment, because the other four feed into it: a system that has noticed enough, simulated the cost, abstracted the situation correctly, and updated its beliefs honestly still has to decide when it has done enough and stop.</p>
+<p>The failure mode of Optimization is the one every engineer has watched consume a sprint. It is the refusal to stop: the escalation of a commitment that the evidence has already condemned, more resource poured into an approach precisely because resource has already been poured in.</p>
+<p>This post formalizes that failure as a deviation from cost-aware optimal stopping. It shows that the correct policy, once the real cost of continuing to search is priced in, is not the heroic pursuit of the best possible outcome, but a threshold rule that stops early and on purpose.</p>
+<h2 id="the-case-agents-that-escalate-only-in-company">The Case: Agents That Escalate Only in Company</h2>
+<p>In August 2025, Emilio Barkett, Olivia Long, and Paul Kröger published a study built to test whether large language models exhibit the escalation of commitment <a href="#ref-1" class="cite-ref" data-def="Barkett, E., Long, O. & Kröger, P. (2025) -- Getting out of the Big-Muddy: Escalation of Commitment in LLMs, arXiv:2508.01545" aria-label="Barkett, E., Long, O. & Kröger, P. (2025) -- Getting out of the Big-Muddy: Escalation of Commitment in LLMs, arXiv:2508.01545">[1]</a>
+. Escalation of commitment is the well-documented human tendency to keep investing in a failing course of action rather than absorb a loss and change direction. The design is what makes the result matter for this post, rather than merely adding one more entry to the catalogue of biases agents display.</p>
+<p>The study did not ask only whether a model escalates. It varied the social structure the decision was embedded in, and measured how escalation changed as that structure changed.</p>
+<p>The finding has three parts, and the gap between them is the whole point.</p>
+<p>Presented with an individual decision, a single model weighing whether to keep funding a division that is losing money, the models behaved well. They showed, in the study’s own words, strong rational cost-benefit logic with minimal escalation of commitment. Left alone, a frontier model mostly does the correct thing: it recognizes a sunk cost as sunk and declines to throw more resource after it. That is the baseline, and it is a genuinely good one.</p>
+<p>Then the structure changed. When the same decision was made through symmetrical peer deliberation, several model instances deliberating together as nominal equals, escalation of commitment rose to near-universal: about 99.2 percent of runs. When the decision was made under organizational pressure, a hierarchy pushing for continuation, the models allocated about 68.95 percent of available resource to the failing division on average.</p>
+<p>The individual reasoner that would have cut its losses becomes, inside a multi-agent structure, a reasoner that almost cannot. The bias does not sit inside the model as a fixed disposition it carries everywhere. It is produced by the structure the model is placed into, and most powerfully by the structure that looks least coercive: the symmetrical peer group, where no single instance is being ordered to escalate and the escalation nonetheless approaches certainty.</p>
+<p>This is a stronger finding than “agents have the sunk cost bias.” The strength is the reason it heads a post about Optimization, rather than a post about Rationality.</p>
+<p>A bias that lives in the individual is a property of the model, and the response to it is to fix the model. A bias that emerges from the multi-agent structure is a property of the deployment, and no amount of fixing the individual model removes it, because the individual model, measured alone, was already doing the right thing. The escalation is an emergent property of how the agents are composed. That means the control-plane response to it cannot be a better agent. It has to be a structural intervention, placed outside the deliberation the agents perform among themselves.</p>
+<p>Hold that shape. It is the shape the entire Optimization argument, and the entire closing synthesis, turns on.</p>
+<h2 id="what-optimization-actually-is">What Optimization Actually Is</h2>
+<p>Before the theorem, a definition of terms, because the founding post used the word Optimization narratively and this series cannot.</p>
+<p>Optimization, as the founding post meant it and as this post formalizes it, is not the pursuit of the maximum, but the act of deciding, under cost, when a search has done enough and should stop. Every real optimization runs against a budget: time, compute, attention, money, tokens.</p>
+<p>The question a real optimizer answers is never “what is the best achievable outcome,” because that question ignores the cost of finding out. The question is “given what it costs me to keep looking, when should I take what I have.”</p>
+<p>A system that optimizes well is a system that stops at the right moment. A system that optimizes badly does so in one of two directions: it stops too early and leaves obvious value on the table, or, the direction this post is about, it cannot stop at all.</p>
+<p>Herbert Simon named the good version of this in 1956 and called it satisficing: the strategy of accepting the first option that clears a threshold of good-enough, rather than searching on for the global best <a href="#ref-2" class="cite-ref" data-def="Simon, H.A. (1956) -- Rational Choice and the Structure of the Environment, Psychological Review 63(2), 129-138" aria-label="Simon, H.A. (1956) -- Rational Choice and the Structure of the Environment, Psychological Review 63(2), 129-138">[2]</a>
+. Simon’s argument was that an organism in a real environment, with real limits on time and computation, does not and cannot optimize in the textbook sense. Satisficing is not a failure to optimize, but the rational response to the structure of the environment the organism actually inhabits.</p>
+<p>For a long time satisficing was read, against Simon’s own framing, as a concession: a shortcut that a system with unlimited resources would not need, an approximation of the real optimum that bounded creatures settle for. This post takes the sharper reading, the one Simon was actually making and the one the search-theoretic mathematics makes exact.</p>
+<p>Satisficing is not an approximation of the optimal policy. Once the cost of searching is priced into the objective, satisficing is the optimal policy, and the textbook maximum is the thing no cost-bearing system should ever try to reach.</p>
+<p>Getting that precise requires saying what the search actually costs and what it actually buys, and that requires a construction this blog’s own standing rule demands be written down before any proposition uses it.</p>
+<h2 id="the-search-cost-achievable-region">The Search-Cost Achievable Region</h2>
+<p>This blog does not let a trade-off go unstated. Whenever a proposition rests on balancing one quantity against another, the achievable region and its frontier get defined first, as an explicit object. That way, the proposition that follows is choosing a point in a region the reader can already see, rather than smuggling in a trade-off as prose.</p>
+<p>Optimization is a trade-off between how much you spend searching and how close you get to the best possible outcome. So the region comes first.</p>
+<p><span id="def-5"></span></p>
+<details>
+<summary>Definition 5 -- The Search-Cost Achievable Region: what searching buys and what it costs</summary>
+<p><strong>Definition 5</strong> (Search-Cost Achievable Region). For a search process that incurs a cost <script type="math/tex">c</script>
+ per additional option examined, the achievable region is the set of pairs <script type="math/tex">(c \cdot n, \; |v_n - v^*|)</script>
+ where:</p>
+<ul>
+<li><script type="math/tex">n</script>
+ is the number of options examined before stopping</li>
+<li><script type="math/tex">c \cdot n</script>
+ is the total search cost paid to examine them</li>
+<li><script type="math/tex">v_n</script>
+ is the best value found after <script type="math/tex">n</script>
+ examinations</li>
+<li><script type="math/tex">v^*</script>
+ is the costless-search optimum, the best value in the whole option space, unreachable at any finite <script type="math/tex">n</script>
+ except by chance</li>
+<li><script type="math/tex">|v_n - v^*|</script>
+ is the distance from the ideal, the shortfall between what the search found and the best it could ever have found</li>
+<li><script type="math/tex">F</script>
+ has bounded support, so <script type="math/tex">v^* = \sup(\mathrm{supp}\, F) < \infty</script>
+: this is stronger than the finite-mean assumption a search model needs on its own, and it is required here specifically so <script type="math/tex">v^*</script>
+ is a real number the region can measure distance from, and so the ideality limit named below is a finite corner rather than a point at infinity</li>
+</ul>
+</details>
+<pre class="mermaid">
+    
+    %%{init: {'theme': 'neutral'}}%%
+flowchart LR
+    classDef term fill:none,stroke:#333,stroke-width:2px;
+    classDef good fill:none,stroke:#2980b9,stroke-width:2px;
+    classDef bad fill:none,stroke:#c0392b,stroke-width:2px;
+    N["Examine one more option<br/>(n increases by one)"]:::term
+    Cost["Total search cost c·n<br/>rises"]:::term
+    Dist["Distance from ideal |v_n − v*|<br/>falls"]:::term
+    F{"Achievable Region frontier"}:::term
+    Theta["Reservation threshold θ(c)<br/>Proposition 5's optimal point"]:::good
+    Ideal["(0, 0): zero cost, zero distance<br/>the ideality limit, unreachable"]:::bad
+    N --> Cost --> F
+    N --> Dist --> F
+    F --> Theta
+    F -.->|"cost would have to be zero"| Ideal
+</pre><figcaption>Figure 0: the achievable region's two axes pull against each other. Proposition 5 names the one point on the frontier that minimizes their sum; the corner where both are zero is the ideality limit, reachable only as search cost vanishes.</figcaption>
+<p>The region has a shape worth seeing before the proposition names a point in it. On one axis is total search cost, which climbs linearly as the search examines more options. On the other axis is distance from the ideal, which falls as the search examines more options, because more draws make it more likely one of them is close to the best.</p>
+<p>The two axes pull against each other. Spending more drives the distance down but drives the cost up. Spending less holds the cost down but leaves the distance large. The frontier of the region is the set of stopping points where you cannot reduce one without increasing the other. The entire question of Optimization is which point on that frontier a system should choose.</p>
+<p>The naive reading of this picture, and the reading this post is written to correct, is that the ideal point is the bottom of the distance axis, the point where <script type="math/tex">|v_n - v^*| = 0</script>
+, and a good optimizer should push toward it as far as its budget allows. That reading treats search cost as a regrettable tax on the pursuit of the optimum.</p>
+<p>The correct reading is that the objective is not the distance alone, but the sum of the distance and the cost, because the cost is real and is paid out of the same account the outcome is measured in. The point a system should choose is the one that minimizes that sum, and that point is almost never at the bottom of the distance axis. It is somewhere up the frontier, at a deliberate, positive distance from the ideal, chosen because closing that last distance would cost more than the distance is worth.</p>
+<p>Naming that point exactly is the next proposition.</p>
+<h2 id="cost-aware-optimal-stopping">Cost-Aware Optimal Stopping</h2>
+<p><span id="prop-5"></span></p>
+<p><strong>Proposition 5</strong> (Cost-Aware Optimal Stopping, Stigler/McCall reservation-value form). [Layer 1: Bound] Given a per-option search cost <script type="math/tex">c > 0</script>
+ and option values drawn independently from a distribution <script type="math/tex">F</script>
+ with the costless optimum <script type="math/tex">v^*</script>
+ at the top of its support, the policy that minimizes total expected cost, meaning search cost plus expected distance from <script type="math/tex">v^*</script>
+, is a reservation-value threshold rule <a href="#ref-3" class="cite-ref" data-def="Stigler, G.J. (1961) -- The Economics of Information, Journal of Political Economy 69(3), 213-225" aria-label="Stigler, G.J. (1961) -- The Economics of Information, Journal of Political Economy 69(3), 213-225">[3]</a>
+ <a href="#ref-4" class="cite-ref" data-def="McCall, J.J. (1970) -- Economics of Information and Job Search, Quarterly Journal of Economics 84(1), 113-126" aria-label="McCall, J.J. (1970) -- Economics of Information and Job Search, Quarterly Journal of Economics 84(1), 113-126">[4]</a>
+: there is a single reservation value <script type="math/tex">\theta(c)</script>
+, depending on the cost, such that the searcher continues if and only if the best value seen so far is below it. Stop as soon as an option meeting or exceeding that computed threshold <script type="math/tex">\theta(c)</script>
+ is found. This threshold rule is satisficing in form, and it is the actual optimal policy under this cost structure, not an approximation of one. As <script type="math/tex">c \to 0</script>
+, the threshold <script type="math/tex">\theta(c) \to v^*</script>
+: the costless ideal is the limiting case that search cost structurally prevents any real system from reaching.</p>
+<details class="proof">
+<summary>Mathematical proof: the reservation equation, why the threshold rule is optimal, and the costless limit</summary>
+<p><strong>The setup.</strong> Model the search as sequential sampling with recall. At each step the searcher pays <script type="math/tex">c</script>
+ to draw one more option, observes its value <script type="math/tex">v</script>
+ drawn independently from the distribution <script type="math/tex">F</script>
+, and may stop and keep the best value seen so far or pay again to continue. The searcher wants to maximize the expected value kept minus the total search cost paid, which is the same objective as minimizing search cost plus expected distance from <script type="math/tex">v^*</script>
+, since <script type="math/tex">v^*</script>
+ is a constant.</p>
+<p><strong>Why the optimal rule is a threshold.</strong> The problem has a stationary structure, because each fresh draw faces the same distribution and the same per-draw cost, so the optimal rule cannot depend on how many draws have already happened, only on the best value in hand. That immediately implies the optimal rule is a threshold: there is a single value <script type="math/tex">\theta</script>
+ such that the searcher continues if and only if the best value in hand is below <script type="math/tex">\theta</script>
+.</p>
+<p><strong>The reservation equation.</strong> The threshold is fixed by an indifference condition. At exactly <script type="math/tex">\theta</script>
+, the searcher must be indifferent between stopping and taking one more draw, because above <script type="math/tex">\theta</script>
+ stopping is strictly better and below it continuing is strictly better. One more draw costs <script type="math/tex">c</script>
+ and improves the outcome only when it exceeds the value in hand, by the amount it exceeds it, so the expected gross gain from one more draw when holding <script type="math/tex">\theta</script>
+ is the expected excess of a draw over <script type="math/tex">\theta</script>
+. Setting the expected gain equal to the cost gives the reservation equation:</p>
+<script type="math/tex;mode=display">c = \int_{\theta}^{v^*} (v - \theta)\, dF(v)</script>
+<p>The right-hand side is the expected improvement a further draw would bring when the current best is <script type="math/tex">\theta</script>
+. It is a strictly decreasing function of <script type="math/tex">\theta</script>
+: raising the bar leaves less room above it for a draw to improve on, so the expected improvement shrinks. The left-hand side is the constant marginal cost <script type="math/tex">c</script>
+. There is therefore exactly one <script type="math/tex">\theta</script>
+ inside the support solving the equation, for any <script type="math/tex">c</script>
+ up to the right-hand side’s own maximum, attained at the bottom of the support. Past that maximum, no draw is ever worth its cost regardless of what is currently in hand, and the optimal policy is to take the very first option offered rather than search at all. Within the range where a solution exists, <script type="math/tex">\theta</script>
+ is the optimal reservation value.</p>
+<p>A standard exchange argument confirms optimality:</p>
+<ul>
+<li>any policy that stops while holding a value below <script type="math/tex">\theta</script>
+ can be improved in expectation by continuing, because a further draw is worth more than it costs there</li>
+<li>any policy that continues while holding a value above <script type="math/tex">\theta</script>
+ can be improved by stopping, because a further draw costs more than it is worth there</li>
+</ul>
+<p>Only the threshold rule is not improvable in either direction. So it is optimal.</p>
+<p><strong>The comparative statics.</strong> This is the part that carries the proposition’s claim.</p>
+<p>As <script type="math/tex">c</script>
+ rises, the constant left-hand side rises. Since the right-hand side decreases in <script type="math/tex">\theta</script>
+, the solution <script type="math/tex">\theta</script>
+ must fall: a more expensive search stops sooner and settles for less, satisficing becoming more aggressive as the world becomes more costly to search.</p>
+<p>As <script type="math/tex">c \to 0</script>
+, the left-hand side goes to zero, and the only way the right-hand side integral goes to zero is for the lower limit <script type="math/tex">\theta</script>
+ to rise to the top of the support, <script type="math/tex">v^*</script>
+. So <script type="math/tex">\theta(c) \to v^*</script>
+ as <script type="math/tex">c \to 0</script>
+. The costless ideal, in which the searcher holds out for the very best option in the entire space, is recovered only in the limit where searching is free.</p>
+<p>For every strictly positive <script type="math/tex">c</script>
+, the optimal threshold is strictly below <script type="math/tex">v^*</script>
+. The optimal policy deliberately settles for less than the best, and the size of the shortfall is set by how expensive the search is.</p>
+<p>The threshold rule does not approximate a costless optimum it would rather have reached. It is the exact optimum of the problem the searcher actually faces. The costless optimum is a different problem, the one nobody who pays for search is solving.</p>
+</details>
+<blockquote>
+<p><strong>Physical translation.</strong> An agent that keeps regenerating a patch until it finds one that passes every check is not pursuing quality, it is running a search with the stopping threshold pinned at <script type="math/tex">v^*</script>
+ while paying real cost <script type="math/tex">c</script>
+ per attempt, which Proposition 5 proves is optimal only in the limit where attempts are free, so on any real token budget the agent is spending past the reservation value on every task where the first good-enough patch already cleared the bar, and the retry that finally succeeds is not evidence the policy was right, it is the coupon the policy overpaid to buy.</p>
+</blockquote>
+<p>The Physical Translation is where this half of the post earns its place next to the theorem. Read it as the operational claim it is.</p>
+<p>The failure the theorem catches is not that a retrying agent is lazy or careless, but the opposite: the agent is being too ambitious about outcome quality relative to the cost it is paying to chase it. A retry loop with no reservation threshold is a search that has set <script type="math/tex">\theta = v^*</script>
+, and Proposition 5 says that setting is optimal only when <script type="math/tex">c = 0</script>
+.</p>
+<p>The moment each attempt costs real tokens, real latency, real money, the optimal policy stops earlier, at a positive distance from perfection. An agent that will not stop there is not optimizing harder, but optimizing the wrong objective, the costless one, on a budget that is not free.</p>
+<p>One case worth naming explicitly, because SWE-bench itself grades pass or fail: if a patch’s value really were binary, <script type="math/tex">v \in \{0, 1\}</script>
+, the reservation-value machinery above collapses to something simpler, not something different. With current best <script type="math/tex">0</script>
+ and a per-attempt success probability <script type="math/tex">p</script>
+, one more draw is worth trying exactly when <script type="math/tex">p > c</script>
+. That is a threshold rule in its own right, just with only one live comparison instead of a continuum of them. That does not license unbounded retry: it is the cascade above, not this post alone, that explains why an agent’s <em>believed</em> <script type="math/tex">p</script>
+ stays above <script type="math/tex">c</script>
+ long after its <em>true</em> <script type="math/tex">p</script>
+ on the current broken approach has fallen below it. Simulation overprices the task, Abstraction holds the wrong frame, Rationality discounts the tests that would correct the estimate, so the number actually driving the retry decision is a confidently wrong <script type="math/tex">p</script>
+, not an honest one.</p>
+<p>The binary case does not weaken the argument. It sharpens exactly where the failure lives: not in the stopping rule, but in the belief the stopping rule is fed.</p>
+<p>One more honesty note on <script type="math/tex">c</script>
+ itself, since a deployment has to put a number on it and the theorem does not hand one over. A single retry rarely costs only its own tokens. It also costs wall-clock latency the caller is waiting on, and it costs context: a failed attempt’s transcript stays in the conversation, and a context window filling up with failed attempts is a real, compounding cost that a pure per-token price misses entirely.</p>
+<p>A deployment-grade governor has to account for all three. The correct way to combine them is not a weighted sum of raw quantities in three different units, a token count, a duration, and a measure of accumulated confusion, added together with tunable coefficients. That is dimensionally incoherent regardless of what the weights are, the same way adding a distance in meters to a duration in seconds is incoherent regardless of the numbers chosen. The three components would first have to be converted into a common unit before they could be summed at all. What a unit of latency or a unit of accumulated context loss is actually worth relative to a unit of token cost is a real, deployment-specific judgment this post cannot make in the abstract.</p>
+<p>What Proposition 5 guarantees survives that accounting intact: a constant per-attempt cost implies a constant threshold, and a cost that grows as attempts accumulate implies a threshold that has to fall to match it. A context window filling with failed transcripts is exactly that: state that actively degrades the draw distribution for the next attempt, <script type="math/tex">F</script>
+ shifting to <script type="math/tex">F(\cdot \mid \text{failed attempts})</script>
+, which is a growing cost by the same logic even though no token price changed. The theorem’s shape holds either way. Only the number fed into it gets harder to compute honestly.</p>
+<p>This is the exact link to the escalation-of-commitment case. Escalation is what a search looks like when its threshold has been driven up to <script type="math/tex">v^*</script>
+ and its stopping rule has been removed, and the study’s finding is that multi-agent structure is one of the things that removes it.</p>
+<p>One scope note on “real token budget,” because it changes the problem Proposition 5 solved, not just its parameters. Proposition 5’s own setup, sequential sampling with recall against a constant per-draw cost and no discounting, never mentions a remaining-attempt count at all: the searcher can always pay <script type="math/tex">c</script>
+ for one more draw, so the derivation never has a boundary to be near. A real token budget adds exactly the boundary that derivation lacked: a hard cap <script type="math/tex">N</script>
+ on remaining attempts, past which the searcher is forced to keep whatever is currently in hand.</p>
+<p>That addition reopens the threshold as a function of <script type="math/tex">k</script>
+, the number of attempts remaining. The standard finite-horizon recursion for search with recall gives it: with <script type="math/tex">W_k(m)</script>
+ the value of holding best-so-far <script type="math/tex">m</script>
+ with <script type="math/tex">k</script>
+ draws left, <script type="math/tex">W_0(m) = m</script>
+ and <script type="math/tex">W_k(m) = \max\bigl(m,\, -c + \mathbb{E}_v[W_{k-1}(\max(m, v))]\bigr)</script>
+ for <script type="math/tex">k \geq 1</script>
+.</p>
+<p>More remaining budget is never worth less, so <script type="math/tex">W_k</script>
+ is increasing in <script type="math/tex">k</script>
+. That forces the indifference point at each <script type="math/tex">k</script>
+, the threshold <script type="math/tex">\theta_k</script>
+, to rise with it. The sequence <script type="math/tex">\theta_1 \leq \theta_2 \leq \dots</script>
+ climbs monotonically toward Proposition 5’s own stationary <script type="math/tex">\theta(c)</script>
+ as <script type="math/tex">k \to \infty</script>
+, and sits strictly below it for every finite <script type="math/tex">k</script>
+. A hard cap on remaining attempts is, by itself, exactly the reason the threshold should fall as the deadline nears: with one draw left there is no future option value to protect, and the optimal bar drops accordingly. This is the ordinary finite-horizon search-with-recall result, not an exception to Proposition 5. Proposition 5 is the <script type="math/tex">k \to \infty</script>
+ limit of the same recursion.</p>
+<p>A second, independent mechanism can lower the threshold further. If later attempts draw from a worse distribution than earlier ones, because the search is exhausting a finite pool of candidate fixes rather than resampling <script type="math/tex">F</script>
+ afresh each time, the model’s i.i.d. assumption breaks on top of its horizon. A control-plane governor built on this proposition should track both: how many attempts remain, which the recursion above already prices in, and whether the distribution of attempts is degrading, which it does not.</p>
+<p>That second gap has a concrete fix, not only a diagnosis. The context window is where the degradation actually accumulates: every failed attempt’s transcript stays in it. Each one pushes the next draw further from the fresh <script type="math/tex">F</script>
+ the reservation equation assumes, and closer to <script type="math/tex">F(\cdot \mid \text{failed attempts})</script>
+, the degraded distribution named earlier. Prompting the same context to try again is asking for another draw from exactly that degraded distribution.</p>
+<p>Flushing the accumulated failure transcripts and re-deriving from the raw problem state, rather than iterating on top of what has already gone wrong, is what actually restores the <script type="math/tex">F</script>
+ the stopping rule assumes. It is the same remedy Post 2 already named for a stale abstraction, applied here to a stale search history instead of a stale summary: return to the raw state, not to another pass through what already failed.</p>
+<h2 id="ideality-the-corner-search-cost-forbids">Ideality: The Corner Search Cost Forbids</h2>
+<p>Proposition 5 has a limit at its edge worth naming directly, because the rest of this section leans on that name as a fixed point of reference. Call it the ideality limit, adapting the term from its general, model-free sense in TRIZ. There, the ideality of a process is the ratio of the total benefit it delivers to the total cost it incurs, and a process is maximally ideal in the limit where benefit grows without bound while every component of cost falls to zero.</p>
+<p>That general form does not transplant directly into the search model of Definition 5, where benefit is capped at the finite <script type="math/tex">v^*</script>
+ by the bounded-support assumption already stated. Inside this model, the ideality limit’s trace is the point <script type="math/tex">(c \cdot n, |v_n - v^*|) \to (0, 0)</script>
+ as <script type="math/tex">c \to 0</script>
+: cost paid and distance from the best possible outcome, both approaching zero. That is a corner the frontier bends toward and, for any strictly positive <script type="math/tex">c</script>
+, never actually reaches.</p>
+<p>Naming that limit is not a fresh construct competing with the definitions doing the section’s mechanical work; it reframes what the whole optimization exercise is for, in prose, not in a proof. The ordinary way to think about an optimizer is that it navigates a trade-off: it buys outcome quality with cost, and its job is to spend well. The ideality limit rejects that framing only at the edge no positive cost ever reaches.</p>
+<p>The ideal is not a well-chosen point on the trade-off frontier. It is the corner the frontier never touches, the point where the trade-off dissolves because cost has gone to zero and the distance from the best possible outcome has gone to zero too, so there is nothing left to trade. An ideal process reaches the best outcome the model allows and costs nothing to reach it, which is to say it does not sit on the achievable region of Definition 5 at all. It sits at the unreachable origin the region bends toward but never reaches.</p>
+<p>The connection to Proposition 5 is exact. That is the reason the ideal deserves to be defined precisely, rather than dismissed as a fantasy. The proposition’s limit statement, <script type="math/tex">\theta(c) \to v^*</script>
+ as <script type="math/tex">c \to 0</script>
+, is the ideality corner approached along the cost axis. When search is free, the optimal policy holds out for the very best outcome, distance zero, at cost zero, which is exactly the ideal corner.</p>
+<p>The ideal is neither incoherent nor useless, but the precise limit of the optimal policy as cost vanishes. It functions as the direction a real optimizer should push toward: lower the cost of search itself, and the reservation threshold rises on its own toward the ideal, without the optimizer having to override its own stopping rule.</p>
+<p>The mistake is not aiming at the ideal. The mistake is pretending you have reached it while still paying a positive cost, which is what a retry loop with the threshold pinned at <script type="math/tex">v^*</script>
+ is doing: acting as though <script type="math/tex">c = 0</script>
+ while the token meter runs. Ideality names the target correctly. Proposition 5 proves that the honest way to approach it is to drive down <script type="math/tex">c</script>
+, not to disable the stopping rule and charge the difference to the budget.</p>
+<h2 id="the-human-instance-the-sunk-cost-fallacy-and-escalation-of-commitment">The Human Instance: The Sunk Cost Fallacy and Escalation of Commitment</h2>
+<p>This is the closing post of a series about portability, not a standalone note on stopping rules, because the same failure was catalogued in humans four decades before there were agents to catalogue it in, with the same defining signature. That signature is the specific thing that carries across.</p>
+<p>Hal Arkes and Catherine Blumer named and measured the sunk cost effect in 1985, in a sequence of experiments so clean they are still the standard reference <a href="#ref-5" class="cite-ref" data-def="Arkes, H.R. & Blumer, C. (1985) -- The Psychology of Sunk Cost, Organizational Behavior and Human Decision Processes 35(1), 124-140" aria-label="Arkes, H.R. & Blumer, C. (1985) -- The Psychology of Sunk Cost, Organizational Behavior and Human Decision Processes 35(1), 124-140">[5]</a>
+. Their defining demonstration is the one that isolates the effect from every rational alternative.</p>
+<p>People who had paid for a theatre subscription attended more plays, early in the season, than people who had received the identical subscription free. This held even though the price was paid and gone for both groups, and only the future enjoyment of each play should have mattered to the decision to attend. The money already spent, the sunk cost, was driving behavior it should have had no bearing on, because a cost that cannot be recovered is irrelevant to any forward-looking choice by construction.</p>
+<p>Arkes and Blumer showed the effect across contexts and pinned its signature precisely: the greater the prior investment, the greater the tendency to continue, independent of the prospects going forward. That is escalation of commitment stated as an empirical regularity, and its defining feature is exactly the one Proposition 5 identifies as the failure of cost-aware stopping.</p>
+<p>A cost-aware optimizer stops when the marginal value of continuing falls below the marginal cost, computing that comparison only over the future, because only the future is still in play. An escalating reasoner lets the past investment raise its threshold for stopping. It keeps searching past <script type="math/tex">\theta</script>
+ because it has already spent, and the spending it has done cannot, by the structure of the reservation equation, appear anywhere in the correct decision.</p>
+<p><strong>The sunk cost fallacy and escalation of commitment are a measured human finding</strong> [Layer 2: Fit]. The tag is doing exact work, not decoration. What it asserts is that the Arkes and Blumer results are an empirically observed pattern in one substrate, consistent with the prediction Proposition 5 makes if a human decision-maker is modeled as a searcher whose stopping threshold has been contaminated by unrecoverable prior cost.</p>
+<p>It asserts that much and no more. It does not assert that a human brain computes a reservation equation. It does not assert that the human effect and the agent effect are the same event. Those are separate claims at a different layer, and conflating them is the error this series is organized to avoid.</p>
+<p><strong>The escalation-of-commitment result in the Big-Muddy study is a measured agent finding</strong> [Layer 2: Fit]. The Barkett, Long, and Kröger study measured, in language-model agents under controlled decision structures, whether the model keeps funding a failing course of action. It found near-universal 99.2 percent escalation under symmetrical peer deliberation, and 68.95 percent allocation to failing divisions under organizational pressure, against a well-behaved individual baseline.</p>
+<p>This is an independent measurement, in a different substrate, of the same escalation signature. It is stated as its own fact, not as evidence for a shared cause.</p>
+<p>What makes it more than a single data point is its structure-dependence. The finding is not that agents escalate, but that agents escalate as a function of the social composition they are placed in, which is a sharper and more useful claim than a flat bias would be.</p>
+<p>The structure-dependence connects Optimization to a strand of evidence this series has not yet touched: the game-theoretic evaluation of strategic reasoning. It belongs here because escalation inside a multi-agent structure is a strategic-reasoning failure, not only a stopping-rule failure.</p>
+<p>Jinhao Duan and colleagues built GTBench to measure exactly the strategic-reasoning limitations of language models across game-theoretic tasks <a href="#ref-7" class="cite-ref" data-def="Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. & Xu, K. (2024) -- GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations, arXiv:2402.12348" aria-label="Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. & Xu, K. (2024) -- GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations, arXiv:2402.12348">[7]</a>
+. They found performance that is uneven in a diagnostic way: models do better in probabilistic, incomplete-information games, and markedly worse in complete, deterministic games where the right move is a matter of strategic calculation rather than pattern completion.</p>
+<p>The systematic survey by Haoran Sun, Yusen Wu, Yukun Cheng, and Xu Chu catalogues the broader picture across the field <a href="#ref-8" class="cite-ref" data-def="Sun, H., Wu, Y., Cheng, Y. & Chu, X. (2025) -- Game Theory Meets Large Language Models: A Systematic Survey, Proceedings of IJCAI 2025, Survey Track, 10669-10677" aria-label="Sun, H., Wu, Y., Cheng, Y. & Chu, X. (2025) -- Game Theory Meets Large Language Models: A Systematic Survey, Proceedings of IJCAI 2025, Survey Track, 10669-10677">[8]</a>
+. Language models placed in game-theoretic settings display characteristic and repeatable departures from equilibrium play, and their behavior in multi-agent interaction is not reliably captured by treating each agent as an independent rational actor.</p>
+<p><strong>These strategic-reasoning limitations are measured agent findings</strong> [Layer 2: Fit], and they corroborate the Big-Muddy result rather than duplicate it. The escalation study shows the failure on one specific decision. The game-theoretic evaluations show that departures from optimal play in multi-agent settings are a broad and repeatable feature. Together, the two make the case that the Optimization failure this post formalizes is not an artifact of one experimental setup.</p>
+<p>Optimization is also where a named proxy-failure mechanism this series has been tracking reaches its sharpest form for a single agent. Manheim and Garrabrant split Goodhart’s Law into four mechanisms. Post 2 named a family resemblance to Causal Goodhart for the stale abstraction, without claiming membership in it, and Post 3 used Regressional Goodhart for the Dunning-Kruger artifact <a href="#ref-6" class="cite-ref" data-def="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585" aria-label="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585">[6]</a>
+. The two remaining mechanisms govern the single-agent Optimization failures.</p>
+<p>Extremal Goodhart is what happens when an isolated optimizer pushes a proxy to its extreme, into a regime where the proxy’s historical correlation with the true objective no longer holds. Proposition 5’s <script type="math/tex">v</script>
+ is the true objective itself, with no proxy in the formalism. The fit needs one added premise the proposition does not contain: the searcher actually observes a proxy <script type="math/tex">\hat{v}</script>
+, the passing test suite, the reward signal, correlated with but distinct from the true <script type="math/tex">v</script>
+, and that correlation degrades toward <script type="math/tex">\hat{v}</script>
+’s own extreme. Grant that, and a search with its threshold pinned at <script type="math/tex">\sup \hat{v}</script>
+ rather than the true <script type="math/tex">v^*</script>
+ does precisely what Extremal Goodhart describes: it drives toward the extreme of the measurable proxy, past the region where that proxy tracked the outcome it was standing in for.</p>
+<p>Adversarial Goodhart is what happens when an agent optimizing a proxy actively games it. It is the mechanism behind reward hacking, where a system optimizes the specified objective so effectively that it satisfies the letter of the metric while defeating its purpose.</p>
+<p><strong>Identifying single-agent search failure and reward hacking as Extremal and Adversarial Goodhart is an identification between two formal vocabularies, this series’ own interpretive act rather than an empirical measurement</strong> [Layer 3: Estimate], not a further theorem. The Layer 1 content is Proposition 5. The Goodhart labels are the recognition that a stopping rule pinned at the ideal is an Extremal-Goodhart engine, and that an agent gaming its own success metric is Adversarial Goodhart in action.</p>
+<p>These single-agent mechanisms have to be kept separate from the multi-agent escalation the Big-Muddy study measured, because collapsing them would misattribute a mechanism this series has not established. An isolated agent driving its own metric to an extreme is Extremal Goodhart. A network of agents converging on 99.2 percent escalation is a different shape of failure: each instance is reading confidence off the others rather than off its own independent signal, plausibly an information cascade or Bayesian herding effect. This series has no formal result pinning down which mechanism is doing the work there. The Goodhart fit and the multi-agent number are both genuine evidence for the Optimization property. They are not the same claim about it, and there is no reason to expect the same architectural fix would address both.</p>
+<p><strong>The claim that the human escalation and the agent-side escalation are the same phenomenon</strong> [Layer 3: Estimate]. This is the series’ own interpretive act. It carries the only real risk in this section, exactly as every prior post set out.</p>
+<p>The Layer 1 result, Proposition 5, is a triviality of the search-theoretic mathematics and holds for any cost-bearing searcher by construction. The Layer 2 findings are separate measurements, each independently consistent with that shape. The Layer 3 claim that they are one phenomenon, rather than two phenomena of the same shape, is where the classical objection lands.</p>
+<p>It lands here for the same reason it landed in every earlier post. Multiple realizability is the standard warrant for calling a functional property shared across substrates. Hilary Putnam, who introduced that warrant, later argued that real mental kinds are compositionally and computationally plastic enough that a single functional kind need not correspond to one clean computational state <a href="#ref-9" class="cite-ref" data-def="Putnam, H. (1988) -- Representation and Reality, MIT Press, Chapters 5-6, the reconsideration of functionalism" aria-label="Putnam, H. (1988) -- Representation and Reality, MIT Press, Chapters 5-6, the reconsideration of functionalism">[9]</a>
+.</p>
+<p>That objection does not touch Proposition 5, and does not touch the two measurements. It targets only the identity claim. The right posture, held consistently across this series, is that the identity is offered as an estimate with its own standing objection attached, never as settled.</p>
+<p>There is one wrinkle specific to Optimization worth naming. The agent escalation is emergent from multi-agent structure, and the human escalation is measured in individuals. The Layer 3 identity here is therefore doing slightly more work than elsewhere: it asserts that a structurally-induced agent effect and a dispositionally-measured human effect are the same kind. That is a real reason to hold this particular estimate a little more loosely than the others, and the falsification criteria below make the extra caution concrete.</p>
+<h2 id="five-properties-one-loop-the-mape-k-correspondence">Five Properties, One Loop: The MAPE-K Correspondence</h2>
+<p>The series has now formalized all five properties. Before the closing synthesis reassembles them, it is worth naming a correspondence that has been latent in the structure the whole time: the five-property decomposition this blog inherited from its founding post is not idiosyncratic.</p>
+<p>It is, component for component, the same decomposition that autonomic computing arrived at independently for self-managing systems. Seeing the two line up is a check on the decomposition, not a coincidence to note in passing.</p>
+<p>The autonomic-computing reference model is the MAPE-K loop, formalized in the vision of autonomic computing and adapted on this blog for edge conditions in the Autonomic Edge Architectures series <a href="#ref-10" class="cite-ref" data-def="Kephart, J.O. & Chess, D.M. (2003) -- The Vision of Autonomic Computing, IEEE Computer 36(1), 41-50" aria-label="Kephart, J.O. & Chess, D.M. (2003) -- The Vision of Autonomic Computing, IEEE Computer 36(1), 41-50">[10]</a>
+. A self-managing system, in that model, runs a loop with four active stages over a shared store:</p>
+<ul>
+<li><strong>Monitor.</strong> Gathers the state of the system and the world.</li>
+<li><strong>Analyze.</strong> Interprets the raw state into a model of the situation.</li>
+<li><strong>Plan.</strong> Decides what to do about the situation the analysis produced.</li>
+<li><strong>Execute.</strong> Acts on the world.</li>
+</ul>
+<p>All four stages read from and write to a fifth component, Knowledge: a shared store of models, policies, and history that no single stage owns and every stage uses. The loop is written MAPE-K precisely because the K is not the fifth step, but the substrate the other four run on.</p>
+<p>The correspondence to this series’ five properties holds, and stating it in words is the point: most of its value sits in the two places it does not run the way the surface pairing would suggest.</p>
+<ul>
+<li>Monitor corresponds to Noticing and Simulation together: the stage that registers what the situation contains and prices what it will cost is the stage that gathers state and forecasts. That is Post 1’s pairing exactly, the two treated as one because they are inseparable.</li>
+<li>Analyze corresponds to Abstraction: the stage that turns gathered state into a model of the situation is the stage that summarizes raw data into a sufficient statistic, Post 2’s first half.</li>
+<li>Plan corresponds to Rationality: the stage that decides what to do about the analyzed situation is the stage that updates beliefs on evidence and chooses accordingly, Post 2’s second half.</li>
+<li>Execute corresponds to Optimization, at the boundary rather than inside either neighbor cleanly: Proposition 5’s stopping rule is the policy decision of when to quit searching, which in Kephart and Chess’s own division of labor is Plan’s job, and Execute is the stage that then carries the decision out. Optimization maps most precisely to that Plan-to-Execute commitment point, the moment a decision becomes an action, this post.</li>
+</ul>
+<p>Four of the five properties line up with the four active stages of the loop, in the founding post’s own dependency order, three of them one for one and the fourth at the seam between two of its stages.</p>
+<p>The fifth is where the mapping earns its keep, and it is the finding worth stating explicitly, rather than leaving for the reader to infer. Knowledge corresponds to Awareness by <em>position</em> in the architecture, not by mechanism. In the MAPE-K reference model, Knowledge is a passive store. Awareness’s actual teeth, the shadow-mode reconciliation loop Post 3 proved is required, is an active process, not a store. What corresponds is where each one sits.</p>
+<p>Knowledge is not a stage, but the cross-cutting store that every stage reads and writes, owned by none of them, sitting orthogonal to the pipeline rather than inside it. An active Awareness process is exactly the kind of thing that would read and write against a store occupying that same orthogonal position. The correspondence licenses placement, not the claim that a store can do a loop’s job.</p>
+<p>Concretely: the reconciliation logic runs as its own process, task, or actor, never as code executing inside the store’s own read or write path. Any active worker in a distributed orchestration system sits outside the shared state it reads and writes, the same way, rather than inside it. The store stays exactly as passive as MAPE-K’s own reference model already requires; nothing here asks it to be anything else.</p>
+<p>The isolation the Franzen caveat demands has to be structural, not merely organizational. If the reconciliation process can read or act on the agent’s own working state directly, sharing anything mutable the agent also touches, the independence the whole argument relies on is compromised before the first check runs. That holds whatever the arrangement looks like on paper. What actually makes a check external is that the two processes meet only at their boundary: the agent’s completed state is the only thing the reconciliation process ever sees, and its own verdict is the only thing it is ever allowed to feed back. That is the same closure von Foerster described and Proposition 4 makes exact, restated as a constraint on where the checker may stand rather than as a logical one: it cannot be inside the same self-referential loop as the thing it checks.</p>
+<p>That is exactly how this series has treated Awareness from the start. Post 3 placed Awareness alone, outside the four paired properties, and gave a structural reason: Awareness is second-order, an operation on the system’s own operations rather than a first-order operation on the world, so it cannot be one stage in a pipeline of world-facing stages.</p>
+<p>The MAPE-K model, built by a different community for a different purpose, made the identical structural choice, putting Knowledge cross-cutting rather than in-line. The reason is identical too: the store of what the system knows about itself and its history is used by every stage and is not any one of them.</p>
+<p>Two decompositions, arrived at independently, agree not just on the four active stages, but on the harder point that the self-knowledge component is categorically different from the other four. That agreement is a reason to trust the decomposition. It is also the specific thing the diagram below shows that a linear reading of the five properties does not: the pipeline is linear, and the self-knowledge component is not on it.</p>
+<p><strong>This structural correspondence is itself offered as an estimate, not a proof</strong> [Layer 3: Estimate], for the same reason every other cross-domain match in this series carries that tag. MAPE-K and this series’ five properties were built for different purposes, by different communities, one for engineering self-managing systems and one for describing engineering judgment. The alignment is evidence that this decomposition carves the problem at a real joint, the way two independent surveys landing on the same coastline is evidence the coastline is really there. It is not a proof that no other five-part decomposition would serve as well, and it is not the kind of claim, unlike Proposition 4, that a theorem could settle either way.</p>
+<pre class="mermaid">
+    
+    graph LR
+    M[Monitor] --> A[Analyze]
+    A --> P[Plan]
+    P --> E[Execute]
+    K[Knowledge] -.-> M
+    K -.-> A
+    K -.-> P
+    K -.-> E
+    M -.- N["Noticing + Simulation"]
+    A -.- AB["Abstraction"]
+    P -.- R["Rationality"]
+    E -.- O["Optimization"]
+    K -.- AW["Awareness"]
+</pre><figcaption>Figure 1: the four active stages of MAPE-K map one-for-one onto Simulation, Abstraction, Rationality, and Optimization in the founding post's dependency order, and Knowledge maps onto Awareness. The solid arrows are the pipeline. The dotted arrows from Knowledge to every stage are the reason Awareness stands alone: it is the cross-cutting store the whole loop runs on, not a step within it.</figcaption>
+<h2 id="the-bookend-one-case-five-failures-one-cascade">The Bookend: One Case, Five Failures, One Cascade</h2>
+<p>Post 1 opened this series with a single case: six frontier models asked to price and forecast their own work on a subset of SWE-bench Lite. It read that case through one property, Simulation.</p>
+<p>The completed framework can now read the same case through all five. The point of doing so is not to show that five lenses see more than one. It is to show that the five failures are not five independent observations about one case. They are one causal cascade, each failure creating the conditions for the next, and the cascade is why compute spent at the last stage cannot repair a deficit that originated at the first.</p>
+<p><strong>Reading the case this way is itself a claim with a warrant, and it earns the same tag every other composite claim in this series carries</strong> [Layer 3: Estimate]. Each per-stage mechanism below is a Layer 1 or Layer 2 finding, proved or measured on its own apparatus: Ashby’s Law is a theorem, the stale-abstraction and asymmetric-update signatures are ToolMaze and Li-Wang-Yang measurements, the miscalibrated self-report is the shadow-mode pattern Post 3 formalized. MarketBench itself measured a forecast and an outcome, not the four intervening steps the cascade narrates. Chaining all five into one trajectory, each failure producing the next within a single run, is this series’ own construction, not a sequence any one study instrumented. It is falsifiable on exactly that basis, not on the basis of the four propositions it is built from.</p>
+<p>Recall the exact case. In April 2026, Andrey Fradkin and Rohit Krishnan ran MarketBench across six recently released frontier models, Claude Opus 4.5, Gemini 3 Pro Preview, GPT-5.2, GPT-5.2-pro, Claude Sonnet 4.5, and GPT-5-mini, on a 93-task subset of SWE-bench Lite. Each model was asked to forecast its success probability and token cost before attempting each task.</p>
+<p>The token-cost estimates ran roughly one fifth of the true cost, a factor of about five underestimation. Stated success probabilities ranged from 61.4 to 92.9 percent, while realized pass rates clustered between 75.3 and 80.6 percent. Post 1 read the underestimation as a Simulation failure and stopped there, deliberately, because that was the property Post 1 was about.</p>
+<p>Now follow what that first failure sets in motion.</p>
+<p>The <strong>Simulation</strong> failure is the entry point. The model prices the task at a fifth of its true cost. As Post 1 proved through Ashby’s Law, a regulator can spend only the variety it has noticed, and at forecast time the model has noticed a two-line issue description and almost none of the task’s real disturbance variety. The forecast is forced low.</p>
+<p>So far this is Post 1’s story, and on its own it is merely an inaccurate estimate.</p>
+<p>The underestimate does not stay contained. This is where the cascade begins.</p>
+<p>Because the model has priced the task cheap, it commits to the first patch strategy that looks plausible, allocating the small budget its forecast justified. Then that strategy’s cost assumptions break: the patch turns out to touch more of the codebase than the cheap forecast allowed for. The correct move is to re-abstract, returning to the raw repository state and re-deriving a summary sufficient for the task as it actually is, not as the cheap forecast imagined it.</p>
+<p>The model does not do this. It holds the original abstraction fixed and keeps working through it. That is the <strong>Abstraction</strong> failure Post 2 formalized: a sufficient statistic fitted to the task-as-forecast, held past the moment the task-as-encountered diverged from it, with the information needed to notice the divergence sitting in the raw data the abstraction already discarded.</p>
+<p>The undersimulation caused this. A system that had priced the task correctly would have budgeted for the exploration that surfaces the need to re-abstract. A system that priced it cheap has already spent its budget committing to the first frame.</p>
+<p>The stale abstraction then distorts the next stage. Working through a frame that no longer fits, the model runs tests, and some of them fail. Failing tests are disconfirming evidence: they carry the signal that the chosen approach is wrong. A cost-aware reasoner would weight that signal by its true diagnostic value, which for a failing test on a committed approach is high.</p>
+<p>The model instead discounts it, because the failing test contradicts the approach it has already abstracted the task around. That is the <strong>Rationality</strong> failure Post 2 formalized as asymmetric updating: confirming evidence inflated, disconfirming evidence suppressed, the posterior drifting away from the truth by an amount that grows with the evidence seen.</p>
+<p>The stale abstraction caused this. The disconfirming test is disconfirming only relative to the frame, and a model holding the frame fixed reads the test as noise to be worked around, rather than as the counterexample that should break the frame.</p>
+<p>The discounted disconfirmation then blinds the stage above it. Having suppressed the evidence that its work is wrong, the model arrives at a self-assessment: high confidence in a diff that does not resolve the issue.</p>
+<p>This is the <strong>Awareness</strong> failure Post 3 formalized. Post 3 proved it is the one failure in the cascade with a genuine formal-system-grade limit behind it. A reasoner whose self-trust is provability-based cannot certify its own soundness from within without collapse, so the confidence the model reports is generated by a process that structurally cannot verify the thing the confidence is about.</p>
+<p>The asymmetric updating caused this specific instance. A model that had absorbed the failing tests at their true weight would have had the disconfirming mass its self-assessment needed. A model that suppressed them has fed its self-model a stream with the counterevidence already filtered out.</p>
+<p>And the unwarranted confidence forces the final stage into the failure this post formalized. Confident in a broken diff and blind to the brokenness, the model does not stop. It retries, regenerates, escalates, spending more budget on an approach the evidence already condemned. That is the <strong>Optimization</strong> failure: a search with its stopping threshold pinned at <script type="math/tex">v^*</script>
+ while it pays real cost per attempt, escalation of commitment in the exact sense the Big-Muddy study measured.</p>
+<p>Here the multi-agent finding bites. A system that dispatches the retry to a deliberating group of agent instances, rather than to a single instance that might have cut its losses, has assembled precisely the symmetrical peer structure the study found drives escalation to near-universal. The undersimulation at the entrance has become, five stages later, a retry loop that cannot terminate.</p>
+<table><thead><tr><th>Stage</th><th>Failure</th><th>Upstream cause</th><th>What it produces downstream</th></tr></thead><tbody>
+<tr><td>Simulation</td><td>Prices the task at about one fifth of its true cost</td><td>Forecast-time variety far smaller than task variety (Ashby’s Law)</td><td>A small budget committed before exploration reveals the task’s real shape</td></tr>
+<tr><td>Abstraction</td><td>Holds the original plan fixed after it stops fitting</td><td>The cheap forecast never budgeted for the exploration that would trigger re-abstraction</td><td>A frame that reads later disconfirming evidence as noise to route around</td></tr>
+<tr><td>Rationality</td><td>Discounts failing tests as noise</td><td>The stale abstraction makes disconfirming tests look irrelevant to the chosen frame</td><td>A self-assessment built on a filtered evidence stream</td></tr>
+<tr><td>Awareness</td><td>Reports high confidence in a broken diff</td><td>Disconfirming mass suppressed before it reached the self-model</td><td>A confidence signal with the counterevidence already removed</td></tr>
+<tr><td>Optimization</td><td>Retries past the point the evidence condemned</td><td>Confident, blind self-assessment gives the search no signal to stop on</td><td>A retry loop that cannot terminate on its own</td></tr>
+</tbody></table>
+<figcaption>Table 0: the same case reread as one causal cascade rather than five independent observations. Each column's failure is the next column's cause; fixing the retry loop at the bottom does not touch the deficit that originated at the top.</figcaption>
+<p>The table states the claim. The chart below runs it: click any stage to test, for yourself, whether fixing it there would actually have helped.</p>
+<div style="margin:1.5em 0;">
+<p id="cascade-readout" style="margin:0; padding:0.65em 1em; font-size:0.9em; color:#444; text-align:center; background:#f8f6f4; border:1px solid #e0e0e0; border-bottom-width:0; border-top-width:3px; border-top-color:#c0392b; border-radius:4px 4px 0 0; transition:border-top-color 0.4s ease;"></p>
+<canvas id="cascade-canvas" aria-label="Interactive fire diagram of the five-stage causal cascade: Simulation, Abstraction, Rationality, Awareness, Optimization. A panel centered over the flame names the current outcome, from RESOLVED through CORRECTLY DIAGNOSED, HONEST STOP, and CAPPED-STILL-WRONG to RUNAWAY, with a one-line explanation of what is and is not fixed underneath it, fading into place each time it changes so it stays readable no matter how tall the flame underneath it grows, styled to match the description panel above the chart. A legend for burning, contained, and extinguished states, an on-canvas hint, and a small rotated caption reading tokens, burning along the flame's left edge, are also visible directly on the chart. A flickering flame rises from a baseline and grows taller and redder stage by stage as the error compounds, ending in an unstable pulsing burst past Optimization representing a retry loop that does not go out on its own. Embers drift through the flame to show the error propagating, and smoke puffs rise briefly at the moment a stage is put out. Clicking a stage places a firebreak there: the flame animates down to nothing immediately downstream over about a second, rather than vanishing instantly, showing those failures never happening, while everything upstream of the firebreak keeps burning exactly as before, showing that putting out a downstream symptom cannot reach an upstream cause. Clicking the contained stage again relights everything downstream of it. Below the fire diagram, a separate strip shows Figure 1's MAPE-K loop mapped onto the same five stages: M, A, P, and E each connect down to their matching stage with a solid line, while Awareness connects with a dashed line to a dashed K badge, marking it as the cross-cutting Knowledge store rather than a pipeline stage. When nothing is hovered or selected, a small dot drifts along the strip to suggest the pipeline running; hovering or clicking a stage above, or clicking its badge in the strip directly, glows the matching badge below, and the two stay in sync in either direction. Every click, whether it places a firebreak or removes one, sends a brief expanding ring out from the affected badge to confirm the change." style="width:100%; aspect-ratio:700/520; border:1px solid #e0e0e0; border-radius:0 0 4px 4px; background:#fff; display:block;"></canvas>
+</div>
+<script>
+(function () {
+  var canvas = document.getElementById('cascade-canvas');
+  var ctx = canvas.getContext('2d');
+  var readout = document.getElementById('cascade-readout');
+  var W, H, contentH;
+  var nodes = [
+    { label: 'Simulation', fail: 'Prices task at ~1/5 true cost', gone: 'never underpriced the task', mape: 'M' },
+    { label: 'Abstraction', fail: 'Holds the plan fixed past its fit', gone: 'no cheap plan to over-commit to', mape: 'A' },
+    { label: 'Rationality', fail: 'Discounts failing tests as noise', gone: 'no stale frame to make tests look irrelevant', mape: 'P' },
+    { label: 'Awareness', fail: 'Reports confidence in a broken diff', gone: 'no filtered evidence to be confident from', mape: 'K' },
+    { label: 'Optimization', fail: 'Retries past what evidence condemned', gone: 'no false confidence telling it to keep going', mape: 'E' }
+  ];
+  var edgeLabels = ['commits budget blind', 'reads dissent as noise', 'filters the self-model', 'removes the stop signal'];
+  var stageWeight = [0.16, 0.30, 0.48, 0.70, 1.0];
+  var runaway = { label: 'RUNAWAY', color: '#c0392b', sub: 'nothing caught yet: the error compounds through all five stages unchecked', detail: 'Nothing put out yet: one undersimulation, MarketBench\'s own measured factor-of-five cost underestimate, left to burn, compounds through all five stages into a retry loop that does not go out on its own. Click a stage to test where you would have caught it.' };
+  var outcomes = [
+    { label: 'RESOLVED', color: '#27ae60', sub: 'caught before any budget is committed, so nothing downstream ever has a cause', detail: 'Put out at Simulation, the root cause: MarketBench measured this exact failure, pricing the task at roughly one fifth its true cost. A resource-estimation floor gating admission catches it here, before any budget is committed. Every downstream failure disappears because none of them ever had a cause: no cheap plan to over-commit to, no stale frame, no filtered evidence, no false confidence, no runaway retry.' },
+    { label: 'CORRECTLY DIAGNOSED', color: '#2980b9', sub: 'honest frame downstream, though the upstream cost estimate is still wrong', detail: 'Put out at Abstraction, via the re-abstraction loop returning to the raw repository state instead of trusting the cheap plan: Rationality never gets a stale frame to discount tests against, Awareness never gets a filtered evidence stream, and Optimization never loses its stop signal. Simulation\'s original underestimate is still sitting there, though, unexamined and unpaid for.' },
+    { label: 'CORRECTLY DIAGNOSED', color: '#2980b9', sub: 'honest evidence downstream, though the estimate and plan are still wrong', detail: 'Put out at Rationality, via the falsification loop injecting the disconfirming evidence the model would not sample itself: the failing tests get weighted at their true diagnostic value instead of discounted as noise. Awareness gets the disconfirming mass its self-assessment needs, and Optimization gets an honest signal to stop on. Simulation\'s underestimate and Abstraction\'s stale plan are both still upstream, untouched.' },
+    { label: 'HONEST STOP', color: '#d68910', sub: 'a real stop signal at last, though three upstream errors go uncorrected', detail: 'Put out at Awareness, via the shadow-mode reconciliation loop checking confidence against ground truth the model did not generate: Optimization finally gets a real stop signal instead of false confidence. Three stages of accumulated error, the cheap forecast, the stale plan, the discounted tests, are still exactly where they started.' },
+    { label: 'CAPPED, STILL WRONG', color: '#d35400', sub: 'the retry stops, though the belief driving it is still confidently wrong', detail: 'Put out at Optimization, via the external stopping governor, the fix everyone reaches for first because it is where the cost is visibly burned: the retry stops. But the belief driving it is still confidently wrong, because the other four stages are all still broken upstream. If the retry runs through a deliberating group of agents rather than one, Big-Muddy\'s own numbers show escalation holds in about 99.2 percent of runs even past this governor.' }
+  ];
+  var damNode = null;
+  var hoverIdx = -1;
+  var lastDamNodeForRipple = null;
+  var mapeRippleIdx = -1;
+  var mapeRippleT = 1;
+  var phase = 0;
+  var animFrontier = null;
+  var lastDam = -1;
+  var headlineProgress = 1;
+  var smoke = [];
+  var embers = [0, 0.2, 0.4, 0.6, 0.8, 0.95];
+  function currentOutcome(dam) { return dam === 5 ? runaway : outcomes[dam]; }
+  function prevented() {
+    var p = [false, false, false, false, false];
+    if (damNode !== null) for (var i = damNode + 1; i < 5; i++) p[i] = true;
+    return p;
+  }
+  function damIndex() {
+    return damNode === null ? 5 : damNode;
+  }
+  function setupCanvas() {
+    var rect = canvas.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = rect.width; H = rect.height;
+    contentH = H * (440 / 520);
+    animFrontier = null;
+  }
+  function calcNR() {
+    return Math.min(32, W * 0.04);
+  }
+  function edgeLabelYFor(baseY) {
+    return Math.max(contentH * 0.15, baseY - contentH * 0.58);
+  }
+  function positions() {
+    var pad = W * 0.085, usable = W - pad * 2;
+    var NR = calcNR();
+    var lineH = Math.max(9, NR * 0.32);
+    var capBudget = NR + 33 + 2 * lineH + 12;
+    var flameHeadroom = contentH * 0.44 * 1.3 + 6;
+    var y = Math.min(contentH * 0.90, contentH - capBudget);
+    y = Math.max(y, flameHeadroom);
+    var pts = [];
+    for (var i = 0; i < 5; i++) pts.push({ x: pad + usable * (i / 4), y: y });
+    return pts;
+  }
+  function severityAt(x, pts) {
+    if (x <= pts[0].x) return stageWeight[0] * (0.1 + 0.9 * Math.max(0, (x - pts[0].x + W * 0.05) / (W * 0.05)));
+    var seg = 3;
+    for (var i = 0; i < 4; i++) { if (x >= pts[i].x && x <= pts[i + 1].x) { seg = i; break; } }
+    if (x <= pts[4].x) {
+      var t0 = pts[seg].x, t1 = pts[seg + 1].x;
+      var f = (x - t0) / (t1 - t0);
+      return stageWeight[seg] + (stageWeight[seg + 1] - stageWeight[seg]) * f;
+    }
+    var over = (x - pts[4].x) / (W * 0.12);
+    return 1.0 + over * over * 0.9;
+  }
+  function targetFrontier(pts, dam) {
+    if (dam === 0) return pts[0].x - W * 0.045;
+    if (dam === 5) return W - W * 0.015;
+    return pts[dam].x;
+  }
+  function drawFlame(pts, dam) {
+    var baseY = pts[0].y;
+    var maxH = contentH * 0.44;
+    var target = targetFrontier(pts, dam);
+    if (animFrontier === null) animFrontier = target;
+    animFrontier += (target - animFrontier) * 0.07;
+    var startX = pts[0].x - W * 0.05;
+    var fadeZone = W * 0.05;
+    var step = Math.max(2, W * 0.0035);
+    ctx.beginPath();
+    ctx.moveTo(startX, baseY);
+    var maxTip = 0, tipX = startX;
+    for (var x = startX; x <= animFrontier + fadeZone && x <= W; x += step) {
+      var sev = severityAt(x, pts);
+      var flicker = Math.sin(x * 0.05 + phase * 1.6) * 0.35 + Math.abs(Math.sin(x * 0.12 + phase * 2.3)) * 0.45;
+      var breathing = x > pts[4].x ? Math.sin(phase * 2.4) * 0.16 * sev : 0;
+      var h = maxH * (sev * (0.55 + flicker * 0.5) + breathing);
+      var fade = 1;
+      if (x > animFrontier) fade = Math.max(0, 1 - (x - animFrontier) / fadeZone);
+      h *= fade;
+      var y = baseY - h;
+      ctx.lineTo(x, y);
+      if (h > maxTip) { maxTip = h; tipX = x; }
+    }
+    var endX = Math.min(animFrontier + fadeZone, W);
+    ctx.lineTo(endX, baseY);
+    ctx.closePath();
+    var grad = ctx.createLinearGradient(0, baseY, 0, baseY - maxH);
+    grad.addColorStop(0, 'rgba(255,196,64,0.92)');
+    grad.addColorStop(0.35, 'rgba(230,126,34,0.88)');
+    grad.addColorStop(0.7, 'rgba(211,84,0,0.85)');
+    grad.addColorStop(1, 'rgba(192,57,43,0.9)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    if (endX < W - W * 0.01) {
+      ctx.strokeStyle = 'rgba(130,140,145,0.35)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(endX, baseY); ctx.lineTo(W - W * 0.015, baseY); ctx.stroke();
+    }
+    return { tipX: tipX, tipY: baseY - maxTip, frontier: animFrontier, target: target };
+  }
+  function drawDam(pts, dam, dark) {
+    if (dam === 5) return;
+    var x = dam === 0 ? pts[0].x - W * 0.03 : pts[dam].x;
+    var baseY = pts[0].y, h = contentH * 0.26;
+    ctx.strokeStyle = dark ? '#8ab4f8' : '#2980b9';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, baseY + 6); ctx.lineTo(x, baseY - h); ctx.stroke();
+    for (var r = 6; r <= 16; r += 5) {
+      ctx.beginPath(); ctx.arc(x, baseY, r + Math.sin(phase * 3) * 2, 0, Math.PI * 2);
+      ctx.strokeStyle = dark ? 'rgba(138,180,248,' + (0.35 - r * 0.015) + ')' : 'rgba(41,128,185,' + (0.35 - r * 0.015) + ')';
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  function spawnSmoke(x, y) {
+    if (smoke.length > 24) return;
+    smoke.push({ x: x + (Math.random() - 0.5) * 10, y: y, life: 1, drift: (Math.random() - 0.5) * 0.3 });
+  }
+  function drawSmoke(dark) {
+    for (var i = smoke.length - 1; i >= 0; i--) {
+      var s = smoke[i];
+      s.y -= 0.55; s.x += s.drift; s.life -= 0.016;
+      if (s.life <= 0) { smoke.splice(i, 1); continue; }
+      ctx.beginPath(); ctx.arc(s.x, s.y, 3 + (1 - s.life) * 7, 0, Math.PI * 2);
+      ctx.fillStyle = dark ? 'rgba(180,180,180,' + (s.life * 0.35) + ')' : 'rgba(120,120,120,' + (s.life * 0.3) + ')';
+      ctx.fill();
+    }
+  }
+  function drawEmbers(pts, flame) {
+    var startX = pts[0].x - W * 0.05;
+    var endX = flame.frontier;
+    if (endX <= startX) return;
+    for (var i = 0; i < embers.length; i++) {
+      embers[i] += 0.0015 + severityAt(Math.min(endX, pts[4].x), pts) * 0.0035;
+      if (embers[i] > 1) embers[i] -= 1;
+      var x = startX + (endX - startX) * embers[i];
+      var sev = severityAt(x, pts);
+      var flicker = Math.sin(x * 0.05 + phase * 1.6) * 0.35 + Math.abs(Math.sin(x * 0.12 + phase * 2.3)) * 0.45;
+      var h = contentH * 0.44 * (sev * (0.55 + flicker * 0.5));
+      var ey = pts[0].y - h * (0.3 + 0.5 * Math.abs(Math.sin(x * 0.2 + phase * 3 + i)));
+      ctx.beginPath(); ctx.arc(x, ey, Math.max(1.2, 2.2 * sev), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,236,179,0.9)'; ctx.fill();
+    }
+  }
+  function glyph(cx, cy, r, kind, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    if (kind === 'x') {
+      var o = r * 0.42;
+      ctx.beginPath(); ctx.moveTo(cx - o, cy - o); ctx.lineTo(cx + o, cy + o); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + o, cy - o); ctx.lineTo(cx - o, cy + o); ctx.stroke();
+    } else if (kind === 'check') {
+      ctx.beginPath(); ctx.moveTo(cx - r * 0.4, cy); ctx.lineTo(cx - r * 0.1, cy + r * 0.35); ctx.lineTo(cx + r * 0.45, cy - r * 0.35); ctx.stroke();
+    } else {
+      ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(cx - r * 0.4, cy); ctx.lineTo(cx + r * 0.4, cy); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  function drawLegend(dark) {
+    var lf = dark ? '#c9c9c9' : '#555';
+    var red = '#c0392b', blue = dark ? '#8ab4f8' : '#2980b9', grayStroke = dark ? '#777' : '#9aa0a4';
+    var items = [{ k: 'x', c: red, t: 'burning' }, { k: 'check', c: blue, t: 'contained here' }, { k: 'dash', c: grayStroke, t: 'extinguished' }];
+    var fs = Math.max(8, W * 0.0135);
+    ctx.font = fs + 'px system-ui,sans-serif';
+    var totalW = 0, gap = W * 0.024, r = fs * 0.6;
+    for (var m = 0; m < items.length; m++) totalW += r * 2.6 + ctx.measureText(items[m].t).width + gap;
+    var x = W - totalW + gap * 0.3, y = H * 0.045;
+    for (var i = 0; i < items.length; i++) {
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = dark ? '#262626' : '#fbfbfb'; ctx.fill();
+      ctx.lineWidth = 1.6; ctx.strokeStyle = items[i].c; ctx.stroke();
+      glyph(x, y, r, items[i].k, items[i].c);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = lf;
+      ctx.fillText(items[i].t, x + r * 1.6, y + 1);
+      x += r * 2.6 + ctx.measureText(items[i].t).width + gap;
+    }
+  }
+  function drawSpendAxisLabel(dark) {
+    var fs = Math.max(8, W * 0.0125);
+    ctx.save();
+    ctx.translate(W * 0.02, contentH * 0.58);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = 'italic ' + fs + 'px system-ui,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = dark ? '#8a8a8a' : '#9a9a9a';
+    ctx.fillText('tokens, burning', 0, 0);
+    ctx.restore();
+  }
+  function mapeRow() {
+    var hintY = H * 0.965;
+    var hintFs = Math.max(8, W * 0.0135);
+    var br = Math.max(5, W * 0.016);
+    var rowY = hintY - hintFs * 1.7 - br;
+    return { rowY: rowY, br: br };
+  }
+  function drawMapeStrip(pts, dark) {
+    var blue = dark ? '#8ab4f8' : '#2980b9';
+    var lineCol = dark ? '#555' : '#bbb';
+    var mutedText = dark ? '#8a8a8a' : '#9a9a9a';
+    ctx.save();
+    ctx.strokeStyle = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, contentH + 0.5); ctx.lineTo(W, contentH + 0.5); ctx.stroke();
+    ctx.restore();
+    var mr = mapeRow(), rowY = mr.rowY, br = mr.br;
+    var capFs = Math.max(7, W * 0.0115);
+    var gapAboveRow = rowY - br - contentH;
+    var showCaption = gapAboveRow > capFs * 2.2;
+    var capY = contentH + Math.min(gapAboveRow * 0.4, capFs * 1.3);
+    var dropStartY = Math.min(showCaption ? capY + capFs * 0.7 : contentH + 3, rowY - br - 2);
+    if (showCaption) {
+      ctx.font = 'italic ' + capFs + 'px system-ui,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = mutedText;
+      ctx.fillText('Figure 1\'s MAPE-K loop, mapped onto these five stages', W / 2, capY);
+    }
+    var highlightIdx = hoverIdx >= 0 ? hoverIdx : (damNode !== null ? damNode : -1);
+    if (damNode !== lastDamNodeForRipple) {
+      mapeRippleIdx = damNode !== null ? damNode : lastDamNodeForRipple;
+      mapeRippleT = 0;
+      lastDamNodeForRipple = damNode;
+    }
+    mapeRippleT = Math.min(1, mapeRippleT + 0.05);
+    for (var i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.strokeStyle = lineCol;
+      ctx.lineWidth = 1.3;
+      if (i === 2 || i === 3) ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(pts[i].x + br, rowY); ctx.lineTo(pts[i + 1].x - br, rowY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    var t = (phase * 0.06) % 1;
+    var tx = pts[0].x + (pts[4].x - pts[0].x) * t;
+    ctx.save();
+    ctx.globalAlpha = highlightIdx === -1 ? 0.5 : 0.25;
+    ctx.beginPath(); ctx.arc(tx, rowY, br * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = blue;
+    ctx.fill();
+    ctx.restore();
+    for (var j = 0; j < 5; j++) {
+      var bx = pts[j].x, isK = nodes[j].mape === 'K', isHi = j === highlightIdx;
+      var pulse = isHi ? 1 + 0.08 * Math.sin(phase * 4) : 1;
+      ctx.save();
+      ctx.strokeStyle = lineCol; ctx.lineWidth = 1;
+      if (isK) ctx.setLineDash([2, 2]);
+      ctx.beginPath(); ctx.moveTo(bx, dropStartY); ctx.lineTo(bx, rowY - br * pulse);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+      ctx.save();
+      if (isHi) { ctx.shadowColor = blue; ctx.shadowBlur = W * 0.02; }
+      ctx.beginPath(); ctx.arc(bx, rowY, br * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = dark ? '#262626' : '#fbfbfb'; ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = isHi ? blue : (isK ? blue : lineCol);
+      ctx.lineWidth = isHi ? 1.8 : 1.2;
+      if (isK) ctx.setLineDash([2, 2]);
+      ctx.beginPath(); ctx.arc(bx, rowY, br * pulse, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold ' + Math.max(8, br * 1.05) + 'px system-ui,sans-serif';
+      ctx.fillStyle = isHi || isK ? blue : mutedText;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(nodes[j].mape, bx, rowY + 0.5);
+      ctx.restore();
+      if (j === mapeRippleIdx && mapeRippleT < 1) {
+        ctx.save();
+        ctx.globalAlpha = (1 - mapeRippleT) * 0.6;
+        ctx.strokeStyle = blue;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(bx, rowY, br * (1 + mapeRippleT * 2), 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+  function roundRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function wrapLines(text, maxW) {
+    var words = text.split(' '), line = '', lines = [];
+    for (var i = 0; i < words.length; i++) {
+      var test = line + words[i] + ' ';
+      if (ctx.measureText(test).width > maxW && line !== '') { lines.push(line.trim()); line = words[i] + ' '; }
+      else line = test;
+    }
+    lines.push(line.trim());
+    return lines;
+  }
+  function headlineLayout(o) {
+    var baseY = positions()[0].y;
+    var edgeLabelY = edgeLabelYFor(baseY);
+    var nodeTopY = baseY - calcNR();
+    var availTop = edgeLabelY + contentH * 0.02;
+    var availBottom = nodeTopY - contentH * 0.02;
+    var maxAvailH = availBottom - availTop;
+    var labelSize = Math.max(16, W * 0.031);
+    var subSize = Math.max(10, W * 0.0165);
+    var labelW, subLines, subW, panelW, lineH, padY, gap, panelH;
+    for (var attempt = 0; attempt < 6; attempt++) {
+      ctx.font = '800 ' + labelSize + 'px system-ui,sans-serif';
+      labelW = ctx.measureText(o.label).width;
+      ctx.font = subSize + 'px system-ui,sans-serif';
+      subLines = wrapLines(o.sub, W * 0.84);
+      subW = 0;
+      for (var s = 0; s < subLines.length; s++) subW = Math.max(subW, ctx.measureText(subLines[s]).width);
+      panelW = Math.min(W * 0.92, Math.max(labelW, subW) + W * 0.08);
+      lineH = subSize * 1.3;
+      padY = subSize * 0.8;
+      gap = subSize * 0.6;
+      panelH = padY * 2 + labelSize + gap + subLines.length * lineH;
+      if (panelH <= maxAvailH || (labelSize <= 11 && subSize <= 8)) break;
+      labelSize = Math.max(11, labelSize * 0.9);
+      subSize = Math.max(8, subSize * 0.88);
+    }
+    return { cy: (availTop + availBottom) / 2, labelSize: labelSize, subSize: subSize, panelW: panelW, panelH: panelH, subLines: subLines, lineH: lineH, padY: padY, gap: gap };
+  }
+  function drawHeadline(dam) {
+    if (dam !== lastDam) { headlineProgress = 0; lastDam = dam; }
+    headlineProgress = Math.min(1, headlineProgress + 0.06);
+    var ease = 1 - Math.pow(1 - headlineProgress, 3);
+    var subT = Math.max(0, Math.min(1, (headlineProgress - 0.25) / 0.75));
+    var subEase = 1 - Math.pow(1 - subT, 3);
+    var o = currentOutcome(dam);
+    var cx = W / 2;
+    var lay = headlineLayout(o);
+    var labelSize = lay.labelSize, subSize = lay.subSize, panelW = lay.panelW, panelH = lay.panelH;
+    var subLines = lay.subLines, lineH = lay.lineH, padY = lay.padY, gap = lay.gap;
+    var cy = lay.cy + (1 - ease) * 10;
+    ctx.save();
+    ctx.globalAlpha = ease;
+    roundRectPath(cx - panelW / 2, cy - panelH / 2, panelW, panelH, Math.min(18, panelH * 0.16));
+    ctx.shadowColor = o.color;
+    ctx.shadowBlur = W * 0.035;
+    ctx.fillStyle = '#f8f6f4';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = o.color;
+    ctx.stroke();
+    ctx.restore();
+    var labelCY = cy - panelH / 2 + padY + labelSize * 0.5;
+    ctx.save();
+    ctx.globalAlpha = ease;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '800 ' + labelSize + 'px system-ui,sans-serif';
+    ctx.fillStyle = o.color;
+    ctx.fillText(o.label, cx, labelCY);
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = subEase;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = subSize + 'px system-ui,sans-serif';
+    ctx.fillStyle = '#4a4a4a';
+    var subTop = labelCY + labelSize * 0.5 + gap + lineH * 0.5;
+    for (var k = 0; k < subLines.length; k++) ctx.fillText(subLines[k], cx, subTop + k * lineH);
+    ctx.restore();
+  }
+  function draw() {
+    var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var bg = dark ? '#1e1e1e' : '#ffffff';
+    var lf = dark ? '#e6e6e6' : '#1a1a1a', sub = dark ? '#aaa' : '#555';
+    var red = '#c0392b', blue = dark ? '#8ab4f8' : '#2980b9', grayFill = dark ? '#2a2a2a' : '#eef0f1', grayStroke = dark ? '#666' : '#aab0b4';
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    var pts = positions(), pv = prevented(), dam = damIndex();
+    var NR = calcNR();
+    drawLegend(dark);
+    drawSpendAxisLabel(dark);
+    var flame = drawFlame(pts, dam);
+    if (Math.abs(flame.target - flame.frontier) > 2) { spawnSmoke(flame.frontier, pts[0].y - contentH * 0.05); }
+    drawSmoke(dark);
+    drawEmbers(pts, flame);
+    drawDam(pts, dam, dark);
+    drawHeadline(dam);
+    for (var i = 0; i < 4; i++) {
+      var lfs = Math.max(8, W * 0.0148);
+      ctx.font = 'italic ' + lfs + 'px system-ui,sans-serif';
+      var midX = (pts[i].x + pts[i + 1].x) / 2;
+      var labelY = edgeLabelYFor(pts[0].y);
+      ctx.textAlign = 'center'; ctx.fillStyle = i < dam ? sub : grayStroke;
+      ctx.fillText(edgeLabels[i], midX, labelY);
+      ctx.save();
+      ctx.strokeStyle = i < dam ? sub : grayStroke;
+      ctx.lineWidth = 1.3;
+      if (i === 2 || i === 3) ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(midX - W * 0.028, labelY + lfs * 0.75);
+      ctx.lineTo(midX + W * 0.028, labelY + lfs * 0.75);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    for (var j = 0; j < 5; j++) {
+      var pt = pts[j], nd = nodes[j];
+      var state = pv[j] ? 'prevented' : (j === damNode ? 'fixed' : 'failed');
+      var r = NR + (j === hoverIdx ? 3 : 0);
+      if (j === hoverIdx) {
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, r + 6, 0, Math.PI * 2);
+        ctx.fillStyle = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; ctx.fill();
+      }
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.28)'; ctx.shadowBlur = state === 'prevented' ? 0 : 6; ctx.shadowOffsetY = 2;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = state === 'prevented' ? grayFill : (dark ? '#262626' : '#fbfbfb'); ctx.fill();
+      ctx.restore();
+      ctx.lineWidth = state === 'fixed' ? 2.8 : 2;
+      ctx.strokeStyle = state === 'failed' ? red : (state === 'fixed' ? blue : grayStroke);
+      ctx.setLineDash(state === 'prevented' ? [3, 3] : []);
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      glyph(pt.x, pt.y, r, state === 'failed' ? 'x' : (state === 'fixed' ? 'check' : 'dash'), state === 'failed' ? red : (state === 'fixed' ? blue : grayStroke));
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = 'bold ' + Math.max(9, NR * 0.36) + 'px system-ui,sans-serif';
+      ctx.fillStyle = lf;
+      ctx.fillText(nd.label, pt.x, pt.y + NR + 15);
+      ctx.font = Math.max(7, NR * 0.26) + 'px system-ui,sans-serif';
+      ctx.fillStyle = state === 'prevented' ? grayStroke : (state === 'fixed' ? blue : sub);
+      var bodyText = state === 'prevented' ? nd.gone : nd.fail;
+      wrapText(bodyText, pt.x, pt.y + NR + 33, W * 0.185, Math.max(9, NR * 0.32));
+    }
+    drawMapeStrip(pts, dark);
+    ctx.font = Math.max(8, W * 0.0135) + 'px system-ui,sans-serif';
+    ctx.fillStyle = sub; ctx.textAlign = 'center';
+    var hint = dam === 5 ? 'click a stage below to put the fire out there' : 'click the blue stage to relight it, or click another to move it';
+    ctx.fillText(hint, W / 2, H * 0.965);
+  }
+  function wrapText(text, cx, cy, maxW, lh) {
+    var words = text.split(' '), line = '', lines = [];
+    for (var i = 0; i < words.length; i++) {
+      var test = line + words[i] + ' ';
+      if (ctx.measureText(test).width > maxW && line !== '') { lines.push(line); line = words[i] + ' '; }
+      else line = test;
+    }
+    lines.push(line);
+    for (var k = 0; k < lines.length; k++) ctx.fillText(lines[k].trim(), cx, cy + k * lh);
+  }
+  function updateReadout() {
+    var o = currentOutcome(damIndex());
+    readout.textContent = o.detail;
+    readout.style.borderTopColor = o.color;
+  }
+  function loop() {
+    phase += 0.018;
+    draw();
+    requestAnimationFrame(loop);
+  }
+  function hitTest(x, y) {
+    var pts = positions(), NR = calcNR() + 8;
+    for (var i = 0; i < pts.length; i++) {
+      var dx = pts[i].x - x, dy = pts[i].y - y;
+      if (dx * dx + dy * dy <= NR * NR) return i;
+    }
+    var mr = mapeRow(), rowY = mr.rowY, br = mr.br + 8;
+    for (var j = 0; j < pts.length; j++) {
+      var mdx = pts[j].x - x, mdy = rowY - y;
+      if (mdx * mdx + mdy * mdy <= br * br) return j;
+    }
+    return -1;
+  }
+  function selectDam(hit) {
+    damNode = (damNode === hit) ? null : hit;
+    updateReadout();
+  }
+  function onClick(e) {
+    var rect = canvas.getBoundingClientRect();
+    var hit = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+    if (hit >= 0) selectDam(hit);
+  }
+  function onMove(e) {
+    var rect = canvas.getBoundingClientRect();
+    hoverIdx = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+    canvas.style.cursor = hoverIdx >= 0 ? 'pointer' : 'default';
+  }
+  canvas.addEventListener('click', onClick);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', function () { hoverIdx = -1; });
+  canvas.addEventListener('touchend', function (e) {
+    if (e.changedTouches.length > 0) {
+      var rect = canvas.getBoundingClientRect();
+      var hit = hitTest(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top);
+      if (hit >= 0) selectDam(hit);
+    }
+    e.preventDefault();
+  }, { passive: false });
+  updateReadout();
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries, obs) {
+      if (entries[0].isIntersecting) { obs.disconnect(); setupCanvas(); requestAnimationFrame(loop); }
+    }, { threshold: 0.2 }).observe(canvas);
+  } else { setupCanvas(); requestAnimationFrame(loop); }
+  window.addEventListener('resize', setupCanvas);
+})();
+</script>
+<figcaption>Figure 2: one undersimulation, left alone, compounds stage by stage into a retry loop with no natural stopping point. Click a stage to put the fire out there and watch it actually die down, not vanish. Stopping it at Simulation prevents the whole fire. Stopping it at Optimization alone leaves the other four exactly as ablaze as before, a fire already burned cannot be put out after the fact.</figcaption>
+<p>The cascade is the argument for why the failures cannot be fixed at the stage where they surface. The retry loop is where the cost is visibly burned, so the natural instinct is to fix it there: a better retry policy, a smarter stopping heuristic, more compute to find the patch that finally works.</p>
+<p>Every one of those fixes is applied at the Optimization stage, and the deficit did not originate there. It originated in the Simulation undersimulation five stages upstream, propagated through a stale abstraction and an asymmetric update and a blind self-assessment, and arrived at Optimization as a search that cannot stop because the four stages above it have removed every signal that would tell it to.</p>
+<p>This is exactly the invariant of the 
+  
+  
+    
+    
+    
+  
+
+<a href="https://e-mindset.space/blog/microlearning-platform-part6-meta-framework/#the-constraint-sequence-framework" class="defined-term" data-def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding" aria-label="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding">Constraint Sequence Framework</a>
+: a constraint that surfaces at one level cannot be resolved by re-optimizing at that level, because the dependency graph puts the binding constraint upstream of where it became visible. Spending more compute on retries is re-optimizing at the level where the constraint surfaced, and the framework says, and the cascade demonstrates, that this cannot work.</p>
+<p>The retry loop is the <a href="https://e-mindset.space/blog/borrowed-guarantees-part4-ceiling-no-retry-clears/">iteration trap</a> this blog has named before. The cascade is why the trap is baited upstream: the Optimization failure is an unaddressed Simulation failure wearing the costume of a stopping problem.</p>
+<h2 id="the-closing-synthesis-self-consistency-and-why-verification-is-not-optional">The Closing Synthesis: Self-Consistency and Why Verification Is Not Optional</h2>
+<p>The series has one argument left to make: the one the whole structure was built to reach. It has to be made carefully, because the tempting version of it is an overclaim. The discipline of the series is to make the defensible version instead, and to mark exactly where the defensible version stops.</p>
+<p>Begin with a definition, because the argument turns on a property the series has been circling without naming precisely.</p>
+<p><span id="def-self-consistency"></span></p>
+<p>A property is <strong>self-consistent</strong> for a system if the system’s belief that it possesses that property can be verified using only the system’s own internal resources. A self-consistent property is one a system can check on itself, from the inside, without appeal to anything external.</p>
+<p>The question the series has been building toward is which of the five properties are self-consistent. A property that is self-consistent needs no external verification loop. A property that is not self-consistent requires one, structurally, and the cost of that loop is the portability gap.</p>
+<p>Post 3 proved the one hard result in this vicinity. For a reasoner whose self-trust is provability-based, Awareness is not self-consistent: the reasoner cannot certify its own soundness from within without deriving everything, which is Critch’s resource-bounded generalization of Loeb’s theorem applied to exactly that class of reasoner.</p>
+<p><strong>This is a genuine Layer 1 result</strong> [Layer 1: Bound], a formal-system-grade theorem about a precisely specified class of reasoner. It is the single instance in this series where the claim that a property cannot verify itself is proven rather than estimated. Awareness has a self-consistency ceiling, and the ceiling is a theorem.</p>
+<p>The series now proposes that the other four properties have self-consistency ceilings too, and here is where the discipline has to hold.</p>
+<p><strong>The extension of the self-consistency ceiling from Awareness to Simulation, Abstraction, Rationality, and Optimization is this series’ own structural generalization, offered explicitly at Layer 3</strong> [Layer 3: Estimate]. It is not, and must not be read as, four more instances of a Loebian or Godelian proof. Only Awareness carries a formal-system-grade theorem. Simulation does not have a hidden proof that it cannot self-verify, and neither does Abstraction, Rationality, or Optimization.</p>
+<p>What the other four have is a strong structural argument, and the argument is not that each secretly contains Loeb’s theorem. The argument is this: each of the four failures, as its own proposition showed, requires for its detection exactly the information the failing property has structurally excluded from itself.</p>
+<ul>
+<li>Simulation cannot detect its own undersimulation, because the detection requires the disturbance variety the forecast did not notice, which is what Post 1’s Ashby bound formalizes.</li>
+<li>Abstraction cannot detect its own staleness, because the detection requires the residual the abstraction discarded, which the data-processing inequality proves is unreachable from the abstraction.</li>
+<li>Rationality cannot restore its own disconfirming mass, because the asymmetry that needs correcting is what governs the sampling.</li>
+<li>Optimization is different in kind from the other three, and the difference is worth being exact about rather than folding into the same pattern. Proposition 5 proves a stopping rule is optimal; it proves nothing about that rule being unable to audit itself, and the Big-Muddy baseline shows an isolated instance mostly does not need to, individual decisions displayed strong rational cost-benefit logic with minimal escalation. Optimization’s blindness is conditional, not intrinsic. It fails when its inputs, the believed success probability and the true search cost, are corrupted by an upstream property failure it has no channel to audit, exactly the mechanism the binary-case argument above traces to a confidently wrong belief rather than a broken rule. It also fails when the stopping decision is embedded in a deliberative structure whose emergent escalation no single instance inside that structure can flag, the Big-Muddy multi-agent finding. Both are real reasons the property needs an external governor. Neither is a Layer 1 result of Proposition 5 itself.</li>
+</ul>
+<p>In the first three cases, the property is blind to its own failure for a reason internal to what the property is, and that blindness is a Layer 1 result of the property’s own proposition. Optimization’s ceiling is conditional on composition, inherited from upstream properties or from the structure it is deployed inside, rather than intrinsic to the stopping rule itself, and its external governor is justified by that composition, not by a fourth blindness theorem. What is Layer 3 across all four is the claim that they are the same kind of thing as Awareness’s proven self-consistency ceiling. They rhyme with it. They are not proven to be it.</p>
+<p>That distinction is the whole honesty of the synthesis. It is worth stating what survives it and what does not.</p>
+<p>What does not survive is any claim that the series has proven five self-verification ceilings. It has proven one. What does survive, and it is enough, is the argument the one proof makes available. If even a rigorously scoped formal reasoner, the cleanest possible case, cannot verify one of its own properties from within, then the expectation that the messier, informal versions of self-verification succeed for the other four is an expectation with the burden of proof against it.</p>
+<p>The one theorem does not prove the other four ceilings. It shifts the default. It makes external verification the thing you should assume is necessary until shown otherwise, rather than the thing you bolt on when self-checking visibly fails. It does this because the one place the question was settled rigorously, it was settled against self-verification.</p>
+<p>This is the actual argument the series produces, stated as its conclusion: external falsification is not optional scaffolding for any of the five properties. For Awareness it is required by theorem. For the other four it is required by a structural argument that each property is blind to its own characteristic failure, an argument the one theorem makes it unreasonable to bet against.</p>
+<p>A system cannot be trusted to audit, from within, the properties whose failures it is structurally unequipped to see. The loop that audits them from outside is not a design luxury that a better architecture would eliminate, but the price of the fact that a property and the check on that property cannot both live inside the same closure.</p>
+<p>This lands where an earlier series on this blog landed, from the opposite direction. <a href="https://e-mindset.space/blog/borrowed-guarantees-part1-independence/">Theorems Out of Warranty</a> argued that a guarantee quietly stops covering what it was never proven to cover: the warranty on a result expires exactly at the boundary of the theorem’s stated conditions, and the danger is trusting the guarantee past that boundary.</p>
+<p>This series arrives at the same place by asking not what a borrowed theorem stops covering, but what a system can verify about itself. The answer, for the one property where it can be settled rigorously, is that the system cannot verify the thing that matters most.</p>
+<p>A guarantee that stops covering what it never proved, and a self-check that cannot reach the property it is checking, are the same gap seen from two sides. The warranty ran out at the theorem’s boundary in the earlier series. Here it runs out at the boundary of the system’s own closure. In both cases, what lies past the boundary is not covered, and pretending it is covered is the failure.</p>
+<p><strong>That parallel can be made sharper than a family resemblance</strong> [Layer 3: Estimate], because the two series are naming the same mechanism at two different scales rather than two different mechanisms that happen to rhyme. <a href="https://e-mindset.space/blog/borrowed-guarantees-part1-independence/">Independence Illusion</a> shows that the Condorcet Jury Theorem, Byzantine fault tolerance, and the Universal Scalability Law all price redundancy the same way: more voters, more replicas, more agents buy more truth only if their errors are independent. A committee of language models drawn from overlapping training data fails that condition by default, agreeing confidently for the same reason rather than disagreeing for different ones.</p>
+<p>That is the multi-agent instance of the exact structure this series has spent four posts proving at the single-agent scale: a verification signal only counts as a check when it draws on something the thing it is checking could not also have corrupted. Ashby’s bound, the data-processing inequality, and the asymmetric-updating divergence are each a proof that, for their respective properties, no internally-generated signal clears that bar by default. Loeb’s theorem is the one place either series has a proof that no signal ever could, regardless of how the system is built.</p>
+<p>Independence Illusion’s own honesty about its correlation-quality function, offered explicitly as that post’s own construction rather than a citation, is the same caution carried here: the multi-agent case is real and measured, not yet a closed-form theorem the way the single-agent Awareness case is.</p>
+<p>One further question follows both series, and neither one alone had answered it: why not simply check whether enough checking has already been done? <a href="https://e-mindset.space/blog/asymptotically-ruined-part6-meta-constraint/">The Meta-Constraint This Series Never Priced</a> already has the answer, from a third series on this blog, and it generalizes here without alteration. Deciding how much verification is enough is itself a decision, with its own cost, that would need its own check: a regress. Formal metareasoning research proves that regress has no exact solution, only a cheap, admittedly approximate cap <a href="#ref-11" class="cite-ref" data-def="Russell, S. & Wefald, E. (1991) -- Principles of Metareasoning, Artificial Intelligence 49(1-3), 361-395" aria-label="Russell, S. & Wefald, E. (1991) -- Principles of Metareasoning, Artificial Intelligence 49(1-3), 361-395">[11]</a>
+.</p>
+<p>That caution applies to this series’ own machinery too, not only rhetorically. The five external loops priced later in this post are themselves a further computation, purchased at a further cost. The honest question the regress raises is not whether to run them but how much to invest in perfecting them before the investment itself stops paying. The metareasoning result gives the same answer here it gave there: a cheap, fixed, approximate bar, checked once and revised occasionally, beats an exact recursive calculation of the value of calculating more precisely. That is not a concession this series makes reluctantly. It is the same correct result showing up a third time.</p>
+<h2 id="falsification-criteria">Falsification Criteria</h2>
+<p>A claim that cannot be wrong is not a claim, so this post states the conditions under which each of its two central assertions would fail. Each is concrete and checkable, and each is aimed at a specific layer of a specific claim.</p>
+<p><strong>F1 (the cost-aware stopping proposition).</strong> A cost-bearing sequential searcher is exhibited whose expected total cost, search cost plus distance from <script type="math/tex">v^*</script>
+, is strictly lower under a non-threshold policy than under the reservation-value threshold rule of Proposition 5, on an option distribution with well-defined finite moments and a strictly positive per-option cost.</p>
+<p>This would falsify Proposition 5 directly. The reservation rule is derived as the unique non-improvable policy under exactly those conditions, so a policy that beats it would mean the exchange argument is mis-stated.</p>
+<p>This is the strongest falsification, and the least likely, because the result is a theorem of search theory. But a post that exempted its own foundation from falsification would not be honest about where its risk lives. The risk, however small, lives here too.</p>
+<p>A weaker but more reachable version: an agent is shown to reach outcomes indistinguishable from an unbounded-retry policy while provably enforcing a positive reservation threshold. That would confirm rather than falsify the proposition, and is included to show the criterion is not rigged to be unfalsifiable in both directions.</p>
+<p><strong>F2 (the Layer 3 self-consistency generalization).</strong> A property among Simulation, Abstraction, Rationality, and Optimization is shown to be self-consistent for a real system: the system verifies, using only its own internal resources, that it possesses the property, at a reliability indistinguishable from an external verification loop, across a held-out task distribution it was not tuned against, without covertly importing an external check.</p>
+<p>Concretely for Optimization: an agent is shown to detect and halt its own escalation of commitment from inside the same multi-agent structure that produces the escalation, at a reliability matching an external stopping governor, out of distribution.</p>
+<p>If this happens for any of the four, the Layer 3 generalization is wrong for that property. External falsification is not structurally required there, but merely useful, which would shrink or remove that property’s portability gap.</p>
+<p>Note the deliberate asymmetry with Post 3’s F1. F2 here cannot touch Awareness, whose self-consistency ceiling is a Layer 1 theorem and is falsifiable only on its own terms. It cannot touch Proposition 5 either, which is a stopping-theory result independent of the generalization. F2 attacks only the estimate that the four informal ceilings are real, the only part of the synthesis offered as an estimate.</p>
+<p><strong>F3 (the cross-substrate identity for Optimization).</strong> The human escalation of commitment is shown to arise entirely from a mechanism with no analogue in the agent case, in a way that severs the two rather than uniting them.</p>
+<p>Concretely, either of these would do it. The human sunk cost effect could be shown to be wholly a self-presentational or affective mechanism that vanishes when the decision is private and stakeless, while the agent escalation persists in the stakeless multi-agent condition. Or, conversely, the agent escalation could be shown to be entirely an artifact of prompt framing that disappears under neutral elicitation while the human effect persists.</p>
+<p>Either result breaks the Layer 3 identity: the first by showing the two effects share a shape but not a cause, the second by dissolving the agent effect into an elicitation artifact. F3 is stated with the extra caution this post flagged. The agent effect is emergent from multi-agent structure and the human effect is measured in individuals, so the identity here starts from a wider gap than the identities in the earlier posts, and needs the sharper falsification condition to match.</p>
+<p><strong>F4 (the causal cascade).</strong> A single agent trajectory on a SWE-bench-class task is instrumented at every stage and shows a link in the Bookend’s chain broken: re-abstraction occurring correctly after a cheap forecast, yet the self-assessment stays miscalibrated anyway, or the evidence weighted symmetrically, yet the retry loop persists regardless.</p>
+<p>This would falsify the cascade specifically, not the four propositions it is built from. Each per-stage mechanism, the forecast collapse, the stale abstraction, the asymmetric update, the miscalibrated self-report, is independently a Layer 1 or Layer 2 finding, measured on its own apparatus. What F4 targets is narrower: the claim that these five, chained within one trajectory, form the single causal sequence the Bookend describes. That chaining has not been instrumented on any single trajectory in the literature cited here; it is this series’ own Layer 3 construction, and a demonstration that one link fails to hold while the others still do would break it without touching the four propositions themselves.</p>
+<h2 id="the-property-verdict-ledger-complete">The Property Verdict Ledger, Complete</h2>
+<p>The series has accumulated one artifact across its four posts, a ledger with one entry added per post, and this is where it is assembled in full. It is the payoff object the whole series has been building toward, the running record that substitutes for a continuous specimen, and it is a deployment gate rather than only a diagnosis: each entry’s final field names the specific architectural response a failed verdict demands, not a general suspicion of the agent.</p>
+<p><strong>Noticing + Simulation</strong></p>
+<p><em>Formal Proposition:</em> Proposition 1: Ashby’s Law of Requisite Variety, <script type="math/tex">V(\text{outcome}) \geq V(\text{disturbance}) - V(\text{regulator})</script>
+</p>
+<p><em>Human Instance:</em> Planning fallacy: systematic underestimation of task resources (Kahneman and Tversky 1979; Buehler, Griffin and Ross 1994)</p>
+<p><em>Agent Instance:</em> MarketBench: six frontier LLMs, roughly 5x token-cost underestimation, stated confidence 61 to 93 percent against actual pass rates 75 to 81 percent (Fradkin and Krishnan 2026)</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the theorem; Layer 3 approximate for the cross-substrate identity of the two failures</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Simulation: self-forecast miscalibrated in the direction the bound predicts, confidence decoupled from realized performance</p>
+<p><em>Control-Plane Consequence:</em> A resource-estimation floor gating admission, calibrated against measured variety rather than self-reported confidence: the agent is not trusted to price its own work until an external loop has raised or verified its forecast-time variety</p>
+<p><strong>Abstraction</strong></p>
+<p><em>Formal Proposition:</em> Proposition 2: sufficiency, <script type="math/tex">P(T \mid D, A) = P(T \mid A)</script>
+; stale-abstraction loss <script type="math/tex">I(D; T_{\text{new}} \mid A) \geq 0</script>
+</p>
+<p><em>Human Instance:</em> Functional fixedness and Einstellung: a target-specific abstraction reused past its sufficiency (Duncker 1945; Luchins 1942)</p>
+<p><em>Agent Instance:</em> Tool-failure recovery: LLM agents persisted with invalidated strategies, PRR down roughly 37 percent under implicit failures versus explicit ones, fault tolerance scaling 3.66x slower than task execution (Zhu et al. 2026); human-side corroboration in chat-search fixedness (Liu, Karimnazarov and White 2025)</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the sufficiency identity and the information-loss quantity; Layer 3 approximate for the cross-substrate identity of the two fixedness effects</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Abstraction: it cannot detect a stale abstraction from within, because the detecting information was discarded at abstraction time</p>
+<p><em>Control-Plane Consequence:</em> A re-abstraction loop that retains the raw data and re-derives sufficiency against the current target, triggered on divergence signals rather than trusted to self-detect</p>
+<p><strong>Rationality</strong></p>
+<p><em>Formal Proposition:</em> Proposition 3: asymmetric updating, <script type="math/tex">g(\ell) = w_+ \ell_+ + w_- \ell_-</script>
+, diverges from Bayes by <script type="math/tex">n\Delta</script>
+</p>
+<p><em>Human Instance:</em> Confirmation bias: preferential weighting of confirming over disconfirming evidence, in many guises (Nickerson 1998)</p>
+<p><em>Agent Instance:</em> Framing-and-confirmation study: two LLMs reinforced handed premises and flipped conclusions with framing on identical inputs (Li, Wang and Yang 2025)</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the divergence and sign-flip results; Layer 3 approximate for the cross-substrate identity of the two confirmation effects</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Rationality: it updates asymmetrically and cannot restore its own disconfirming mass from within</p>
+<p><em>Control-Plane Consequence:</em> A falsification loop that constructs and injects hypothesis-breaking tests, restoring the disconfirming evidence the reasoner will not sample for itself</p>
+<p><strong>Awareness</strong></p>
+<p><em>Formal Proposition:</em> Proposition 4: Critch’s resource-bounded Loeb’s theorem, a provability-based reasoner cannot derive <script type="math/tex">\Box(\Box\phi \rightarrow \phi)</script>
+ without deriving <script type="math/tex">\Box\phi</script>
+ for arbitrary <script type="math/tex">\phi</script>
+</p>
+<p><em>Human Instance:</em> Dunning-Kruger miscalibration, interpretation revised as largely Regressional Goodhart artifact (Kruger and Dunning 1999; Nuhfer et al. 2017; Gignac and Zajenkowski 2020), plus Bandura self-efficacy and reciprocal determinism as the behavioral-consequence complement (Bandura 1977, 1986)</p>
+<p><em>Agent Instance:</em> Situational-awareness evals showing self-knowledge lags general capability (Laine et al. 2024), and a shadow-mode control-plane reconciliation gap between agent self-report and independent ground-truth check</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the theorem, holding for provability-based reasoners only; agent-side application exact for provability-based agents and Layer 3 analogy for deployed language models; Layer 3 analogy for the human side, never the same theorem</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Awareness: it cannot certify its own soundness from within, by theorem for the provability-based case and by evidence for the deployed case</p>
+<p><em>Control-Plane Consequence:</em> The shadow-mode reconciliation loop: an external audit that checks work against ground truth the agent did not generate, run as a separate control-plane mechanism because Proposition 4 proves self-assessment cannot replace it for the reasoner class it governs</p>
+<p><strong>Optimization</strong></p>
+<p><em>Formal Proposition:</em> Proposition 5: cost-aware optimal stopping, reservation threshold <script type="math/tex">\theta(c)</script>
+ with <script type="math/tex">\theta(c) \to v^*</script>
+ as <script type="math/tex">c \to 0</script>
+; the ideality limit as the costless corner search cost forbids</p>
+<p><em>Human Instance:</em> Sunk cost fallacy and escalation of commitment: prior investment raising the stopping threshold (Arkes and Blumer 1985)</p>
+<p><em>Agent Instance:</em> Big-Muddy escalation: individual decisions near-rational, symmetrical multi-agent deliberation about 99.2 percent escalation, organizational pressure about 68.95 percent (Barkett, Long and Kröger 2025); strategic-reasoning limits (Duan et al. 2024; Sun et al. 2025); single-agent search failure and reward hacking mapped to Extremal and Adversarial Goodhart (Manheim and Garrabrant 2018)</p>
+<p><em>Exact vs. Approximate:</em> Layer 1 exact for the stopping theorem; Layer 3 approximate for the cross-substrate identity, held more loosely because the agent effect is emergent from multi-agent structure and the human effect is dispositional</p>
+<p><em>Verdict:</em> Agent does not reliably demonstrate Optimization: it escalates past the reservation threshold, and the escalation is emergent from multi-agent structure rather than individual disposition</p>
+<p><em>Control-Plane Consequence:</em> An external optimal-stopping governor: a reservation-threshold circuit-breaker that caps escalation, placed outside the agents’ own deliberation because the bias is a property of the multi-agent structure</p>
+<p>The Exact-versus-Approximate field carries the three-layer discipline into every entry. Read across the five in sequence, it tells the honest story of the series in miniature.</p>
+<p>Every formal proposition is exact and substrate-free at Layer 1. Every mapping of a theorem onto its measured failures is a Layer 2 fit. Every claim that a human failure and an agent failure are one phenomenon is a Layer 3 estimate, offered as one, with Putnam’s own reversal of multiple realizability attached, and in the Awareness entry the additional distinction that even the theorem’s reach into deployed language models is an analogy rather than an application.</p>
+<p>Five negative verdicts, and not one of them is an insult to systems that resolve hard tasks. Each is a precise statement that one specific property fails in the direction its own theorem predicts and its own study measures.</p>
+<h2 id="the-portability-gap-now-a-number">The Portability Gap, Now a Number</h2>
+<p>The series was built around one coined term, the portability gap. A coined term that stays a phrase is decoration. This blog’s standing habit is to turn a coined term into a computable quantity, and the completed ledger is where the portability gap becomes one.</p>
+<p>The portability gap for a property was defined in Post 1 as the latency and compute cost of the external verification loop that property needs because it cannot certify itself from within. The ledger’s Control-Plane Consequence field names five such loops, one per property. The total portability gap for a system that must audit all five is the sum of the five loops’ costs.</p>
+<p>That sum is the number the term was always pointing at. Computing it, even illustratively, is what makes the term a quantity rather than a gesture.</p>
+<p>The costs are best expressed as overhead relative to the base task, meaning the compute the agent spends doing the work itself. That is the denominator a deployment actually cares about: how much does correctness cost, as a fraction of doing the work.</p>
+<p>The figures that follow are illustrative unit costs chosen to show that the sum is computable, in the same spirit Post 1 traced an illustrative bit-accounting for the forecast error. They are not measured values from any particular system. Two bookkeeping facts have to be honored, not glossed over, or the sum would be wrong on its own stated terms.</p>
+<p>First, a conditional loop that only fires on some fraction of tasks contributes its per-trigger cost times how often it triggers, not the per-trigger cost itself. Second, Post 2 already argued that the re-abstraction loop and the falsification loop are, in that post’s own words, one operation aimed at two different symptoms. Both return to the raw data the original abstraction discarded, so they share a substrate. Summing them as if they were built from nothing in common would double-count that shared cost.</p>
+<table><thead><tr><th>Property</th><th>External loop</th><th>Illustrative cost (fraction of base compute)</th><th>Why</th></tr></thead><tbody>
+<tr><td>Simulation</td><td>One exploratory pass raising noticed variety before the forecast is trusted</td><td>0.15, plus one added round-trip of latency</td><td>Cheapest of the conditional loops; a single pass is enough to raise the floor</td></tr>
+<tr><td>Abstraction</td><td>Re-abstraction loop, retains raw data, re-derives sufficiency on divergence</td><td>0.10 per trigger, an illustrative 0.03 in expectation at a 30 percent divergence rate</td><td>Conditional: most tasks never diverge from their original frame, so the expected cost is the per-trigger cost times how often it fires</td></tr>
+<tr><td>Rationality</td><td>Falsification loop, constructs and runs hypothesis-breaking tests</td><td>0.25</td><td>Most expensive conditional loop; manufacturing genuine disconfirming evidence is real work</td></tr>
+<tr><td>Shared substrate</td><td>Raw-data retention and probe construction, common to the Abstraction and Rationality loops per Post 2’s own unification</td><td>−0.05</td><td>Charged once instead of twice; the two loops are one operation aimed at two symptoms, not two operations</td></tr>
+<tr><td>Awareness</td><td>Reconciliation loop, checks work against ground truth the agent did not generate</td><td>0.30</td><td>Structural, not optional: Proposition 4 proves the agent cannot do this from within</td></tr>
+<tr><td>Optimization</td><td>Stopping governor, monitors the reservation threshold, trips on escalation</td><td>0.05</td><td>Cheapest overall: enforcing a threshold is far cheaper than searching past it</td></tr>
+<tr><td><strong>Total</strong></td><td></td><td><strong>≈0.73 (illustrative)</strong></td><td>0.15 + 0.03 + 0.25 − 0.05 + 0.30 + 0.05, illustrative unit costs, not a measured value from any real system</td></tr>
+</tbody></table>
+<figcaption>Table 5: the portability gap as a computed number rather than a phrase, with the conditional loop discounted by its trigger rate and the shared substrate charged once. On these illustrative figures, auditing correctness across all five properties adds about 73 percent to the cost of the base work.</figcaption>
+<p>Summed, the total portability gap for the five-property audit is about <script type="math/tex">0.15 + (0.3 \times 0.10) + 0.25 - 0.05 + 0.30 + 0.05 = 0.73</script>
+ of the base task’s own compute. On these illustrative figures, auditing correctness across all five properties still adds most of the cost of the work back on top of it. That number is the portability gap made concrete: what it costs to carry a portable architecture across the substrate boundary once you stop assuming a portable architecture came with a portable guarantee.</p>
+<p>The precise value will differ by system, by how many tasks trigger the conditional loops, and by how much of the falsification and re-abstraction substrate a given implementation actually shares. The point is not the specific 0.73, or the 0.85 a less careful accounting would have produced. The point is that the term now denotes a sum a deployment can actually compute, one loop cost per property with the conditionality and the shared substrate priced in rather than assumed away, and that the sum is a large fraction of the base cost rather than a rounding error.</p>
+<p>Correctness is not free to port. The portability gap is exactly the size of the bill, and the completed ledger is the itemized invoice.</p>
+<p>This is the payoff the series was structured to deliver. Post 1 introduced the portability gap and quantified it for one property, while openly deferring the proof that the external loop is unavoidable. Post 3 proved that unavoidability for the one property where it can be proven.</p>
+<p>This post sums the five loops into the total and states the number. In doing so it closes the arc. The coined term began as a name for a difference, became a per-property cost, and ends as a computable total. That total says, in a single fraction, what it costs to trust an agent’s five cognitive properties when the agent cannot verify any of them from within.</p>
+<h2 id="what-a-real-version-of-this-table-would-require">What a Real Version of This Table Would Require</h2>
+<p>Table 5 prices five loops as if their costs simply summed, and the honest next step is to say what a live measurement of that sum would actually have to do, not just to assert that the illustrative figures fall short of one.</p>
+<p>A real version would instrument a live control plane and log, per task, which of the five loops fired, what latency and compute each one actually spent, and whether the outcome was correct against a matched control run with that loop disabled, correctness checked the same way Post 3’s reconciliation loop checks it, against ground truth the agent did not generate.</p>
+<p>A single pass comparing all loops enabled against all loops disabled cannot tell a reader anything about any one loop’s own contribution, because the five loops are not independent switches: Post 2 already found Abstraction’s re-derivation and Rationality’s falsification sharing one substrate, and this post’s own cascade traced a single undersimulation through all five stages in one run. The tool built for exactly this situation is a full factorial ablation across the thirty-two on/off configurations, run because the loops interact and not despite it: a factorial design measures interaction effects directly, where a single before/after comparison would only ever measure their sum.</p>
+<p>Those interactions have a name already established in this series rather than a new one this post would need to invent. Disabling an upstream loop does not remove the downstream property’s own ability to run; per Post 5’s Proposition 9, a downstream mechanism fed corrupted input carries no structural guarantee that it dilutes what it received, it simply computes over whatever state actually reaches it. A downstream loop’s own marginal contribution, measured this way, will differ depending on which upstream loops were enabled when it ran, and a factorial ablation is what surfaces that difference instead of averaging it away.</p>
+<p>What such a study would produce, run honestly, is a real Pareto frontier of token-cost overhead against error-rate reduction, per property and for the loops in combination, in place of the single illustrative number Table 5 supplies. No such study has been run here. The 0.73 stays exactly what it was introduced as, an illustrative sum, for the reasons already given above.</p>
+<h2 id="which-loops-sit-on-the-critical-path">Which Loops Sit on the Critical Path</h2>
+<p>The cost accounting above answers what these five loops spend. It does not answer when they have to spend it, and for a deployment serving a live caller, the two questions have different owners. A loop that adds fifteen percent to the compute bill is a budget conversation. A loop that adds itself to the caller’s wait time is a user-experience conversation, and the two are not the same fifteen percent.</p>
+<p>The five loops split cleanly on this axis, using nothing this post has not already established.</p>
+<p>Awareness’s reconciliation loop is already defined as the case that does not block. Post 3 built it explicitly in shadow mode: it “performs its verification alongside live operation without yet gating production on the verdict, so its judgments can be compared against outcomes before they are trusted to act.” That is an eventual-consistency audit by construction, not by convenience. It can run a beat behind the caller, catch what it catches, and feed the next decision without ever sitting on this one’s critical path.</p>
+<p>Optimization’s governor is the opposite case, and it is opposite for a structural reason rather than a design preference. Proposition 5’s whole content is a decision about whether to take one more draw before that draw is taken. A governor that evaluates after the retry has already fired has not gated anything; it has audited a decision that already happened. The reservation threshold has to be checked synchronously, in line, before each attempt, or the property Proposition 5 proves stops being the property the deployment is actually running.</p>
+<p>Simulation, Abstraction, and Rationality sit between those two poles, and where they sit depends on what they gate. Simulation’s exploratory pass has to complete before the forecast it corrects is trusted, so it blocks once, at admission, not on every subsequent step. Abstraction’s re-derivation and Rationality’s falsification tests are both conditional loops that fire on divergence or on a decision worth double-checking, not on every task. When they do fire, the decision they are correcting has to wait for them. Most tasks never pay that latency at all, though, which is the same conditionality Table 5 already priced into their compute cost.</p>
+<p>The practical upshot for a control plane: only one of the five loops can be safely moved off the request path by construction, and it is the one already built that way. The other four are either always synchronous, Optimization, or synchronous exactly when they fire, Simulation at admission, Abstraction and Rationality on divergence. Budgeting the portability gap as a single compute fraction is honest about what it costs. It says nothing about which parts of that cost the caller actually waits on, and conflating the two is the mistake a deployment makes when it assumes cheap in compute means cheap in latency.</p>
+<h2 id="what-this-post-did-not-claim">What This Post Did Not Claim</h2>
+<p>Because the closing synthesis is the most tempting place in the entire series to overclaim, the list of omissions is more load-bearing here than anywhere, and each item is a claim this post deliberately refused to make.</p>
+<ul>
+<li>
+<p>It has not been claimed that the four self-consistency ceilings beyond Awareness are proven. Only Awareness carries a formal-system-grade theorem, Critch’s resource-bounded Loeb result scoped to a provability-based reasoner. The extension to Simulation, Abstraction, Rationality, and Optimization is this series’ own Layer 3 generalization, and reading it as four more theorems is exactly the overreach the layer discipline exists to prevent. What the four have is a structural argument that each is blind to its own characteristic failure, and an inference, from the one place the question was settled rigorously, that the informal versions should be presumed to share the ceiling until shown otherwise.</p>
+</li>
+<li>
+<p>It has not been claimed that satisficing is a concession. Proposition 5 establishes the opposite: once a positive search cost is priced in, the satisficing threshold is the optimal policy and the costless maximum is the wrong target. A system that stops at the reservation value is not settling, but optimizing the objective it actually faces, and a system that refuses to stop is the one making the error, by optimizing a costless objective on a budget that is not free.</p>
+</li>
+<li>
+<p>It has not been claimed that the agents escalate because they are individually biased. The Big-Muddy finding is the reverse: individual decisions were near-rational, and the escalation emerged from the multi-agent structure. The control-plane consequence follows from that specific shape, an external governor placed outside the deliberation, because a fix applied to the individual agent addresses a bias the individual agent does not have.</p>
+</li>
+<li>
+<p>It has not been claimed that the portability gap’s 0.73 is a measured value. It is an illustrative sum of illustrative per-loop costs, priced with the conditional loop’s trigger rate and the shared Abstraction/Rationality substrate accounted for, included to show the term denotes a computable quantity, and the real value is system-specific. What is claimed is only that the total is a sum of five nameable loop costs and that it is a large fraction of the base cost, not a rounding error.</p>
+</li>
+<li>
+<p>It has not been claimed that external verification is a temporary scaffold that better models will outgrow. The argument is structural: a property and the check on that property cannot both live inside the same closure, proven for Awareness and argued for the rest, so the external loop is the price of the closure, not the price of an immature architecture.</p>
+</li>
+<li>
+<p>It has not been claimed that the critical-path classification above is anything beyond what the rest of this post and Post 3 already establish, applied to a new question. Awareness’s async status is Post 3’s own shadow-mode construction, not a new claim about it. Optimization’s synchronous status follows directly from what Proposition 5 is a decision about. No new measurement or theorem backs this section; it reads an already-proven structure for a dimension, wall-clock latency, this post’s own compute accounting explicitly declined to fold in.</p>
+</li>
+<li>
+<p>It has not been claimed that flushing context is proven to restore the exact <script type="math/tex">F</script>
+ the reservation equation assumes, only that it moves a retry closer to a fresh draw than continuing to build on a transcript the recursion already treats as degraded. Nothing here measures how much of the degradation a flush actually recovers, or whether some of what a failed attempt learned is worth keeping despite the cost of keeping it; that trade-off is deployment-specific in the same way <script type="math/tex">\lambda</script>
+ and the three-way cost combination earlier in this post are.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>Cognitive Map</strong></p>
+<ol>
+<li>Optimization is choosing when to stop searching under cost, and its failure is the refusal to stop, escalation of commitment. Once a positive per-option search cost is priced in, the optimal policy is a reservation-value threshold, satisficing in form and the true optimum rather than an approximation, with the costless ideal recovered only in the limit as cost goes to zero, a corner search cost structurally forbids.</li>
+<li>Arkes and Blumer measured the human sunk cost effect in 1985. The Big-Muddy study measured the agent version and found the sharper fact that escalation is emergent from multi-agent structure, near-universal under symmetrical peer deliberation, not a disposition the individual carries.</li>
+<li>The five properties map one-for-one onto the MAPE-K loop, with Knowledge standing exactly where Awareness stands, cross-cutting rather than in-line, which is why Awareness was always alone.</li>
+<li>The opening SWE-bench case, reread through all five, is one causal cascade: undersimulation forces a committed abstraction, the stale abstraction discounts disconfirming tests, the discounted evidence blinds the self-assessment, and the unwarranted confidence forces the retry loop. The Optimization failure is an unaddressed Simulation failure five stages upstream, which is why compute spent on retries cannot fix it.</li>
+<li>Self-consistency, a property a system can verify about itself from within, holds for none of the five: proven absent for Awareness at Layer 1, argued absent for the other four at Layer 3, never four more hidden theorems. External falsification is therefore not optional scaffolding for any property, the same gap Theorems Out of Warranty found from the other side.</li>
+<li>Architecture is portable. Correctness is not, and the portability gap is now a number: the summed cost of the five external loops, priced conditionally and net of their shared substrate, illustratively about 0.73 of the base task, the itemized bill for trusting five properties none of which can audit itself.</li>
+</ol>
+</blockquote>
+<p><strong>Compute it.</strong> Before trusting an agent to optimize, check one thing directly: is there a stopping rule outside the agent’s own deliberation, and is its threshold set below perfection? If the agent decides for itself when it has done enough, it is running a search that will pin its threshold at the ideal and pay real cost to chase it, and if that agent is one of a deliberating group, the Big-Muddy result already tells you the group will escalate where the individual would have stopped. The only fix is a governor placed outside the deliberation, capping the search at the reservation value the cost actually justifies. And before trusting any of the five properties, ask the question the whole series was built to make askable: can the agent verify, from inside, that it has this property? For four of the five the answer is a structural no, and for the fifth it is a proven no, so the number that matters is not how confident the agent is in any of them, but the cost of the external loop that checks each one, summed across all five, because that sum is what correctness costs once you stop assuming it came free with the architecture. A system that has never been audited from outside, and a system that has, look identical on the dashboard. They stop looking identical the moment the work has an effect.</p>
+<hr />
+<p><sup>[1]</sup> Barkett, E., Long, O. &amp; Kröger, P. (2025). <em>Getting out of the Big-Muddy: Escalation of Commitment in LLMs.</em> arXiv:2508.01545.</p>
+<p><sup>[2]</sup> Simon, H. A. (1956). <em>Rational Choice and the Structure of the Environment.</em> Psychological Review, 63(2), 129-138.</p>
+<p><sup>[3]</sup> Stigler, G. J. (1961). <em>The Economics of Information.</em> Journal of Political Economy, 69(3), 213-225.</p>
+<p><sup>[4]</sup> McCall, J. J. (1970). <em>Economics of Information and Job Search.</em> Quarterly Journal of Economics, 84(1), 113-126.</p>
+<p><sup>[5]</sup> Arkes, H. R. &amp; Blumer, C. (1985). <em>The Psychology of Sunk Cost.</em> Organizational Behavior and Human Decision Processes, 35(1), 124-140.</p>
+<p><sup>[6]</sup> Manheim, D. &amp; Garrabrant, S. (2018). <em>Categorizing Variants of Goodhart’s Law.</em> arXiv:1803.04585.</p>
+<p><sup>[7]</sup> Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. &amp; Xu, K. (2024). <em>GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations.</em> arXiv:2402.12348.</p>
+<p><sup>[8]</sup> Sun, H., Wu, Y., Cheng, Y. &amp; Chu, X. (2025). <em>Game Theory Meets Large Language Models: A Systematic Survey.</em> Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI 2025), Survey Track, 10669-10677.</p>
+<p><sup>[9]</sup> Putnam, H. (1988). <em>Representation and Reality.</em> MIT Press (Chapters 5-6, the reconsideration of functionalism).</p>
+<p><sup>[10]</sup> Kephart, J. O. &amp; Chess, D. M. (2003). <em>The Vision of Autonomic Computing.</em> IEEE Computer, 36(1), 41-50.</p>
+<p><sup>[11]</sup> Russell, S. &amp; Wefald, E. (1991). <em>Principles of Metareasoning.</em> Artificial Intelligence, 49(1-3), 361-395.</p>
+
+
+<hr/>
+
+
+  
+  
+  
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        
+      
+    
+    
+      
+      
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+      
+      
+
+      
+      
+      
+      
+      
+
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+
+        
+          
+          
+        
+      
+        
+
+        
+          
+          
+        
+
+        
+      
+        
+          
+          
+        
+
+        
+
+        
+      
+
+      
+      
+
+      
+      <nav class="series-navigation" aria-label="Series navigation">
+        <div class="series-info">
+          <a href="https://e-mindset.space/series/portable-mind/" class="series-link">
+            The Portable Mind: Five Properties of Thinking
+          </a>
+          
+            <span class="series-progress">Part 4/5</span>
+          
+        </div>
+
+        <div class="series-nav">
+          
+            <a class="series-nav-item series-nav-prev" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part3-the-unverifiable-self&#x2F;" title="Awareness and the Proof a Reasoner Cannot Write About Itself">
+              <span class="nav-icon">←</span>
+              <span class="nav-label">Previous</span>
+            </a>
+          
+
+          
+            <a class="series-nav-item series-nav-next" href="https:&#x2F;&#x2F;e-mindset.space&#x2F;blog&#x2F;portable-mind-part5-the-shared-ancestor-problem&#x2F;" title="The Shared Ancestor Problem">
+              <span class="nav-label">Next</span>
+              <span class="nav-icon">→</span>
+            </a>
+          
+        </div>
+      </nav>
+    
+  
+
+
+
+<p class="dialog-buttons">
+<a class="inline-button" href="#top">Back to top</a>
+</p>
+</div>
+  <footer id="site-footer">
+  <p><small>Powered by <a href="https://www.getzola.org">Zola</a></small></p>
+</footer>
+
+<script src="https://e-mindset.space/js/site.js"></script>
+</body>
+</html>
