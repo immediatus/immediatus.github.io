@@ -17,5 +17,6 @@
         "source=${localEnv:HOME}/.claude.json,target=/home/developer/.claude.json,type=bind,readonly=false",
         "source=${localEnv:HOME}/.gemini,target=/home/developer/.gemini,type=bind,readonly=false",
         "source=${localEnv:HOME}/.local/bin/agy,target=/home/developer/.local/bin/agy,type=bind"
-    ]
+    ],
+    "postStartCommand": "claude update || true"
 }

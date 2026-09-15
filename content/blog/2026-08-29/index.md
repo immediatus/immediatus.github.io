@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Noticing and the Cost of Not Knowing Enough"
-description = "Ask a system to price a job before it has looked at the job, and watch it guess wrong with total confidence. That is not a personality flaw. It is arithmetic: nobody can spend variety they have not noticed yet, whether the nobody is a person or a model. This post opens a series about five ways thinking fails, for reasons that were always going to be reasons, not accidents anyone can tune away. Opening The Portable Mind."
+description = "Ask a system to price a job before it has looked at the job, and watch it guess wrong with total confidence. That is arithmetic, not a personality flaw: nobody can spend variety they have not noticed yet, whether the nobody is a person or a model. This post opens a series about five ways thinking fails, for reasons that were always going to be reasons, not accidents anyone can tune away. Opening The Portable Mind."
 date = 2026-08-29
 slug = "portable-mind-part1-requisite-variety"
 draft = false
@@ -258,7 +258,7 @@ The confidence spread falls out of the same analysis. This is the part the Ashby
 
 The confidence numbers ranged across thirty points. The actual pass rates spanned about five. If confidence were a Simulation grounded in the task's disturbance variety, the two spreads would have to be commensurate: they would be measuring the same underlying difficulty.
 
-They are not commensurate, by a factor of more than five. That tells you the confidence is not being generated from the disturbance variety at all. It is being generated from the regulator's internal prior, the same narrow channel that produced the token underestimate. Different models have differently shaped priors, so their confidence numbers scatter widely even though their competence, measured against the actual task, is nearly the same.
+They are not commensurate, by a factor of more than five. That tells you the confidence is being generated from the regulator's internal prior, the same narrow channel that produced the token underestimate, not from the disturbance variety at all. Different models have differently shaped priors, so their confidence numbers scatter widely even though their competence, measured against the actual task, is nearly the same.
 
 **Reading the spread mismatch itself as a signature of narrow regulator variety is a fit, not a further consequence of the proposition** [Layer 2: Fit]. Proposition 1 bounds one regulator's own residual variety; it does not by itself derive how much confidence should scatter across different regulators relative to how much their performance does. That extra step needs one ordinary assumption made explicit: confidence is generated from a shared task-difficulty signal plus each model's own idiosyncratic prior. Given that, cross-model confidence should scatter mostly by however much the priors differ, while pass rate, tracking the task itself, scatters by however much the shared signal differs.
 
@@ -352,7 +352,7 @@ Two systems, built by processes with nothing in common (biological evolution on 
 - both do so systematically, not randomly
 - both resist correction by their own prior experience
 
-The temptation is to say they are doing the same thing. The discipline is to ask what "the same thing" could rigorously mean. The answer is not one claim. It is three.
+The temptation is to say they are doing the same thing. The discipline is to ask what "the same thing" could rigorously mean. The answer is three claims, not one.
 
 | | Human (planning fallacy) | Agent (MarketBench) |
 |---|---|---|
@@ -543,13 +543,68 @@ The parallel between the two findings is seductive. It is worth ending the argum
 
 - It has not been claimed that the portability gap for Simulation is fully justified here. Its cost is stated. Its unavoidability is not established in this post, and a reader who wants the full warrant for why the external loop is not optional should not read the definition given here as complete.
 
-> **Cognitive Map**
->
-> 1. Six frontier models priced SWE-bench tasks at one fifth of their true token cost and reported confidence spanning thirty points while performing within a roughly five-point band. That is not a tuning bug, but Ashby's Law: a regulator can spend only the variety it has noticed, and a forecast made from a channel narrower than the task is forced, by arithmetic, to be narrow and low.
-> 2. Proposition 1 is a Layer 1 triviality of the mathematics, substrate-free, holding for any regulator that has to act through a channel narrower than the disturbance it faces.
-> 3. The human planning fallacy has the same defining signature, resource underestimation that survives its own contrary experience, measured independently in a different substrate 47 years earlier. That is one Layer 2 fact plus another Layer 2 fact, not yet one fact.
-> 4. That the two failures are the same phenomenon, rather than two phenomena of the same shape, is this series' own Layer 3 estimate: defensible as a working hypothesis, cited with Putnam's own reversal of multiple realizability attached, never asserted as settled.
-> 5. Architecture is portable, per the modular-emergence result. Correctness is not automatically portable with it, and the portability gap is the concrete cost, latency and compute, of the external loop that audits what a property cannot audit in itself. For Simulation, that loop is a resource-estimation floor calibrated against measured variety.
+{% cognitive_map(root="Noticing and the Cost of Not Knowing Enough") %}
+{
+  "intro": "Six frontier models priced real coding tasks at one fifth of their true token cost and reported confidence spanning thirty points while actually performing within a five-point band. What follows traces that failure to a seventy-year-old theorem about what any regulator can know, the same signature measured independently in humans decades earlier, and the honest layer-by-layer discipline needed before calling those two findings one phenomenon.",
+  "groups": [
+    {"theme": "The Case, and What Noticing Actually Is", "c": "mint", "points": [
+      [1, "Six Models, One Failure Signature", "Six frontier models underestimated their own token cost by roughly five times and reported confidence spanning thirty points while their actual pass rates clustered within about five. A market built on those self-reports allocated work worse than an oracle that knew the true costs in advance."],
+      [2, "Noticing Is Upstream of Everything", "Noticing sits outside the five properties this series is named for, not among them. A regulator that has not registered a distinction cannot represent it, act on it, or price it, and Simulation can only run forward what noticing has already supplied."],
+      [3, "Not the Doing, the Knowing", "The six models resolved roughly three quarters of hard, real-world coding tasks, genuinely difficult work. What they could not do was say in advance what that work would take, or how likely they were to succeed, in a way that tracked reality."],
+      [4, "Why the Miss Points One Direction", "The theorem alone floors the width of a forecast error, not which way it points. The direction, underestimation, follows from two further facts: unnoticed cost can only add to the true cost, and a prior fitted to a population of tasks tracks the common case, not the expensive tail."]
+    ]},
+    {"theme": "The Theorem", "c": "sky", "points": [
+      [5, "Ashby's Law, Stated Precisely", "Proposition 1, a Layer 1 triviality of the mathematics: no regulator can drive outcome variety below the gap between disturbance variety and its own variety. It holds for any substrate by construction of the inequality, not as an empirical claim about any particular regulator."],
+      [6, "The Regulator's Variety Is What It Noticed, Not What It Nominally Has", "A forecast is a regulator acting through the narrow channel of what it has so far observed. Variety that has not entered a system's representation cannot be spent, and cannot absorb the disturbance it never priced."],
+      [7, "The Confidence Spread Was the Diagnostic Clue", "If confidence tracked the task's own difficulty, its spread and the pass-rate spread would be commensurate. A confidence spread five times wider than the performance spread instead points at each model's own idiosyncratic prior, the same narrow channel that produced the token miss."]
+    ]},
+    {"theme": "Measured Twice, and What That Does and Doesn't License", "c": "peach", "points": [
+      [8, "The Planning Fallacy, Forty-Seven Years Earlier", "Kahneman and Tversky's 1979 finding, sharpened by Buehler, Griffin and Ross in 1994: people systematically underestimate their own task completion times, and remain optimistic even while recalling that past projects of the same kind ran long."],
+      [9, "The Outside View Is Variety Injection", "The corrective the same literature proposes, forecasting from a reference class of past cases instead of the case's own specific features, works by importing distributional variety the inside view structurally lacks. It is the same move, in a different substrate, as an external cost estimator for an agent."],
+      [10, "Three Layers, Not One", "Layer 1 is Ashby's Law itself, substrate-free and uncontestable. Layer 2 is two separate, independent measurements each fitting the bound's prediction. Layer 3 is the claim that the two measured failures are the same phenomenon, the series' own interpretive act and the only layer carrying real risk."],
+      [11, "Putnam Against His Own Argument", "Multiple realizability would put the Layer 3 identity on solid ground, except Putnam later turned the same argument against it, arguing real mental kinds are too computationally plastic to identify cleanly with one functional role. The objection lands on Layer 3 alone, and is cited rather than dismissed."]
+    ]},
+    {"theme": "What Portability Actually Costs", "c": "rose", "points": [
+      [12, "A Structural Rhyme Is Not a Functional Proof", "A 2026 finding that language models develop a modular architecture mirroring the human brain is suggestive Layer 2 evidence the substrates rhyme structurally. It says nothing about whether the failure modes are shared, and a separate finding on brain-alignment scores stands as a reason to read any such rhyme as suggestive, not probative."],
+      [13, "The Portability Gap, Defined", "The latency and compute cost of the external verification loop required to audit a property from outside the system, because the property cannot certify itself from within. Architecture can be portable while correctness is not automatically portable with it."],
+      [14, "The Gate, Not Just the Diagnosis", "A failed Simulation verdict does not end at the agent lacks this property. It names a specific, buildable mechanism: a resource-estimation floor gating admission until the agent's forecast is grounded in measured variety rather than self-report."],
+      [15, "Three Falsification Criteria, Aimed at Three Different Layers", "F1 would show the agent's own Simulation is not variety-limited at all. F2 would sever the human and agent findings from each other. F3 would falsify Ashby's Law itself, the least likely and most fundamental of the three, since Layer 1 is a triviality of the mathematics."]
+    ]}
+  ]
+}
+{% end %}
+
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**The Case, and What Noticing Actually Is**
+
+1. Six frontier models underestimated their own token cost by roughly five times and reported confidence spanning thirty points while their actual pass rates clustered within about five. A market built on those self-reports allocated work worse than an oracle that knew the true costs in advance.
+2. Noticing sits outside the five properties this series is named for, not among them. A regulator that has not registered a distinction cannot represent it, act on it, or price it, and Simulation can only run forward what noticing has already supplied.
+3. The six models resolved roughly three quarters of hard, real-world coding tasks, genuinely difficult work. What they could not do was say in advance what that work would take, or how likely they were to succeed, in a way that tracked reality.
+4. The theorem alone floors the width of a forecast error, not which way it points. The direction, underestimation, follows from two further facts: unnoticed cost can only add to the true cost, and a prior fitted to a population of tasks tracks the common case, not the expensive tail.
+
+**The Theorem**
+
+5. Proposition 1, a Layer 1 triviality of the mathematics: no regulator can drive outcome variety below the gap between disturbance variety and its own variety. It holds for any substrate by construction of the inequality, not as an empirical claim about any particular regulator.
+6. A forecast is a regulator acting through the narrow channel of what it has so far observed. Variety that has not entered a system's representation cannot be spent, and cannot absorb the disturbance it never priced.
+7. If confidence tracked the task's own difficulty, its spread and the pass-rate spread would be commensurate. A confidence spread five times wider than the performance spread instead points at each model's own idiosyncratic prior, the same narrow channel that produced the token miss.
+
+**Measured Twice, and What That Does and Doesn't License**
+
+8. Kahneman and Tversky's 1979 finding, sharpened by Buehler, Griffin and Ross in 1994: people systematically underestimate their own task completion times, and remain optimistic even while recalling that past projects of the same kind ran long.
+9. The corrective the same literature proposes, forecasting from a reference class of past cases instead of the case's own specific features, works by importing distributional variety the inside view structurally lacks. It is the same move, in a different substrate, as an external cost estimator for an agent.
+10. Layer 1 is Ashby's Law itself, substrate-free and uncontestable. Layer 2 is two separate, independent measurements each fitting the bound's prediction. Layer 3 is the claim that the two measured failures are the same phenomenon, the series' own interpretive act and the only layer carrying real risk.
+11. Multiple realizability would put the Layer 3 identity on solid ground, except Putnam later turned the same argument against it, arguing real mental kinds are too computationally plastic to identify cleanly with one functional role. The objection lands on Layer 3 alone, and is cited rather than dismissed.
+
+**What Portability Actually Costs**
+
+12. A 2026 finding that language models develop a modular architecture mirroring the human brain is suggestive Layer 2 evidence the substrates rhyme structurally. It says nothing about whether the failure modes are shared, and a separate finding on brain-alignment scores stands as a reason to read any such rhyme as suggestive, not probative.
+13. The latency and compute cost of the external verification loop required to audit a property from outside the system, because the property cannot certify itself from within. Architecture can be portable while correctness is not automatically portable with it.
+14. A failed Simulation verdict does not end at the agent lacks this property. It names a specific, buildable mechanism: a resource-estimation floor gating admission until the agent's forecast is grounded in measured variety rather than self-report.
+15. F1 would show the agent's own Simulation is not variety-limited at all. F2 would sever the human and agent findings from each other. F3 would falsify Ashby's Law itself, the least likely and most fundamental of the three, since Layer 1 is a triviality of the mathematics.
+
+</details>
 
 **Compute it.** Before trusting any agent's forecast of its own cost or its own odds, check one thing directly: how much of the task's actual state space had the agent observed at the moment it made the forecast? If the answer is "almost none," then Proposition 1 already tells you the forecast is narrow and low, and no amount of the agent sounding confident changes the bound. The confidence is a picture of the agent's prior, not of the task. The only fix inside the theorem is to raise the variety the agent has actually noticed before its forecast is allowed to gate anything, or to price the work with an external estimator that has. A number a system has not earned the variety to compute, and a number that is actually grounded in the task, look identical on the page. They stop looking identical the moment the bill arrives.
 

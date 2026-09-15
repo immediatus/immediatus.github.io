@@ -2,7 +2,7 @@
    Modern Design System
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;700&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
 
 :root {
   /* Modern Pastel Color Palette */
@@ -10,6 +10,7 @@
   --bg-subtle: #f8f6f4;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
+  --text-strong: #000000;
   --text: #374151;
   --text-secondary: #4b5563;
   --text-tertiary: #6b7280;
@@ -29,14 +30,22 @@
   --lavender: #c4b5fd;
   --mint: #86efac;
   --mint-light: #f0fdf4;
+  --mint-line: #4ade80;
+  --mint-text: #15803d;
   --peach: #fdba74;
   --peach-light: #fff7ed;
+  --peach-line: #fb923c;
+  --peach-text: #c2410c;
   --sage: #93c5a7;
   --sage-light: #f0f9f4;
   --sky: #7dd3fc;
   --sky-light: #f0f9ff;
+  --sky-line: #38bdf8;
+  --sky-text: #0369a1;
   --rose: #fda4af;
   --rose-light: #fff1f2;
+  --rose-line: #fb7185;
+  --rose-text: #be123c;
 
   /* Mermaid Diagram Colors - Modern Pastel Theme */
   --mermaid-primary-color: #ede9fe;
@@ -465,6 +474,30 @@ a.defined-term {
   }
 }
 
+/* Epistemic layer tags [Layer N: Type] — reuses .defined-term's own
+   hover-tooltip (desktop) and tap-to-reveal bottom sheet (touch, via
+   site.js's existing touchend handler) so the interaction is identical
+   on every screen size, rather than showing different information
+   by default depending on viewport width. .layer-tag only adjusts
+   size/weight so it reads as a compact classification badge rather
+   than an underlined prose term. */
+.layer-tag {
+  font-size: 0.82em;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 0.3em;
+}
+
+.layer-tag-prefix {
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-right: 0.2em;
+}
+
+.layer-tag::after {
+  text-transform: none;
+}
+
 /* Mobile touch tooltip — slides up from the bottom of the screen */
 #tip-popup {
   display: block;
@@ -669,6 +702,198 @@ blockquote cite {
   font-size: 0.875rem;
   color: var(--text-tertiary);
   font-style: normal;
+}
+
+/* ============================================
+   Blueprint callout devices
+   ============================================
+   Three "pulled out of the body copy" highlights share one device:
+   .pull-quote (a single aphorism), .recap-box ("Argument so far" for a
+   reader re-entering a series mid-way), and .series-lede (the tagline
+   opening every post in a series). Corner brackets in accent color are the
+   load-bearing marks; the dashed hairline is the boundary they're attached
+   to, not the signal itself -- the same "definite corners, phantom edge"
+   language a real technical drawing uses to flag a detail worth a closer
+   look, matching the site's own blueprint-grid background directly rather
+   than gesturing at "technical" through font choice alone. Defined once
+   here and shared, rather than duplicated per element. */
+.pull-quote,
+.recap-box,
+.series-lede {
+  position: relative;
+  border: 1px dashed var(--border-strong);
+}
+
+.pull-quote::before,
+.pull-quote::after,
+.recap-box::before,
+.recap-box::after,
+.series-lede::before,
+.series-lede::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent);
+}
+
+.pull-quote::before,
+.recap-box::before,
+.series-lede::before {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.pull-quote::after,
+.recap-box::after,
+.series-lede::after {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+/* Pull-quote: a single sentence already present in the body copy, pulled out
+   as a drafting-style detail callout, not restated inline. Monospace and a
+   light weight are the site's own signal for "formal, load-bearing
+   statement" -- citations, code, Definition/Proposition math all use it --
+   so an aphorism the surrounding math is proving borrows that same signal
+   instead of a font-weight or color trick. */
+.pull-quote {
+  margin: var(--space-4) 0 var(--space-4) auto;
+  width: 50%;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+@media (max-width: 700px) {
+  .pull-quote {
+    width: auto;
+    max-width: 26rem;
+  }
+}
+
+.pull-quote strong,
+.pull-quote em {
+  font-style: normal;
+}
+
+/* Recap box: a compact "argument so far" card for a reader re-entering a
+   series mid-way. Reference material to skim, not a claim being made. */
+.recap-box {
+  margin: var(--space-4) 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  font-weight: 300;
+  color: var(--text-strong);
+}
+
+.recap-box .recap-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 3px;
+  color: var(--text-strong);
+}
+
+.recap-box ul {
+  margin: 0;
+  padding-left: var(--space-3);
+}
+
+.recap-box li {
+  margin-bottom: var(--space-15);
+  line-height: 1.6;
+}
+
+.recap-box li:last-child {
+  margin-bottom: 0;
+}
+
+.recap-box li strong {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+/* Estimated-data marker ("Estimated data"): wraps a worked table or figure that is the
+   post's own toy construction ([Layer 3: Estimate]), not measured data and
+   not a restatement of a cited theorem. A dashed left rule plus a small
+   uppercase label, the same "phantom edge" language as the callouts above,
+   so a skimming reader sees the evidentiary status before the digits.
+   Usage in markdown (blank lines required so the table still parses):
+   <div class="illustrative">
+
+   | table |
+
+   </div> */
+.illustrative {
+  position: relative;
+  margin: var(--space-5) 0 var(--space-4);
+  padding: var(--space-2) 0 var(--space-1) var(--space-3);
+  border-left: 2px dashed var(--text-tertiary);
+}
+
+/* Tag sits on the dashed rule's top end like a drawing annotation, with a
+   corner bracket in the same mid gray (--text-tertiary) as the label. */
+.illustrative::before {
+  content: 'Estimated data';
+  position: absolute;
+  top: calc(-1 * var(--space-3));
+  left: -2px;
+  padding: 2px var(--space-1);
+  border-top: 2px solid var(--text-tertiary);
+  border-left: 2px solid var(--text-tertiary);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+.illustrative > table {
+  margin-top: var(--space-2);
+}
+
+/* Series-lede: the tagline opening every post in a series. */
+.series-lede {
+  display: block;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  font-weight: 300;
+  color: var(--text-strong);
+  line-height: 1.7;
+  text-align: left;
+}
+
+/* Inside the /series/ index, the description already sits in a
+   .series-index-item card with its own surface, border and shadow -- a
+   second framed box nested inside reads as clutter, not a highlight. Keep
+   only the type there. */
+.series-index-item .series-lede {
+  padding: 0;
+  border: none;
+}
+
+.series-index-item .series-lede::before,
+.series-index-item .series-lede::after {
+  display: none;
 }
 
 /* ============================================
@@ -1990,33 +2215,9 @@ aside code {
   margin: var(--space-1) 0;
 }
 
-/* The only box on the site with a gradient fill rather than a flat one —
-   deliberate: every other highlight device here (blockquote, details, pre)
-   uses a solid color, so a soft fade is what makes this one read as its own
-   thing instead of a duplicate. Fades out before the text ends so it never
-   turns into a hard-edged block. */
-.series-lede {
-  display: block;
-  margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  background: linear-gradient(to right, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0) 70%);
-  font-weight: 500;
-  color: var(--text-primary);
-  line-height: 1.7;
-  text-align: left;
-}
-
-/* Inside the /series/ index, the description already sits in a
-   .series-index-item card with its own surface, border and shadow — a second
-   gradient box nested inside reads as clutter, not a highlight. Keep only
-   the accent bar there. */
-.series-index-item .series-lede {
-  padding: 0 0 0 var(--space-4);
-  border-radius: 0;
-  background: none;
-}
+/* .series-lede styling lives with .pull-quote and .recap-box near the top
+   of this file — all three are the same blueprint-callout device, defined
+   once in one place rather than duplicated across the file. */
 
 .series-description {
   margin: var(--space-2) 0 var(--space-4);
@@ -2459,7 +2660,7 @@ img {
 }
 
 .mermaid svg {
-  max-width: 100%;
+  max-width: none;
   height: auto;
 }
 
@@ -2576,6 +2777,287 @@ details > *:not(summary) {
   color: var(--text-secondary);
   margin: 0;
 }
+
+/* ============================================
+   Cognitive Map widget (mind map + mini-slides)
+   ============================================ */
+
+.cognitive-map-widget {
+  margin: var(--space-4) 0;
+  position: relative;
+}
+.cognitive-map-widget .cm-data { display: none; }
+.cognitive-map-widget .cm-lede {
+  color: var(--text-secondary); font-size: 0.9rem; margin: 0 0 1rem; max-width: 62ch;
+}
+.cognitive-map-widget .cm-canvas-holder {
+  position: relative; width: 100%; aspect-ratio: 900/760; max-height: 560px;
+  background: radial-gradient(circle at 50% 45%, var(--bg-subtle) 0%, var(--bg) 70%);
+  border: 1px solid var(--border); border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.cognitive-map-widget svg.cm-svg { width: 100%; height: 100%; display: block; }
+
+.cognitive-map-widget .mm-node-g { cursor: pointer; }
+/* Bubbles are keyboard-focusable (tabindex) for accessibility, which
+   otherwise draws the browser's own default black focus ring on click.
+   Replace it with the same halo glow already used for hover, and only for
+   real keyboard navigation, not mouse clicks. */
+.cognitive-map-widget .mm-node-g:focus { outline: none; }
+.cognitive-map-widget .mm-node-g:focus-visible .halo { opacity: 0.45; }
+.cognitive-map-widget .mm-node-g .halo { transition: r 0.25s, opacity 0.25s; opacity: 0; }
+.cognitive-map-widget .mm-node-g:hover .halo { opacity: 0.35; }
+.cognitive-map-widget .mm-node circle.body {
+  stroke: var(--surface); stroke-width: 2;
+  transition: r 0.25s, filter 0.2s;
+}
+.cognitive-map-widget .mm-node-g:hover circle.body { filter: brightness(1.06); }
+.cognitive-map-widget .mm-node-g:hover rect.body { filter: brightness(0.98); }
+.cognitive-map-widget .mm-node text {
+  font-family: var(--font-sans); pointer-events: none; fill: var(--text); font-weight: 600;
+}
+.cognitive-map-widget .mm-node.hub circle.body { fill: var(--accent); }
+.cognitive-map-widget .mm-node.hub text { fill: #fff; font-size: 13px; }
+.cognitive-map-widget .mm-node.theme[data-c="mint"] circle.body { fill: var(--mint); }
+.cognitive-map-widget .mm-node.theme[data-c="sky"] circle.body { fill: var(--sky); }
+.cognitive-map-widget .mm-node.theme[data-c="peach"] circle.body { fill: var(--peach); }
+.cognitive-map-widget .mm-node.theme[data-c="rose"] circle.body { fill: var(--rose); }
+.cognitive-map-widget .mm-node.theme text { fill: #1f2430; font-size: 11.5px; }
+.cognitive-map-widget .mm-node.theme .theme-sub {
+  font-size: 9.5px; font-weight: 500; fill: #1f2430; opacity: 0.65;
+}
+.cognitive-map-widget .mm-node.leaf .body { fill: var(--surface); stroke-width: 2; }
+.cognitive-map-widget .mm-node.leaf[data-c="mint"] .body { stroke: var(--mint-line); }
+.cognitive-map-widget .mm-node.leaf[data-c="sky"] .body { stroke: var(--sky-line); }
+.cognitive-map-widget .mm-node.leaf[data-c="peach"] .body { stroke: var(--peach-line); }
+.cognitive-map-widget .mm-node.leaf[data-c="rose"] .body { stroke: var(--rose-line); }
+.cognitive-map-widget .mm-node.leaf text {
+  font-size: 11px; font-weight: 700; fill: var(--text-secondary);
+}
+.cognitive-map-widget .mm-node.leaf.selected .body { stroke-width: 3; }
+.cognitive-map-widget .mm-node.leaf.selected .halo { opacity: 0.4 !important; }
+.cognitive-map-widget .mm-node.leaf .card-topic {
+  font-size: 9.5px; font-weight: 600; fill: var(--text-secondary);
+}
+.cognitive-map-widget .mm-node.leaf[data-c="mint"] .num-badge circle { fill: var(--mint); }
+.cognitive-map-widget .mm-node.leaf[data-c="sky"] .num-badge circle { fill: var(--sky); }
+.cognitive-map-widget .mm-node.leaf[data-c="peach"] .num-badge circle { fill: var(--peach); }
+.cognitive-map-widget .mm-node.leaf[data-c="rose"] .num-badge circle { fill: var(--rose); }
+.cognitive-map-widget .mm-node.leaf .num-badge text {
+  font-size: 9.5px; fill: #1f2430; font-weight: 700;
+}
+
+/* Second level (leaves) has zero visual footprint until its theme is
+   selected: no lines, no shapes, no hinting outline. It then emerges from
+   the theme bubble's own shadow rather than popping into place. */
+.cognitive-map-widget g.branch .mm-leaf-wrap { pointer-events: none; }
+.cognitive-map-widget g.branch:not(.collapsed) .mm-leaf-wrap { pointer-events: auto; }
+
+/* Root links draw once on load. Leaf links draw on branch open and undraw
+   (not fade) on close, so both read as an animated connection rather than a
+   wire that was always there. Links live in their own layer beneath every
+   bubble so they never cross a node's face. */
+.cognitive-map-widget .mm-link {
+  fill: none;
+  stroke-width: 1.5;
+  transition: stroke-dashoffset 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.cognitive-map-widget .root-link { stroke: var(--border-strong); }
+.cognitive-map-widget .leaf-link { stroke: var(--border-strong); }
+.cognitive-map-widget .mm-leaf-links[data-c="mint"] .leaf-link { stroke: var(--mint-line); }
+.cognitive-map-widget .mm-leaf-links[data-c="sky"] .leaf-link { stroke: var(--sky-line); }
+.cognitive-map-widget .mm-leaf-links[data-c="peach"] .leaf-link { stroke: var(--peach-line); }
+.cognitive-map-widget .mm-leaf-links[data-c="rose"] .leaf-link { stroke: var(--rose-line); }
+.cognitive-map-widget .mm-leaf-links.open .leaf-link { stroke-dashoffset: 0 !important; }
+
+.cognitive-map-widget .leaf-inner {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(0.55);
+  opacity: 0;
+  filter: blur(5px) drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+  transition:
+    transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 0.55s ease,
+    opacity 0.5s ease;
+}
+.cognitive-map-widget g.branch:not(.collapsed) .leaf-inner {
+  transform: translate(0px, 0px) scale(1);
+  opacity: 1;
+  filter: blur(0) drop-shadow(0 3px 6px rgba(30, 20, 10, 0.16));
+}
+.cognitive-map-widget .mm-node.leaf.selected .leaf-inner {
+  filter: blur(0) drop-shadow(0 6px 14px rgba(30, 20, 10, 0.28));
+  transform: translate(0px, 0px) scale(1.22);
+}
+/* Same lift-on-hover language as .tag-cloud-item and the theme bubbles
+   above, for a leaf card once it has already been revealed. Skipped once
+   .selected, so it doesn't fight the selected state's own larger scale. */
+.cognitive-map-widget g.branch:not(.collapsed) .mm-node.leaf:hover:not(.selected) .leaf-inner {
+  transform: translate(0px, 0px) scale(1.08);
+  filter: blur(0) drop-shadow(0 5px 11px rgba(30, 20, 10, 0.22));
+}
+.cognitive-map-widget .mm-node.hub .body {
+  filter: drop-shadow(0 4px 10px rgba(124, 58, 237, 0.35));
+}
+.cognitive-map-widget .theme-inner {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.cognitive-map-widget .mm-node.theme .body {
+  filter: drop-shadow(0 3px 8px rgba(30, 20, 10, 0.14));
+  transition: filter 0.3s ease;
+}
+/* Same lift-on-hover language as .tag-cloud-item: a pop and a deeper shadow,
+   not a color change, since a theme bubble's color already carries meaning
+   (its group). Skipped once a bubble is .open, so it doesn't fight the
+   open-state's own, larger scale. */
+.cognitive-map-widget .mm-node.theme:hover:not(.open) .theme-inner {
+  transform: scale(1.07);
+}
+.cognitive-map-widget .mm-node.theme:hover:not(.open) .body {
+  filter: drop-shadow(0 5px 12px rgba(30, 20, 10, 0.2));
+}
+.cognitive-map-widget .mm-node.theme.open .theme-inner { transform: scale(1.14); }
+.cognitive-map-widget .mm-node.theme.open .body {
+  filter: drop-shadow(0 5px 14px rgba(30, 20, 10, 0.22));
+}
+.cognitive-map-widget .mm-node.theme.open .halo { opacity: 0.4; }
+
+/* Breadcrumb: full path from root, shown wherever a point is being read */
+.cognitive-map-widget .crumb {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem;
+  font-size: 0.74rem; color: var(--text-tertiary); margin-bottom: 0.7rem;
+}
+.cognitive-map-widget .crumb .seg { white-space: nowrap; }
+.cognitive-map-widget .crumb .seg.current { color: var(--text); font-weight: 700; }
+.cognitive-map-widget .crumb .sep { color: var(--border-strong); }
+
+/* Mini-slide deck */
+.cognitive-map-widget .cm-deck {
+  position: relative;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--bg-subtle);
+  min-height: 190px; padding: 1.5rem 1.6rem;
+  border-left: 4px solid var(--border-strong);
+  transition: border-color 0.25s;
+}
+.cognitive-map-widget .cm-deck[data-c="mint"] { border-left-color: var(--mint-line); }
+.cognitive-map-widget .cm-deck[data-c="sky"] { border-left-color: var(--sky-line); }
+.cognitive-map-widget .cm-deck[data-c="peach"] { border-left-color: var(--peach-line); }
+.cognitive-map-widget .cm-deck[data-c="rose"] { border-left-color: var(--rose-line); }
+.cognitive-map-widget .hy-deck-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; gap: 1rem;
+}
+.cognitive-map-widget .hy-tag {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  padding: 0.2rem 0.6rem; border-radius: 999px;
+}
+.cognitive-map-widget .cm-deck[data-c="mint"] .hy-tag { background: var(--mint-light); color: var(--mint-text); }
+.cognitive-map-widget .cm-deck[data-c="sky"] .hy-tag { background: var(--sky-light); color: var(--sky-text); }
+.cognitive-map-widget .cm-deck[data-c="peach"] .hy-tag { background: var(--peach-light); color: var(--peach-text); }
+.cognitive-map-widget .cm-deck[data-c="rose"] .hy-tag { background: var(--rose-light); color: var(--rose-text); }
+.cognitive-map-widget .hy-dots { display: flex; gap: 4px; }
+.cognitive-map-widget .hy-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong);
+  transition: background 0.2s, transform 0.2s; cursor: pointer;
+}
+.cognitive-map-widget .hy-dot.current { transform: scale(1.35); }
+.cognitive-map-widget .cm-deck[data-c="mint"] .hy-dot.current { background: var(--mint-line); }
+.cognitive-map-widget .cm-deck[data-c="sky"] .hy-dot.current { background: var(--sky-line); }
+.cognitive-map-widget .cm-deck[data-c="peach"] .hy-dot.current { background: var(--peach-line); }
+.cognitive-map-widget .cm-deck[data-c="rose"] .hy-dot.current { background: var(--rose-line); }
+/* Height is set in JS to the tallest point in the current theme, measured
+   at the page's actual width, not guessed here: point text varies too much
+   in length for one fixed number to fit every point at every viewport width
+   without either wasting space or overflowing. Fixed per-theme height stops
+   the deck, and the prev/next nav below it, from jumping between points. */
+.cognitive-map-widget .hy-body-holder { position: relative; overflow: hidden; }
+.cognitive-map-widget .hy-body {
+  position: absolute; inset: 0;
+  opacity: 0; transform: translateX(18px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+.cognitive-map-widget .hy-body.active {
+  opacity: 1; transform: translateX(0); pointer-events: auto; position: relative;
+}
+.cognitive-map-widget .hy-body p { margin: 0; font-size: 1rem; line-height: 1.6; max-width: none; width: 100%; }
+.cognitive-map-widget .hy-nav {
+  display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;
+}
+.cognitive-map-widget .hy-navbtn {
+  font-family: var(--font-sans); font-weight: 700; font-size: 0.82rem; cursor: pointer;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text);
+  padding: 0.4rem 0.9rem; border-radius: 999px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cognitive-map-widget .hy-navbtn:hover:not(:disabled) {
+  background: var(--accent-light); border-color: var(--accent); color: var(--accent);
+}
+.cognitive-map-widget .hy-navbtn:disabled { opacity: 0.3; cursor: default; }
+.cognitive-map-widget .hy-counter {
+  font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-tertiary);
+}
+
+/* Tooltip: real HTML overlay, not cramped SVG text, so a hovered or
+   focused bubble's full label reads at a normal size. */
+.cognitive-map-widget .cm-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  max-width: 260px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.cognitive-map-widget .cm-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--text);
+}
+.cognitive-map-widget .cm-tooltip.visible { opacity: 0.96; }
+
+/* Shading: once any bubble at a level is selected/open, its siblings at
+   that same level dim so the active one reads as the focus. */
+/* Dimming reads as muted, frosted glass, never as literal transparency: the
+   bubble or card's own background stays fully opaque, so nothing behind it
+   (another card, a connector line, an overlapping halo) can show through.
+   Only its color and its small text/badge fade. */
+.cognitive-map-widget .mm-node.theme.dimmed circle.body {
+  fill: var(--bg-subtle) !important;
+  transition: fill 0.25s ease;
+}
+.cognitive-map-widget .mm-node.theme.dimmed .theme-label,
+.cognitive-map-widget .mm-node.theme.dimmed .theme-sub {
+  opacity: 0.45;
+}
+.cognitive-map-widget .mm-node.theme.dimmed .halo { opacity: 0 !important; }
+
+.cognitive-map-widget .mm-node.leaf.dimmed .body {
+  fill: var(--bg-subtle) !important;
+  stroke-opacity: 0.35;
+}
+.cognitive-map-widget .mm-node.leaf.dimmed .card-topic,
+.cognitive-map-widget .mm-node.leaf.dimmed .num-badge {
+  opacity: 0.4;
+}
+.cognitive-map-widget .mm-node.leaf.dimmed .halo { opacity: 0 !important; }
 
 /* ============================================
    Utilities

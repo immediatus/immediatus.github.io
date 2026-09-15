@@ -422,22 +422,85 @@ This post's own herding simulation, above, checked staleness within a single fro
 * **Does your fleet serve one model or several?** If several, has Definition 6's raw headroom-fraction comparison been corrected for the fact that a heavy task costs a different number of gigabytes depending on which node's model it lands on?
 * **Once pooling has done what it can do at the admission boundary, does your fleet have Proposition 5's own relocation machinery available for the population that's already landed unevenly?** Or is an already-diverged node stuck with whatever it already has, the same as Blood Oath always was?
 
-> **Cognitive Map**
->
-> 1. Every mechanism through Post 4 priced one pool, one resource, one task's decision. This post asks what changes at fleet scale, not by assumption, but by an exact classical queueing result.
-> 2. Definition 2a's own {% katex() %}G \sim \text{Poisson}(2.22){% end %} was never a convenient approximation. It's the exact distribution of a bridging-window arrival count, for any heavy-task duration shape with finite mean: a consequence of the classical M/G/{% katex() %}\infty{% end %} thinning identity, confirmed here three posts after the fact.
-> 3. Proposition 6: pooling {% katex() %}N{% end %} nodes' bridging-window risk behind a shared routing layer needs a strictly smaller *fraction* of aggregate capacity than {% katex() %}N{% end %} independent per-node reserves. At {% katex() %}N=32{% end %}, the fleet's own size, that's {% katex() %}9.69\%{% end %} against {% katex() %}4.81\%{% end %}: {% katex() %}49.7{% end %}GB, or roughly 132 ordinary sequences' worth of capacity, freed by routing alone.
-> 4. The excess reserve above the pooled mean scales as {% katex() %}\beta\sqrt{\text{offered load}}{% end %} for {% katex() %}\beta \approx 1.9{% end %}, matching the classical square-root staffing law's own functional form: reached here by an exact route rather than the asymptotic one that law was originally derived from.
-> 5. Proposition 6b: pooling only covers admissions that haven't landed yet. Redistributing pressure from an already-running, already-diverged population requires Post 4's own relocation machinery, at Post 4's own real cost: a boundary a March 2026 fleet-capacity-planning study, built against real production traces, independently confirms naive aggregate analysis misses.
-> 6. Definition 6 generalizes Definition 4's per-resource headroom comparison to a per-node one across the fleet, routing new admissions toward whatever headroom currently exists rather than treating any single node's own redline as a fleet-wide event. It does this by sampling a small number of nodes per decision rather than a global argmax, which simulation confirms is the difference between never herding and herding every concurrent admission onto the same node.
-> 7. None of this changes what a single task, once admitted, is worth continuing to run. Posts 1 through 4's own machinery is exactly as necessary as it always was, on whichever node the fleet happens to route a task to.
-> 8. The instinct that started this post (a big enough fleet should need less relative margin than one node) turns out to be right, computably right, and also narrower than the instinct itself would have guessed: right at the admission boundary, silent past it.
-> 9. {% katex() %}G_N{% end %}'s exactness is proven for a constant-rate Poisson process. This post has never sized {% katex() %}H_{\min}^{\text{fleet}}{% end %} against a surge-elevated rate specific to the detected-surge window the bridging period actually is, even though the machinery to do so (Eick, Massey & Whitt's own time-varying generalization) was cited two sections earlier for a different purpose.
-> 10. Definition 6's own herding simulation checked staleness within one frozen snapshot. It hasn't checked the regime a real correlated burst produces: sustained staleness across many fast-arriving decisions, which a separate, already-cited result on stale-information load balancing says degrades differently than single-snapshot staleness does.
-> 11. Definition 6 and Definition 4 are never explicitly composed: a stale routing decision can land an admission on a node whose own redline has already fired, and this post never states what the router does with that rejection. Retry-without-backoff on exactly that failure is a standard retry-storm shape, and it fires hardest during the same correlated surge the whole mechanism exists to survive.
-> 12. Sampling {% katex() %}d{% end %} nodes per decision has a throughput cost this post never separates from the round-trip latency cost priced later against Sparrow. {% katex() %}d{% end %} probes per admission is {% katex() %}d{% end %} times the message volume at the router and at every sampled node, unchecked against what sustained load does to a control plane's own event loop.
-> 13. A shared central backlog, pulled from lazily instead of pushed to, closes the routing-versus-redline composition gap by construction: a node that never pulls until it's already ready never receives an admission it has to reject. It doesn't dissolve the underlying tradeoff. It relocates it: an indexing cost to match multi-dimensional readiness against a multi-dimensional backlog, the same USL contention this series already prices for a fleet-wide router now centered on a queue, and a new, direct draw against Post 4's own {% katex() %}T_{\text{timeout}}{% end %} that push never makes at all.
-> 14. {% katex() %}G{% end %}'s own exactness never needed the loss-system caveat this post already names for a different quantity: {% katex() %}G{% end %} counts arrivals in a fixed window, unaffected by downstream blocking, while the caveat bites the steady-state occupancy count instead. Where that occupancy approximation degrades, a classical insensitivity result for M/G/c/c loss systems says it degrades toward a *smaller* true fractile, not a larger one: the untruncated Poisson tail this post leans on is conservative near saturation, not dangerous.
+{% cognitive_map(root="The Square Root That Doesn't Cover Routing") %}
+{
+  "intro": "Every post in this series so far has priced one pool, one resource, one task's decision. Real fleets run hundreds of pools at once, and this post checks whether scale changes what the earlier posts prove is needed, not by assumption, but by an exact classical queueing result precise enough to price a real number: how many gigabytes pooling a fleet's own memory margin actually frees, and exactly where that pooling stops working.",
+  "groups": [
+    {
+      "theme": "Pooling: The Exact Saving Behind One Number",
+      "c": "mint",
+      "points": [
+        "Every mechanism through the earlier posts priced one pool, one resource, one task's decision. This post asks whether volume changes what those mechanisms need, and answers with an exact classical queueing result rather than an intuition about scale.",
+        "The bridging-window arrival count was never a convenient approximation. It is the exact distribution for any heavy-task duration shape with a finite mean, a consequence of a classical thinning identity confirmed here, several posts after the number was first used.",
+        "Pooling a fleet's bridging-window risk behind a shared routing layer needs a strictly smaller fraction of aggregate capacity than the same number of independent per-node reserves, computed rather than merely argued: at a specimen fleet of 32 nodes, roughly half the standing margin one node alone would need, in relative terms.",
+        "The excess reserve above the pooled mean scales as a constant multiple of the square root of offered load, matching the functional form of the classical square-root staffing law, reached here by an exact route rather than the asymptotic one that law was originally derived from."
+      ]
+    },
+    {
+      "theme": "Where Pooling Stops",
+      "c": "sky",
+      "points": [
+        "Pooling only covers admissions that have not landed yet. Redistributing pressure from an already-running, already-diverged population requires the earlier eviction machinery, at its own real cost, a boundary an independent, real-trace fleet-planning study confirms naive aggregate analysis misses.",
+        "A fleet redline generalizes the earlier per-resource headroom comparison to a per-node one, routing new admissions toward whatever headroom currently exists rather than treating any single node's own breach as a fleet-wide event.",
+        "Sampling a small number of nodes per routing decision, rather than computing a single fleet-wide best choice, is the difference between a rule that never herds concurrent admissions and one that sends every one of them to the same node.",
+        "None of this changes what a single task, once admitted, is worth continuing to run. Every earlier post's own machinery is exactly as necessary as it always was, on whichever node the fleet happens to route a task to."
+      ]
+    },
+    {
+      "theme": "A Design Question Left Open",
+      "c": "peach",
+      "points": [
+        "The routing rule as built pushes an admission to a committed node based on a remote sample that can already be stale by the time the admission lands, the exact gap a correlated, fast-arriving burst could exploit.",
+        "A pull-based alternative, where nodes claim work only once they are genuinely ready, closes that composition gap by construction, but trades it for a real indexing cost and a new, direct draw against a client's own patience for waiting.",
+        "A fully centralized alternative is not one design but a family with genuinely different answers to how a single authority sees fleet state without becoming a bottleneck, and this post resolves none of that comparison, naming its own choice as one defensible point in that space rather than the only one.",
+        "Whether the routing layer is one coordinating decision-maker or several independent ones matters more than this post's own numbers assume: a separately measured equilibrium-inefficiency result already found that gap small below saturation and sharply nonlinear above it."
+      ]
+    },
+    {
+      "theme": "What This Post Has Not Verified",
+      "c": "rose",
+      "points": [
+        "The herding simulation checked staleness within one frozen snapshot. It has not checked the regime a real correlated burst produces, several fast-arriving decisions sharing one stale reading, which a separately established result on stale-information load balancing says degrades differently.",
+        "A stale routing decision can land an admission on a node whose redline has already fired, and this post never states what happens next. A naive retry policy on that rejection is a standard retry-storm shape, firing hardest during the exact surge the whole mechanism exists to survive.",
+        "A fleet mixing an immortal population with a checkpointable one has two nodes reporting identical headroom while carrying structurally different resilience, since only the checkpointable population can ever be relocated to relieve pressure, and the routing rule as stated cannot see the difference.",
+        "Whether the router itself remains reachable is a real partition choice this post never states as one: block new admissions until it recovers, or let every node fall back to its own local, possibly stale view, quietly losing the pooled saving with no signal announcing that it happened."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**Pooling: The Exact Saving Behind One Number**
+
+1. Every mechanism through the earlier posts priced one pool, one resource, one task's decision. This post asks whether volume changes what those mechanisms need, and answers with an exact classical queueing result rather than an intuition about scale.
+2. The bridging-window arrival count was never a convenient approximation. It is the exact distribution for any heavy-task duration shape with a finite mean, a consequence of a classical thinning identity confirmed here, several posts after the number was first used.
+3. Pooling a fleet's bridging-window risk behind a shared routing layer needs a strictly smaller fraction of aggregate capacity than the same number of independent per-node reserves, computed rather than merely argued: at a specimen fleet of 32 nodes, roughly half the standing margin one node alone would need, in relative terms.
+4. The excess reserve above the pooled mean scales as a constant multiple of the square root of offered load, matching the functional form of the classical square-root staffing law, reached here by an exact route rather than the asymptotic one that law was originally derived from.
+
+**Where Pooling Stops**
+
+5. Pooling only covers admissions that have not landed yet. Redistributing pressure from an already-running, already-diverged population requires the earlier eviction machinery, at its own real cost, a boundary an independent, real-trace fleet-planning study confirms naive aggregate analysis misses.
+6. A fleet redline generalizes the earlier per-resource headroom comparison to a per-node one, routing new admissions toward whatever headroom currently exists rather than treating any single node's own breach as a fleet-wide event.
+7. Sampling a small number of nodes per routing decision, rather than computing a single fleet-wide best choice, is the difference between a rule that never herds concurrent admissions and one that sends every one of them to the same node.
+8. None of this changes what a single task, once admitted, is worth continuing to run. Every earlier post's own machinery is exactly as necessary as it always was, on whichever node the fleet happens to route a task to.
+
+**A Design Question Left Open**
+
+9. The routing rule as built pushes an admission to a committed node based on a remote sample that can already be stale by the time the admission lands, the exact gap a correlated, fast-arriving burst could exploit.
+10. A pull-based alternative, where nodes claim work only once they are genuinely ready, closes that composition gap by construction, but trades it for a real indexing cost and a new, direct draw against a client's own patience for waiting.
+11. A fully centralized alternative is not one design but a family with genuinely different answers to how a single authority sees fleet state without becoming a bottleneck, and this post resolves none of that comparison, naming its own choice as one defensible point in that space rather than the only one.
+12. Whether the routing layer is one coordinating decision-maker or several independent ones matters more than this post's own numbers assume: a separately measured equilibrium-inefficiency result already found that gap small below saturation and sharply nonlinear above it.
+
+**What This Post Has Not Verified**
+
+13. The herding simulation checked staleness within one frozen snapshot. It has not checked the regime a real correlated burst produces, several fast-arriving decisions sharing one stale reading, which a separately established result on stale-information load balancing says degrades differently.
+14. A stale routing decision can land an admission on a node whose redline has already fired, and this post never states what happens next. A naive retry policy on that rejection is a standard retry-storm shape, firing hardest during the exact surge the whole mechanism exists to survive.
+15. A fleet mixing an immortal population with a checkpointable one has two nodes reporting identical headroom while carrying structurally different resilience, since only the checkpointable population can ever be relocated to relieve pressure, and the routing rule as stated cannot see the difference.
+16. Whether the router itself remains reachable is a real partition choice this post never states as one: block new admissions until it recovers, or let every node fall back to its own local, possibly stale view, quietly losing the pooled saving with no signal announcing that it happened.
+
+</details>
 
 ---
 <sup>[1]</sup> NVIDIA (2025). *Introducing NVIDIA Dynamo, technical blog.*

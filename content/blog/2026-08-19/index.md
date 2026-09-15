@@ -331,22 +331,85 @@ Every earlier post named its own boundaries. This one, being the reconciliation 
 * **Is the drift-cost figure you're comparing against actually in a unit your own {% katex() %}C_{\text{workflow}}{% end %} estimate shares?** Or would combining them require the same kind of unjustified cross-post currency conversion this post tried once and rejected?
 * **If you're running more than one of this series' own mechanisms at once, on the same real system, has anyone actually checked that they compose?** Or is that, too, an assumption riding on five separately-proven results that were never proven together?
 
-> **Cognitive Map**
->
-> 1. This series has priced one side of adaptation's own ledger, repeatedly and rigorously: the cost of *not* adapting, real and computed in three different posts, three different units, and named without a number in a fourth.
-> 2. It has never priced the other side: what adaptation itself costs to run. Definition 7a states that gap formally, as an achievable region with one axis undrawn, rather than assuming it away.
-> 3. Proposition 7 applies the Constraint Sequence Framework's own Meta-Constraint ROI test directly: a real, positive numerator, an unmeasured denominator, a genuinely undetermined sign, not a favorable assumption this series is now entitled to keep making.
-> 4. The compute cost of adaptation is cheap, verifiably: negligible against this series' own smallest priced unit. That was never the expensive part. Engineering time, validation, trust, and stopping criteria are, and none of those have been priced here or anywhere else in this series.
-> 5. The Constraint Sequence Framework's own meta-constraint has no completion state without an explicit stopping criterion. This series' own Knowledge phase, across every post that built a piece of it, has never been given one.
-> 6. Four real specimens have never been checked running together. No post in this series has asked whether its own achievable-region pattern applies to every tradeoff it's been used on. Both are named here as open, not resolved by this post's own accounting.
-> 7. Real operations practice already has a name for the missing term (toil) and a real, numeric rule for weighing it against the engineering cost of eliminating it. This series built a toil-elimination project, Knowledge, without ever holding it to that same bar.
-> 8. Neither direction this could resolve in is assumed here. A team with mature infrastructure and a modest build likely does clear the ROI bar this series has implicitly claimed since Post 2. A team building the machinery from nothing, debugging an adaptive system at 2 a.m., might not. Both are real possibilities this Ledger leaves open rather than settles.
-> 9. Built out in full, this series' own Knowledge phase is four separate live-adapting subsystems, not one: a per-resource EWMA sidecar, a Hill estimator, an emergency-eviction ranking channel, a fleet-wide routing layer. Each is capable of drifting in a direction the others can't see. The cognitive cost of reconstructing which of the four moved before diagnosing an incident is its own named piece of {% katex() %}C_{\text{workflow}}{% end %}, distinct from engineering-hours, and no more measured than any other piece of it.
-> 10. Underneath the cognitive cost sits a literal transport one. Fine-grained per-task telemetry is {% katex() %}O(N\cdot M){% end %} in the naive reading, but stays {% katex() %}O(N){% end %}, bounded by design, only because Posts 3 and 5 kept {% katex() %}m(t){% end %} and {% katex() %}S(t){% end %} node-local and shared just one aggregate number per node fleet-wide. That's a real architectural constraint neither post ever stated out loud, and a real, continuously-running cost this series has never priced even at its bounded size.
-> 11. The ROI formula's own algebra, not a new measurement, already bounds what "cheap enough" has to mean: clearing the cited framework's own {% katex() %}\tau=3.0{% end %} floor requires {% katex() %}C_{\text{workflow}}{% end %} under a quarter of what it saves, not merely under all of it.
-> 12. Knowledge's own missing stopping criterion isn't an oversight. Formal metareasoning research proves the exact version of that criterion is subject to an infinite regress: the same strange loop this post already names for the cited framework's own meta-constraint. It shows the correct response is a fixed, cheap, approximate threshold, rather than an exact recursive one.
-> 13. An unresolved ROI sign isn't a reason to guess. Information value theory gives the "go measure {% katex() %}C_{\text{workflow}}{% end %}" advice a formal justification: the value of resolving the sign is real and boundable, and measuring it is cheap next to guessing wrong for years.
-> 14. Whether {% katex() %}\tau=3.0{% end %}, borrowed from feature-development economics, is even the right bar for reliability work's own asymmetric downside has not been checked. Neither has this post's own expansion against the value-of-computation standard it argues Knowledge should be held to.
+{% cognitive_map(root="The Meta-Constraint This Series Never Priced") %}
+{
+  "intro": "Five posts have priced, over and over, what it costs to guess wrong about a distribution that will not hold still, borrowing five of a named framework's six components along the way without ever turning the sixth, Meta-Constraint Awareness, on the machinery doing the pricing. This post runs that test on its own series: a real numerator computed three times over, a denominator no post has ever measured, and a return on investment whose sign comes out genuinely undetermined, not favorably assumed.",
+  "groups": [
+    {
+      "theme": "One Side Priced, One Side Never",
+      "c": "mint",
+      "points": [
+        "This series has priced the cost of not adapting, over and over, in real numbers: a light-tailed guess overpaying by a specific fraction, an unmeasured correlation costing specific extra slots, an unmeasured cross-node correlation costing specific extra gigabytes.",
+        "It has never once priced the other side of that same comparison: what the adapting machinery itself costs to build, run, and keep trustworthy. An achievable region with one axis drawn and the other left blank is not a completed trade-off, whatever it feels like from inside the argument that built it.",
+        "The gap survived five posts of otherwise careful self-checking because each post's own review looked outward at that post's own boundary, never backward across posts at a pattern only visible in aggregate, exactly the kind of migration a real body of systems-safety research already has a name for.",
+        "Every drift-cost figure this series computed was earned defending a mechanism already decided on, answering how bad the problem is that the mechanism solves, never what the mechanism itself costs to keep running."
+      ]
+    },
+    {
+      "theme": "The ROI Test, Applied Honestly",
+      "c": "sky",
+      "points": [
+        "Applying a real return-on-investment test already published on this blog to the series' own Knowledge phase finds a real, positive numerator computed three times over and named a fourth time without a number, against a denominator that has never been measured anywhere in the series.",
+        "That makes the sign of the ratio genuinely undetermined, not probably positive and not presumably small enough to ignore. One of the two required terms has simply never been supplied.",
+        "The formula's own algebra still yields a real threshold without needing either side's exact value: clearing the framework's own bar requires the adaptation machinery's overhead to sit under a quarter of what it saves, not merely under all of it.",
+        "The one piece of that overhead genuinely easy to price, the raw arithmetic a live-tuned estimator performs, is verifiably negligible. Real production machine-learning research says the expensive part is never the arithmetic. It is everything built around making sure the arithmetic stays trustworthy, the exact part this series has never measured for its own machinery."
+      ]
+    },
+    {
+      "theme": "The Regress Has a Name, and a Resolution",
+      "c": "peach",
+      "points": [
+        "A published framework already used throughout this series states that its own optimization workflow has no completion state without an explicit stopping criterion, and every Knowledge-phase mechanism this series has built has been running that exact strange loop without one.",
+        "Deciding how much further tuning to invest in an adaptive system is itself a decision with its own cost, and deciding how much to think about that decision is another one stacked on top, the same infinite regress a formal body of research on allocating computation has already proven has no exact solution.",
+        "That research's own resolution is not to compute the regress exactly but to cap it: a cheap, fixed, admittedly approximate threshold, the identical move the framework this series has cited since early on already makes with its own numeric floor.",
+        "An unresolved sign is not a reason to guess in either direction. A formal theory of the value of missing information gives the instruction to go measure real overhead a genuine justification: the value of resolving the sign is real and boundable, and measuring it is cheap next to guessing wrong for years."
+      ]
+    },
+    {
+      "theme": "What's Still Unchecked",
+      "c": "rose",
+      "points": [
+        "Four real specimens spanning the whole series have never been checked running together on one real system, and a concrete coordination question between two of them, whether a node mid-recovery should broadcast its current or its optimistically projected headroom, is provably safe in one direction and genuinely open in the other.",
+        "The same ROI discipline this post insists on for the existing Knowledge phase applies with equal force to a still-open architectural question from the previous post: whether to replace the current routing design with something that removes staleness by construction, since that swap is its own optimization-workflow decision, not a free upgrade.",
+        "Whether the numeric floor this whole test borrows from feature-development economics is even the right bar for reliability work's asymmetric downside has never been checked, and neither has this very post's own expansion against the value-of-computation standard it argues everything else in the series should be held to.",
+        "Built out in full, the series' own Knowledge phase turns out to be four separately live-adapting subsystems rather than one, each capable of drifting in a direction the others cannot see, with a real cognitive cost to reconstructing which one moved before an incident can even be diagnosed."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**One Side Priced, One Side Never**
+
+1. This series has priced the cost of not adapting, over and over, in real numbers: a light-tailed guess overpaying by a specific fraction, an unmeasured correlation costing specific extra slots, an unmeasured cross-node correlation costing specific extra gigabytes.
+2. It has never once priced the other side of that same comparison: what the adapting machinery itself costs to build, run, and keep trustworthy. An achievable region with one axis drawn and the other left blank is not a completed trade-off, whatever it feels like from inside the argument that built it.
+3. The gap survived five posts of otherwise careful self-checking because each post's own review looked outward at that post's own boundary, never backward across posts at a pattern only visible in aggregate, exactly the kind of migration a real body of systems-safety research already has a name for.
+4. Every drift-cost figure this series computed was earned defending a mechanism already decided on, answering how bad the problem is that the mechanism solves, never what the mechanism itself costs to keep running.
+
+**The ROI Test, Applied Honestly**
+
+5. Applying a real return-on-investment test already published on this blog to the series' own Knowledge phase finds a real, positive numerator computed three times over and named a fourth time without a number, against a denominator that has never been measured anywhere in the series.
+6. That makes the sign of the ratio genuinely undetermined, not probably positive and not presumably small enough to ignore. One of the two required terms has simply never been supplied.
+7. The formula's own algebra still yields a real threshold without needing either side's exact value: clearing the framework's own bar requires the adaptation machinery's overhead to sit under a quarter of what it saves, not merely under all of it.
+8. The one piece of that overhead genuinely easy to price, the raw arithmetic a live-tuned estimator performs, is verifiably negligible. Real production machine-learning research says the expensive part is never the arithmetic. It is everything built around making sure the arithmetic stays trustworthy, the exact part this series has never measured for its own machinery.
+
+**The Regress Has a Name, and a Resolution**
+
+9. A published framework already used throughout this series states that its own optimization workflow has no completion state without an explicit stopping criterion, and every Knowledge-phase mechanism this series has built has been running that exact strange loop without one.
+10. Deciding how much further tuning to invest in an adaptive system is itself a decision with its own cost, and deciding how much to think about that decision is another one stacked on top, the same infinite regress a formal body of research on allocating computation has already proven has no exact solution.
+11. That research's own resolution is not to compute the regress exactly but to cap it: a cheap, fixed, admittedly approximate threshold, the identical move the framework this series has cited since early on already makes with its own numeric floor.
+12. An unresolved sign is not a reason to guess in either direction. A formal theory of the value of missing information gives the instruction to go measure real overhead a genuine justification: the value of resolving the sign is real and boundable, and measuring it is cheap next to guessing wrong for years.
+
+**What's Still Unchecked**
+
+13. Four real specimens spanning the whole series have never been checked running together on one real system, and a concrete coordination question between two of them, whether a node mid-recovery should broadcast its current or its optimistically projected headroom, is provably safe in one direction and genuinely open in the other.
+14. The same ROI discipline this post insists on for the existing Knowledge phase applies with equal force to a still-open architectural question from the previous post: whether to replace the current routing design with something that removes staleness by construction, since that swap is its own optimization-workflow decision, not a free upgrade.
+15. Whether the numeric floor this whole test borrows from feature-development economics is even the right bar for reliability work's asymmetric downside has never been checked, and neither has this very post's own expansion against the value-of-computation standard it argues everything else in the series should be held to.
+16. Built out in full, the series' own Knowledge phase turns out to be four separately live-adapting subsystems rather than one, each capable of drifting in a direction the others cannot see, with a real cognitive cost to reconstructing which one moved before an incident can even be diagnosed.
+
+</details>
 
 **A later note, added after a different series on this blog needed the same result.** Item 12's regress, and Russell and Wefald's resolution of it, generalize past this series' own Knowledge phase. [The Portable Mind](@/blog/2026-09-05/index.md#falsification-criteria) later asks the same question of a different machinery, external loops that verify an AI agent's own cognitive properties rather than a capacity-planning system's tuning, and the answer is unchanged: deciding how much verification is enough is itself a decision with its own cost, and the honest response is the same cheap, fixed, approximate cap this post already reaches for here. One regress, two unrelated domains, the same correct answer both times.
 

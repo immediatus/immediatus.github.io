@@ -17,11 +17,11 @@ series_title = "The Portable Mind: Five Properties of Thinking"
 series_description = """<div class="series-lede">Thinking architecture is portable across a human brain and a transformer. Correctness is not.</div>Five formal properties of thinking, each pinned to a real theorem: Ashby's Law for Noticing and Simulation, a sufficiency identity for Abstraction, an asymmetric-updating result for Rationality, a resource-bounded Loeb's theorem for Awareness, and cost-aware optimal stopping for Optimization. Every theorem is tested against a matching human finding and a current AI-agent finding. One real case opens the series and closes it, rerun through everything the four posts build in between, and Post 4 prices the portability gap itself: a structural cost, computable in kind, never a number any single deployment can just adopt. A fifth post asks what the five external loops actually have in common, and derives the general criterion underneath all of them."""
 +++
 
-A system that has spent too much on a losing approach will keep spending. The extra spending is not a search for the exit. It is a defence of the entrance.
+A system that has spent too much on a losing approach will keep spending. The extra spending is a defence of the entrance, not a search for the exit.
 
 That sentence describes a stalled project, a bad hire nobody will fire, and a language-model agent retrying a broken patch for the ninth time with equal accuracy. That is the first sign, as in every earlier post in this series, that something structural is running underneath the surface rather than something incidental to any one substrate.
 
-This is the fourth of five posts, and the last to introduce a new property. The first three took Noticing and Simulation, then Abstraction and Rationality, then Awareness alone. Each showed that a genuinely useful property fails in a direction the mathematics predicts before any experiment is run.
+This is the fourth of five posts, and the last to introduce a new property. Each of the first three, named below, showed that a genuinely useful property fails in a direction the mathematics predicts before any experiment is run.
 
 This post takes the fifth property, Optimization. Then it does the thing the whole series was built to do: it reassembles the five findings into one object, reruns the opening case through all of them as a single causal chain, and states plainly what the completed picture licenses and what it does not.
 
@@ -30,6 +30,16 @@ Optimization is the property of choosing well under cost. It is where the foundi
 The failure mode of Optimization is the one every engineer has watched consume a sprint. It is the refusal to stop: the escalation of a commitment that the evidence has already condemned, more resource poured into an approach precisely because resource has already been poured in.
 
 This post formalizes that failure as a deviation from cost-aware optimal stopping. It shows that the correct policy, once the real cost of continuing to search is priced in, is not the heroic pursuit of the best possible outcome, but a threshold rule that stops early and on purpose.
+
+<div class="recap-box">
+<span class="recap-label">Argument so far</span>
+<ul>
+<li><strong><a href="/blog/portable-mind-part1-requisite-variety/">Noticing and the Cost of Not Knowing Enough</a>'s Proposition 1, stated formally.</strong> {% katex() %}V(\text{outcome}) \geq V(\text{disturbance}) - V(\text{regulator}){% end %}. Six frontier models on MarketBench underestimated their own token cost by a median ratio near 0.19, roughly fivefold.</li>
+<li><strong><a href="/blog/portable-mind-part2-sufficient-abstraction/">Sufficient Abstraction and the Cost of Asking the Wrong Question Twice</a>'s Propositions 2 and 3.</strong> Sufficiency for {% katex() %}T_{\text{old}}{% end %} carries no guarantee of sufficiency for {% katex() %}T_{\text{new}}{% end %}. Asymmetric likelihood weighting produces a log-odds gap against the true posterior that grows without bound in the evidence seen.</li>
+<li><strong><a href="/blog/portable-mind-part3-the-unverifiable-self/">Awareness and the Proof a Reasoner Cannot Write About Itself</a>'s Proposition 4.</strong> Critch's resource-bounded Loeb's theorem: a provability-based reasoner cannot derive a general reflection principle about its own soundness without the principle collapsing into unconditional assertion.</li>
+<li><strong>What this post asks next.</strong> The fifth and last new property, Optimization. Then this post puts everything the first four priced only in kind onto one shared, numeric scale.</li>
+</ul>
+</div>
 
 ## The Case: Agents That Escalate Only in Company
 
@@ -233,13 +243,13 @@ What makes it more than a single data point is its structure-dependence. The fin
 
 The structure-dependence connects Optimization to a strand of evidence this series has not yet touched: the game-theoretic evaluation of strategic reasoning. It belongs here because escalation inside a multi-agent structure is a strategic-reasoning failure, not only a stopping-rule failure.
 
-Jinhao Duan and colleagues built GTBench to measure exactly the strategic-reasoning limitations of language models across game-theoretic tasks {{ cite(ref="7", title="Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. & Xu, K. (2024) -- GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations, arXiv:2402.12348") }}. They found performance that is uneven in a diagnostic way: models do better in probabilistic, incomplete-information games, and markedly worse in complete, deterministic games where the right move is a matter of strategic calculation rather than pattern completion.
+Jinhao Duan and colleagues built GTBench to measure exactly the strategic-reasoning limitations of language models across game-theoretic tasks {{ cite(ref="6", title="Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. & Xu, K. (2024) -- GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations, arXiv:2402.12348") }}. They found performance that is uneven in a diagnostic way: models do better in probabilistic, incomplete-information games, and markedly worse in complete, deterministic games where the right move is a matter of strategic calculation rather than pattern completion.
 
-The systematic survey by Haoran Sun, Yusen Wu, Yukun Cheng, and Xu Chu catalogues the broader picture across the field {{ cite(ref="8", title="Sun, H., Wu, Y., Cheng, Y. & Chu, X. (2025) -- Game Theory Meets Large Language Models: A Systematic Survey, Proceedings of IJCAI 2025, Survey Track, 10669-10677") }}. Language models placed in game-theoretic settings display characteristic and repeatable departures from equilibrium play, and their behavior in multi-agent interaction is not reliably captured by treating each agent as an independent rational actor.
+The systematic survey by Haoran Sun, Yusen Wu, Yukun Cheng, and Xu Chu catalogues the broader picture across the field {{ cite(ref="7", title="Sun, H., Wu, Y., Cheng, Y. & Chu, X. (2025) -- Game Theory Meets Large Language Models: A Systematic Survey, Proceedings of IJCAI 2025, Survey Track, 10669-10677") }}. Language models placed in game-theoretic settings display characteristic and repeatable departures from equilibrium play, and their behavior in multi-agent interaction is not reliably captured by treating each agent as an independent rational actor.
 
 **These strategic-reasoning limitations are measured agent findings** [Layer 2: Fit], and they corroborate the Big-Muddy result rather than duplicate it. The escalation study shows the failure on one specific decision. The game-theoretic evaluations show that departures from optimal play in multi-agent settings are a broad and repeatable feature. Together, the two make the case that the Optimization failure this post formalizes is not an artifact of one experimental setup.
 
-Optimization is also where a named proxy-failure mechanism this series has been tracking reaches its sharpest form for a single agent. Manheim and Garrabrant split Goodhart's Law into four mechanisms. Post 2 named a family resemblance to Causal Goodhart for the stale abstraction, without claiming membership in it, and Post 3 used Regressional Goodhart for the Dunning-Kruger artifact {{ cite(ref="6", title="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585") }}. The two remaining mechanisms govern the single-agent Optimization failures.
+Optimization is also where a named proxy-failure mechanism this series has been tracking reaches its sharpest form for a single agent. Manheim and Garrabrant split Goodhart's Law into four mechanisms. Post 2 named a family resemblance to Causal Goodhart for the stale abstraction, without claiming membership in it, and Post 3 used Regressional Goodhart for the Dunning-Kruger artifact {{ cite(ref="8", title="Manheim, D. & Garrabrant, S. (2018) -- Categorizing Variants of Goodhart's Law, arXiv:1803.04585") }}. The two remaining mechanisms govern the single-agent Optimization failures.
 
 Extremal Goodhart is what happens when an isolated optimizer pushes a proxy to its extreme, into a regime where the proxy's historical correlation with the true objective no longer holds. Proposition 5's {% katex() %}v{% end %} is the true objective itself, with no proxy in the formalism. The fit needs one added premise the proposition does not contain: the searcher actually observes a proxy {% katex() %}\hat{v}{% end %}, the passing test suite, the reward signal, correlated with but distinct from the true {% katex() %}v{% end %}, and that correlation degrades toward {% katex() %}\hat{v}{% end %}'s own extreme. Grant that, and a search with its threshold pinned at {% katex() %}\sup \hat{v}{% end %} rather than the true {% katex() %}v^*{% end %} does precisely what Extremal Goodhart describes: it drives toward the extreme of the measurable proxy, past the region where that proxy tracked the outcome it was standing in for.
 
@@ -261,9 +271,7 @@ There is one wrinkle specific to Optimization worth naming. The agent escalation
 
 ## Five Properties, One Loop: The MAPE-K Correspondence
 
-The series has now formalized all five properties. Before the closing synthesis reassembles them, it is worth naming a correspondence that has been latent in the structure the whole time: the five-property decomposition this blog inherited from its founding post is not idiosyncratic.
-
-It is, component for component, the same decomposition that autonomic computing arrived at independently for self-managing systems. Seeing the two line up is a check on the decomposition, not a coincidence to note in passing.
+The series has now formalized all five properties. Before the closing synthesis reassembles them, it is worth naming a correspondence that has been latent in the structure the whole time: the five-property decomposition this blog inherited from its founding post is, component for component, the same decomposition that autonomic computing arrived at independently for self-managing systems, not an idiosyncratic one. Seeing the two line up is a check on the decomposition, not a coincidence to note in passing.
 
 The autonomic-computing reference model is the MAPE-K loop, formalized in the vision of autonomic computing and adapted on this blog for edge conditions in the Autonomic Edge Architectures series {{ cite(ref="10", title="Kephart, J.O. & Chess, D.M. (2003) -- The Vision of Autonomic Computing, IEEE Computer 36(1), 41-50") }}. A self-managing system, in that model, runs a loop with four active stages over a shared store:
 
@@ -321,7 +329,7 @@ graph LR
 
 Post 1 opened this series with a single case: six frontier models asked to price and forecast their own work on a subset of SWE-bench Lite. It read that case through one property, Simulation.
 
-The completed framework can now read the same case through all five. The point of doing so is not to show that five lenses see more than one. It is to show that the five failures are not five independent observations about one case. They are one causal cascade, each failure creating the conditions for the next, and the cascade is why compute spent at the last stage cannot repair a deficit that originated at the first.
+The completed framework can now read the same case through all five. The point of doing so is to show that the five failures are not five independent observations about one case, not merely that five lenses see more than one. They are one causal cascade, each failure creating the conditions for the next, and the cascade is why compute spent at the last stage cannot repair a deficit that originated at the first.
 
 **Reading the case this way is itself a claim with a warrant, and it earns the same tag every other composite claim in this series carries** [Layer 3: Estimate]. Each per-stage mechanism below is a Layer 1 or Layer 2 finding, proved or measured on its own apparatus: Ashby's Law is a theorem, the stale-abstraction and asymmetric-update signatures are ToolMaze and Li-Wang-Yang measurements, the miscalibrated self-report is the shadow-mode pattern Post 3 formalized. MarketBench itself measured a forecast and an outcome, not the four intervening steps the cascade narrates. Chaining all five into one trajectory, each failure producing the next within a single run, is this series' own construction, not a sequence any one study instrumented. It is falsifiable on exactly that basis, not on the basis of the four propositions it is built from.
 
@@ -959,7 +967,7 @@ Independence Illusion's own honesty about its correlation-quality function, offe
 
 One further question follows both series, and neither one alone had answered it: why not simply check whether enough checking has already been done? [The Meta-Constraint This Series Never Priced](@/blog/2026-08-19/index.md) already has the answer, from a third series on this blog, and it generalizes here without alteration. Deciding how much verification is enough is itself a decision, with its own cost, that would need its own check: a regress. Formal metareasoning research proves that regress has no exact solution, only a cheap, admittedly approximate cap {{ cite(ref="11", title="Russell, S. & Wefald, E. (1991) -- Principles of Metareasoning, Artificial Intelligence 49(1-3), 361-395") }}.
 
-That caution applies to this series' own machinery too, not only rhetorically. The five external loops priced later in this post are themselves a further computation, purchased at a further cost. The honest question the regress raises is not whether to run them but how much to invest in perfecting them before the investment itself stops paying. The metareasoning result gives the same answer here it gave there: a cheap, fixed, approximate bar, checked once and revised occasionally, beats an exact recursive calculation of the value of calculating more precisely. That is not a concession this series makes reluctantly. It is the same correct result showing up a third time.
+That caution applies to this series' own machinery too, not only rhetorically. The five external loops priced later in this post are themselves a further computation, purchased at a further cost. The honest question the regress raises is not whether to run them but how much to invest in perfecting them before the investment itself stops paying. The metareasoning result gives the same answer here it gave there: a cheap, fixed, approximate bar, checked once and revised occasionally, beats an exact recursive calculation of the value of calculating more precisely. That is the same correct result showing up a third time, not a concession this series makes reluctantly.
 
 ## Falsification Criteria
 
@@ -1151,14 +1159,85 @@ Because the closing synthesis is the most tempting place in the entire series to
 
 - It has not been claimed that flushing context is proven to restore the exact {% katex() %}F{% end %} the reservation equation assumes, only that it moves a retry closer to a fresh draw than continuing to build on a transcript the recursion already treats as degraded. Nothing here measures how much of the degradation a flush actually recovers, or whether some of what a failed attempt learned is worth keeping despite the cost of keeping it; that trade-off is deployment-specific in the same way {% katex() %}\lambda{% end %} and the three-way cost combination earlier in this post are.
 
-> **Cognitive Map**
->
-> 1. Optimization is choosing when to stop searching under cost, and its failure is the refusal to stop, escalation of commitment. Once a positive per-option search cost is priced in, the optimal policy is a reservation-value threshold, satisficing in form and the true optimum rather than an approximation, with the costless ideal recovered only in the limit as cost goes to zero, a corner search cost structurally forbids.
-> 2. Arkes and Blumer measured the human sunk cost effect in 1985. The Big-Muddy study measured the agent version and found the sharper fact that escalation is emergent from multi-agent structure, near-universal under symmetrical peer deliberation, not a disposition the individual carries.
-> 3. The five properties map one-for-one onto the MAPE-K loop, with Knowledge standing exactly where Awareness stands, cross-cutting rather than in-line, which is why Awareness was always alone.
-> 4. The opening SWE-bench case, reread through all five, is one causal cascade: undersimulation forces a committed abstraction, the stale abstraction discounts disconfirming tests, the discounted evidence blinds the self-assessment, and the unwarranted confidence forces the retry loop. The Optimization failure is an unaddressed Simulation failure five stages upstream, which is why compute spent on retries cannot fix it.
-> 5. Self-consistency, a property a system can verify about itself from within, holds for none of the five: proven absent for Awareness at Layer 1, argued absent for the other four at Layer 3, never four more hidden theorems. External falsification is therefore not optional scaffolding for any property, the same gap Theorems Out of Warranty found from the other side.
-> 6. Architecture is portable. Correctness is not, and the portability gap is now a number: the summed cost of the five external loops, priced conditionally and net of their shared substrate, illustratively about 0.73 of the base task, the itemized bill for trusting five properties none of which can audit itself.
+{% cognitive_map(root="Optimization and the Ceiling No Retry Can Raise") %}
+{
+  "intro": "Ask a single language model whether to keep funding a failing project and it usually says no. Put a small crowd of them in a room agreeing with each other and the answer flips to yes almost every time. This closing post proves the exact stopping rule a cost-bearing search should follow, reruns the series' opening case through all five properties as one causal cascade rather than five separate findings, and states honestly which of the five properties can check themselves and which cannot, before pricing the whole verification apparatus as a number.",
+  "groups": [
+    {
+      "theme": "Optimization: Knowing When to Stop",
+      "c": "mint",
+      "points": [
+        "Optimization is not pursuing the best outcome, but deciding when a cost-bearing search has done enough. Its failure is the refusal to stop, escalation of commitment: more resource poured in precisely because resource has already been poured in.",
+        "The search-cost achievable region trades total spend against distance from the unreachable costless ideal, and the proposition proves the optimal point on that frontier is a reservation-value threshold, satisficing in exact form rather than an approximation of some better policy.",
+        "The costless ideal sits at a corner the frontier only approaches as search cost falls toward zero. Reaching closer to it honestly means reducing the cost of searching itself, not disabling the stopping rule and charging the difference to the budget.",
+        "A 1985 study measured the human sunk cost effect. A 2025 study measured the agent version and found a sharper fact: escalation is emergent from multi-agent structure, near-universal under symmetrical peer deliberation, and largely absent when a single instance decides alone."
+      ]
+    },
+    {
+      "theme": "One Loop, Five Properties: MAPE-K and the Cascade",
+      "c": "sky",
+      "points": [
+        "The five formal properties this series proved line up, stage for stage, with the MAPE-K loop autonomic computing arrived at independently for self-managing systems, with the property that asks whether a belief is reliable landing on the cross-cutting knowledge store rather than on any pipeline stage.",
+        "The series' opening case reread through all five properties is one causal cascade, not five separate observations: an undersimulated forecast forces a committed frame, the frame discounts disconfirming tests, the discounted evidence produces unwarranted confidence, and the confidence drives a retry loop that cannot terminate on its own.",
+        "Fixing the retry loop at the bottom of that cascade does not touch the deficit that produced it, because the failure that actually needs fixing sits stages upstream of where the resource is finally burned.",
+        "Reading the case as one chained trajectory, rather than five independent findings each proven on its own apparatus, is this series' own construction, offered as an estimate and stated to be falsifiable on its own terms, separately from the four propositions it is built from."
+      ]
+    },
+    {
+      "theme": "Self-Consistency: One Theorem, Four Estimates",
+      "c": "peach",
+      "points": [
+        "A property is self-consistent if a system can verify, using only its own resources, that it possesses that property. The question the whole series has been building toward is which of the five properties clear that bar.",
+        "Only one property carries a proven ceiling: the resource-bounded self-reference theorem already established for a provability-based reasoner's ability to certify its own reliability. The other four ceilings are this series' own structural generalization, offered explicitly as an estimate, never as four more hidden proofs.",
+        "The generalization rests on a real argument rather than a hunch: each remaining property fails to detect its own characteristic failure for a reason internal to what that property is, since the very information needed to notice the failure is exactly what the failure excludes.",
+        "The one rigorous case shifts the default rather than settling the other four: if even the cleanest formal reasoner cannot verify one of its own properties from within, treating self-verification as sufficient for the messier remaining four carries the burden of proof, not the assumption that it already works."
+      ]
+    },
+    {
+      "theme": "The Portability Gap, Priced and Placed",
+      "c": "rose",
+      "points": [
+        "The completed verdict ledger turns five negative verdicts into five named architectural responses: a resource-estimation floor, a re-abstraction loop, a falsification loop, a reconciliation loop, and a stopping governor, one per property.",
+        "Summing the five loops' illustrative costs, discounted by how often each conditional loop actually fires and net of the substrate two of them share, prices the portability gap at roughly three quarters of the base task's own compute, a large fraction rather than a rounding error.",
+        "The five loops are not equally urgent to a caller waiting on an answer: one runs a beat behind live operation by design, one has to block every single attempt because it is the decision the stopping theorem is actually about, and the rest block only when they fire.",
+        "Correctness is not free to port. The portability gap is the itemized bill for the fact that none of the five properties can audit itself, computed as a number rather than left as a coined phrase."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**Optimization: Knowing When to Stop**
+
+1. Optimization is not pursuing the best outcome, but deciding when a cost-bearing search has done enough. Its failure is the refusal to stop, escalation of commitment: more resource poured in precisely because resource has already been poured in.
+2. The search-cost achievable region trades total spend against distance from the unreachable costless ideal, and the proposition proves the optimal point on that frontier is a reservation-value threshold, satisficing in exact form rather than an approximation of some better policy.
+3. The costless ideal sits at a corner the frontier only approaches as search cost falls toward zero. Reaching closer to it honestly means reducing the cost of searching itself, not disabling the stopping rule and charging the difference to the budget.
+4. A 1985 study measured the human sunk cost effect. A 2025 study measured the agent version and found a sharper fact: escalation is emergent from multi-agent structure, near-universal under symmetrical peer deliberation, and largely absent when a single instance decides alone.
+
+**One Loop, Five Properties: MAPE-K and the Cascade**
+
+5. The five formal properties this series proved line up, stage for stage, with the MAPE-K loop autonomic computing arrived at independently for self-managing systems, with the property that asks whether a belief is reliable landing on the cross-cutting knowledge store rather than on any pipeline stage.
+6. The series' opening case reread through all five properties is one causal cascade, not five separate observations: an undersimulated forecast forces a committed frame, the frame discounts disconfirming tests, the discounted evidence produces unwarranted confidence, and the confidence drives a retry loop that cannot terminate on its own.
+7. Fixing the retry loop at the bottom of that cascade does not touch the deficit that produced it, because the failure that actually needs fixing sits stages upstream of where the resource is finally burned.
+8. Reading the case as one chained trajectory, rather than five independent findings each proven on its own apparatus, is this series' own construction, offered as an estimate and stated to be falsifiable on its own terms, separately from the four propositions it is built from.
+
+**Self-Consistency: One Theorem, Four Estimates**
+
+9. A property is self-consistent if a system can verify, using only its own resources, that it possesses that property. The question the whole series has been building toward is which of the five properties clear that bar.
+10. Only one property carries a proven ceiling: the resource-bounded self-reference theorem already established for a provability-based reasoner's ability to certify its own reliability. The other four ceilings are this series' own structural generalization, offered explicitly as an estimate, never as four more hidden proofs.
+11. The generalization rests on a real argument rather than a hunch: each remaining property fails to detect its own characteristic failure for a reason internal to what that property is, since the very information needed to notice the failure is exactly what the failure excludes.
+12. The one rigorous case shifts the default rather than settling the other four: if even the cleanest formal reasoner cannot verify one of its own properties from within, treating self-verification as sufficient for the messier remaining four carries the burden of proof, not the assumption that it already works.
+
+**The Portability Gap, Priced and Placed**
+
+13. The completed verdict ledger turns five negative verdicts into five named architectural responses: a resource-estimation floor, a re-abstraction loop, a falsification loop, a reconciliation loop, and a stopping governor, one per property.
+14. Summing the five loops' illustrative costs, discounted by how often each conditional loop actually fires and net of the substrate two of them share, prices the portability gap at roughly three quarters of the base task's own compute, a large fraction rather than a rounding error.
+15. The five loops are not equally urgent to a caller waiting on an answer: one runs a beat behind live operation by design, one has to block every single attempt because it is the decision the stopping theorem is actually about, and the rest block only when they fire.
+16. Correctness is not free to port. The portability gap is the itemized bill for the fact that none of the five properties can audit itself, computed as a number rather than left as a coined phrase.
+
+</details>
 
 **Compute it.** Before trusting an agent to optimize, check one thing directly: is there a stopping rule outside the agent's own deliberation, and is its threshold set below perfection? If the agent decides for itself when it has done enough, it is running a search that will pin its threshold at the ideal and pay real cost to chase it, and if that agent is one of a deliberating group, the Big-Muddy result already tells you the group will escalate where the individual would have stopped. The only fix is a governor placed outside the deliberation, capping the search at the reservation value the cost actually justifies. And before trusting any of the five properties, ask the question the whole series was built to make askable: can the agent verify, from inside, that it has this property? For four of the five the answer is a structural no, and for the fifth it is a proven no, so the number that matters is not how confident the agent is in any of them, but the cost of the external loop that checks each one, summed across all five, because that sum is what correctness costs once you stop assuming it came free with the architecture. A system that has never been audited from outside, and a system that has, look identical on the dashboard. They stop looking identical the moment the work has an effect.
 
@@ -1173,11 +1252,11 @@ Because the closing synthesis is the most tempting place in the entire series to
 
 <sup>[5]</sup> Arkes, H. R. & Blumer, C. (1985). *The Psychology of Sunk Cost.* Organizational Behavior and Human Decision Processes, 35(1), 124-140.
 
-<sup>[6]</sup> Manheim, D. & Garrabrant, S. (2018). *Categorizing Variants of Goodhart's Law.* arXiv:1803.04585.
+<sup>[6]</sup> Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. & Xu, K. (2024). *GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations.* arXiv:2402.12348.
 
-<sup>[7]</sup> Duan, J., Zhang, R., Diffenderfer, J., Kailkhura, B., Sun, L., Stengel-Eskin, E., Bansal, M., Chen, T. & Xu, K. (2024). *GTBench: Uncovering the Strategic Reasoning Limitations of LLMs via Game-Theoretic Evaluations.* arXiv:2402.12348.
+<sup>[7]</sup> Sun, H., Wu, Y., Cheng, Y. & Chu, X. (2025). *Game Theory Meets Large Language Models: A Systematic Survey.* Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI 2025), Survey Track, 10669-10677.
 
-<sup>[8]</sup> Sun, H., Wu, Y., Cheng, Y. & Chu, X. (2025). *Game Theory Meets Large Language Models: A Systematic Survey.* Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence (IJCAI 2025), Survey Track, 10669-10677.
+<sup>[8]</sup> Manheim, D. & Garrabrant, S. (2018). *Categorizing Variants of Goodhart's Law.* arXiv:1803.04585.
 
 <sup>[9]</sup> Putnam, H. (1988). *Representation and Reality.* MIT Press (Chapters 5-6, the reconsideration of functionalism).
 

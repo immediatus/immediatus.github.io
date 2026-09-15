@@ -12,3 +12,6 @@ worktrees/
 # Other files
 **/.claude/**
 **/.docs/**
+
+# Working notes / design specs (not part of the published site)
+docs/

@@ -1,0 +1,3 @@
+{%- set explanation = "" -%}
+{%- if type == "Bound" -%}{%- set explanation = "An exact, formally proven or cited result." -%}{%- elif type == "Fit" -%}{%- set explanation = "A qualitative judgment call, a real pattern match, not a formal proof." -%}{%- elif type == "Estimate" -%}{%- set explanation = "An illustrative, verified worked example, not a literal claim about production behavior." -%}{%- endif -%}
+<span class="defined-term layer-tag" tabindex="0" data-def="Layer {{ n | safe }} — {{ type | safe }}. {{ explanation }}" role="note" aria-label="Layer {{ n | safe }}, {{ type | safe }}. {{ explanation }}"><span class="layer-tag-prefix" aria-hidden="true">L{{ n | safe }}&nbsp;&middot;</span> {{ type | safe }}</span>

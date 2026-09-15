@@ -534,15 +534,85 @@ The Constraint Sequence Framework is why both theorems had to be proven, not jus
 
 What this post proves is where the number stops being enough, and where no algorithm can rescue what's left. No safe number exists for a workload with all three Blood Oath properties. That claim is proven, not asserted: an adversary construction and a closed-form fractile, both checked against real numbers rather than left symbolic.
 
-> **Cognitive Map**
->
-> 1. Provisioning by precedent (trusting a number because it has always worked) is exactly the property that stops being informative the day a heavy tail finally tests it. Proposition 0 proves precisely where the stability ends: a light-tailed {% katex() %}Q^*{% end %} can run 24.5% over the true robust optimum, not from bad luck but from fitting the wrong distributional family to begin with.
-> 2. Definition 1 names three properties (ingress blindness, execution immortality, locality lock) that, together, remove every lever a scheduler normally has: no admission control on unknown cost, no correcting a bad admission after the fact, no spreading the risk across more machines.
-> 3. Definition 1b shows a fixed pre-admission classifier is real, useful lead time, not a permanent edge: an elapsed-time posterior overtakes any fixed confidence eventually, because one signal keeps improving without bound and the other doesn't.
-> 4. Proposition A proves the three Blood Oath properties together aren't a harder version of ordinary scheduling. They're a different problem: no admission algorithm, however clever, can promise a bounded loss against the worst case: verified with an adversary that needs nothing but the freedom to keep extending whichever job is currently running.
-> 5. The Constraint Sequence Framework is why both theorems had to be proven, not just one: a team that only knew Proposition 0 keeps re-fitting a number that was never the binding constraint; a team that only knew Proposition A stops looking for the structural response that's actually available.
-> 6. No safe number exists for a workload with all three properties. What replaces the number is a structural response, not a smarter admission rule: a category of fix, not a specific mechanism this post itself derives.
-> 7. Property 1's decreasing-hazard-rate claim leans on two separate pieces of evidence for two separate jobs. A 1997 UNIX process-lifetime study earns the general scheduling argument: elapsed time predicts remaining time, for any decreasing-hazard-rate distribution. A 2025 extreme-value-theory study fitting real LLM response lengths earns the domain-specific one: this workload's own duration is genuinely heavy-tailed, not by analogy to a different generative process.
+{% cognitive_map(root="The Newsvendor Problem Under a Heavy Tail") %}
+{
+  "intro": "A pool of thirty-two generation slots, sized by months of passing load tests, sediments solid the day three or four long reasoning traces land close together. No request was malformed and no bug shipped. This post proves, with two separate theorems, exactly where a trusted capacity number stops being enough and why no admission algorithm, however clever, can rescue what is left once a workload denies visibility, denies preemption, and denies horizontal escape all at once.",
+  "groups": [
+    {
+      "theme": "Provisioning by Precedent: Where the Number Breaks",
+      "c": "mint",
+      "points": [
+        "Provisioning by precedent, trusting a capacity number because it has always worked, is exactly the property that stops being informative the day a heavy tail finally tests it.",
+        "The newsvendor formula itself was never the problem. Its closed-form optimum is correct for any demand distribution, heavy-tailed or not, given the true distribution to plug in.",
+        "What actually breaks is the ordinary habit of fitting a light-tailed family to historical data, a mistake that costs nothing when the assumption happens to hold and produces a specific, checkable overpayment when it does not.",
+        "Fitting an exponential to demand that is really Pareto-shaped, even using the correct mean, produces a 45 percent capacity shortfall and a 24.5 percent weighted-cost overpayment against the true optimum."
+      ]
+    },
+    {
+      "theme": "Blood Oath: Three Properties That Remove Every Lever",
+      "c": "sky",
+      "points": [
+        "A workload exhibits the Blood Oath Constraint when three properties hold together: its true cost is unknown until completion, a running task cannot be preempted or evicted, and shared-memory locality forecloses spreading the risk across more machines.",
+        "Any one or two of these properties alone still leaves a scheduler a lever. All three together remove admission control, mid-flight correction, and horizontal escape simultaneously, because the properties intersect the achievable region rather than merely shrinking it.",
+        "Because task duration is genuinely heavy-tailed, a task's expected remaining duration grows rather than shrinks the longer it has already run, which makes elapsed time itself a physical signal a system can act on even while the task's true cost stays unknown.",
+        "A fixed pre-admission classifier buys real, valuable lead time, but elapsed time is the only signal that keeps improving without bound, so it eventually overtakes any fixed confidence, however good that confidence started out."
+      ]
+    },
+    {
+      "theme": "No Competitive Algorithm Exists",
+      "c": "peach",
+      "points": [
+        "Once ingress blindness and non-preemption hold together, no algorithm, however clever, can guarantee any non-trivial bound on its worst-case loss, proved by an adversary that simply keeps extending whichever job the algorithm is currently, irrevocably running.",
+        "The gap between the trapped algorithm and the clairvoyant optimum grows without bound as the adversary keeps extending the job, which is exactly what having no competitive ratio means, not merely a bad ratio but an unbounded one.",
+        "A pool with many slots does not dilute this result. The adversary only needs to win against one contested slot to break the whole algorithm's worst-case guarantee, the other slots running perfectly notwithstanding.",
+        "Centralizing admission decisions with a perfect, real-time view of every node does not move this bound, because the adversary exploits not knowing a task's future duration, an information problem no amount of present-state visibility touches."
+      ]
+    },
+    {
+      "theme": "What Survives, What's Open, and Why Both Theorems Were Needed",
+      "c": "rose",
+      "points": [
+        "Circuit breakers, rate limiters, and retry budgets each fail against this workload for a different, specific reason: none of them can undo an admission already made, only reject, throttle, or count failures this workload does not produce.",
+        "A real fleet's heavy traffic is rarely one clean population. A three-component mixture can make the expected remaining duration of an already-heavy task swing through four genuine reversals, even though the coarse two-class crossover signal survives that mixture intact.",
+        "Two separate theorems were both required, and <a href=\"/blog/microlearning-platform-part6-meta-framework/\">The Constraint Sequence Framework</a> is why: a team that only proves the capacity theorem keeps re-fitting a number that was never the binding constraint, while a team that only proves the impossibility theorem stops looking for the structural response elapsed time actually makes available.",
+        "No safe number exists for a workload carrying all three Blood Oath properties, and what replaces the number is a structural change to what is allowed to happen to a running task, not a smarter admission rule computed once and defended forever."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**Provisioning by Precedent: Where the Number Breaks**
+
+1. Provisioning by precedent, trusting a capacity number because it has always worked, is exactly the property that stops being informative the day a heavy tail finally tests it.
+2. The newsvendor formula itself was never the problem. Its closed-form optimum is correct for any demand distribution, heavy-tailed or not, given the true distribution to plug in.
+3. What actually breaks is the ordinary habit of fitting a light-tailed family to historical data, a mistake that costs nothing when the assumption happens to hold and produces a specific, checkable overpayment when it does not.
+4. Fitting an exponential to demand that is really Pareto-shaped, even using the correct mean, produces a 45 percent capacity shortfall and a 24.5 percent weighted-cost overpayment against the true optimum.
+
+**Blood Oath: Three Properties That Remove Every Lever**
+
+5. A workload exhibits the Blood Oath Constraint when three properties hold together: its true cost is unknown until completion, a running task cannot be preempted or evicted, and shared-memory locality forecloses spreading the risk across more machines.
+6. Any one or two of these properties alone still leaves a scheduler a lever. All three together remove admission control, mid-flight correction, and horizontal escape simultaneously, because the properties intersect the achievable region rather than merely shrinking it.
+7. Because task duration is genuinely heavy-tailed, a task's expected remaining duration grows rather than shrinks the longer it has already run, which makes elapsed time itself a physical signal a system can act on even while the task's true cost stays unknown.
+8. A fixed pre-admission classifier buys real, valuable lead time, but elapsed time is the only signal that keeps improving without bound, so it eventually overtakes any fixed confidence, however good that confidence started out.
+
+**No Competitive Algorithm Exists**
+
+9. Once ingress blindness and non-preemption hold together, no algorithm, however clever, can guarantee any non-trivial bound on its worst-case loss, proved by an adversary that simply keeps extending whichever job the algorithm is currently, irrevocably running.
+10. The gap between the trapped algorithm and the clairvoyant optimum grows without bound as the adversary keeps extending the job, which is exactly what having no competitive ratio means, not merely a bad ratio but an unbounded one.
+11. A pool with many slots does not dilute this result. The adversary only needs to win against one contested slot to break the whole algorithm's worst-case guarantee, the other slots running perfectly notwithstanding.
+12. Centralizing admission decisions with a perfect, real-time view of every node does not move this bound, because the adversary exploits not knowing a task's future duration, an information problem no amount of present-state visibility touches.
+
+**What Survives, What's Open, and Why Both Theorems Were Needed**
+
+13. Circuit breakers, rate limiters, and retry budgets each fail against this workload for a different, specific reason: none of them can undo an admission already made, only reject, throttle, or count failures this workload does not produce.
+14. A real fleet's heavy traffic is rarely one clean population. A three-component mixture can make the expected remaining duration of an already-heavy task swing through four genuine reversals, even though the coarse two-class crossover signal survives that mixture intact.
+15. Two separate theorems were both required, and The Constraint Sequence Framework is why: a team that only proves the capacity theorem keeps re-fitting a number that was never the binding constraint, while a team that only proves the impossibility theorem stops looking for the structural response elapsed time actually makes available.
+16. No safe number exists for a workload carrying all three Blood Oath properties, and what replaces the number is a structural change to what is allowed to happen to a running task, not a smarter admission rule computed once and defended forever.
+
+</details>
 
 ---
 <sup>[1]</sup> Arrow, K.J., Harris, T. & Marschak, J. (1951). *Optimal Inventory Policy.* Econometrica, 19(3), 250–272.

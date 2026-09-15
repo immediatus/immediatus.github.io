@@ -406,14 +406,85 @@ Definition 1b's own {% katex() %}t^*\approx3.4{% end %}s needs no such check: it
 * **Does your Knowledge phase have an actual update rule?** Or does "the system learns" mean nobody re-derives the thresholds after an incident: a control loop that never closes back into Analyze is a reactive system wearing an autonomic name.
 * **Do any of your tenants have an incentive to evade detection?** If so, stop here: this post's mechanisms were not built for that regime, and pretending otherwise is worse than admitting the gap.
 
-> **Cognitive Map**
->
-> 1. Proposition A proved no algorithm can save a Blood Oath workload. The fix has to be structural, priced, not assumed free.
-> 2. The Sedimentation Threshold (Proposition 1) shows heavy tasks alone can fill the pool past {% katex() %}\rho_h = C{% end %}, a removed face, not a tradeoff.
-> 3. The Physical Redline (Definition 2a, Definition 2) gates demotion on headroom and its derivative. Reserved margin {% katex() %}H_{\min}{% end %} is sized against a real Poisson arrival model and the pool's own 32:1 failure-versus-idle cost ratio: {% katex() %}H_{\min}^*=5{% end %}, verified as cost-minimizing, not merely formula-shaped.
-> 4. The Provisioning Window (Proposition 2, 2b) shows autoscaling's viability is a property of {% katex() %}\alpha{% end %} relative to {% katex() %}E[S_h]/T_{\text{scale}}{% end %}, not of detection timing: comfortably satisfied at every detection time for this series' own {% katex() %}\alpha=2.2{% end %}, but not guaranteed for a lighter-tailed system.
-> 5. The buffer (Proposition 3) is the same {% katex() %}H_{\min}{% end %} priced as a critical fractile. One object reached two ways, not two objects that share a name.
-> 6. Definition 3 closes the loop from Knowledge back into Analyze, the one edge most MAPE-K implementations skip. It names the exact dividing line between fragile, robust, and antifragile: whether a stress event changes what the system believes about its own parameters afterward.
+{% cognitive_map(root="The Phase MAPE-K Usually Skips") %}
+{
+  "intro": "No algorithm can save a Blood Oath workload. What is left is physical, not algorithmic: a redline that watches real headroom and its derivative instead of trusting a number, an honest accounting of when autoscaling actually helps, and a buffer sized by the same critical-fractile logic that opened the series. None of it adapts on its own until the self-managing loop's own most commonly skipped phase actually closes the loop the other four were never built to close by themselves.",
+  "groups": [
+    {
+      "theme": "The Sedimentation Threshold: When Heavy Tasks Alone Fill the Pool",
+      "c": "mint",
+      "points": [
+        "Past a specific point, the offered load from heavy tasks alone, independent of light-task volume entirely, can fill the whole pool. This is a face removed from the achievable region, not a tradeoff to weigh.",
+        "For this pool, that threshold sits at roughly 384 reasoning traces per hour against a baseline of about 89, two countable, alertable numbers rather than an abstract multiplier.",
+        "A physical redline gates task demotion on real headroom and its trajectory, not on a static threshold or the workload's own self-report, because a signal that is merely low but stable is a genuinely different situation from one falling fast.",
+        "Smoothing that headroom signal trades reaction speed for noise immunity, and one particular setting dominates every gentler alternative in this specimen: identical risk, strictly better lag, a free improvement with no offsetting cost."
+      ]
+    },
+    {
+      "theme": "The Provisioning Window: When Autoscaling Actually Helps",
+      "c": "sky",
+      "points": [
+        "Autoscaling triggered by aggregate load cannot help against a burst of short tasks, since the burst has already resolved by the time new capacity comes online.",
+        "Autoscaling triggered by the same elapsed-time detection that drives local demotion is viable whenever a task's expected remaining duration, not its unconditional average, clears the scaling latency.",
+        "Whether that condition holds is a property of the tail's own weight relative to the scaling latency, checkable in advance rather than assumed: this specimen clears the bar at every detection time, but a lighter measured tail can open a real window where autoscaling looks like it should help and does not.",
+        "A new instance never rescues the task that triggered scaling, since locality lock keeps that task exactly where it is. What the new instance actually does is absorb subsequent arrivals, a capacity release for the rest of the system, not a rescue for the one task that caused it."
+      ]
+    },
+    {
+      "theme": "The Buffer as a Critical Fractile",
+      "c": "peach",
+      "points": [
+        "The bridging window between detection and new capacity landing is not survived for free: a detected task keeps its slot and its memory, so pressure keeps building during exactly the window autoscaling cannot yet relieve.",
+        "Sizing the reserved margin against that pressure is the same critical-fractile problem that opened the series, applied to a different random variable and this pool's own genuine failure-versus-idle cost ratio rather than a borrowed one.",
+        "For this specimen the arithmetic puts the minimum at five slots out of thirty-two, verified against its neighbors on the same frontier rather than assumed from a round number.",
+        "That answer is only as good as the independence assumption behind it: doubling the variance of arrivals within a bridging window, the kind a correlated surge would plausibly produce, moves the optimal margin from five slots to seven."
+      ]
+    },
+    {
+      "theme": "Closing the Loop: Fragile, Robust, and Antifragile",
+      "c": "rose",
+      "points": [
+        "Four of the five phases in a standard self-managing control loop can all be implemented faithfully and still leave the system merely reactive, because none of the first four ever revises the thresholds the others depend on.",
+        "The fifth phase is what actually closes the loop: persisting and updating the parameters every other phase depends on, rather than treating them as constants fixed once at design time.",
+        "The dividing line is not survival versus failure. A system that survives a stress event unchanged is robust but not yet antifragile; a system whose parameters get sharper because of what it just lived through is the narrower, specific sense this post means by the word.",
+        "That fifth phase has real failure modes of its own, both biasing its estimate downward at exactly the worst moment: a quiet period that hides real demand rather than reflecting its absence, and a slow settling time that lags behind a genuinely correlated surge."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**The Sedimentation Threshold: When Heavy Tasks Alone Fill the Pool**
+
+1. Past a specific point, the offered load from heavy tasks alone, independent of light-task volume entirely, can fill the whole pool. This is a face removed from the achievable region, not a tradeoff to weigh.
+2. For this pool, that threshold sits at roughly 384 reasoning traces per hour against a baseline of about 89, two countable, alertable numbers rather than an abstract multiplier.
+3. A physical redline gates task demotion on real headroom and its trajectory, not on a static threshold or the workload's own self-report, because a signal that is merely low but stable is a genuinely different situation from one falling fast.
+4. Smoothing that headroom signal trades reaction speed for noise immunity, and one particular setting dominates every gentler alternative in this specimen: identical risk, strictly better lag, a free improvement with no offsetting cost.
+
+**The Provisioning Window: When Autoscaling Actually Helps**
+
+5. Autoscaling triggered by aggregate load cannot help against a burst of short tasks, since the burst has already resolved by the time new capacity comes online.
+6. Autoscaling triggered by the same elapsed-time detection that drives local demotion is viable whenever a task's expected remaining duration, not its unconditional average, clears the scaling latency.
+7. Whether that condition holds is a property of the tail's own weight relative to the scaling latency, checkable in advance rather than assumed: this specimen clears the bar at every detection time, but a lighter measured tail can open a real window where autoscaling looks like it should help and does not.
+8. A new instance never rescues the task that triggered scaling, since locality lock keeps that task exactly where it is. What the new instance actually does is absorb subsequent arrivals, a capacity release for the rest of the system, not a rescue for the one task that caused it.
+
+**The Buffer as a Critical Fractile**
+
+9. The bridging window between detection and new capacity landing is not survived for free: a detected task keeps its slot and its memory, so pressure keeps building during exactly the window autoscaling cannot yet relieve.
+10. Sizing the reserved margin against that pressure is the same critical-fractile problem that opened the series, applied to a different random variable and this pool's own genuine failure-versus-idle cost ratio rather than a borrowed one.
+11. For this specimen the arithmetic puts the minimum at five slots out of thirty-two, verified against its neighbors on the same frontier rather than assumed from a round number.
+12. That answer is only as good as the independence assumption behind it: doubling the variance of arrivals within a bridging window, the kind a correlated surge would plausibly produce, moves the optimal margin from five slots to seven.
+
+**Closing the Loop: Fragile, Robust, and Antifragile**
+
+13. Four of the five phases in a standard self-managing control loop can all be implemented faithfully and still leave the system merely reactive, because none of the first four ever revises the thresholds the others depend on.
+14. The fifth phase is what actually closes the loop: persisting and updating the parameters every other phase depends on, rather than treating them as constants fixed once at design time.
+15. The dividing line is not survival versus failure. A system that survives a stress event unchanged is robust but not yet antifragile; a system whose parameters get sharper because of what it just lived through is the narrower, specific sense this post means by the word.
+16. That fifth phase has real failure modes of its own, both biasing its estimate downward at exactly the worst moment: a quiet period that hides real demand rather than reflecting its absence, and a slow settling time that lags behind a genuinely correlated surge.
+
+</details>
 
 ---
 <sup>[1]</sup> Little, J.D.C. (1961). *A Proof for the Queuing Formula: L = λW.* Operations Research, 9(3), 383–387.

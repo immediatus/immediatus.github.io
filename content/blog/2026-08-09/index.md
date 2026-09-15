@@ -388,15 +388,85 @@ At this post's own {% katex() %}P=1{,}020{% end %}-token baseline that ratio is 
 
 If you're comparing resources on a common scale, do you know exactly what you borrowed to make that comparison legitimate, and what you didn't? Definition 4's headroom fraction borrows DRF's normalization idea, explicitly not its strategy-proofness proof. A real game-theoretic analysis of this exact production architecture studies a different actor model, centrally-routed pools, not strategic tenants, so it doesn't close that gap either. The question stays genuinely open, not resolved by citation. Does your architecture actually keep your resources separable, or does it deliberately couple them for efficiency? Chunked-prefill interleaving trades this post's clean separable-regions structure for better hardware utilization, and knowing which side of that trade a real deployment is on determines whether Definition 4a's math applies as written. Is your own {% katex() %}C_r{% end %} actually a constant, or is something in your stack already treating it as a control variable? Arrow and HeteroScale both do, independently, in production, changing the denominator of Definition 4's headroom fraction on the same timescale demand changes its numerator. And have you priced your own resource ratios, or are you reusing this specimen's? Older GPUs, a larger model, a slower interconnect, or a workload skewed toward long-context requests can each move a resource that's currently comfortable into genuine contention. Measure before assuming this post's specific percentages transfer.
 
-> **Cognitive Map**
->
-> 1. Post 1's [Proposition A](/blog/no-safe-number-part1-blood-oath/#prop-a) proved no algorithm can save a Blood Oath workload. Post 2 built the physical-signal response for the one resource that case study made binding: VRAM. This post generalizes into a real production architecture, disaggregated prefill/decode, that genuinely splits GPU, memory, and network I/O into independently-scaled resources.
-> 2. Definition 4a corrects a naive joint-frontier framing into separable achievable regions, coupled only through a shared demotion decision.
-> 3. Proposition 4 shows Little's Law generalizes only to occupancy resources: exactly for a constant holding quantity, and via {% katex() %}H=\lambda G{% end %} for one that accumulates with age, decode memory's own case. Checked against this specimen's own numbers. The heavy task's footprint sized against its own tail, aggregated by the second moment rather than a mean-duration snapshot, memory alone already exceeds its budget more than fourfold at the slot-based Sedimentation Threshold, while GPU and I/O stay negligible by three to four orders of magnitude.
-> 4. That correction is a Constraint Sequence Framework result in its own right: the real memory-exhaustion rate, aggregated by the KV-cache's own second moment rather than its mean, is 137.8 arrivals per hour. Definition 4's own reserved-margin trigger (itself corrected the same way, from 28.7% of decode memory down to 9.7%, holding the budget fixed to isolate the aggregation fix alone) sits lower still, at 124.4: both above the 89/hour baseline this series has called resting since Post 2, and both well below the 384/hour a slot-based sizing exercise would have trusted.
-> 5. A June 2026 dynamical-systems result shows the more dangerous version of this mechanism, threshold-based *eviction*, is provably unstable under saturation. Blood Oath's non-preemptibility structurally avoids that specific pathology, though this post's own admission-refusal loop hasn't been proven stable either. It names the specific missing tool: a formal, Nyquist-style stability margin for a delay system, not run here.
-> 6. A 2026 Price-of-Anarchy analysis of the same production architecture, sharing no mathematical structure with this post's queueing arithmetic, reaches the same conclusion from a genuinely different kind of argument: an efficiency-loss metric the paper itself finds invariant across topology below saturation, then a real nonlinear jump (roughly 8.9-fold on the topology checked) at it. Not the linear threshold-crossing the memory argument found, but the same warning: margins near a resource limit are less forgiving than they look.
-> 7. Checked against what real production systems actually do, this post's mechanism is named for what it is: a safety backstop underneath an optimizing scheduler, not a competing one. Chunked-prefill interleaving, elastic capacity reallocation, and ordinary handoff-traffic contention on shared memory bandwidth are named as three real boundaries where this post's separable-resources assumption stops holding, one by software coupling, one by an operational reallocation decision, one by hardware topology alone.
+{% cognitive_map(root="Multi-Resource Capacity and the Price of Anarchy") %}
+{
+  "intro": "A margin computed at the wrong level of abstraction does not fail where the old threshold said it would. It fails a third of the way there. This post generalizes the single-resource redline to a genuinely multi-resource setting, finds the real byte-level exhaustion point sits far closer to baseline than a slot-based accounting ever showed, and checks that finding against a structurally unrelated equilibrium-inefficiency argument that reaches the same warning from a completely different direction.",
+  "groups": [
+    {
+      "theme": "One Gauge, Three Resources: Where the Old Redline Goes Blind",
+      "c": "mint",
+      "points": [
+        "The single-resource redline was scoped to VRAM because a single node only ever had one resource that could run out. Splitting a workload's two phases onto separate hardware creates two more resources, GPU compute and network bandwidth, that the old gauge was never wired to see.",
+        "Not every resource sediments the same way: a resource held for a task's entire lifetime aggregates the way the original slot-based threshold did, but a resource whose held quantity grows with age needs the exact generalization of that queueing identity, weighted by the second moment of holding time rather than its mean.",
+        "Applying that corrected aggregation to a heavy task's real footprint, sized against the tail this series actually specifies rather than an ordinary request's median, finds decode memory already demanding nearly three times its budget at the threshold the earlier slot-based accounting trusted.",
+        "GPU compute and network bandwidth fail structurally rather than by degree: their own holding times sit three to four orders of magnitude shorter than decode's, so no arrival rate this workload could plausibly produce brings either one within reach of its own limit."
+      ]
+    },
+    {
+      "theme": "The Dominant Redline: Comparing Unlike Resources on One Scale",
+      "c": "sky",
+      "points": [
+        "Demotion now triggers whenever any one of three resources crosses its own margin, compared on one common scale as a fraction of its own capacity, so a GPU-slot count, a memory-byte count, and a network-bandwidth figure become genuinely comparable.",
+        "Converting an arrival count directly into bytes by multiplying by a task's mean-duration footprint repeats the same aggregation error one level down. Correcting it drops the reserved margin sharply once the calculation accounts for how much memory a newly-arrived task actually holds by the time the margin needs to have absorbed it.",
+        "The real memory-exhaustion rate, aggregated correctly, sits at a fraction of the slot-based threshold the whole series had trusted since the redline was first built, comfortably above the resting baseline but far closer to it than the slot-based number ever suggested.",
+        "Three resources with holding times spanning several orders of magnitude cannot be monitored on one shared clock; the monitoring phase has to run separately on each resource's own native timescale instead of one tick that is wrong for all three at once."
+      ]
+    },
+    {
+      "theme": "Does the New Mechanism Oscillate?",
+      "c": "peach",
+      "points": [
+        "A recent dynamical-systems result proves that threshold-based eviction under saturated demand is provably unstable, converging to a self-sustaining limit cycle between admission and eviction with real throughput losses.",
+        "The specific feedback loop that result proves unstable requires an eviction step interrupting already-admitted work, and the non-preemptibility this whole series is built on rules that mechanism out by construction, since nothing already running is ever touched.",
+        "That does not make the refusal-only mechanism free and clear on its own: a control loop with delay in it is a real, named source of instability regardless of whether it evicts, and the missing formal stability analysis is named rather than assumed away.",
+        "The same heavy-tailed duration distribution that makes this workload dangerous also desynchronizes completions, a structural reason to expect better behavior than a fixed-duration system, but an argument from analogy, not a proof this specific loop is stable."
+      ]
+    },
+    {
+      "theme": "Two Unrelated Arguments, One Warning",
+      "c": "rose",
+      "points": [
+        "A second, structurally unrelated argument reaches the same qualitative warning from a completely different direction: an equilibrium-inefficiency metric for the same production architecture that stays small and stable below saturation, then jumps nearly ninefold once the system crosses it.",
+        "The two arguments share no mathematical structure and are not measuring the same quantity. One is a threshold crossed on an otherwise straight line, the other is a metric that itself accelerates, and claiming they have the same shape would overclaim exactly what makes pairing them meaningful.",
+        "What real production disaggregated-serving systems actually do confirms this mechanism's real job: a safety backstop underneath an optimizing scheduler, not a competing one, the same relationship a queue-latency circuit breaker has to a full traffic-engineering stack.",
+        "Three genuine boundaries limit the separable-resources assumption this post depends on: a software choice that couples GPU compute across phases on purpose, a production reality where the resource split itself becomes a live variable rather than a fixed constant, and ordinary handoff traffic that couples network and memory by hardware topology alone."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**One Gauge, Three Resources: Where the Old Redline Goes Blind**
+
+1. The single-resource redline was scoped to VRAM because a single node only ever had one resource that could run out. Splitting a workload's two phases onto separate hardware creates two more resources, GPU compute and network bandwidth, that the old gauge was never wired to see.
+2. Not every resource sediments the same way: a resource held for a task's entire lifetime aggregates the way the original slot-based threshold did, but a resource whose held quantity grows with age needs the exact generalization of that queueing identity, weighted by the second moment of holding time rather than its mean.
+3. Applying that corrected aggregation to a heavy task's real footprint, sized against the tail this series actually specifies rather than an ordinary request's median, finds decode memory already demanding nearly three times its budget at the threshold the earlier slot-based accounting trusted.
+4. GPU compute and network bandwidth fail structurally rather than by degree: their own holding times sit three to four orders of magnitude shorter than decode's, so no arrival rate this workload could plausibly produce brings either one within reach of its own limit.
+
+**The Dominant Redline: Comparing Unlike Resources on One Scale**
+
+5. Demotion now triggers whenever any one of three resources crosses its own margin, compared on one common scale as a fraction of its own capacity, so a GPU-slot count, a memory-byte count, and a network-bandwidth figure become genuinely comparable.
+6. Converting an arrival count directly into bytes by multiplying by a task's mean-duration footprint repeats the same aggregation error one level down. Correcting it drops the reserved margin sharply once the calculation accounts for how much memory a newly-arrived task actually holds by the time the margin needs to have absorbed it.
+7. The real memory-exhaustion rate, aggregated correctly, sits at a fraction of the slot-based threshold the whole series had trusted since the redline was first built, comfortably above the resting baseline but far closer to it than the slot-based number ever suggested.
+8. Three resources with holding times spanning several orders of magnitude cannot be monitored on one shared clock; the monitoring phase has to run separately on each resource's own native timescale instead of one tick that is wrong for all three at once.
+
+**Does the New Mechanism Oscillate?**
+
+9. A recent dynamical-systems result proves that threshold-based eviction under saturated demand is provably unstable, converging to a self-sustaining limit cycle between admission and eviction with real throughput losses.
+10. The specific feedback loop that result proves unstable requires an eviction step interrupting already-admitted work, and the non-preemptibility this whole series is built on rules that mechanism out by construction, since nothing already running is ever touched.
+11. That does not make the refusal-only mechanism free and clear on its own: a control loop with delay in it is a real, named source of instability regardless of whether it evicts, and the missing formal stability analysis is named rather than assumed away.
+12. The same heavy-tailed duration distribution that makes this workload dangerous also desynchronizes completions, a structural reason to expect better behavior than a fixed-duration system, but an argument from analogy, not a proof this specific loop is stable.
+
+**Two Unrelated Arguments, One Warning**
+
+13. A second, structurally unrelated argument reaches the same qualitative warning from a completely different direction: an equilibrium-inefficiency metric for the same production architecture that stays small and stable below saturation, then jumps nearly ninefold once the system crosses it.
+14. The two arguments share no mathematical structure and are not measuring the same quantity. One is a threshold crossed on an otherwise straight line, the other is a metric that itself accelerates, and claiming they have the same shape would overclaim exactly what makes pairing them meaningful.
+15. What real production disaggregated-serving systems actually do confirms this mechanism's real job: a safety backstop underneath an optimizing scheduler, not a competing one, the same relationship a queue-latency circuit breaker has to a full traffic-engineering stack.
+16. Three genuine boundaries limit the separable-resources assumption this post depends on: a software choice that couples GPU compute across phases on purpose, a production reality where the resource split itself becomes a live variable rather than a fixed constant, and ordinary handoff traffic that couples network and memory by hardware topology alone.
+
+</details>
 > 8. The GPU throughput ceiling's own 30% MFU floor absorbs a real hit from two separate uncertainty sources: the model-size mismatch between the ratio's own source and this specimen's model, and MFU's own sensitivity to the sequence-length variance a heavy-tailed surge produces, the same regime this whole series is built to survive. It stays comfortably clear of this specimen's own demand under both, a 24{% katex() %}\times{% end %} margin against the first, a 12{% katex() %}\times{% end %} margin against halving MFU for the second. But neither uncertainty is bounded precisely; both are checked only against the margin that happens to be large enough to absorb them.
 >
 > Two independent methods, two different mathematical shapes, one conclusion. That convergence, not any single derivation, is this post's actual claim.

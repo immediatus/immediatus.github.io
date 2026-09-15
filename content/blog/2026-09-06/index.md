@@ -23,6 +23,17 @@ That number is from a post on this blog published in July 2026. A different post
 
 Neither post cites the other. Both were computing the same requirement, and neither one derived the requirement itself, only one instance of it.
 
+<div class="recap-box">
+<span class="recap-label">Argument so far</span>
+<ul>
+<li><strong><a href="/blog/portable-mind-part1-requisite-variety/">Noticing and the Cost of Not Knowing Enough</a>'s Proposition 1.</strong> {% katex() %}V(\text{outcome}) \geq V(\text{disturbance}) - V(\text{regulator}){% end %}, Ashby's Law, tested against MarketBench's own fivefold token-cost underestimate.</li>
+<li><strong><a href="/blog/portable-mind-part2-sufficient-abstraction/">Sufficient Abstraction and the Cost of Asking the Wrong Question Twice</a>'s Propositions 2 and 3.</strong> Sufficiency for {% katex() %}T_{\text{old}}{% end %} carries no guarantee of sufficiency for {% katex() %}T_{\text{new}}{% end %}. Asymmetric likelihood weighting diverges from the true posterior by a gap unbounded in the evidence seen.</li>
+<li><strong><a href="/blog/portable-mind-part3-the-unverifiable-self/">Awareness and the Proof a Reasoner Cannot Write About Itself</a>'s Proposition 4.</strong> Critch's own generalized version of Loeb's theorem, scoped to a provability-based reasoner rather than to minds in general, the one form of the result this blog treats as actually applying here.</li>
+<li><strong><a href="/blog/portable-mind-part4-the-portability-gap/">Optimization and the Ceiling No Retry Can Raise</a>'s Proposition 5.</strong> Cost-aware optimal stopping: the policy that minimizes total expected cost is a reservation-value threshold rule that stops on purpose, short of the costless ideal search cost structurally forbids reaching.</li>
+<li><strong>What this post asks next.</strong> Every one of the four external loops above audits something the property it audits could not verify in itself. This post asks what has to be true of an auditor for that audit to mean anything, and finds the answer is not one requirement but two, different in kind, not degree.</li>
+</ul>
+</div>
+
 ## One Requirement, Computed Twice
 
 Strip the vocabulary each series built for its own purpose and the underlying claim is identical: a verification signal only counts as a check if it draws on something the thing it checks could not also have corrupted. Independence Illusion proved this for committees: Condorcet's jury theorem, Byzantine fault tolerance, and the Universal Scalability Law all price redundancy the same way. A committee of language-model instances drawn from overlapping training data fails the independence assumption by default, agreeing confidently for the same reason rather than disagreeing for different ones. Loeb's theorem, applied to a single provability-based reasoner, proves the same requirement fails for a different reason entirely. The reasoner's only available derivation apparatus is the one thing that could be wrong, so there is no computation inside the same system that avoids depending on it.
@@ -116,9 +127,9 @@ This is not a purely theoretical worry. Knight and Leveson ran the experiment di
 
 The floor drops. It does not disappear.
 
-None of this is a hypothetical extrapolation to language models. Kim, Garg, Peng, and Garg measured the same failure directly {{ cite(ref="9", title="Kim, E., Garg, A., Peng, K. & Garg, N. (2025) -- Correlated Errors in Large Language Models, arXiv:2506.07962, accepted ICML 2025") }}: LLM errors correlate across models far more than an independence assumption predicts. That correlation is severe enough that the naive ensembling and majority-vote aggregation Independence Illusion's own committee math prices can fail outright, on exactly the pools that look healthiest by headcount.
+None of this is a hypothetical extrapolation to language models. Kim, Garg, Peng, and Garg measured the same failure directly {{ cite(ref="7", title="Kim, E., Garg, A., Peng, K. & Garg, N. (2025) -- Correlated Errors in Large Language Models, arXiv:2506.07962, accepted ICML 2025") }}: LLM errors correlate across models far more than an independence assumption predicts. That correlation is severe enough that the naive ensembling and majority-vote aggregation Independence Illusion's own committee math prices can fail outright, on exactly the pools that look healthiest by headcount.
 
-Measuring that correlation is not the same as auditing it formally, and this post is not first to try the second thing either. A concurrent statistical framework audits behavioral entanglement among black-box LLM judges directly, introducing information-theoretic metrics that predict judge over-endorsement bias {{ cite(ref="10", title="Kuai, C., Jiang, J., Zhu, Z., Wang, H., Wu, K., Li, Z., Zhang, Y., Liu, C., Tu, Z., Fan, Z. & Zhou, Y. (2026) -- A Statistical Framework for Auditing Behavioral Dependence and Induced Bias in LLM Judges, arXiv:2604.07650") }}. It derives a de-entangled verifier-reweighting scheme along lines close to what Definition 7's own power condition demands. It stays entirely within the graded, empirical register {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C1, the common-cause clause: a check fails when its own error correlates with the object-level error through a shared mechanism, graded by correlation and escapable at a cost through substrate diversification") %}C1{% end %} covers. It never crosses into the unconditional, self-reference register {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C2, the self-reference clause: Loeb's theorem forbids a provability-based reasoner from certifying its own soundness from within, binary and unconditional, with no escape at any cost") %}C2{% end %} requires.
+Measuring that correlation is not the same as auditing it formally, and this post is not first to try the second thing either. A concurrent statistical framework audits behavioral entanglement among black-box LLM judges directly, introducing information-theoretic metrics that predict judge over-endorsement bias {{ cite(ref="8", title="Kuai, C., Jiang, J., Zhu, Z., Wang, H., Wu, K., Li, Z., Zhang, Y., Liu, C., Tu, Z., Fan, Z. & Zhou, Y. (2026) -- A Statistical Framework for Auditing Behavioral Dependence and Induced Bias in LLM Judges, arXiv:2604.07650") }}. It derives a de-entangled verifier-reweighting scheme along lines close to what Definition 7's own power condition demands. It stays entirely within the graded, empirical register {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C1, the common-cause clause: a check fails when its own error correlates with the object-level error through a shared mechanism, graded by correlation and escapable at a cost through substrate diversification") %}C1{% end %} covers. It never crosses into the unconditional, self-reference register {% term(url="@/blog/2026-09-06/index.md#prop-8", def="C2, the self-reference clause: Loeb's theorem forbids a provability-based reasoner from certifying its own soundness from within, binary and unconditional, with no escape at any cost") %}C2{% end %} requires.
 
 This post's own contribution is not the observation that verifiers correlate with what they check. Both works above already establish that. It is stating precisely when that correlation is C1's kind and when it is C2's, a distinction neither needed to draw, because neither one crosses into the Löbian half of the question at all.
 
@@ -131,7 +142,7 @@ Applied to a checker built from a language model, the hierarchy of shared, diver
 
 Beyond even the last of these sits one ancestor no amount of substrate diversity touches: the difficulty landscape of the task itself. A checker built on a completely different model still shares that difficulty landscape with the thing it is checking.
 
-That floor is why Definition 7's independence condition has to be graded, correlation {% katex() %}\rho{% end %} somewhere between 0 and 1, not a binary valid-or-invalid predicate. Independence Illusion's own correlation-quality function is the working estimator for {% katex() %}\rho{% end %} at the committee scale {{ cite(ref="7", title="Ladha, K. (1992) -- The Condorcet Jury Theorem, Free Speech, and Correlated Votes, American Journal of Political Science 36, 617-634, cited via this blog's Independence Illusion post, 2026-07-08") }}. It was built for this purpose, and explicitly flagged there as that post's own interpolation rather than a citation. The multi-agent series' committee math and the single-agent series' verifier math are pricing the same {% katex() %}\rho{% end %}, at two different scales. They are not two different quantities that happen to share a symbol.
+That floor is why Definition 7's independence condition has to be graded, correlation {% katex() %}\rho{% end %} somewhere between 0 and 1, not a binary valid-or-invalid predicate. Independence Illusion's own correlation-quality function is the working estimator for {% katex() %}\rho{% end %} at the committee scale {{ cite(ref="9", title="Ladha, K. (1992) -- The Condorcet Jury Theorem, Free Speech, and Correlated Votes, American Journal of Political Science 36, 617-634, cited via this blog's Independence Illusion post, 2026-07-08") }}. It was built for this purpose, and explicitly flagged there as that post's own interpolation rather than a citation. The multi-agent series' committee math and the single-agent series' verifier math are pricing the same {% katex() %}\rho{% end %}, at two different scales. They are not two different quantities that happen to share a symbol.
 
 ### What This Buys: When to Stop Diversifying
 
@@ -346,7 +357,7 @@ That is the actual line between C1 and C2: C1 cases have an available, if costly
 
 ## The Case a Verification Criterion Cannot Just File Away
 
-Optimization does not fit either clause, and the honest move is not to file it outside the framework and move on. Individual decisions in a controlled multi-agent study showed strong rational cost-benefit logic with minimal escalation of commitment. The same decision, made through symmetrical peer deliberation among several model instances, escalated to near-universal, about 99.2 percent of runs {{ cite(ref="8", title="Barkett, E., Long, O. & Kröger, P. (2025) -- Getting out of the Big-Muddy: Escalation of Commitment in LLMs, arXiv:2508.01545") }}. Post 4's own threshold rule did not become unsound between the individual case and the group case. Nothing in the object-level mechanism changed.
+Optimization does not fit either clause, and the honest move is not to file it outside the framework and move on. Individual decisions in a controlled multi-agent study showed strong rational cost-benefit logic with minimal escalation of commitment. The same decision, made through symmetrical peer deliberation among several model instances, escalated to near-universal, about 99.2 percent of runs {{ cite(ref="10", title="Barkett, E., Long, O. & Kröger, P. (2025) -- Getting out of the Big-Muddy: Escalation of Commitment in LLMs, arXiv:2508.01545") }}. Post 4's own threshold rule did not become unsound between the individual case and the group case. Nothing in the object-level mechanism changed.
 
 <span id="def-9"></span>
 
@@ -450,14 +461,85 @@ This is the least likely of the four to fail, since the exchange argument behind
 - It has not been claimed that a constant {% katex() %}\lambda{% end %} prices what residual correlation costs under every consensus mechanism. The exchange argument needs one number, the marginal cost of a unit of {% katex() %}\rho{% end %} at the point a deployment is choosing between, which is exactly what Independence Illusion's {% katex() %}Q(N,p,\rho){% end %} supplies: a graded, linear-in-{% katex() %}\rho{% end %} interpolation, this series' own construction rather than a citation, as Definition 2 there already flagged. A deployment running strict Byzantine quorum consensus instead, where correlated faults crossing a fixed fraction collapse safety as a step rather than a slope, is outside the case {% katex() %}Q{% end %} was built for, and Proposition 7 inherits that scope from it rather than widening it.
 - It has not been claimed that Proposition 6 is a substantive result the way the others are. It is an algebraic identity, following directly from the definition of correlation for two Bernoulli variables, true for any joint distribution by construction rather than by a claim about any particular system. Its content is not in the fact that it holds, but in what it forces once Definition 7's two conditions are read together, and no falsification criterion is stated for it below for that reason: there is no experiment that could find it false, only a check of the algebra, which the two numeric cases above already are.
 
-> **Cognitive Map**
->
-> 1. Two series on this blog, built independently, proved the same requirement from opposite directions: a check only counts if it draws on something the thing it checks could not also have corrupted, tested at the multi-agent committee scale in one series and the single-reasoner scale in the other.
-> 2. Independence and power are not two independent knobs. At matched base rates, the power margin equals the correlation between checker and object-level error exactly, {% katex() %}(1-\beta)-\alpha = \rho{% end %}, which proves rather than merely asserts why a perfectly independent checker is a coin flip, and clarifies what Definition 7 actually forbids: not correlation with the truth, which power requires, but the specific correlation that runs through {% katex() %}\Phi{% end %}.
-> 3. That requirement splits into two structurally different clauses, not one. C1, common-cause failure, is graded, escapable at a cost, and governs four of the five properties Portable Mind proved plus the committee case Independence Illusion proved. C2, self-reference, is binary and unconditional, and governs Awareness alone, because Loeb's theorem binds even at zero error rate. The split was checked directly for a hidden third case and confirmed exhaustive: C1 itself has a hard-zero sub-case (Abstraction) and graded sub-cases, but both remain escapable in a way C2 never is.
-> 4. Diversifying a checker's substrate away from the thing it checks is not free and does not reach zero correlation: Eckhardt and Lee proved even independently built checkers correlate whenever task difficulty varies, Knight and Leveson measured that same failure in twenty-seven independently written program versions, and forced diversity lowers the floor without erasing it. Two 2025-2026 papers confirm this is not a historical curiosity: LLM errors measurably correlate across models, and a concurrent statistical framework audits that correlation for LLM judges directly, both staying inside C1's graded register and neither crossing into C2's. How far to push diversification has an actual answer, not a rule of thumb: diversify through a layer precisely while its cost is below what the correlation it removes is worth, an exchange argument in the same style Post 4 used for its own stopping rule, arrived at independently because the underlying problem is deterministic where Post 4's was stochastic, not because one theorem was stretched to cover both.
-> 5. A third pattern, Inherited Consequence, is not a third clause but a corollary of the first two under composition: a property with a provably sound mechanism of its own can still need a governor, because its inputs were corrupted by a different property's own C1 or C2 failure. This is not merely definitional: a downstream mechanism with no cross-check on its input carries no structural guarantee of diluting an upstream error rate, the reason redundancy's usual protection does not apply to a pipeline the way it applies to a committee, and Optimization's own threshold fails to dilute for a further, case-specific reason: the bias reaching it is directional, not the symmetric noise a bare threshold would happen to absorb. Optimization's multi-agent escalation is this pattern's best candidate case, offered as a hypothesis consistent with the data, not a settled mechanism.
-> 6. None of this has passed review independent of the process that built it in the strong sense the term usually carries, and that is stated here as an open fact about this post's own epistemic status, not a caveat to be read past.
+{% cognitive_map(root="The Shared Ancestor Problem") %}
+{
+  "intro": "Five agent instances scored between 0.83 and 1.00 on a task, a pool that looked near its ceiling by headcount alone. Run through outlier-resistant selection, the diversity-adjusted signal dropped to 0.40, because five high scores were one answer restated five times, not five independent confirmations, first measured in <a href=\"/blog/borrowed-guarantees-part1-independence/\">The Independence Illusion</a>. This closing post proves that finding and Awareness's self-reference limit are answers to the same underlying requirement, computed independently by two series that never cited each other, and states precisely where the two proofs share a shape and where they do not.",
+  "groups": [
+    {
+      "theme": "One Requirement, Computed Twice",
+      "c": "mint",
+      "points": [
+        "Two series on this blog proved the same requirement from opposite directions without citing each other: a verification signal only counts as a check if it draws on something the thing it checks could not also have corrupted.",
+        "A verification signal is valid to the degree it satisfies two separate conditions: independence from the specific process whose malfunction constitutes the failure being checked for, and enough discriminative power that its true-positive rate actually exceeds its false-positive rate.",
+        "Independence and power are not two separately tunable knobs. At matched base rates, the power margin equals the correlation between checker and object-level error exactly, which proves rather than merely asserts why a perfectly independent checker carries zero discriminative power.",
+        "What the independence condition actually forbids is narrower than correlation with the truth itself, since power requires exactly that. It forbids only the specific correlation that runs through the shared failure-producing process."
+      ]
+    },
+    {
+      "theme": "What Diversity Buys, and What It Cannot",
+      "c": "sky",
+      "points": [
+        "Diversifying a checker's substrate away from the process it checks, through prompt, model weights, training corpus, and finally the ground-truth channel, buys a real reduction in shared-cause correlation, but never reaches zero.",
+        "Even genuinely independently built checkers correlate whenever task difficulty varies across the input space, a result proved decades before language models existed and then measured directly in twenty-seven independently written program versions that still failed together far more than independence would predict.",
+        "Two recent studies confirm the same floor in language models: LLM errors correlate across models more than an independence assumption predicts, and a separate statistical framework now audits that correlation directly in LLM judges.",
+        "How far to push diversification has an exact answer rather than a rule of thumb: diversify through a layer exactly while its cost is below what the correlation it removes is worth, and stop at the first layer where that stops holding."
+      ]
+    },
+    {
+      "theme": "Two Clauses, Not One",
+      "c": "peach",
+      "points": [
+        "Checking all five properties this series proved against the same requirement reveals two structurally different reasons a check can fail, not one uniform mechanism, and conflating them was an error an earlier draft of this post made and had to retract.",
+        "The common-cause clause covers three of the five properties: a check fails when its own error correlates with the object-level error through a shared process, graded between zero and one and escapable at a cost through substrate diversification.",
+        "The self-reference clause covers Awareness alone: the resource-bounded self-reference theorem already proved for a provability-based reasoner binds even at zero error rate, because there is no failure to correlate, only a structural fact about what such a system can derive about itself.",
+        "Checked directly rather than assumed, the split is exhaustive: one property's failure looks momentarily as absolute as the self-reference case, but the absoluteness turns out to depend on a regime a system could choose to leave, exactly the escape the self-reference clause never offers."
+      ]
+    },
+    {
+      "theme": "Inherited Consequence: When a Sound Mechanism Still Needs a Babysitter",
+      "c": "rose",
+      "points": [
+        "A property whose own verification mechanism is sound, with neither clause applying to its own workings, can still need external verification if its inputs are drawn from a property where one of the two clauses does apply.",
+        "A downstream mechanism with no cross-check on its input carries no structural guarantee of diluting an upstream error, which is exactly why the comfort redundancy provides in a committee does not transfer to a pipeline, where each stage only ever sees what the one before it produced.",
+        "The property that stops early under cost inherits exactly this problem: the bias feeding its stopping decision is directional rather than symmetric noise, pushing believed cost down and believed odds of success up on precisely the side that says keep going, which a bare threshold has no way to catch.",
+        "The post closes by naming its own open epistemic status directly: a review process that caught two real errors in its own construction is evidence checking helped, not evidence the checking process itself was independent of the process that built what it checked."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**One Requirement, Computed Twice**
+
+1. Two series on this blog proved the same requirement from opposite directions without citing each other: a verification signal only counts as a check if it draws on something the thing it checks could not also have corrupted.
+2. A verification signal is valid to the degree it satisfies two separate conditions: independence from the specific process whose malfunction constitutes the failure being checked for, and enough discriminative power that its true-positive rate actually exceeds its false-positive rate.
+3. Independence and power are not two separately tunable knobs. At matched base rates, the power margin equals the correlation between checker and object-level error exactly, which proves rather than merely asserts why a perfectly independent checker carries zero discriminative power.
+4. What the independence condition actually forbids is narrower than correlation with the truth itself, since power requires exactly that. It forbids only the specific correlation that runs through the shared failure-producing process.
+
+**What Diversity Buys, and What It Cannot**
+
+5. Diversifying a checker's substrate away from the process it checks, through prompt, model weights, training corpus, and finally the ground-truth channel, buys a real reduction in shared-cause correlation, but never reaches zero.
+6. Even genuinely independently built checkers correlate whenever task difficulty varies across the input space, a result proved decades before language models existed and then measured directly in twenty-seven independently written program versions that still failed together far more than independence would predict.
+7. Two recent studies confirm the same floor in language models: LLM errors correlate across models more than an independence assumption predicts, and a separate statistical framework now audits that correlation directly in LLM judges.
+8. How far to push diversification has an exact answer rather than a rule of thumb: diversify through a layer exactly while its cost is below what the correlation it removes is worth, and stop at the first layer where that stops holding.
+
+**Two Clauses, Not One**
+
+9. Checking all five properties this series proved against the same requirement reveals two structurally different reasons a check can fail, not one uniform mechanism, and conflating them was an error an earlier draft of this post made and had to retract.
+10. The common-cause clause covers three of the five properties: a check fails when its own error correlates with the object-level error through a shared process, graded between zero and one and escapable at a cost through substrate diversification.
+11. The self-reference clause covers Awareness alone: the resource-bounded self-reference theorem already proved for a provability-based reasoner binds even at zero error rate, because there is no failure to correlate, only a structural fact about what such a system can derive about itself.
+12. Checked directly rather than assumed, the split is exhaustive: one property's failure looks momentarily as absolute as the self-reference case, but the absoluteness turns out to depend on a regime a system could choose to leave, exactly the escape the self-reference clause never offers.
+
+**Inherited Consequence: When a Sound Mechanism Still Needs a Babysitter**
+
+13. A property whose own verification mechanism is sound, with neither clause applying to its own workings, can still need external verification if its inputs are drawn from a property where one of the two clauses does apply.
+14. A downstream mechanism with no cross-check on its input carries no structural guarantee of diluting an upstream error, which is exactly why the comfort redundancy provides in a committee does not transfer to a pipeline, where each stage only ever sees what the one before it produced.
+15. The property that stops early under cost inherits exactly this problem: the bias feeding its stopping decision is directional rather than symmetric noise, pushing believed cost down and believed odds of success up on precisely the side that says keep going, which a bare threshold has no way to catch.
+16. The post closes by naming its own open epistemic status directly: a review process that caught two real errors in its own construction is evidence checking helped, not evidence the checking process itself was independent of the process that built what it checked.
+
+</details>
 
 **Compute it.** Before trusting any check, whether it is a second model instance voting alongside the first or a verification loop auditing a single agent's own output, ask what {% katex() %}\Phi{% end %} is for the specific failure being checked for, and whether the check's own computation passes through it. If it does, no amount of additional checking helps, only a genuinely different pathway does. How different is measured in prompt, weights, training corpus, and the ground-truth channel, each one a harder floor to clear than the last, and none of them free, with the task's own difficulty landscape waiting past all four, uncrossable at any price. Before deciding how far down that list to go, put a number on what a unit of residual correlation actually costs, and stop at the first layer that costs more than it saves. Going further than that number justifies is not extra caution, it is spending past the point the spending was worth. And before trusting a property that seems to need no check at all, ask whether its inputs came from somewhere that did, and whether the mechanism in between has anything that could have caught the difference. A sound mechanism fed corrupted state and a sound mechanism fed honest state produce outputs that look identical until the state they were built on turns out to have been wrong, and by then the mechanism that failed is not the one anyone was watching.
 
@@ -475,10 +557,10 @@ This is the least likely of the four to fail, since the exchange argument behind
 
 <sup>[6]</sup> Littlewood, B. & Miller, D. R. (1989). *Conceptual Modeling of Coincident Failures in Multiversion Software.* IEEE Transactions on Software Engineering, 15(12), 1596-1614.
 
-<sup>[7]</sup> Ladha, K. (1992). *The Condorcet Jury Theorem, Free Speech, and Correlated Votes.* American Journal of Political Science, 36, 617-634.
+<sup>[7]</sup> Kim, E., Garg, A., Peng, K. & Garg, N. (2025). *Correlated Errors in Large Language Models.* arXiv:2506.07962. Accepted to ICML 2025.
 
-<sup>[8]</sup> Barkett, E., Long, O. & Kröger, P. (2025). *Getting out of the Big-Muddy: Escalation of Commitment in LLMs.* arXiv:2508.01545.
+<sup>[8]</sup> Kuai, C., Jiang, J., Zhu, Z., Wang, H., Wu, K., Li, Z., Zhang, Y., Liu, C., Tu, Z., Fan, Z. & Zhou, Y. (2026). *A Statistical Framework for Auditing Behavioral Dependence and Induced Bias in LLM Judges.* arXiv:2604.07650.
 
-<sup>[9]</sup> Kim, E., Garg, A., Peng, K. & Garg, N. (2025). *Correlated Errors in Large Language Models.* arXiv:2506.07962. Accepted to ICML 2025.
+<sup>[9]</sup> Ladha, K. (1992). *The Condorcet Jury Theorem, Free Speech, and Correlated Votes.* American Journal of Political Science, 36, 617-634.
 
-<sup>[10]</sup> Kuai, C., Jiang, J., Zhu, Z., Wang, H., Wu, K., Li, Z., Zhang, Y., Liu, C., Tu, Z., Fan, Z. & Zhou, Y. (2026). *A Statistical Framework for Auditing Behavioral Dependence and Induced Bias in LLM Judges.* arXiv:2604.07650.
+<sup>[10]</sup> Barkett, E., Long, O. & Kröger, P. (2025). *Getting out of the Big-Muddy: Escalation of Commitment in LLMs.* arXiv:2508.01545.

@@ -434,23 +434,85 @@ It would need {% katex() %}k\approx4{,}200{% end %} concurrent evictions sharing
 * **Before running that rule as a standing policy rather than a one-off decision, measure your own population's tail index** the way Post 2's Hill-estimator approach prescribes, specifically on the checkpointable subset, not the pool as a whole, since this post's own open question is exactly whether that subset inherits the heterogeneity the argument leans on or quietly loses it. If the measured tail turns out lighter than {% katex() %}\alpha = 2.2{% end %}, treat Proposition 5b's structural defense as weaker in direct proportion, not as a fixed guarantee that survives any duration distribution.
 * **If none of this measurement has happened yet, the honest fallback isn't "don't evict."** It's Blood Oath's own answer, restated for a population that happens to have an escape hatch it hasn't verified is safe to use: a policy nobody has checked for the specific failure mode a real, cited result proves possible is a policy running on faith, dressed in the vocabulary of a theorem it hasn't actually earned.
 
-> **Cognitive Map**
->
-> 1. Post 3 cited a real result and mostly set it aside: threshold-based eviction is provably unstable under saturated demand, a worst-case limit cycle costing up to 50% of throughput. Blood Oath's non-preemptibility ruled the mechanism out by construction, not by choice.
-> 2. This post studies the population Blood Oath excludes: checkpointable tasks, which keep ingress blindness but can actually be relocated at a real, finite cost rather than an architecturally prohibitive one.
-> 3. Definition 5a builds the achievable-region frontier for a single, isolated eviction decision, explicitly scoped to say nothing yet about repeated application at population scale.
-> 4. Proposition 5 prices both sides using numbers this series already earned: Proposition 2b's corrected, piecewise mean residual life, Post 3's KV-cache cost and decode rate, and, for the first time, Post 3's own ConnectX-7 bandwidth figure. It finds a genuine crossover at roughly 864 seconds, nearly three times the mean heavy-task duration: eviction is a rare-outlier remedy, not a routine one, reached by fewer than 3% of heavy tasks.
-> 5. This is the one place in the series the Constraint Sequence Framework runs backward: relaxing the property that excluded a face of the achievable region makes that face reachable again, for the narrower population that can afford to relax it.
-> 6. Proposition 5, taken as the only eviction rule, has no term for the pool's own state. It can say "evict nothing" while a redline is breached and admission-refusal alone can't relieve it, since fewer than 3% of tasks ever individually justify eviction. Proposition 5c closes that gap with corrections to both which task and how fast the loop reacts. Rank by descending accumulated state, largest and most memory-heavy first, floored at Definition 1b's confidence crossover so the rule can't reach into ordinary light traffic for near-zero relief at full fixed cost, and capped by a real time-to-exhaustion deadline so the rule never picks a candidate whose own transfer wouldn't land before the node fails outright. That's rather than Proposition 5's own economic comparison, since fixed per-eviction overhead means relief rate strictly increases with the size of what's evicted, not the reverse. And evaluate the redline against a projected headroom: physical state, plus pending eviction credits, minus what surviving tasks will still consume before the slowest pending transfer lands, so neither a lagging transfer nor ongoing survivor growth triggers a cascade of unnecessary further evictions before relief actually arrives.
-> 7. Every crossover rule in this post assumes the heavy class is one clean Pareto population. A real fleet's heavy traffic is often a mixture of distinct workload types instead, and Post 1's own worked three-component mixture shows what that does: mean residual life reverses direction four times rather than settling into a single fall-then-rise. Checked against this post's own prices, that mixture crosses the eviction threshold ({% katex() %}\approx720{% end %}) four separate times between {% katex() %}t=150{% end %}s and {% katex() %}t=1{,}300{% end %}s: continue, evict, continue, evict, continue. This is the single highest-priority gap in the post, a prerequisite the other two below both assume away.
-> 8. Proposition 5c's own batching is a designed one, not a coincidental one, and its descending-state ranking draws from close to the same sparse long-tail survivors Proposition 5b's desynchronization argument is about, by strong correlation rather than by construction. It inherits most of that argument's protection, not none of it, though not as a proven guarantee. Closing that gap from correlation to proof is unfinished work this post names.
-> 9. Proposition 5b gives a structural, heavy-tail-grounded reason to expect the *voluntary* channel avoids Post 3's cited instability. The same argument Post 3 made for its own milder mechanism, now applied to the paper's own literal subject: honestly short of a proof, and explicitly scoped to not cover the emergency channel.
-> 10. That structural argument depends on the checkpointable sub-population actually inheriting the full pool's heterogeneity, an assumption worth measuring, not assuming, since the classification itself could plausibly select against it.
-> 11. Ao et al.'s own model evicts stateless tasks that restart from zero. This post's population has memory gravity instead (an evicted task is owed its state back, not discarded), so a real limit cycle here is compounded by a second, return-trip transfer the cited paper's model never has to price. That's a cost channel this post names but doesn't yet size a defense for beyond a penalization window on re-admission, one bounded from outside this post's own accounting by a live client's own timeout.
-> 12. The {% katex() %}B/k{% end %} fair-share model behind the 5.5-second {% katex() %}k=32{% end %} transfer-time figure assumes costless multiplexing. Real RDMA fabrics running RoCEv2 depend on Priority Flow Control, whose own documented production failure mode (pause-frame storms triggered by exactly the many-to-one pattern an emergency eviction wave creates) collapses non-linearly rather than degrading linearly with {% katex() %}k{% end %}. The 5.5-second figure should be read as a floor on real fabric hardware, not an estimate.
-> 13. A team following Post 3's own truncation remedy for {% katex() %}\alpha \leq 2{% end %} breaks this post's crossover proof from the opposite direction of the mixture-hazard gap: {% katex() %}m(t){% end %} can't keep rising toward a hard ceiling {% katex() %}L{% end %}, so it has to fall back toward zero as {% katex() %}t \to L{% end %}, reopening a second crossing the well-behaved-crossover check was built to rule out. Proposition 5's single, permanent crossing is a property of the untruncated tail specifically, unproven for the truncated case Post 3 actually prescribes.
-> 14. {% katex() %}\hat{H}_{\text{mem}}(t){% end %}'s own projection prices contention on the transfer link; it doesn't price contention that reaches back into {% katex() %}\sigma{% end %}, the survivors' own generation rate. Where the relocation NIC and decode compute share PCIe lanes or a memory controller, a {% katex() %}k=32{% end %} wave can degrade both at once, and a falling {% katex() %}\sigma{% end %} multiplied against an already-inflated {% katex() %}T_{\text{wait}}{% end %} makes the projection wrong in a direction this post hasn't checked.
-> 15. Live re-sampling of {% katex() %}N_{\text{survivors}}(t){% end %} and {% katex() %}T_{\text{wait}}(t){% end %} corrects for ordinary estimation drift between ticks, not for a PFC-storm collapse, which jumps rather than drifts. Every tick before the one that observes the jump computed {% katex() %}\hat{H}_{\text{mem}}(t){% end %} against an estimate already wrong by orders of magnitude. That's a one-tick lag whose real cost depends on the control loop's own tick rate against how fast a real fabric can actually collapse, a comparison this post has never run.
+{% cognitive_map(root="Optimal Stopping at the Edge of a Limit Cycle") %}
+{
+  "intro": "A cited result this series cannot quietly set aside: threshold-based eviction, proven dynamically unstable under saturated demand, a worst-case limit cycle that costs up to half of throughput. This post takes on the population the earlier non-preemptible design was built to exclude, tasks that can actually be evicted, and asks the two questions left open: is a single eviction worth its cost, and is running that rule as a policy, at scale, safe from the instability the earlier posts only watched from the outside.",
+  "groups": [
+    {
+      "theme": "A New Population, and a Real Price on Eviction",
+      "c": "mint",
+      "points": [
+        "This post studies exactly the population the earlier non-preemptible design excluded: tasks that keep unknown cost at admission but whose accumulated state can actually be relocated at a real, finite cost rather than an architecturally prohibitive one.",
+        "A single eviction decision is its own achievable-region tradeoff: continuing to run a task costs its expected remaining opportunity cost, while evicting it costs a real relocation charge, and the two pull against each other exactly the way every earlier tradeoff in this series has.",
+        "Pricing both sides with real numbers this series already earned, a genuine crossover appears at roughly 864 seconds, nearly three times the mean heavy-task duration, reached by fewer than 3 percent of heavy tasks.",
+        "Eviction, at this specimen's own real prices, is a remedy reserved for the rare, genuine long-tail outlier, not a routine intervention against ordinary heavy-task duration."
+      ]
+    },
+    {
+      "theme": "When One Rule Isn't Enough: The Emergency Channel",
+      "c": "sky",
+      "points": [
+        "The crossover rule alone has no term for the pool's own state. It can say evict nothing while a real memory redline is breached and admission-refusal cannot relieve it, since the vast majority of running tasks never individually clear the crossover.",
+        "An emergency channel closes that gap with two corrections: which task to evict, and how fast the control loop is allowed to react to its own commands.",
+        "The right ranking is the opposite of the intuitive one: fixed per-eviction overhead means relief rate strictly increases with the size of what gets evicted, so the rule ranks by descending accumulated state, largest first, not smallest.",
+        "Evaluating the redline against physical headroom alone invites a cascade of unnecessary further evictions. The correct check projects headroom forward, crediting transfers already in flight while also subtracting what surviving tasks will still consume before the slowest of those transfers actually lands."
+      ]
+    },
+    {
+      "theme": "Is the New Policy Stable?",
+      "c": "peach",
+      "points": [
+        "A cited 2026 result proves threshold-based eviction under saturated demand is provably unstable, converging to a self-sustaining limit cycle that can cost up to half of a fleet's throughput.",
+        "Non-preemptibility ruled that specific mechanism out by construction in the earlier posts, not by a considered choice, so this post is the first place in the series obligated to check whether reintroducing eviction reopens the door the earlier design walked around.",
+        "The same heavy tail that has done real work everywhere else in this series gives a structural reason to expect better behavior: the population actually at risk of eviction is sparse and spread out in time, close to the opposite of the synchronized-completion pattern the cited instability depends on. That reason is real but explicitly short of a proof.",
+        "A checkpointable task carries a cost the cited paper's own stateless model never has to price: an evicted task is owed its state back rather than discarded, so a real limit cycle here would be compounded by a second, return-trip transfer cost the earlier result's own accounting has no channel for."
+      ]
+    },
+    {
+      "theme": "What's Still Unverified",
+      "c": "rose",
+      "points": [
+        "Every crossover rule in this post assumes the heavy class is one clean population. A real mixture of distinct workload types can make expected remaining duration reverse direction several times rather than settle into a single fall-then-rise, reopening the crossing more than once. This is named as the single highest-priority open gap.",
+        "Whether the checkpointable sub-population actually inherits the full pool's heavy-tailed spread, rather than a narrower, more synchronized slice selected by an operator's own checkpointing policy, is a real empirical question this post can name but not answer from its own numbers.",
+        "A real relocation fabric introduces a failure shape the transfer-time arithmetic never prices: a lossless-delivery mechanism whose documented production pathology is a pause-frame storm triggered by exactly the many-to-one pattern an emergency eviction wave creates, a collapse rather than a graceful slowdown.",
+        "A fleet-wide coordinator cannot make a better choice of which task to evict on a given node, since eviction only ever relieves the node that pays for it, but coordination could still help pace evictions across nodes sharing the same physical fabric, a real, unpriced tradeoff this post names rather than resolves."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**A New Population, and a Real Price on Eviction**
+
+1. This post studies exactly the population the earlier non-preemptible design excluded: tasks that keep unknown cost at admission but whose accumulated state can actually be relocated at a real, finite cost rather than an architecturally prohibitive one.
+2. A single eviction decision is its own achievable-region tradeoff: continuing to run a task costs its expected remaining opportunity cost, while evicting it costs a real relocation charge, and the two pull against each other exactly the way every earlier tradeoff in this series has.
+3. Pricing both sides with real numbers this series already earned, a genuine crossover appears at roughly 864 seconds, nearly three times the mean heavy-task duration, reached by fewer than 3 percent of heavy tasks.
+4. Eviction, at this specimen's own real prices, is a remedy reserved for the rare, genuine long-tail outlier, not a routine intervention against ordinary heavy-task duration.
+
+**When One Rule Isn't Enough: The Emergency Channel**
+
+5. The crossover rule alone has no term for the pool's own state. It can say evict nothing while a real memory redline is breached and admission-refusal cannot relieve it, since the vast majority of running tasks never individually clear the crossover.
+6. An emergency channel closes that gap with two corrections: which task to evict, and how fast the control loop is allowed to react to its own commands.
+7. The right ranking is the opposite of the intuitive one: fixed per-eviction overhead means relief rate strictly increases with the size of what gets evicted, so the rule ranks by descending accumulated state, largest first, not smallest.
+8. Evaluating the redline against physical headroom alone invites a cascade of unnecessary further evictions. The correct check projects headroom forward, crediting transfers already in flight while also subtracting what surviving tasks will still consume before the slowest of those transfers actually lands.
+
+**Is the New Policy Stable?**
+
+9. A cited 2026 result proves threshold-based eviction under saturated demand is provably unstable, converging to a self-sustaining limit cycle that can cost up to half of a fleet's throughput.
+10. Non-preemptibility ruled that specific mechanism out by construction in the earlier posts, not by a considered choice, so this post is the first place in the series obligated to check whether reintroducing eviction reopens the door the earlier design walked around.
+11. The same heavy tail that has done real work everywhere else in this series gives a structural reason to expect better behavior: the population actually at risk of eviction is sparse and spread out in time, close to the opposite of the synchronized-completion pattern the cited instability depends on. That reason is real but explicitly short of a proof.
+12. A checkpointable task carries a cost the cited paper's own stateless model never has to price: an evicted task is owed its state back rather than discarded, so a real limit cycle here would be compounded by a second, return-trip transfer cost the earlier result's own accounting has no channel for.
+
+**What's Still Unverified**
+
+13. Every crossover rule in this post assumes the heavy class is one clean population. A real mixture of distinct workload types can make expected remaining duration reverse direction several times rather than settle into a single fall-then-rise, reopening the crossing more than once. This is named as the single highest-priority open gap.
+14. Whether the checkpointable sub-population actually inherits the full pool's heavy-tailed spread, rather than a narrower, more synchronized slice selected by an operator's own checkpointing policy, is a real empirical question this post can name but not answer from its own numbers.
+15. A real relocation fabric introduces a failure shape the transfer-time arithmetic never prices: a lossless-delivery mechanism whose documented production pathology is a pause-frame storm triggered by exactly the many-to-one pattern an emergency eviction wave creates, a collapse rather than a graceful slowdown.
+16. A fleet-wide coordinator cannot make a better choice of which task to evict on a given node, since eviction only ever relieves the node that pays for it, but coordination could still help pace evictions across nodes sharing the same physical fabric, a real, unpriced tradeoff this post names rather than resolves.
+
+</details>
 
 ---
 <sup>[1]</sup> Ao, R., Dong, J., Luo, G. & Simchi-Levi, D. (2026). *Service-Induced Congestion in Memory-Constrained LLM Serving.* arXiv:2606.15555.

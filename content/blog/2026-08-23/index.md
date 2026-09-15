@@ -799,17 +799,85 @@ This series accumulated roughly thirty symbols across six prior posts, reused on
 
 </details>
 
-> **Cognitive Map**
->
-> 1. Being proven correct doesn't specify what to build. Every mechanism this series proved needs a stated engineering answer (what gets built, where it sits, what it costs) before it's actionable.
-> 2. Blood Oath's impossibility has three real responses: accept the permanent buffer cost, build checkpointing to escape the locality lock, or use bare preemption where a full restart is tolerable. The cheapest option is preemption where it's available; the real engineering tradeoff is buffer-cost-forever versus checkpointing's own one-time build.
-> 3. The Physical Redline's own arithmetic is cheap; the real engineering cost is the telemetry pipeline and the demotion hook's own scoping. The one real tuning decision, {% katex() %}\eta{% end %}, should be set by re-running Post 2's own simulation against real data, not by reusing this series' own number.
-> 4. Definition 4's per-resource mechanism is a small sidecar, not a scheduler: build it alongside an adopted system like Dynamo, not instead of one, and re-derive its separable-regions assumption before trusting it under chunked-prefill or elastic reassignment.
-> 5. Eviction is a real, moderate build with a structural (not proof-level) safety argument behind it, against a near-free alternative with none. The credited-headroom projection term is the piece most often skipped and most load-bearing when it is.
-> 6. Fleet pooling trades a real, computed capacity saving for a real, new coordination component with its own availability engineering. A cost the underlying math was never built to price.
-> 7. The meta-constraint's own answer is a staged build: measure the static version's own drift cost and the adaptive version's own build cost before committing to full automation, so Proposition 7's own ROI test has real inputs instead of an assumed one.
-> 8. Build in dependency order: redline before multi-resource, multi-resource before eviction, eviction before fleet pooling, adaptation last. Know that this order avoids one named failure mode, not that it proves the whole system composes safely, which remains as open after this post as it was after the one before it.
-> 9. Every mechanism in this post decides locally, on a stale view, by construction: never argued for against the alternative until here. Checked against five other real points in the same design space (Sparrow's late binding, a lazy-pull shared backlog, Borg's monolithic scheduler, Mesos's two-level offer model, Omega's shared-state optimism), this series' own choice dominates for its own specific workload. The verdict flips cleanly under one stated, checkable condition: frequent correlated bursts as a measured incident cost, plus centralized infrastructure that already exists for other reasons, so the marginal cost of adding scheduling to it approaches zero rather than the full cost of building it from nothing.
+{% cognitive_map(root="Building What Six Posts Only Proved") %}
+{
+  "intro": "A proof tells you a mechanism is correct under stated conditions. It doesn't say what component owns the check, what it costs to run, or what order to build six of them in when a real system needs more than one at once. This post is that build: one engineering answer per problem this series proved, a formal decision function for whether to build each one, a build order that keeps them from being built against each other, and the centralization comparison the series never ran until now.",
+  "groups": [
+    {
+      "theme": "From Proof to Build",
+      "c": "mint",
+      "points": [
+        "A proof that a mechanism is correct under stated conditions does not say what component owns the check, what it costs to run, or what order to build several of them in. This post is the other half of six posts of proof.",
+        "A closed door, proven closed, still has exactly three real engineering responses: accept the permanent cost of working around it, remove the property that closed it, or take the cheapest escape when the caller can tolerate it.",
+        "The Physical Redline's own arithmetic is genuinely negligible. The real engineering cost sits in the telemetry pipeline's own timing and in scoping the demotion hook so it can never reach a task it was never granted authority over.",
+        "A per-resource sidecar is a small, real build meant to sit alongside an adopted production scheduler, not replace one, and its own separable-resources assumption has to be re-derived, not assumed, the moment a real deployment couples resources on purpose for efficiency."
+      ]
+    },
+    {
+      "theme": "Eviction, Pooling, and the Missing Denominator",
+      "c": "sky",
+      "points": [
+        "Eviction is a real, moderate engineering lift with a structural, short-of-proof safety argument behind it, against a near-free alternative with no safety argument at all, and the credited-headroom projection term is the piece most often skipped under time pressure and most costly to skip.",
+        "A real breach deep enough to need several evictions has a cumulative deadline, not a per-candidate one, and a control plane has to check that cumulative bound before defaulting to the fabric-safe but slower choice of running them one at a time.",
+        "Fleet pooling's own saving is real and computed, but the coordination component that realizes it is a genuinely new piece of infrastructure with its own availability engineering, a cost the underlying queueing math was never built to price.",
+        "The honest response to an adaptive system's own unmeasured overhead is not to build the expensive version on faith. It is to stage a fixed version behind two real logs and a calendared review date, so the return-on-investment test finally has both of the numbers it needs."
+      ]
+    },
+    {
+      "theme": "Building in the Right Order",
+      "c": "peach",
+      "points": [
+        "A downstream mechanism cannot be built correctly on top of an upstream one that is not yet in place, because its own inputs depend on the upstream one's outputs. Every dependency in this series' own machinery follows that same rule construction-side, not just proof-side.",
+        "Building fleet pooling before eviction exists reproduces exactly the gap an earlier post already named: a redline breach on an already-diverged node with no lever left to pull, reverting to admission-refusal alone.",
+        "Six build-or-don't-build questions collapse into one formal decision function: validate the mechanism causally, check whether the deployment actually has the problem, clear a real return-on-investment bar or a named exception, then check that nothing upstream is still missing.",
+        "Two of the six mechanisms only qualify for an exception to the standard bar by a looser fit than the framework's own numeric criteria require, and naming that looseness honestly matters more than the exception itself."
+      ]
+    },
+    {
+      "theme": "The Centralization Question, Finally Asked",
+      "c": "rose",
+      "points": [
+        "Every mechanism this series built decides locally, on a stale view, by construction, an architectural choice made without ever being argued for against the alternative until this post finally runs that comparison.",
+        "Seven real, independently developed systems occupy genuinely different points in the same design space, from a single authority holding a complete fleet-wide picture to a design that deliberately knows less so it never has to reconcile it, and none of the seven made the same choice as any other.",
+        "A single decider buys zero decision-staleness by construction, but nothing about physical propagation delay, and its own coordination overhead grows faster than the fleet it coordinates, the identical scaling law this series already derived once for a smaller claim.",
+        "For the exact workload this series defines, the decentralized design already built dominates a fully centralized alternative, and the verdict flips cleanly only under one stated, checkable condition: frequent correlated bursts as a measured incident cost, alongside centralized infrastructure that already exists for other reasons."
+      ]
+    }
+  ]
+}
+{% end %}
+<details>
+<summary>Read the Cognitive Map as plain text</summary>
+
+**From Proof to Build**
+
+1. A proof that a mechanism is correct under stated conditions does not say what component owns the check, what it costs to run, or what order to build several of them in. This post is the other half of six posts of proof.
+2. A closed door, proven closed, still has exactly three real engineering responses: accept the permanent cost of working around it, remove the property that closed it, or take the cheapest escape when the caller can tolerate it.
+3. The Physical Redline's own arithmetic is genuinely negligible. The real engineering cost sits in the telemetry pipeline's own timing and in scoping the demotion hook so it can never reach a task it was never granted authority over.
+4. A per-resource sidecar is a small, real build meant to sit alongside an adopted production scheduler, not replace one, and its own separable-resources assumption has to be re-derived, not assumed, the moment a real deployment couples resources on purpose for efficiency.
+
+**Eviction, Pooling, and the Missing Denominator**
+
+5. Eviction is a real, moderate engineering lift with a structural, short-of-proof safety argument behind it, against a near-free alternative with no safety argument at all, and the credited-headroom projection term is the piece most often skipped under time pressure and most costly to skip.
+6. A real breach deep enough to need several evictions has a cumulative deadline, not a per-candidate one, and a control plane has to check that cumulative bound before defaulting to the fabric-safe but slower choice of running them one at a time.
+7. Fleet pooling's own saving is real and computed, but the coordination component that realizes it is a genuinely new piece of infrastructure with its own availability engineering, a cost the underlying queueing math was never built to price.
+8. The honest response to an adaptive system's own unmeasured overhead is not to build the expensive version on faith. It is to stage a fixed version behind two real logs and a calendared review date, so the return-on-investment test finally has both of the numbers it needs.
+
+**Building in the Right Order**
+
+9. A downstream mechanism cannot be built correctly on top of an upstream one that is not yet in place, because its own inputs depend on the upstream one's outputs. Every dependency in this series' own machinery follows that same rule construction-side, not just proof-side.
+10. Building fleet pooling before eviction exists reproduces exactly the gap an earlier post already named: a redline breach on an already-diverged node with no lever left to pull, reverting to admission-refusal alone.
+11. Six build-or-don't-build questions collapse into one formal decision function: validate the mechanism causally, check whether the deployment actually has the problem, clear a real return-on-investment bar or a named exception, then check that nothing upstream is still missing.
+12. Two of the six mechanisms only qualify for an exception to the standard bar by a looser fit than the framework's own numeric criteria require, and naming that looseness honestly matters more than the exception itself.
+
+**The Centralization Question, Finally Asked**
+
+13. Every mechanism this series built decides locally, on a stale view, by construction, an architectural choice made without ever being argued for against the alternative until this post finally runs that comparison.
+14. Seven real, independently developed systems occupy genuinely different points in the same design space, from a single authority holding a complete fleet-wide picture to a design that deliberately knows less so it never has to reconcile it, and none of the seven made the same choice as any other.
+15. A single decider buys zero decision-staleness by construction, but nothing about physical propagation delay, and its own coordination overhead grows faster than the fleet it coordinates, the identical scaling law this series already derived once for a smaller claim.
+16. For the exact workload this series defines, the decentralized design already built dominates a fully centralized alternative, and the verdict flips cleanly only under one stated, checkable condition: frequent correlated bursts as a measured incident cost, alongside centralized infrastructure that already exists for other reasons.
+
+</details>
 
 ---
 <sup>[1]</sup> Verma, A., Pedrosa, L., Korupolu, M., Oppenheimer, D., Tune, E. & Wilkes, J. (2015). *Large-Scale Cluster Management at Google with Borg.* Proceedings of the Tenth European Conference on Computer Systems (EuroSys '15).

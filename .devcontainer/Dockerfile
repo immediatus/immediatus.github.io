@@ -22,10 +22,11 @@ RUN printf '#!/usr/bin/env bash\nexec claude --channels plugin:telegram@claude-p
 RUN printf '#!/usr/bin/env bash\nexec agy --dangerously-skip-permissions "$@"\n' > /usr/local/bin/xagy \
     && chmod +x /usr/local/bin/xagy
 
-RUN chown -R developer:developer /workspaces
+RUN chown -R developer:developer /workspaces /usr/local/lib/node_modules /usr/local/bin
 
 USER developer
 ENV USER="developer"
 ENV HOME="/home/developer"
-ENV PATH="/home/developer/.local/bin:/usr/local/bin:${PATH}"
-RUN mkdir -p /home/developer/.local/bin
+ENV NPM_CONFIG_PREFIX="/home/developer/.npm-global"
+ENV PATH="/home/developer/.npm-global/bin:/home/developer/.local/bin:/usr/local/bin:${PATH}"
+RUN mkdir -p /home/developer/.local/bin /home/developer/.npm-global

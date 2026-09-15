@@ -1,0 +1,10 @@
+<div class="cognitive-map-widget" data-root="{{ root | safe }}">
+  <script type="application/json" class="cm-data">{{ body | safe }}</script>
+  <p class="cm-lede">Click a theme to branch it out and read its points. Each point shows the full path back to the root.</p>
+  <div class="cm-canvas-holder">
+    <svg class="cm-svg" viewBox="0 0 900 760" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="cm-deck">
+    <div class="crumb"><span class="seg current">{{ root | safe }}</span></div>
+  </div>
+</div>
