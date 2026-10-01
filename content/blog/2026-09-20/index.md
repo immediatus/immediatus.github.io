@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Dual Control and the Weaponized Probe"
-description = "Part 1 proved the cost of not exploring. The standard organizational response, scheduling a two-week canary test for the failure you already suspect, is just a second simulator built to agree with you, and under a heavy tail, bounded experiments systematically under-sample the cliff. Feldbaum's 1960 dual control theory supplies the actual fix: a control action engineered to regulate the system and keep testing its own estimates at the same time, permanently, with no scheduled point where it gets to stop, already running at internet scale inside TCP BBR since 2016."
+description = "A scheduled canary test for the failure you already suspect is a second simulator built to agree with you. Feldbaum's 1960 dual control theory supplies the alternative: a control action that regulates the system and keeps testing its own estimates, with no scheduled point where it stops. TCP BBR has run one at internet scale since 2016."
 date = 2026-09-20
 slug = "cost-of-knowing-part2-dual-control-and-the-weaponized-probe"
 draft = false
@@ -14,7 +14,7 @@ series = ["cost-of-knowing"]
 toc = false
 series_order = 2
 series_title = "The Cost of Knowing: Dual Control, Bounded Probing, and the Limits of Forward Simulation"
-series_description = """<div class="series-lede">Your simulator has never once been wrong about the past.</div>Every engineer trusts a simulation right up until it is wrong in a way the simulation itself was built never to notice. This series is an audit of that trust, run against congruence bias, the specific paradox of building a check that can only ever agree with you, and against a real production incident, until the audit produces its own math. Each part stands on a formal result from its own discipline and prices one piece of the same underlying question, without assuming in advance which part, if any, closes it. Every post ends the same way, by naming the exact number at which its own recommendation reverses, because an architecture is only as honest as the failure condition it names, and one that names none was never engineered, only decorated."""
+series_description = """<div class="series-lede">Every simulation answers one question and raises three new ones.</div>A simulator validated against history has never once been wrong about the past, which is why its clean result is so easy to mistake for evidence. This series asks when to stop simulating and start learning from live operation. Each part prices one step: what refusing to explore really costs, how a controller can measure while it operates, what a safety boundary has to bound, and the point where one more simulation costs more than it can teach. Every part ends by naming the condition under which its own recommendation reverses. An architecture is only as honest as the failure condition it names."""
 +++
 
 [The Simulation Singularity](@/blog/2026-09-13/index.md) ended with a number. A platform team's shadow-routing admission-control policy was validated against six months of history. It then met a correlated-retry regime that window had only a roughly one-in-six chance of ever producing. The regime broke the queue. The postmortem blamed a monitoring gap. Proposition 1 said the real cost was structural: refusing to explore an unknown environment does not eliminate the cost of not knowing it. It compounds the cost, silently, until an incident collects the bill.
@@ -94,7 +94,7 @@ Proposition 2 establishes that continuous probing is mathematically necessary. I
 
 ## What Feldbaum Actually Proved
 
-The fix is neither a bigger one-shot test nor a weekly instead of one-time schedule, though the second gets closer. It requires naming, precisely, what the team's control action is actually supposed to be doing. The relevant theory here is older than either simulator: Alexander Feldbaum's dual control theory, from 1960{{ cite(ref="4", title="Feldbaum, A.A. (1960-61) -- Theory of Dual Control, I-IV, Avtomatika i Telemekhanika") }}.
+The fix is neither a bigger one-shot test nor a weekly instead of one-time schedule, though the second gets closer. Making the test bigger or more frequent re-optimizes at the same level of abstraction that produced the gap: test size and test schedule. The {% term(url="@/blog/2025-12-27/index.md#the-constraint-sequence-framework", def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding") %}Constraint Sequence Framework{% end %} names why that cannot work: a constraint cannot be resolved at the level of abstraction that exposed it, and the binding one here sits one level down, in what the control action already does structurally. The fix requires naming, precisely, what the team's control action is actually supposed to be doing. The relevant theory here is older than either simulator: Alexander Feldbaum's dual control theory, from 1960{{ cite(ref="4", title="Feldbaum, A.A. (1960-61) -- Theory of Dual Control, I-IV, Avtomatika i Telemekhanika") }}.
 
 ### The Dual Effect, Precisely Stated
 
@@ -363,7 +363,70 @@ Getting an implementation of that mechanism to converge cleanly and quickly is s
 
 That last point is worth taking seriously, because the mechanism behind the leftover 2.9-to-1 split is not what it first looks like. Kelly's fixed point, {% katex() %}r_i = w_i / \text{price}{% end %}, does not depend on either flow's reaction speed at all. Rerunning the 10x-speed case with the price loop's own step size at 0.0005, 0.005, and 0.05, a hundredfold range, gives the identical 74.3%/25.7% split every time. The residual is the slow flow still partway through its own approach to that speed-independent fixed point, not the price loop lagging behind the flows.
 
-Extending the same run confirms it: the slow flow's share is 25.7% at 80,000 rounds, 28.3% at 400,000, and 43.3% at 2,000,000, still climbing toward 50% and showing no sign of settling short of it. Kelly's equilibrium is exact and symmetric in weight, not speed; what the earlier table reports is a snapshot of a transient at one arbitrarily chosen horizon, not a floor the mechanism converges to and stops at.
+Extending the same run confirms it: the slow flow's share is 25.7% at 80,000 rounds, 28.3% at 400,000, and 43.3% at 2,000,000, still climbing toward 50% and showing no sign of settling short of it. Run to 10,000,000 rounds, it reaches 50.0%. Kelly's equilibrium is exact and symmetric in weight, not speed; what the earlier table reports is a snapshot of a transient at one arbitrarily chosen horizon, not a floor the mechanism converges to and stops at.
+
+<div style="margin:1.5em 0;">
+<canvas id="chart-kelly-convergence" aria-label="A line chart of the slow flow's share of capacity against the number of rounds run, on a logarithmic horizontal axis from twenty thousand to ten million rounds. The share sits near 25 percent until about one hundred thousand rounds, then climbs: 25.7 percent at 80,000 rounds, 28.3 percent at 400,000, 43.3 percent at 2,000,000, and 50.0 percent at 10,000,000, where it meets a horizontal line marking Kelly's fixed point at 50 percent." style="width:100%; height:320px; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<script>
+(function(){
+var cv=document.getElementById('chart-kelly-convergence');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var DATA=[[20000,25.22],[23000,25.09],[27000,25.09],[31000,25.12],[35000,25.17],[41000,25.25],[47000,25.33],[54000,25.42],[62000,25.52],[71000,25.64],[80000,25.74],[82000,25.77],[95000,25.91],[109000,26.06],[125000,26.22],[144000,26.40],[166000,26.60],[192000,26.82],[221000,27.05],[254000,27.30],[293000,27.58],[337000,27.87],[388000,28.20],[400000,28.27],[447000,28.55],[515000,28.93],[593000,30.06],[683000,31.53],[787000,33.06],[906000,34.62],[1044000,36.22],[1202000,37.82],[1384000,39.40],[1594000,40.96],[1836000,42.46],[2000000,43.32],[2115000,43.87],[2436000,45.16],[2805000,46.30],[3231000,47.29],[3721000,48.11],[4285000,48.74],[4935000,49.22],[5684000,49.55],[6546000,49.76],[7539000,49.88],[8683000,49.95],[10000000,49.98]];
+var MARK=[[80000,25.74,'25.7%',"at 80,000 rounds: the table's snapshot"],[400000,28.27,'28.3%','at 400,000'],[2000000,43.32,'43.3%','at 2,000,000'],[10000000,49.98,'50.0%','at 10,000,000']];
+var W=0,H=0,narrow=false,L=46,R=18,T=30,B=46;
+var X0=Math.log(20000),X1=Math.log(10000000),Y0=20,Y1=54;
+function px(n){return L+(Math.log(n)-X0)/(X1-X0)*(W-L-R);}
+function py(v){return T+(1-(v-Y0)/(Y1-Y0))*(H-T-B);}
+function txt(t,x,y){ctx.fillText(t,Math.round(x),Math.round(y));}
+function setup(){
+W=cv.clientWidth;narrow=W<560;H=narrow?300:320;
+cv.style.height=H+'px';
+if(cv.clientHeight&&cv.clientHeight!==H){cv.style.height=(2*H-cv.clientHeight)+'px';}
+var dpr=window.devicePixelRatio||1;
+cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+}
+function draw(){
+ctx.clearRect(0,0,W,H);
+var i,xt=[[100000,'100,000'],[1000000,'1,000,000'],[10000000,'10,000,000']],yt=[25,30,40,50];
+ctx.font='11px sans-serif';ctx.textBaseline='middle';ctx.textAlign='right';
+for(i=0;i<yt.length;i++){
+ctx.strokeStyle='#eceff1';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,Math.round(py(yt[i]))+0.5);ctx.lineTo(W-R,Math.round(py(yt[i]))+0.5);ctx.stroke();
+ctx.fillStyle='#607d8b';txt(yt[i]+'%',L-8,py(yt[i]));
+}
+ctx.textBaseline='top';
+for(i=0;i<xt.length;i++){
+ctx.strokeStyle='#eceff1';ctx.beginPath();ctx.moveTo(Math.round(px(xt[i][0]))+0.5,T);ctx.lineTo(Math.round(px(xt[i][0]))+0.5,H-B);ctx.stroke();
+ctx.fillStyle='#607d8b';ctx.textAlign=i===2?'right':'center';txt(xt[i][1],px(xt[i][0]),H-B+7);
+}
+ctx.textAlign='center';ctx.fillStyle='#607d8b';
+txt(narrow?'rounds (each step is 10× more)':'rounds run (logarithmic: each gridline is 10× more)',L+(W-L-R)/2,H-B+24);
+ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(L,py(50));ctx.lineTo(W-R,py(50));ctx.stroke();
+ctx.fillStyle='#2e7d32';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.textBaseline='bottom';
+txt(narrow?"Kelly's fixed point: 50%":"Kelly's fixed point: an equal 50% share",L+4,py(50)-5);
+ctx.strokeStyle='#263238';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();
+for(i=0;i<DATA.length;i++){if(i===0)ctx.moveTo(px(DATA[i][0]),py(DATA[i][1]));else ctx.lineTo(px(DATA[i][0]),py(DATA[i][1]));}
+ctx.stroke();
+for(i=0;i<MARK.length;i++){
+var m=MARK[i],x=px(m[0]),y=py(m[1]),last=i===3,left=i>=2;
+ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,4.5,0,6.2832);ctx.fill();
+ctx.strokeStyle='#263238';ctx.lineWidth=2;ctx.stroke();
+ctx.textAlign=left?'right':'left';ctx.textBaseline='top';
+var tx=left?x-9:x-4,ty=last?y+10:(left?y-8:y+10);
+ctx.fillStyle='#263238';ctx.font='bold 14px sans-serif';txt(m[2],tx,ty);
+if(!narrow||i===0){ctx.fillStyle='#607d8b';ctx.font='11px sans-serif';txt(narrow?'at 80,000 rounds':m[3],tx,ty+17);}
+}
+ctx.fillStyle='#263238';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+txt("SLOW FLOW'S SHARE OF CAPACITY",L,9);
+}
+function start(){if(cv.clientWidth<10){requestAnimationFrame(start);return;}setup();draw();}
+start();
+window.addEventListener('resize',function(){setup();draw();});
+})();
+</script>
+<figcaption>The 74.3%/25.7% split in the table is one point on this curve, read at 80,000 rounds. Left running, the slow flow's share keeps climbing and reaches Kelly's equal split after roughly ten million rounds. The mechanism's guarantee is the green line, and what a flow experiences is wherever on the curve the deployment happens to be.</figcaption>
+</div>
 
 The idealized row in the table is not "a faster price." It is the same fixed point substituted in directly, {% katex() %}\text{price} = (w_1+w_2)/\text{capacity}{% end %}, with no gradient approach to run at all. That is why it lands exactly on 50/50 and 75/25 regardless of which flow reacts faster: it is not approximating the equilibrium under favorable timing, it already is the equilibrium.
 
@@ -501,7 +564,22 @@ Everything above argues that Cyclic Adaptive Regulation is statistically require
 
 ### The Model
 
-This is a different question from [The Simulation Singularity](@/blog/2026-09-13/index.md)'s crossover, and it needs its own achievable-region model before any number gets solved. [The Simulation Singularity](@/blog/2026-09-13/index.md) compared the cost of exploring against the cost of an unpriced incident: a one-time engineering choice against an open-ended risk. This section compares two ways of paying for the same activity, ongoing validation, over an operating horizon of {% katex() %}N{% end %} months. A team can keep paying a recurring cost every cycle, forever, or pay a larger cost once and a smaller recurring cost afterward. At any given {% katex() %}N{% end %}, a rational team pays whichever of the two is smaller. The achievable region is the lower envelope of both cost curves, not either curve alone.
+This is a different question from [The Simulation Singularity](@/blog/2026-09-13/index.md)'s crossover, and it needs its own achievable-region model before any number gets solved. [The Simulation Singularity](@/blog/2026-09-13/index.md) compared the cost of exploring against the cost of an unpriced incident: a one-time engineering choice against an open-ended risk. This section compares two ways of paying for the same activity, ongoing validation, over an operating horizon of {% katex() %}N{% end %} months. A team can keep paying a recurring cost every cycle, forever, or pay a larger cost once and a smaller recurring cost afterward. At any given {% katex() %}N{% end %}, a rational team pays whichever of the two is smaller. Definition 2a below states that choice as the lower envelope of the achievable region's frontier.
+
+<span id="def-2a"></span>
+
+<details>
+<summary>Definition 2a -- Validation-Cost Achievable Region: every validation path over a horizon of N months is a point in one-time cost and cumulative recurring cost</summary>
+
+**Definition 2a** (Validation-Cost Achievable Region). Over an operating horizon of {% katex() %}N{% end %} months, each available validation path maps to a point {% katex() %}(\text{one-time cost},\ \text{cumulative recurring cost}){% end %}: the one-shot path sits at {% katex() %}(0,\ c_{\text{test}} \cdot N){% end %}, the cyclic-infrastructure path at {% katex() %}(B,\ c_{\text{maint}} \cdot N){% end %}. The achievable region is the set of such points across the paths available at that {% katex() %}N{% end %}; its frontier is the non-dominated set. Both coordinates are priced in the same unit, so total cost at a point is their sum, and the lower envelope of the two paths' total-cost lines, not either line alone, is what a rational team pays.
+
+where:
+
+- "one-time cost" is the up-front spend a path requires before it starts paying for itself: zero for the one-shot path, {% katex() %}B{% end %} for the cyclic path
+- "cumulative recurring cost" is the ongoing spend accrued over the full {% katex() %}N{% end %} months: {% katex() %}c_{\text{test}} \cdot N{% end %} for repeated one-shot testing, {% katex() %}c_{\text{maint}} \cdot N{% end %} for the maintained cyclic policy
+- this is the same achievable-region and frontier structure as [The Impossibility Tax](@/blog/2026-03-14/index.md#def-1)'s Definition 1, applied to two cost paths rather than to a system's operating points
+
+</details>
 
 | Symbol | Meaning | Value | Status | Derived from |
 |---|---|---|---|---|

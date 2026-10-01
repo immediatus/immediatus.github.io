@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "Safe in Probability, Not in Size"
-description = "A perpetual probe is a mathematical necessity that terrifies change management. This post builds the boundary a reviewer approves once, a discrete-time stochastic control barrier function, then does what this series always does to its apparatus: names the gap. Bounding the probability of an excursion says nothing about the blast radius. Under a heavy tail, a probability bound alone can certify a system as safe while its worst case runs four orders of magnitude past what a reviewer thought they signed off on."
+description = "A permanent probe needs a boundary a reviewer can approve once. This post builds it as a discrete-time stochastic control barrier function, then names its gap: bounding how often a system leaves its safe region says nothing about how far it goes. Under a heavy tail, the worst case can run four orders of magnitude past what the reviewer signed."
 date = 2026-09-24
 slug = "cost-of-knowing-part3-safe-in-probability-not-in-size"
 draft = false
@@ -14,7 +14,7 @@ series = ["cost-of-knowing"]
 toc = false
 series_order = 3
 series_title = "The Cost of Knowing: Dual Control, Bounded Probing, and the Limits of Forward Simulation"
-series_description = """<div class="series-lede">Your simulator has never once been wrong about the past.</div>Every engineer trusts a simulation right up until it is wrong in a way the simulation itself was built never to notice. This series is an audit of that trust, run against congruence bias, the specific paradox of building a check that can only ever agree with you, and against a real production incident, until the audit produces its math. Each part stands on a formal result from its discipline and prices one piece of the same underlying question, without assuming in advance which part, if any, closes it. Every post ends the same way, by naming the exact number at which its recommendation reverses, because an architecture is only as honest as the failure condition it names, and one that names none was never engineered, only decorated."""
+series_description = """<div class="series-lede">Every simulation answers one question and raises three new ones.</div>A simulator validated against history has never once been wrong about the past, which is why its clean result is so easy to mistake for evidence. This series asks when to stop simulating and start learning from live operation. Each part prices one step: what refusing to explore really costs, how a controller can measure while it operates, what a safety boundary has to bound, and the point where one more simulation costs more than it can teach. Every part ends by naming the condition under which its own recommendation reverses. An architecture is only as honest as the failure condition it names."""
 +++
 
 [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) ended with a design, not a resolution. The platform team's admission-control layer no longer sits still and trusts history, and it no longer burns a two-week canary window hoping to catch the one regime it already suspects. It runs Cyclic Adaptive Regulation: a control action that treats its ordinary operation as a continuous measurement. It cycles between regulating and probing the way TCP BBR has been doing at internet scale since 2016. Proposition 2 said this is mathematically necessary. It said nothing about who signs off on it.
@@ -56,269 +56,7 @@ A control barrier function is a different kind of object. Instead of enumerating
 
 Whether it actually does that is not a question to take on faith. The rest of this post spends its effort on how much that promise is worth, and where it runs out.
 
-<div style="margin:1.5em 0;">
-<canvas id="chart-retry-storm" aria-label="An interactive simulation of the same 8-executor admission-control queue described below: a queue-depth bar out of 200 with the Rejection Threshold marked, a grid of 8 executor slots lit by how many are currently busy, a scrolling chart of queue depth over the last 60 simulated seconds, and a status line reporting the current state, DRAINING, STEADY, or STUCK ABOVE CEILING, queue depth, busy executor count, joint clearing rate, and admitted rate. Four sliders control Base Traffic, Dependency Health, Rejection Threshold, and Rejection Sensitivity; a button triggers a single health dip and recovery on the same schedule the post's reference implementation uses; a Reset link restarts the simulation from an empty queue." style="width:100%; aspect-ratio:700/460; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
-<div style="display:flex; flex-wrap:wrap; gap:0.6em 1.4em; align-items:flex-end; justify-content:center; margin-top:0.75em; font-size:0.82em;">
-<label style="display:flex; flex-direction:column; align-items:center;">Base Traffic: <span id="chart-retry-storm-basetraffic-val" style="display:inline-block; min-width:3ch; text-align:right; font-variant-numeric:tabular-nums;">60</span> req/s<input type="range" id="chart-retry-storm-basetraffic" min="0" max="150" step="1" value="60" style="width:120px;"></label>
-<label style="display:flex; flex-direction:column; align-items:center;">Dependency Health: <span id="chart-retry-storm-health-val" style="display:inline-block; min-width:3ch; text-align:right; font-variant-numeric:tabular-nums;">100</span>%<input type="range" id="chart-retry-storm-health" min="10" max="100" step="1" value="100" style="width:120px;"></label>
-<label style="display:flex; flex-direction:column; align-items:center;">Rejection Threshold: <span id="chart-retry-storm-threshold-val" style="display:inline-block; min-width:4ch; text-align:right; font-variant-numeric:tabular-nums;">0.70</span><input type="range" id="chart-retry-storm-threshold" min="0.3" max="1.0" step="0.01" value="0.7" style="width:120px;"></label>
-<label style="display:flex; flex-direction:column; align-items:center;">Rejection Sensitivity: <span id="chart-retry-storm-sensitivity-val" style="display:inline-block; min-width:3ch; text-align:right; font-variant-numeric:tabular-nums;">0</span>%<input type="range" id="chart-retry-storm-sensitivity" min="0" max="100" step="1" value="0" style="width:120px;"></label>
-<button type="button" id="chart-retry-storm-dip" style="font-size:1em; padding:0.25em 0.6em;">Trigger health dip</button>
-<a href="#" id="chart-retry-storm-reset" style="font-size:1em;">Reset</a>
-</div>
-<script>
-(function(){
-var cv=document.getElementById('chart-retry-storm');
-if(!cv)return;
-var ctx=cv.getContext('2d');
-var W,H,dpr;
-// MODEL (pure simulation; everything after it only draws)
-var N=8,C=4,R=37.5,QUEUE_CAP=200,MODEL_DT=0.02;
-var DIP_STEADY=100,DIP_FLOOR=10,DIP_PRE=10,DIP_DOWN=5,DIP_LOWHOLD=2,DIP_UP=5;
-var DIP_END=DIP_PRE+DIP_DOWN+DIP_LOWHOLD+DIP_UP;
-function perSlotRate(numBusy){return numBusy<=C?R:R*Math.pow(C/numBusy,2);}
-function jointRate(nBusy,healthPct){if(nBusy<=0)return 0;return nBusy*perSlotRate(nBusy)*(healthPct/100);}
-function healthSingleDip(t,steady,floor){
-if(t<DIP_PRE)return steady;
-t-=DIP_PRE;
-if(t<DIP_DOWN)return steady+(floor-steady)*(t/DIP_DOWN);
-t-=DIP_DOWN;
-if(t<DIP_LOWHOLD)return floor;
-t-=DIP_LOWHOLD;
-if(t<DIP_UP)return floor+(steady-floor)*(t/DIP_UP);
-return steady;
-}
-function stepModel(state,params,dt){
-var q=state.q;
-var occ=q/QUEUE_CAP;
-var rejectFrac=0;
-if(params.rejectionSensitivity>0&&occ>=params.rejectionThreshold){
-var span=Math.max(1e-9,1-params.rejectionThreshold);
-var push=Math.min(1,(occ-params.rejectionThreshold)/span);
-rejectFrac=push*(params.rejectionSensitivity/100);
-}
-var admitted=params.baseTraffic*(1-rejectFrac);
-var nBusy=q>0?Math.min(N,Math.ceil(q)):0;
-var service=jointRate(nBusy,params.health);
-var cleared=Math.min(service*dt,q);
-var qNext=Math.max(0,Math.min(QUEUE_CAP,q+admitted*dt-cleared));
-return {q:qNext,nBusy:nBusy,service:service,admitted:admitted};
-}
-// end of MODEL section; everything below is display/interaction only
-var SIM_SPEED=8,HISTORY_WINDOW=60,SAMPLE_EVERY=0.1;
-var baseTraffic=60,healthSlider=100,rejectionThreshold=0.7,rejectionSensitivity=0;
-var q=0,simTime=0,subAcc=0,lastSampleT=-1;
-var dipActive=false,dipT=0;
-var lastNBusy=0,lastService=0,lastAdmitted=0;
-var history=[];
-var lastTs=null,runId=0;
-var reducedMotion=(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)||false;
-var elBase=document.getElementById('chart-retry-storm-basetraffic');
-var elBaseVal=document.getElementById('chart-retry-storm-basetraffic-val');
-var elHealth=document.getElementById('chart-retry-storm-health');
-var elHealthVal=document.getElementById('chart-retry-storm-health-val');
-var elThresh=document.getElementById('chart-retry-storm-threshold');
-var elThreshVal=document.getElementById('chart-retry-storm-threshold-val');
-var elSens=document.getElementById('chart-retry-storm-sensitivity');
-var elSensVal=document.getElementById('chart-retry-storm-sensitivity-val');
-var elDip=document.getElementById('chart-retry-storm-dip');
-var elReset=document.getElementById('chart-retry-storm-reset');
-function currentHealth(){
-if(dipActive)return healthSingleDip(dipT,healthSlider,DIP_FLOOR);
-return healthSlider;
-}
-function setup(){
-var rect=cv.getBoundingClientRect();
-dpr=window.devicePixelRatio||1;
-cv.width=rect.width*dpr;
-cv.height=rect.height*dpr;
-ctx.setTransform(dpr,0,0,dpr,0,0);
-W=rect.width;H=rect.height;
-}
-function barGeom(){
-return {x:16,y:14,w:44,h:150};
-}
-function exGeom(){
-var b=barGeom();
-return {x:b.x+b.w+34,y:b.y,w:W-(b.x+b.w+34)-16,h:b.h};
-}
-function tsGeom(){
-var b=barGeom();
-return {x:b.x,y:b.y+b.h+38,w:W-b.x-16,h:H-(b.y+b.h+38)-52};
-}
-function drawBar(){
-var g=barGeom();
-var frac=Math.min(1,q/QUEUE_CAP);
-var over=frac>=0.999;
-var pastThresh=frac>=rejectionThreshold;
-var fillColor=over?'#e57373':(pastThresh?'#ffb74d':'#90caf9');
-var borderColor=over?'#c0392b':(pastThresh?'#e65100':'#999');
-ctx.fillStyle='#fff';ctx.strokeStyle=borderColor;ctx.lineWidth=over?2:1.5;
-ctx.beginPath();
-if(ctx.roundRect)ctx.roundRect(g.x,g.y,g.w,g.h,4);else ctx.rect(g.x,g.y,g.w,g.h);
-ctx.fill();ctx.stroke();
-ctx.save();ctx.beginPath();
-if(ctx.roundRect)ctx.roundRect(g.x,g.y,g.w,g.h,4);else ctx.rect(g.x,g.y,g.w,g.h);
-ctx.clip();
-ctx.fillStyle=fillColor;
-ctx.fillRect(g.x,g.y+g.h*(1-frac),g.w,g.h*frac);
-ctx.restore();
-var ty=g.y+g.h*(1-rejectionThreshold);
-ctx.strokeStyle='#c0392b';ctx.lineWidth=1.3;ctx.setLineDash([3,3]);
-ctx.beginPath();ctx.moveTo(g.x-4,ty);ctx.lineTo(g.x+g.w+4,ty);ctx.stroke();
-ctx.setLineDash([]);
-ctx.fillStyle='#333';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
-ctx.fillText('QUEUE',g.x+g.w/2,g.y-4);
-ctx.font='10px monospace';ctx.fillStyle='#444';ctx.textBaseline='top';
-ctx.fillText(String(Math.round(q)).padStart(3,' ')+'/'+QUEUE_CAP,g.x+g.w/2,g.y+g.h+4);
-}
-function drawExecutors(){
-var g=exGeom();
-ctx.fillStyle='#333';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.textBaseline='bottom';
-ctx.fillText('EXECUTORS ('+lastNBusy+' / '+N+' busy)',g.x,g.y-4);
-var cols=4,rows=2,gap=8;
-var cw=(g.w-gap*(cols-1))/cols,ch=(g.h-gap*(rows-1))/rows;
-for(var i=0;i<N;i++){
-var col=i%cols,row=Math.floor(i/cols);
-var x=g.x+col*(cw+gap),y=g.y+row*(ch+gap);
-var busy=i<lastNBusy;
-ctx.fillStyle=busy?'#42a5f5':'#fff';
-ctx.strokeStyle=busy?'#1565c0':'#bbb';
-ctx.lineWidth=1.3;
-ctx.beginPath();
-if(ctx.roundRect)ctx.roundRect(x,y,cw,ch,3);else ctx.rect(x,y,cw,ch);
-ctx.fill();ctx.stroke();
-}
-}
-function drawTimeseries(){
-var g=tsGeom();
-ctx.strokeStyle='#555';ctx.lineWidth=1;
-ctx.strokeRect(g.x,g.y,g.w,g.h);
-ctx.fillStyle='#333';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.textBaseline='bottom';
-ctx.fillText('QUEUE DEPTH, LAST 60 SIMULATED SECONDS',g.x,g.y-4);
-var ty=g.y+g.h*(1-rejectionThreshold);
-ctx.strokeStyle='#c0392b';ctx.lineWidth=1;ctx.setLineDash([3,3]);
-ctx.beginPath();ctx.moveTo(g.x,ty);ctx.lineTo(g.x+g.w,ty);ctx.stroke();
-ctx.setLineDash([]);
-var t0=Math.max(0,simTime-HISTORY_WINDOW);
-ctx.strokeStyle='#2980b9';ctx.lineWidth=1.8;ctx.beginPath();
-for(var i=0;i<history.length;i++){
-var p=history[i];
-if(p.t<t0)continue;
-var px=g.x+((p.t-t0)/HISTORY_WINDOW)*g.w;
-var py=g.y+g.h*(1-Math.min(1,p.q/QUEUE_CAP));
-if(i===0||history[i-1].t<t0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
-}
-ctx.stroke();
-}
-function stateInfo(){
-var stuck=lastNBusy>=N&&lastAdmitted>=lastService-1e-9;
-var draining=false;
-if(history.length>2){
-var target=simTime-1;
-var ref=history[0];
-for(var i=history.length-1;i>=0;i--){if(history[i].t<=target){ref=history[i];break;}}
-draining=(q-ref.q)<-1;
-}
-if(stuck)return{label:'STUCK ABOVE CEILING',color:'#8e0000'};
-if(draining)return{label:'DRAINING',color:'#2e7d32'};
-return{label:'STEADY',color:'#1565c0'};
-}
-function drawStatus(){
-var s=stateInfo();
-var barH=Math.max(20,H*0.09),bx=6,by=H-barH-4,bw=W-12;
-ctx.fillStyle='rgba(255,255,255,0.94)';ctx.strokeStyle=s.color;ctx.lineWidth=1.5;
-ctx.beginPath();
-if(ctx.roundRect)ctx.roundRect(bx,by,bw,barH,5);else ctx.rect(bx,by,bw,barH);
-ctx.fill();ctx.stroke();
-function pad(v,n){return String(v).padStart(n,' ');}
-var text=s.label.padEnd(19,' ')+'   QUEUE '+pad(Math.round(q),3)+'/'+QUEUE_CAP+'   BUSY '+lastNBusy+'/'+N+'   CLEARING '+pad(lastService.toFixed(1),5)+' req/s   ADMITTED '+pad(lastAdmitted.toFixed(1),5)+' req/s';
-var fsz=Math.max(9,Math.round(barH*0.34));ctx.font='bold '+fsz+'px monospace';while(fsz>6&&ctx.measureText(text).width>bw-12){fsz--;ctx.font='bold '+fsz+'px monospace';}ctx.textAlign='center';ctx.textBaseline='middle';
-ctx.fillStyle=s.color;
-ctx.fillText(text,W/2,by+barH/2+1);
-}
-function draw(){
-ctx.clearRect(0,0,W,H);
-drawBar();
-drawExecutors();
-drawTimeseries();
-drawStatus();
-}
-function advance(simDt){
-subAcc+=simDt;
-while(subAcc>=MODEL_DT){
-var params={baseTraffic:baseTraffic,health:currentHealth(),rejectionThreshold:rejectionThreshold,rejectionSensitivity:rejectionSensitivity};
-var res=stepModel({q:q},params,MODEL_DT);
-q=res.q;lastNBusy=res.nBusy;lastService=res.service;lastAdmitted=res.admitted;
-simTime+=MODEL_DT;
-if(dipActive){dipT+=MODEL_DT;if(dipT>=DIP_END)dipActive=false;}
-if(simTime-lastSampleT>=SAMPLE_EVERY){history.push({t:simTime,q:q});lastSampleT=simTime;}
-subAcc-=MODEL_DT;
-}
-var cutoff=simTime-HISTORY_WINDOW-1;
-while(history.length&&history[0].t<cutoff)history.shift();
-}
-function frame(ts,myRun){
-if(myRun!==runId)return;
-if(lastTs===null)lastTs=ts;
-var realDt=Math.min(0.25,(ts-lastTs)/1000);
-lastTs=ts;
-advance(realDt*SIM_SPEED);
-draw();
-scheduleNext(myRun);
-}
-function scheduleNext(myRun){
-if(reducedMotion){setTimeout(function(){frame(performance.now(),myRun);},250);}
-else{requestAnimationFrame(function(ts){frame(ts,myRun);});}
-}
-function startLoop(){
-runId+=1;
-var myRun=runId;
-lastTs=null;
-scheduleNext(myRun);
-}
-function trySetupAndStart(){
-var rect=cv.getBoundingClientRect();
-if(rect.width<10||rect.height<10){requestAnimationFrame(trySetupAndStart);return;}
-setup();
-draw();
-startLoop();
-}
-function syncSliderLabels(){
-elBaseVal.textContent=baseTraffic;
-elHealthVal.textContent=healthSlider;
-elThreshVal.textContent=rejectionThreshold.toFixed(2);
-elSensVal.textContent=rejectionSensitivity;
-}
-function resetAll(){
-q=0;simTime=0;subAcc=0;lastSampleT=-1;dipActive=false;dipT=0;history=[];
-baseTraffic=60;healthSlider=100;rejectionThreshold=0.7;rejectionSensitivity=0;
-elBase.value=baseTraffic;elHealth.value=healthSlider;elThresh.value=rejectionThreshold;elSens.value=rejectionSensitivity;
-syncSliderLabels();
-}
-elBase.addEventListener('input',function(){baseTraffic=parseFloat(elBase.value);syncSliderLabels();});
-elHealth.addEventListener('input',function(){healthSlider=parseFloat(elHealth.value);syncSliderLabels();});
-elThresh.addEventListener('input',function(){rejectionThreshold=parseFloat(elThresh.value);syncSliderLabels();});
-elSens.addEventListener('input',function(){rejectionSensitivity=parseFloat(elSens.value);syncSliderLabels();});
-elDip.addEventListener('click',function(){dipActive=true;dipT=0;});
-elReset.addEventListener('click',function(e){e.preventDefault();resetAll();});
-syncSliderLabels();
-if('IntersectionObserver' in window){
-new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();trySetupAndStart();}},{threshold:0.2}).observe(cv);
-}else{trySetupAndStart();}
-window.addEventListener('resize',function(){setup();draw();});
-})();
-</script>
-<figcaption>Figure 3: this post's admission-control model, live, ported line for line from its reference implementation. Set Base Traffic to 70, leave Rejection Sensitivity at 0, and click "Trigger health dip": the queue climbs during the dip and drains back down on its own, slowly, once Dependency Health recovers. Raise Base Traffic to 76 and trigger a dip again: the queue climbs to the cap and stays pinned there even after Dependency Health returns to 100 percent, the joint-ceiling behavior the prose below derives. Now, still at Base Traffic 80, raise Rejection Sensitivity toward 100 and watch the queue stop pinning at the cap, though it keeps oscillating rather than settling, the same gap between rejecting early and merely reducing severity the Model Scope table below states.</figcaption>
-</div>
-
-This system is 8 concurrent executors pulling from a Redis-style backlog, calling a downstream dependency directly. Below 75 requests per second, a health dip still costs a real, growing recovery delay as traffic approaches that line. The queue drains on its own, eventually. At or above 75, all 8 executors staying simultaneously saturated caps joint throughput below arrivals permanently. The queue then does not drain on its own at any Health setting. That is a genuine, derived threshold, not a tuned one.
-
-Raising Rejection Sensitivity does not add capacity downstream does not have. It removes enough admitted demand that the executors stop being simultaneously saturated, which is the only lever in this model that touches the actual cause. That gate is this model's literal instance of Definition 3's filter: the threshold parameter is {% katex() %}\mathcal{C}{% end %}'s boundary, and Rejection Sensitivity is how hard the filter pushes back once the state gets close to it.
-
-Notice the mechanism driving that behavior with the admission gate off, since Definition 3 is built specifically to bound it. Downstream health scales each executor's clearing rate directly. A second, independent effect comes from how many of the 8 executors are simultaneously busy. At or below 4 concurrent requests, each executor clears at its full rate. Past that comfortable concurrency, real contention sets in: lock contention, connection-pool pressure, the kind of thing a shared, contended resource always produces past its comfortable load. That contention degrades every busy executor's rate, not just the newest arrival's.
-
-{{ layer(n=3, type="Estimate", id="model-that-degradation-the-sam") }}Model that degradation the same way this post's reference implementation does: per-executor rate proportional to {% katex() %}(C/n)^2{% end %} once {% katex() %}n{% end %} concurrent requests exceed the comfortable count {% katex() %}C{% end %}. The joint, worst-case throughput at full saturation, all 8 executors busy at once, has an exact closed form:
+This system is 8 concurrent executors pulling from a shared backlog and calling a downstream dependency directly, with a comfortable concurrency of 4. Two separate rules govern how fast it clears work, and each sounds reasonable in isolation. Downstream health scales every executor's clearing rate directly: a degraded dependency slows every request in flight, not only the newest one. Past the comfortable concurrency, contention does the same thing for a different reason, the cost any shared, contended resource exacts once more than a few workers draw on it at once: lock contention, connection-pool pressure, memory pressure. {{ layer(n=3, type="Estimate", id="model-that-degradation-the-sam") }}Model that second effect the way this post's reference model does, a per-executor rate proportional to {% katex() %}(C/n)^2{% end %} once {% katex() %}n{% end %} concurrent requests exceed {% katex() %}C{% end %}. The joint, worst-case throughput at full saturation, all 8 executors busy, has an exact closed form:
 
 {% katex(block=true) %}
 \text{Rate}_{\max} = P \cdot s \cdot \left(\frac{C}{P}\right)^2 = \frac{s C^2}{P}
@@ -330,38 +68,28 @@ where:
 - {% katex() %}C{% end %} is the comfortable concurrency
 - {% katex() %}P{% end %} is the executor pool size
 
-With this model's numbers, {% katex() %}s=37.5{% end %}, {% katex() %}C=4{% end %}, {% katex() %}P=8{% end %}, that ceiling is exactly 75 requests per second, verified directly against this post's reference implementation, not asserted. Push Base Traffic below 75, and a health dip costs a real, growing recovery delay before the queue drains unaided. That delay runs from single digits (9.0 seconds at Base Traffic 55) well into the hundreds (386.1 seconds at Base Traffic 74.5) as traffic approaches 75. Push it to 75 or above, with the same health-dip schedule, and the queue does not drain at any Health setting. Base Traffic 75 itself is already pinned at the queue cap, 200 out of 200, after 400 simulated seconds, the same outright saturation Base Traffic 76 and above also reach. The widget above lets a reader trigger that same dip directly and watch the difference between recovering and pinning.
-
-Nothing in the system is broken. Every rule fired as designed. The composition of two individually reasonable rules, health-scaled clearing and contention-scaled clearing, produces a real threshold neither rule alone predicts, which is the entire reason a rulebook approach cannot be trusted to catch it in advance.
+With this model's numbers, {% katex() %}s=37.5{% end %}, {% katex() %}C=4{% end %}, {% katex() %}P=8{% end %}, that ceiling is exactly 75 requests per second, verified directly against this post's reference model, not asserted. Nothing in the system is broken to produce it. Every rule fired as designed. Health-scaled clearing and contention-scaled clearing are each, on their own, an ordinary and defensible modeling choice. Composed, they produce a real threshold neither rule alone predicts, which is the entire reason a rulebook approach cannot be trusted to catch it in advance.
 
 <details>
 <summary>Deeper: the 1/N shape is not an arbitrary choice. Gunther's USL forces a 1/N tail for any coherency-dominated system.</summary>
 
 {{ layer(n=1, type="Bound", id="the-1-n-tail-this-models-own") }}The 1/N tail this model's numbers show is not a power chosen to fit the data after the fact. Gunther's Universal Scalability Law prices exactly this class of system: throughput as a function of concurrency {% katex() %}n{% end %}, {% katex() %}X(n) = \gamma n / (1 + \sigma(n-1) + \kappa n(n-1)){% end %}. Here {% katex() %}\sigma{% end %} prices ordinary queueing contention and {% katex() %}\kappa{% end %} prices a coherency penalty, the cost of cross-talk between concurrently active workers that grows with every additional pair of them{{ cite(ref="1", title="Gunther, N.J. (2008) -- A General Theory of Computational Scalability Based on Rational Functions, arXiv:0808.1431") }}. A system where contention is negligible next to the coherency cost, {% katex() %}\sigma \approx 0{% end %}, the case this model's executors are in, degrades to {% katex() %}X(n) = \gamma n / (1 + \kappa n(n-1)){% end %}. For large {% katex() %}n{% end %} the {% katex() %}\kappa n^2{% end %} term dominates the denominator, forcing {% katex() %}X(n) \to \gamma / (\kappa n){% end %}. Throughput falling as 1/N is not this model's invention. It is the structural signature any bounded-capacity system with a genuine coherency penalty, and negligible contention, is required to show, regardless of its specific numbers.
 
-{{ layer(n=3, type="Estimate", id="what-usl-does-not-do-is-repr") }}What USL does not do is reproduce this post's piecewise {% katex() %}(C/n)^2{% end %} formula at every {% katex() %}n{% end %}. The two curves share only the same asymptotic tail; they are not the same function. USL degrades smoothly starting at {% katex() %}n=1{% end %}, where this model holds a full, undegraded rate up to {% katex() %}C{% end %} and only bends past it, a modeling simplification of its own. A {% katex() %}\sigma \approx 0{% end %} USL curve can be fit two ways, both stated exactly rather than left as "a fit". First, {% katex() %}\gamma = 37.5{% end %}, matching this model's comfortable-load rate at {% katex() %}n=1{% end %}. Second, {% katex() %}\kappa = 1/C^2 = 0.0625{% end %}, chosen so USL's peak-throughput concurrency, {% katex() %}\sqrt{1/\kappa}{% end %} in the {% katex() %}\sigma=0{% end %} case, lands on this model's comfortable concurrency {% katex() %}C=4{% end %}. That is the concurrency past which this model's degradation starts. At {% katex() %}n=8{% end %}, the concurrency this post's reference implementation actually runs, that curve gives roughly 67 requests per second, not the 75 this post derives and verifies directly against its code. The 75 figure stays what it already was: this post's reference implementation's result, checked against its code, not re-derived from Gunther's formula. What the formula licenses is narrower and still real. The shape of the collapse, decay as 1/N rather than some other exponent, is required of any coherency-dominated system in general. It is not a curve chosen because it happened to fit this one running case.
+{{ layer(n=3, type="Estimate", id="what-usl-does-not-do-is-repr") }}What USL does not do is reproduce this post's piecewise {% katex() %}(C/n)^2{% end %} formula at every {% katex() %}n{% end %}. The two curves share only the same asymptotic tail; they are not the same function. USL degrades smoothly starting at {% katex() %}n=1{% end %}, where this model holds a full, undegraded rate up to {% katex() %}C{% end %} and only bends past it, a modeling simplification of its own. A {% katex() %}\sigma \approx 0{% end %} USL curve can be fit two ways, both stated exactly rather than left as "a fit". First, {% katex() %}\gamma = 37.5{% end %}, matching this model's comfortable-load rate at {% katex() %}n=1{% end %}. Second, {% katex() %}\kappa = 1/C^2 = 0.0625{% end %}, chosen so USL's peak-throughput concurrency, {% katex() %}\sqrt{1/\kappa}{% end %} in the {% katex() %}\sigma=0{% end %} case, lands on this model's comfortable concurrency {% katex() %}C=4{% end %}. That is the concurrency past which this model's degradation starts. At {% katex() %}n=8{% end %}, the concurrency this post's reference model actually runs, that curve gives roughly 67 requests per second, not the 75 this post derives and verifies directly against its code. The 75 figure stays what it already was: this post's reference model's result, checked against its code, not re-derived from Gunther's formula. What the formula licenses is narrower and still real. The shape of the collapse, decay as 1/N rather than some other exponent, is required of any coherency-dominated system in general. It is not a curve chosen because it happened to fit this one running case.
 
 </details>
 
 ### Naming the Shape: Metastability, Not an Invented Trap
 
-{{ layer(n=2, type="Fit", id="metastable-fit") }}This section has called the queue's stuck state "METASTABLE" since its first draft. That word turns out to have been earned rather than merely aspirational, once the underlying mechanism is built honestly. A metastable state, in the dynamical-systems sense, is a state whose relaxation time back to the one true equilibrium is anomalously long, not a second, permanent trap sitting next to it. It is long enough that a system observed only briefly looks stuck even though it is not.
-
-That is what the recovery-time sweep above shows below the 75-per-second line. There is not a second fixed point, only a single fixed point approached at a rate that collapses toward zero as traffic approaches the ceiling. That is the same qualitative signature physics calls critical slowing down near a bifurcation. Above the line, the system genuinely does gain a second, permanent state, not metastability but real bistability. At that point it is the joint throughput ceiling itself, rather than the approach to a single equilibrium, that traffic exceeds.
+{{ layer(n=2, type="Fit", id="metastable-fit") }}This section has called the queue's stuck state "METASTABLE" since its first draft, and the mechanism above earns that word rather than merely asserting it. A metastable state, in the dynamical-systems sense, is a state whose relaxation time back to the one true equilibrium is anomalously long, not a second, permanent trap sitting next to it. Below the derived ceiling, there is a single fixed point, approached ever more slowly as traffic nears it, the same qualitative signature physics calls critical slowing down near a bifurcation. At or above the ceiling, the system gains a second, permanent state, genuine bistability rather than metastability, because it is the joint throughput ceiling itself that traffic now exceeds.
 
 ### Why Rejecting Early Is Not Merely a Good Idea, It Is the Coordinated Equilibrium
 
-{{ layer(n=1, type="Bound", id="name-the-shape-of-the") }}The no-rejection baseline already has a name in game theory, and naming it matters for what follows. Eight executors independently pull from the same backlog, each accepting a job whenever one is available with no regard for how many others are already busy. That is a textbook congestion game: each player's payoff, in this case an individual executor's completion rate, depends on how many other players are simultaneously using the same shared, contended resource{{ cite(ref="2", title="Rosenthal, R.W. (1973) -- A class of games possessing pure-strategy Nash equilibria, International Journal of Game Theory, 2, 65-67") }}.
+{{ layer(n=1, type="Bound", id="name-the-shape-of-the") }}The no-rejection baseline already has a name in game theory. Eight executors independently pull from the same backlog, each accepting a job whenever one is available with no regard for how many others are already busy. That is a textbook congestion game: each player's payoff, an executor's completion rate, depends on how many others are simultaneously using the same shared, contended resource{{ cite(ref="2", title="Rosenthal, R.W. (1973) -- A class of games possessing pure-strategy Nash equilibria, International Journal of Game Theory, 2, 65-67") }}.
 
-The uncoordinated equilibrium, every idle executor pulls the instant a job is available, is the "no rejection" baseline above, and it is not the socially optimal outcome. An executor that pulls a tenth job while nine others are already contending for downstream lowers everyone's completion rate, an externality its decision never has to price. The gap between that uncoordinated equilibrium and the coordinated optimum has a name and a literature: the price of anarchy{{ cite(ref="3", title="Roughgarden, T. & Tardos, E. (2002) -- How bad is selfish routing?, Journal of the ACM, 49(2), 236-259") }}.
+The uncoordinated equilibrium, every idle executor pulling the instant a job is available, is not the socially optimal outcome. An executor that pulls an eighth job while seven others already contend for downstream lowers everyone's completion rate, an externality its decision never has to price. The gap between that equilibrium and the coordinated optimum has a name and a literature: the price of anarchy{{ cite(ref="3", title="Roughgarden, T. & Tardos, E. (2002) -- How bad is selfish routing?, Journal of the ACM, 49(2), 236-259") }}. {{ layer(n=3, type="Estimate", id="measured-directly-against-this") }}In this post's reference model, just past the ceiling, the uncoordinated baseline carries about a quarter more backlog-time, 24.7 percent, than the same schedule run with proactive rejection engaged. Proactive rejection is the policy a congestion game's players would adopt if they could bind themselves to a joint strategy instead of each pulling independently.
 
-{{ layer(n=3, type="Estimate", id="measured-directly-against-this") }}Measured directly against this post's reference implementation, the uncoordinated baseline (Rejection Sensitivity 0) costs 24.7 percent more total backlog-time as the social cost. That is compared to the same traffic and health schedule run with Rejection Sensitivity at 100 percent and Rejection Threshold at 0.7, at traffic just past the ceiling (Base Traffic 76). The measure sums total queue depth over a 1,200-simulated-second run of the repeating health cycle, discarding the first 60 seconds as transient. That gap narrows to 14.3 percent at Base Traffic 120 and continues to shrink at yet higher traffic, since a large enough excess eventually saturates any admission policy's ability to shed it. Both figures are this post's reference implementation's output, run once and reported here, not a number computed elsewhere and quietly substituted in. Rejection Sensitivity is this system's coordination mechanism, not an ad hoc patch bolted onto the executor pool from outside. It is the thing a congestion game's players would adopt if they could bind themselves to a joint policy instead of each pulling independently. It internalizes the externality each additional concurrent request imposes on every other request already in flight.
-
-What makes this different from an ordinary buffer is the entire reason rejecting early helps here rather than simply losing work. Standard queueing theory says a bigger buffer only ever helps or is neutral to long-run throughput, converting a burst into delay rather than into loss. That is the reasoning behind sizing a buffer for expected variability in supply-chain and networking practice alike. It assumes the server's service rate is fixed, a property of the server, independent of how many requests are currently waiting on it.
-
-This model's clearing rate is instead coupled to the queue's occupancy, a stand-in for a shared, contended resource: connection or thread-pool exhaustion, memory pressure from holding a large backlog, duplicate retries still consuming downstream capacity while their originals also wait. A deeper queue makes the server itself slower for every request already in it, not only for the newest arrival. Once that coupling holds, admitting one more request when the queue is already deep spends a little of everyone else's clearing capacity. It spends that capacity on a request that, at this occupancy, has a materially worse chance of clearing anyway, rather than storing it safely for later.
-
-Reject that request early and every other request already waiting clears faster, which is the entire mechanism behind this model's throughput numbers above. Remove the coupling, and this post's argument for rejecting early removes itself along with it: with a decoupled server, that same request would have been free to admit, and shedding it would have been pure loss. The Model Scope table below states this condition explicitly rather than leaving it implicit in this model's behavior.
+Rejecting early helps here, rather than simply losing work, for a reason that separates this model from an ordinary buffer. Standard queueing theory says a bigger buffer only ever helps or is neutral to long-run throughput, an argument that assumes the server's rate is fixed, independent of how many requests are waiting on it. This model's clearing rate is instead coupled to the queue's own occupancy, a stand-in for a shared, contended resource: connection or thread-pool exhaustion, memory pressure, duplicate retries consuming downstream capacity while their originals also wait. A deeper queue makes the server itself slower for every request already in it, not only the newest arrival. Admitting one more request when the queue is already deep spends a little of everyone else's clearing capacity on a request with a materially worse chance of clearing anyway. Reject it early instead and every other request already waiting clears faster. Remove the coupling and the argument removes itself along with it: with a decoupled server, shedding that same request would have been pure loss. The Model Scope table below states this condition explicitly.
 
 Six disciplines carry the argument from here:
 
@@ -450,17 +178,17 @@ Leaving the mapping between this model and Definition 3 for the reader to infer 
 
 | Definition 3's object | This model's version of it |
 |---|---|
-| State {% katex() %}x(t){% end %} | Queue depth (0 to 200) and downstream health (0 to 100 percent), the quantities Base Traffic and Dependency Health parameterize directly |
-| Barrier function {% katex() %}h(x){% end %} | A signed distance from a declared occupancy ceiling, most naturally {% katex() %}h(x) = (\text{Rejection Threshold}) - (\text{queue depth}/200){% end %}, zero exactly at the Rejection Threshold parameter's boundary |
-| Safe region {% katex() %}\mathcal{C} = \{h \geq 0\}{% end %} | Queue occupancy at or below whatever Rejection Threshold is currently set to; crossing it bounds the *chance* the queue gets deep, which is a different fact from whether it then drains, the exact probability-versus-magnitude gap "The Boundary Only Watches Probability" states below |
-| A filtered action | Literally the admission gate Rejection Sensitivity controls: at sensitivity 0, no fresh admission is ever filtered on account of occupancy, which is this model showing Definition 3's absence, not its presence; raising sensitivity makes the gate reject a growing share of arrivals once {% katex() %}h(x){% end %} approaches zero, exactly "modifying actions only enough to keep the probability bound satisfied" from Proposition 3, made literal and computable rather than asserted |
-| What the filter does *not* do | Fix downstream health, coordinate with any other service, or manufacture capacity downstream does not have: verified directly against this post's reference implementation, at Base Traffic 80, above the executor pool's 75-per-second joint ceiling, raising Rejection Sensitivity to 100 percent keeps the queue oscillating in a range of roughly 143.8 to 193.9 out of 200, well below the cap but never settling at a single level, and it does not drain to zero, versus 200 out of 200 with rejection off, because rejection can only shed admitted demand, and 80 exceeds what 8 executors can jointly clear even fully saturated regardless of admission policy |
+| State {% katex() %}x(t){% end %} | Queue depth (0 to 200) and downstream health (0 to 100 percent) |
+| Barrier function {% katex() %}h(x){% end %} | A signed distance from a declared occupancy ceiling, zero exactly at that ceiling |
+| Safe region {% katex() %}\mathcal{C} = \{h \geq 0\}{% end %} | Queue occupancy at or below the declared ceiling; crossing it bounds the *chance* the queue gets deep, which is a different fact from whether it then drains, the exact probability-versus-magnitude gap "The Boundary Only Watches Probability" states below |
+| A filtered action | Rejecting a growing share of arrivals as occupancy nears the ceiling, exactly "modifying actions only enough to keep the probability bound satisfied" from Proposition 3, made literal and computable rather than asserted |
+| What the filter does *not* do | Fix downstream health, coordinate with any other service, or manufacture capacity downstream does not have: above the executor pool's joint ceiling, verified directly against this post's reference model, the filter keeps the queue bounded without being able to drain it, because rejection can only shed admitted demand, and no admission policy can clear more than the pool's own joint rate |
 
-Return to this model once more with this table in hand. Every rule it encodes, health-scaled clearing, congestion-compounded clearing, retries re-entering as arrivals, was already justified on its own terms back in [The Simulation Singularity](@/blog/2026-09-13/index.md) and [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md). That last rule is doing more formal work than "retries happen" suggests. Base Traffic, the model's external arrival rate, is not the only source of arrivals once the composed rules above are running: a request that fails downstream and retries re-enters the same backlog as a new arrival. That is the partly-open construction [The Simulation Singularity](@/blog/2026-09-13/index.md) cited to explain why a load test built on a closed or purely open generator cannot manufacture a correlated-retry regime{{ cite(ref="10", title="Schroeder, B., Wierman, A. & Harchol-Balter, M. (2006) -- Open Versus Closed: A Cautionary Tale, NSDI '06: 3rd USENIX Symposium on Networked Systems Design and Implementation, 239-251") }}.
+Return to this model once more with this table in hand. Every rule it encodes, health-scaled clearing, congestion-compounded clearing, retries re-entering as arrivals, was already justified on its own terms back in [The Simulation Singularity](@/blog/2026-09-13/index.md) and [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md). That last rule is doing more formal work than "retries happen" suggests. External arrival traffic is not the only source of arrivals once the composed rules above are running: a request that fails downstream and retries re-enters the same backlog as a new arrival. That is the partly-open construction [The Simulation Singularity](@/blog/2026-09-13/index.md) cited to explain why a load test built on a closed or purely open generator cannot manufacture a correlated-retry regime{{ cite(ref="10", title="Schroeder, B., Wierman, A. & Harchol-Balter, M. (2006) -- Open Versus Closed: A Cautionary Tale, NSDI '06: 3rd USENIX Symposium on Networked Systems Design and Implementation, 239-251") }}.
 
-This model is a genuine instance of that construction in shape, beyond an analogy to it. Arrivals are open at the top, Base Traffic, and a request that fails downstream can re-enter the same backlog as a retry rather than simply leaving. That is the follow-up-request mechanism the partly-open model formalizes. This model's retry probability could be constant, the way Schroeder's {% katex() %}p{% end %} is, or it could rise as Dependency Health falls, the way [The Simulation Singularity](@/blog/2026-09-13/index.md)'s opening incident describes. Either way, it is not a distinction this post's worked numbers above turn on. Retries re-entering as arrivals is what turns an ordinary bounded-concurrency queue into one capable of the runaway feedback loop this post's worked ceiling describes.
+This model is a genuine instance of that construction in shape, beyond an analogy to it. Arrivals are open at the top, external traffic, and a request that fails downstream can re-enter the same backlog as a retry rather than simply leaving. That is the follow-up-request mechanism the partly-open model formalizes. This model's retry probability could be constant, the way Schroeder's {% katex() %}p{% end %} is, or it could rise as downstream health falls, the way [The Simulation Singularity](@/blog/2026-09-13/index.md)'s opening incident describes. Either way, it is not a distinction this post's worked ceiling above turns on. Retries re-entering as arrivals is what turns an ordinary bounded-concurrency queue into one capable of the runaway feedback loop this post's worked ceiling describes.
 
-What a discrete-time stochastic control barrier function adds is a standing constraint that watches all of them at once and intervenes before their composition crosses a declared line, instead of after: not a new rule among these. Rejection Threshold and Rejection Sensitivity are that constraint made computable. At sensitivity 0 the composed rules above run away unfiltered. Raising it makes the same composed rules stop mattering, not because they changed, but because something now sits upstream of all of them, watching the same state, correcting the one thing they never priced.
+What a discrete-time stochastic control barrier function adds is a standing constraint that watches all of them at once and intervenes before their composition crosses a declared line, instead of after: not a new rule among these. The admission filter is that constraint made computable. Absent it, the composed rules above run away unfiltered. Engaging it makes the same composed rules stop mattering, not because they changed, but because something now sits upstream of all of them, watching the same state, correcting the one thing they never priced.
 
 ## Separating the Two Demands by Subsystem, Not by Time
 
@@ -500,7 +228,7 @@ Everything so far has bounded the *chance* of the queue ever crossing 85 percent
 
 Definition 3's bound is this: {% katex() %}\Pr[\text{exit}] \leq \epsilon{% end %}. It says nothing about {% katex() %}E[\text{cost} \mid \text{exit}]{% end %}, the expected severity of an excursion given that one occurs. It also says nothing about the worst excursion a heavy tail can actually produce. Under a light-tailed disturbance, where no single excursion can be arbitrarily bad, this omission costs little: bounding the chance of a bounded-cost event is most of what a decision-maker needs. Not so here: [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s severity problem showed the correlated-retry regime's severity is heavy-tailed, not light-tailed. A bounded number of observed occurrences systematically underestimates the true worst case, worse as the tail gets heavier. A probability-of-exit bound, sitting on top of a heavy-tailed severity distribution, certifies the wrong thing: how rarely the cliff is approached, never how far the fall actually goes once it is.
 
-{{ layer(n=3, type="Estimate", id="make-the-gap-concrete-with") }}Make the gap concrete with a small, Node-verified illustration, not a restatement of any cited theorem. Three admission-control designs are each certified, by construction, to leave their declared safe region with the same probability, 5 percent, the {% katex() %}\epsilon{% end %} a reviewer might reasonably approve. They differ only in how heavy-tailed the *severity* of an excursion is, once one occurs, modeled as a Pareto distribution with a fixed median so that a "typical" excursion looks the same size in all three:
+{{ layer(n=3, type="Estimate", id="make-the-gap-concrete-with") }}Make the gap concrete with a small numerical illustration, not a restatement of any cited theorem. Three admission-control designs are each certified, by construction, to leave their declared safe region with the same probability, 5 percent, the {% katex() %}\epsilon{% end %} a reviewer might reasonably approve. They differ only in how heavy-tailed the *severity* of an excursion is, once one occurs, modeled as a Pareto distribution with a fixed median so that a "typical" excursion looks the same size in all three:
 
 <div class="illustrative">
 
@@ -514,6 +242,202 @@ Definition 3's bound is this: {% katex() %}\Pr[\text{exit}] \leq \epsilon{% end 
 
 All three pass Definition 3's test identically: exactly a 5 percent chance of leaving the safe region, over however many trials a reviewer chooses to check. A control barrier function that only certifies {% katex() %}\epsilon{% end %} would sign off on all three the same way, because {% katex() %}\epsilon{% end %} is the only thing it measures. The worst excursion actually produced, across the same number of trials, differs by more than four orders of magnitude between the first design and the third. Whatever a reviewer thinks they are approving when they sign off on "5 percent chance of an excursion," the number in front of them does not distinguish the two cases. It looks identical whether a system's worst day is 202 times worse than typical, or nearly two million times worse than typical.
 
+The figure below walks through that comparison in four steps on one sample of four hundred trials. A sample that small lands near 5 percent, not exactly on it. Its largest excursion is also far smaller than the table's, which had two million trials to find one.
+
+<div style="margin:1.5em 0;">
+<canvas id="chart-probability-not-size" aria-label="Three rows, one each for a design with a moderate tail, a heavy tail, and a very heavy tail. On the left of every row, a grid of four hundred sampled trials marks the ones that left the safe region; the marked trials are the same in all three rows, so the count is identical. On the right of every row, a horizontal bar on one shared linear scale shows how big the largest of those excursions was. Four steps change the view. Step one shows, in place of the size bar, an identical frequency bar in every row against the five percent bound, because a probability bound only counts how often. Step two reveals the sizes, which differ widely between the three systems. Step three tightens the probability bound from five percent to one percent, which removes excursions without regard to their size. Step four adds a magnitude bound that cuts every excursion off at ten times a typical one." style="width:100%; height:330px; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<div id="chart-probability-not-size-steps" style="display:flex; flex-wrap:wrap; gap:0.5em; align-items:center; justify-content:center; margin-top:0.75em; font-size:0.85em;">
+<button type="button" data-step="1">1. How often</button>
+<button type="button" data-step="2">2. How big</button>
+<button type="button" data-step="3">3. Allow 1% instead of 5%</button>
+<button type="button" data-step="4">4. Cap the size at 10×</button>
+<span aria-hidden="true" style="width:1px; height:1.8em; background:#b0bec5; margin:0 0.5em;"></span>
+<button type="button" id="chart-probability-not-size-new" title="Draw another 400 trials">&#8635; New sample</button>
+</div>
+<p id="chart-probability-not-size-say" aria-live="polite" style="min-height:4.8em; margin:0.75em auto 0; max-width:42em; font-size:0.92em; text-align:center;"></p>
+<script>
+(function(){
+var cv=document.getElementById('chart-probability-not-size');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var say=document.getElementById('chart-probability-not-size-say');
+var stepBox=document.getElementById('chart-probability-not-size-steps');
+var stepBtns=stepBox.querySelectorAll('button[data-step]');
+var btnNew=document.getElementById('chart-probability-not-size-new');
+var N=400,GC=40,GR=10,BOUND=10,EPS_BASE=0.05,EPS_TIGHT=0.01;
+var KEYS=['A','B','C'];
+var ALPHA={A:3.0,B:1.5,C:1.1};
+var NAME={A:'Moderate tail',B:'Heavy tail',C:'Very heavy tail'};
+var W=0,H=0,narrow=false,labW0=130;
+var seed=38,step=1,pairs=[],started=false,animating=false;
+var cur={A:0,B:0,C:0,reveal:0};
+var reduceMotion=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)').matches:false;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function sev(k,u){return Math.pow(2*u,-1/ALPHA[k]);}
+function sample(){var r=mulberry32(seed);pairs=[];for(var i=0;i<N;i++){pairs.push([r(),r()]);}}
+function eps(){return step===3?EPS_TIGHT:EPS_BASE;}
+function worst(k,e){var m=0;for(var i=0;i<N;i++){if(pairs[i][0]<e){m=Math.max(m,sev(k,pairs[i][1]));}}return m;}
+function count(e){var n=0;for(var i=0;i<N;i++){if(pairs[i][0]<e)n++;}return n;}
+function scaleMax(){return Math.max(12,worst('A',EPS_BASE),worst('B',EPS_BASE),worst('C',EPS_BASE));}
+function target(k){if(step===1)return 0;var w=worst(k,eps());return step===4?Math.min(w,BOUND):w;}
+function fmt(v){return Math.round(v).toLocaleString('en-US')+'×';}
+function fit(text,maxW,size,style){var s=size;ctx.font=style.replace('%',s);while(s>7&&ctx.measureText(text).width>maxW){s--;ctx.font=style.replace('%',s);}return s;}
+function txt(t,x,y){ctx.fillText(t,Math.round(x),Math.round(y));}
+function layout(){
+var g={rows:[]};
+if(narrow){
+var gw=W-24,cell=gw/GC,gh=cell*GR,rowH=22+gh+8+54+14;
+for(var i=0;i<3;i++){var y=Math.round(8+i*rowH);g.rows.push({lx:12,ly:y,gx:12,gy:y+22,sx:12,sy:y+22+gh+8,sw:W-24});}
+g.cell=cell;g.head=0;g.h=8+3*rowH;
+}else{
+var labW=labW0,gw2=Math.min(W*0.38,300),cell2=gw2/GC,gh2=cell2*GR,rowH2=Math.max(92,gh2+30),head=30;
+for(var j=0;j<3;j++){var y2=head+j*rowH2;g.rows.push({lx:14,ly:Math.round(y2+rowH2/2-16),gx:labW,gy:Math.round(y2+(rowH2-gh2)/2),sx:Math.round(labW+gw2+30),sy:Math.round(y2+(rowH2-54)/2),sw:Math.round(W-(labW+gw2+30)-18)});}
+g.cell=cell2;g.head=head;g.h=head+3*rowH2+6;g.gx=labW;g.sx=Math.round(labW+gw2+30);
+}
+return g;
+}
+function setup(){
+W=cv.clientWidth;
+narrow=W<560;
+H=Math.ceil(layout().h);
+cv.style.height=H+'px';
+if(cv.clientHeight&&cv.clientHeight!==H){cv.style.height=(2*H-cv.clientHeight)+'px';}
+var dpr=window.devicePixelRatio||1;
+cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+}
+function drawGrid(r,cell){
+var e=eps();
+for(var i=0;i<N;i++){
+var x=r.gx+(i%GC)*cell,y=r.gy+Math.floor(i/GC)*cell,u=pairs[i][0];
+if(u<e){ctx.fillStyle='#263238';ctx.fillRect(x+0.8,y+0.8,cell-1.6,cell-1.6);}
+else if(u<EPS_BASE){ctx.strokeStyle='#90a4ae';ctx.lineWidth=1;ctx.strokeRect(x+1.3,y+1.3,cell-2.6,cell-2.6);}
+else{ctx.fillStyle='#d9dee1';ctx.beginPath();ctx.arc(x+cell/2,y+cell/2,Math.max(0.9,cell*0.17),0,6.2832);ctx.fill();}
+}
+}
+function headline(big,rest,x,y,w){
+ctx.textAlign='left';ctx.textBaseline='alphabetic';
+ctx.fillStyle='#263238';ctx.font='bold 16px sans-serif';
+txt(big,x,y+15);
+var bw=ctx.measureText(big).width+7;
+ctx.fillStyle='#607d8b';
+fit(rest,w-bw,12,'%px sans-serif');
+txt(rest,x+bw,y+15);
+}
+function drawSize(k,r,xmax){
+var x0=r.sx,w=r.sw,ty=r.sy+24,th=16;
+function X(v){return x0+Math.min(v/xmax,1)*w;}
+if(cur.reveal<0.999){
+ctx.save();ctx.globalAlpha=1-cur.reveal;
+var n0=count(EPS_BASE),pct=n0/N*100;
+function P(v){return x0+Math.min(v/10,1)*w;}
+headline(pct.toFixed(1)+'%','of trials had an excursion',x0,r.sy,w);
+ctx.fillStyle='#eceff1';ctx.fillRect(x0,ty,w,th);
+ctx.fillStyle='#263238';ctx.fillRect(x0,ty,P(pct)-x0,th);
+ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(P(5),ty-3);ctx.lineTo(P(5),ty+th+3);ctx.stroke();
+ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+txt('allowed: 5%',P(5),ty+th+5);
+ctx.restore();
+}
+if(cur.reveal<=0.001)return;
+ctx.save();ctx.globalAlpha=cur.reveal;
+var wBase=worst(k,EPS_BASE),len=cur[k],wNow=target(k),rest='the size of a typical excursion';
+if(step===3)rest='largest remaining (was '+fmt(wBase)+')';
+if(step===4)rest=wBase>BOUND?'capped (was '+fmt(wBase)+')':'already under the cap';
+headline(fmt(wNow),rest,x0,r.sy,w);
+if(step>=3&&wBase>len+0.05){ctx.fillStyle='#e3e8eb';ctx.fillRect(x0,ty,X(wBase)-x0,th);}
+ctx.fillStyle='#263238';
+ctx.fillRect(x0,ty,Math.max(2,X(len)-x0),th);
+if(step===4){
+ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(X(BOUND),ty-3);ctx.lineTo(X(BOUND),ty+th+3);ctx.stroke();
+ctx.fillStyle='#c62828';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+txt('cap: 10×',X(BOUND)-2,ty+th+5);
+}
+ctx.restore();
+}
+function draw(){
+if(!started)return;
+ctx.clearRect(0,0,W,H);
+var g=layout(),xmax=scaleMax(),n=count(eps());
+if(!narrow){
+ctx.fillStyle='#546e7a';ctx.textBaseline='top';ctx.textAlign='left';
+fit('400 TRIALS  (dark square = excursion)',g.sx-g.gx-20,11,'bold %px sans-serif');
+txt('400 TRIALS  (dark square = excursion)',g.gx,10);
+var hr=step===1?'HOW OFTEN  (all the bound checks)':'HOW BIG  (never checked by the bound)';
+fit(hr,W-g.sx-18,11,'bold %px sans-serif');
+txt(hr,g.sx,10);
+}
+for(var i=0;i<3;i++){
+var k=KEYS[i],r=g.rows[i];
+ctx.textAlign='left';ctx.textBaseline='top';
+ctx.fillStyle='#263238';
+fit(NAME.C,narrow?W*0.5:labW0-18,14,'bold %px sans-serif');
+txt(NAME[k],r.lx,r.ly);
+ctx.fillStyle='#546e7a';ctx.font='11px sans-serif';
+if(narrow){ctx.textAlign='right';txt(n+' excursions in 400 trials',W-12,r.ly+2);}
+else{txt(n+' excursions',r.lx,r.ly+19);txt('in 400 trials',r.lx,r.ly+33);}
+drawGrid(r,g.cell);
+drawSize(k,r,xmax);
+}
+}
+function settle(){
+var done=true,goal={A:target('A'),B:target('B'),C:target('C'),reveal:step===1?0:1};
+for(var k in goal){
+var d=goal[k]-cur[k];
+if(reduceMotion||Math.abs(d)<Math.max(0.004,Math.abs(goal[k])*0.004)){cur[k]=goal[k];}
+else{cur[k]+=d*0.16;done=false;}
+}
+draw();
+if(done){animating=false;}else{requestAnimationFrame(settle);}
+}
+function narrate(){
+var n=count(EPS_BASE),n1=count(EPS_TIGHT),t;
+var a=fmt(worst('A',eps())),b=fmt(worst('B',eps())),c=fmt(worst('C',eps()));
+if(step===1){t='Step 1. Each mark is one trial, and a dark square is an excursion: a trial that left the safe region. A probability bound only counts them. Here that is '+n+' of 400, the same trials in all three designs, so by this measure the three are identical.';}
+else if(step===2){t='Step 2. Now the size of the largest excursion in each design, on one shared scale: '+a+' a typical excursion with a moderate tail, '+b+' with a heavy tail, '+c+' with a very heavy tail. Size is the only thing that differs, and step 1 never measured it.';
+if(worst('C',EPS_BASE)<=BOUND){t+=' This sample makes the very heavy tail look harmless, which happens in about 44% of samples. Draw a new one.';}}
+else if(step===3){t='Step 3. Allowing 1% instead of 5% keeps '+n1+' of the '+n+' excursions; the hollow squares no longer count. Which ones remain has nothing to do with their size, and the largest are still '+a+', '+b+' and '+c+'.';}
+else{t='Step 4. A magnitude bound limits size directly: no excursion may exceed 10× a typical one, in any design. The pale part of each bar is what the cap removed.';}
+say.textContent=t;
+for(var i=0;i<stepBtns.length;i++){
+var on=parseInt(stepBtns[i].getAttribute('data-step'),10)===step;
+stepBtns[i].style.background=on?'#263238':'transparent';
+stepBtns[i].style.color=on?'#fff':'inherit';
+stepBtns[i].setAttribute('aria-pressed',on?'true':'false');
+}
+}
+function refresh(){
+narrate();
+if(!started)return;
+if(!animating){animating=true;requestAnimationFrame(settle);}
+}
+var all=stepBox.querySelectorAll('button');
+for(var q=0;q<all.length;q++){
+all[q].style.border='1px solid #90a4ae';all[q].style.borderRadius='4px';all[q].style.padding='0.35em 0.8em';
+all[q].style.cursor='pointer';all[q].style.font='inherit';all[q].style.background='transparent';all[q].style.color='inherit';
+}
+btnNew.style.border='1px dashed #1e88e5';btnNew.style.color='#1e88e5';btnNew.style.borderRadius='999px';
+for(var b=0;b<stepBtns.length;b++){
+stepBtns[b].addEventListener('click',function(ev){step=parseInt(ev.currentTarget.getAttribute('data-step'),10);refresh();});
+}
+btnNew.addEventListener('click',function(){seed+=1;sample();if(step>1){cur.A=0;cur.B=0;cur.C=0;}refresh();});
+sample();
+narrate();
+function start(){
+if(cv.clientWidth<10){requestAnimationFrame(start);return;}
+started=true;setup();refresh();
+}
+if('IntersectionObserver' in window){
+new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();start();}},{threshold:0.1}).observe(cv);
+}else{start();}
+window.addEventListener('resize',function(){if(started){setup();draw();}});
+})();
+</script>
+<figcaption>Three systems pass the same probability review because they lose the same trials. Step through the four views: the review counts how often, the sizes it never measured differ by orders of magnitude, a tighter probability bound thins the excursions without shortening them, and only a magnitude bound limits how far one goes. Each sample is four hundred trials, so the heaviest tail often hides in a single draw.</figcaption>
+</div>
+
 ### Shrinking {% katex() %}\epsilon{% end %} Does Not Rescue This
 
 The obvious objection is that a small enough {% katex() %}\epsilon{% end %} should still make the *expected* cost of relying on probability alone acceptable. That is the same way this series has priced expected cost everywhere else. {% katex() %}\epsilon \cdot L{% end %}, an approval probability times a severity, echoes [The Simulation Singularity](@/blog/2026-09-13/index.md)'s {% katex() %}N \cdot p \cdot L{% end %} crossover exactly. Whether that objection holds depends entirely on whether {% katex() %}L{% end %}, the expected severity given an excursion, is itself a finite number. A Pareto severity distribution's mean is not always finite.
@@ -521,6 +445,8 @@ The obvious objection is that a small enough {% katex() %}\epsilon{% end %} shou
 For a Pareto distribution with tail-weight parameter {% term(url="", def="alpha: the Pareto tail-weight parameter, how heavy the severity distribution's tail is.") %}{% katex() %}\alpha{% end %}{% end %} and scale {% katex() %}x_m{% end %}, the mean is {% katex() %}\frac{\alpha}{\alpha - 1}x_m{% end %} for {% katex() %}\alpha > 1{% end %}. It diverges entirely, verified directly rather than asserted, for {% katex() %}\alpha \leq 1{% end %}. All three tail weights in the table above, 3.0, 1.5, and even 1.1, have {% katex() %}\alpha > 1{% end %}, so their means stay finite. {% katex() %}\frac{\alpha}{\alpha-1}{% end %} gives 1.5, 3.0, and 11 times the scale {% katex() %}x_m{% end %}. Against the fixed median {% katex() %}x_m 2^{1/\alpha}{% end %} the table is built on, that works out to the 1.2x, 1.9x, and 5.9x mean severities the table already reports. A genuinely heavier tail than any modeled above, {% katex() %}\alpha \leq 1{% end %}, is not a hypothetical edge case this series needs to reach for. Real network and service-time distributions can sit in or near this regime, and [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) already cited the literature describing why{{ cite(ref="13", title="Resnick, S.I. (1997) -- Heavy tail modeling and teletraffic data, Annals of Statistics, 25(5), 1805-1869") }}.
 
 At that point, {% katex() %}\epsilon \cdot L{% end %} is {% katex() %}\epsilon{% end %} times infinity, for every {% katex() %}\epsilon > 0{% end %} a reviewer could possibly approve. No probability bound, however small, rescues an expected-cost argument once the tail is heavy enough that the cost itself has no finite expectation. This is the sharpest form of the gap this section opened with: {% katex() %}\epsilon{% end %} alone is answering a question that, past a certain tail weight, has no finite answer to give, not that {% katex() %}\epsilon{% end %} is currently too loose.
+
+No re-optimizing of {% katex() %}\epsilon{% end %} reaches the magnitude constraint this gap just exposed. That is the sequencing move the {% term(url="@/blog/2025-12-27/index.md#the-constraint-sequence-framework", def="A candidate constraint cannot be resolved by re-optimizing at the level of abstraction that revealed it; the dependency graph determines which constraint must be secured before the next one becomes binding") %}Constraint Sequence Framework{% end %} names: a constraint exposed at one level of abstraction cannot be resolved by re-optimizing at that level, so the next binding constraint, magnitude, needs a mechanism of its own.
 
 ### A Second Bound, Not a Replacement for the First
 
@@ -536,11 +462,20 @@ where:
 - {% katex() %}\rho{% end %} is the maximum tolerable expected severity within that worst tail fraction, the number that actually prices what the table above shows a plain {% katex() %}\epsilon{% end %}-bound cannot see
 - the two bounds are not redundant with each other: a system can satisfy Definition 3 with a very small {% katex() %}\epsilon{% end %} while still failing Corollary 2 badly, the moderate-versus-very-heavy-tail comparison above with {% katex() %}\epsilon{% end %} held fixed at 5 percent throughout
 
-{{ layer(n=3, type="Estimate", id="applied-to-the-running-case") }}Applied to the running case, {% katex() %}h(x){% end %} stays the queue's signed distance from the declared Rejection Threshold line. {% katex() %}-h(x){% end %} in the worst tail is, concretely, how far past that line the queue is driven and for how long, before whatever downstream recovery eventually arrives. This post's reference implementation now shows that duration can be seconds, hundreds of seconds, or never, depending on traffic relative to the executor pool's joint ceiling, not a single fixed severity Definition 3 alone would ever imply. Corollary 2 does not change what Definition 3 already certifies. It adds a second, independent number a reviewer can also demand, and Falsification Criterion F10 below states what would show this addition is unnecessary.
+{{ layer(n=3, type="Estimate", id="applied-to-the-running-case") }}Applied to the running case, {% katex() %}h(x){% end %} stays the queue's signed distance from the declared occupancy ceiling. {% katex() %}-h(x){% end %} in the worst tail is, concretely, how far past that line the queue is driven and for how long, before whatever downstream recovery eventually arrives. This post's reference model now shows that duration can be seconds, hundreds of seconds, or never, depending on traffic relative to the executor pool's joint ceiling, not a single fixed severity Definition 3 alone would ever imply. Corollary 2 does not change what Definition 3 already certifies. It adds a second, independent number a reviewer can also demand, and Falsification Criterion F10 below states what would show this addition is unnecessary.
 
 ### The Two Bounds Trade Against Each Other, Not for Free
 
-Corollary 2 states that both bounds can be jointly enforced. It does not, by itself, say enforcing both is free. This question needs the same tool [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) reached for the one other time this series priced two ways of spending a fixed budget against each other. That tool is an achievable-region model, not a claim that either bound is costless in isolation.
+<span id="def-3a"></span>
+
+<details>
+<summary>Definition 3a -- Safety Achievable Region: every split of a fixed control-authority budget between a probability margin and a magnitude margin maps to a point, and only the frontier of that set is worth choosing</summary>
+
+**Definition 3a** (Safety Achievable Region). For a fixed control-authority budget {% katex() %}m_p + m_c = m_{\text{tot}}{% end %}, every split between a probability margin {% katex() %}m_p{% end %} and a magnitude margin {% katex() %}m_c{% end %} maps to a point: an achievable {% katex() %}\epsilon{% end %} and an achievable severity bound {% katex() %}\rho{% end %}. The achievable region is the set of such points; its frontier is the non-dominated set, [The Impossibility Tax](@/blog/2026-03-14/index.md#def-1)'s achievable region and [Pareto frontier](@/blog/2026-03-14/index.md#def-2) applied to a safety budget rather than a validation budget.
+
+</details>
+
+Corollary 2 states that both bounds can be jointly enforced. It does not, by itself, say enforcing both is free. Definition 3a states what that enforcement is bought against: a fixed budget. Corollary 3 below is a statement about a point on that region. This question needs the same tool [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) reached for the one other time this series priced two ways of spending a fixed budget against each other.
 
 <span id="cor-3"></span>
 
@@ -580,7 +515,7 @@ flowchart TD
 
 > **Read the diagram.** Figure 1 showed Proposition 3's filter alone, a single barrier constraint, looping forever with no exit state. This figure is not that loop redrawn; it is what changes inside the QP box once Corollary 2 adds a second, independent constraint. Two constraints, one from Definition 3 and one from Corollary 2, feed into a single per-step optimization rather than two sequential checks, which is what "jointly enforced, not one substituting for the other" means as a computation, not only as a sentence. The dashed branch is the one Corollary 3 prices but does not resolve: a highly constrained state can leave no action satisfying both bounds at once, the exact gap "A Cost Floor Assumes a Solution Exists at All," directly below, and Falsification Criterion F17 names. This post has not built the explicit backup policy that would close it.
 
-{{ layer(n=3, type="Estimate", id="state-the-shape-of-the") }}The shape of the tradeoff is worth showing with a small, explicitly illustrative model, not a claim about either cited bound's literal functional form. Let a fixed total control-authority budget {% katex() %}m_{\text{tot}}{% end %} split between a probability-margin {% katex() %}m_p{% end %} and a CVaR-margin {% katex() %}m_c{% end %}, {% katex() %}m_p + m_c = m_{\text{tot}}{% end %}. Model the achievable {% katex() %}\epsilon{% end %} using the generic Bennett/Freedman-type tail form this whole family of concentration inequalities produces, {% katex() %}\epsilon(m_p) = e^{-m_p^2/2v}{% end %} for a disturbance-variance proxy {% katex() %}v{% end %}. Model the achievable severity bound using a generic diminishing-returns form, {% katex() %}S(m_c) = S_0 / (1 + m_c/k){% end %}. Sweep the split at a fixed {% katex() %}m_{\text{tot}}=4{% end %}, verified directly rather than asserted:
+{{ layer(n=3, type="Estimate", id="state-the-shape-of-the") }}The shape of the tradeoff is worth showing with a small, explicitly illustrative model: one instance of Definition 3a's achievable region, not a claim about either cited bound's literal functional form. Let a fixed total control-authority budget {% katex() %}m_{\text{tot}}{% end %} split between a probability-margin {% katex() %}m_p{% end %} and a CVaR-margin {% katex() %}m_c{% end %}, {% katex() %}m_p + m_c = m_{\text{tot}}{% end %}. Model the achievable {% katex() %}\epsilon{% end %} using the generic Bennett/Freedman-type tail form this whole family of concentration inequalities produces, {% katex() %}\epsilon(m_p) = e^{-m_p^2/2v}{% end %} for a disturbance-variance proxy {% katex() %}v{% end %}. Model the achievable severity bound using a generic diminishing-returns form, {% katex() %}S(m_c) = S_0 / (1 + m_c/k){% end %}. Sweep the split at a fixed {% katex() %}m_{\text{tot}}=4{% end %}, verified directly rather than asserted:
 
 <div class="illustrative">
 
@@ -595,105 +530,86 @@ flowchart TD
 </div>
 
 <div style="margin:1.5em 0;">
-<canvas id="chart-frontier" aria-label="Chart showing the achievable region between the probability margin and the CVaR margin, traced as a curve with achievable epsilon on the horizontal log-scale axis and achievable severity bound on the vertical axis. The curve starts at the top left, epsilon near 0.0003 and severity bound 100, where all margin sits on the probability side, and descends to the bottom right, epsilon equals 1 and severity bound 20, where all margin sits on the CVaR side. The bottom-left corner, small epsilon and small severity bound at once, is the unreachable region: no split of this fixed budget reaches it." style="width:100%; aspect-ratio:700/440; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<canvas id="chart-frontier" aria-label="A chart of what one fixed budget of four units of control authority can buy. A curve plots the allowed chance of an excursion, epsilon, on a horizontal logarithmic axis against the severity bound on the vertical axis; smaller is better on both. The curve runs from epsilon 0.0003 with severity bound 100, where the whole budget sits on the probability bound, down to epsilon 1 with severity bound 20, where the whole budget sits on the magnitude bound. The corner below and to the left of the curve, where both numbers are small, is shaded as unreachable with this budget. Five points mark the table's five splits." style="width:100%; height:360px; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
 <script>
-(function () {
-  var canvas = document.getElementById('chart-frontier');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var W, H, pw, ph;
-  var L = 62, R = 24, T = 24, B = 46;
-  var M = 4;
-  var N = 400;
-  var eps = [], sev = [];
-  for (var i = 0; i <= N; i++) {
-    var mp = (i / N) * M;
-    var mc = M - mp;
-    eps.push(Math.exp(-(mp * mp) / 2));
-    sev.push(100 / (1 + mc));
-  }
-  var epsMin = 0.0002, epsMax = 1.0;
-  var sevMin = 15, sevMax = 105;
-  function lx(e) {
-    return (Math.log(Math.max(e, epsMin)) - Math.log(epsMin)) / (Math.log(epsMax) - Math.log(epsMin));
-  }
-  function px(e) { return L + lx(e) * pw; }
-  function py(s) { return T + (1 - (s - sevMin) / (sevMax - sevMin)) * ph; }
-  function setup() {
-    var rect = canvas.getBoundingClientRect();
-    var dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    W = rect.width; H = rect.height;
-    pw = W - L - R; ph = H - T - B;
-  }
-  var xticks = [1, 0.1, 0.01, 0.001];
-  var yticks = [20, 40, 60, 80, 100];
-  function drawAxes() {
-    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.beginPath();
-    ctx.moveTo(L, T); ctx.lineTo(L, T + ph); ctx.lineTo(L + pw, T + ph); ctx.stroke();
-    ctx.fillStyle = '#444'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('achievable epsilon (log scale)', L + pw / 2, H - 8);
-    ctx.save(); ctx.translate(16, T + ph / 2); ctx.rotate(-Math.PI / 2);
-    ctx.fillText('achievable severity bound', 0, 0); ctx.restore();
-    ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-    xticks.forEach(function (e) {
-      var x = px(e);
-      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.beginPath();
-      ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
-      ctx.strokeStyle = '#555'; ctx.beginPath();
-      ctx.moveTo(x, T + ph); ctx.lineTo(x, T + ph + 5); ctx.stroke();
-      ctx.fillStyle = '#444';
-      ctx.fillText(e >= 1 ? '1.0' : e.toString(), x, T + ph + 18);
-    });
-    ctx.textAlign = 'right';
-    yticks.forEach(function (s) {
-      var y = py(s);
-      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.beginPath();
-      ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
-      ctx.strokeStyle = '#555'; ctx.beginPath();
-      ctx.moveTo(L, y); ctx.lineTo(L - 5, y); ctx.stroke();
-      ctx.fillStyle = '#444';
-      ctx.fillText(String(s), L - 8, y + 4);
-    });
-  }
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    drawAxes();
-    ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2.5; ctx.beginPath();
-    for (var i = 0; i <= N; i++) {
-      var x = px(eps[i]), y = py(sev[i]);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    [0, 1, 2, 3, 4].forEach(function (mp) {
-      var mc = M - mp;
-      var e = Math.exp(-(mp * mp) / 2);
-      var s = 100 / (1 + mc);
-      ctx.beginPath(); ctx.arc(px(e), py(s), 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#c0392b'; ctx.fill();
-    });
-    ctx.font = '11px sans-serif'; ctx.fillStyle = '#888';
-    ctx.textAlign = 'left';
-    ctx.fillText('all margin on CVaR', px(0.85), py(sev[0]) - 10);
-    ctx.textAlign = 'right';
-    ctx.fillText('all margin on probability', px(0.0009), py(sev[N]) + 16);
-    ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('unreachable region', L + 14, T + ph - 12);
-  }
-  function trySetupAndDraw() {
-    var rect = canvas.getBoundingClientRect();
-    if (rect.width < 10 || rect.height < 10) { requestAnimationFrame(trySetupAndDraw); return; }
-    setup(); draw();
-  }
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (es, ob) { if (es[0].isIntersecting) { ob.disconnect(); trySetupAndDraw(); } }, { threshold: 0.2 }).observe(canvas);
-  } else { trySetupAndDraw(); }
-  window.addEventListener('resize', function () { setup(); draw(); });
+(function(){
+var cv=document.getElementById('chart-frontier');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var M=4,N=200,BLUE='#1e6fb8',ORANGE='#e07b39',INK='#263238',GREY='#607d8b';
+var W=0,H=0,narrow=false,L=46,R=18,T=44,B=50,started=false;
+var E0=Math.log(0.0002),E1=Math.log(1.6),S0=10,S1=108;
+function epsOf(mp){return Math.exp(-(mp*mp)/2);}
+function sevOf(mp){return 100/(1+(M-mp));}
+function px(e){return L+(Math.log(e)-E0)/(E1-E0)*(W-L-R);}
+function py(s){return T+(1-(s-S0)/(S1-S0))*(H-T-B);}
+function txt(t,x,y){ctx.fillText(t,Math.round(x),Math.round(y));}
+function fit(t,maxW,size,style){var s=size;ctx.font=style.replace('%',s);while(s>8&&ctx.measureText(t).width>maxW){s--;ctx.font=style.replace('%',s);}return s;}
+function fe(e){return e>=0.1?e.toFixed(3):e>=0.001?e.toFixed(3):e.toFixed(4);}
+function setup(){
+W=cv.clientWidth;narrow=W<560;H=narrow?330:360;
+cv.style.height=H+'px';
+if(cv.clientHeight&&cv.clientHeight!==H){cv.style.height=(2*H-cv.clientHeight)+'px';}
+var dpr=window.devicePixelRatio||1;
+cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+}
+function draw(){
+if(!started)return;
+var i;
+ctx.clearRect(0,0,W,H);
+ctx.fillStyle=INK;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+fit('SEVERITY BOUND  (smaller is better)',W-L-R,11,'bold %px sans-serif');
+txt('SEVERITY BOUND  (smaller is better)',L,T-10);
+var x0=L,x1=W-R,y0=T,y1=H-B;
+ctx.save();ctx.beginPath();ctx.rect(x0,y0,x1-x0,y1-y0);ctx.clip();
+ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x0,y0);ctx.lineTo(px(epsOf(M)),y0);
+for(i=N;i>=0;i--){var m=i/N*M;ctx.lineTo(px(epsOf(m)),py(sevOf(m)));}
+ctx.lineTo(x1,py(sevOf(0)));ctx.lineTo(x1,y1);ctx.closePath();
+ctx.fillStyle='rgba(198,40,40,0.09)';ctx.fill();
+ctx.restore();
+var xt=[0.001,0.01,0.1,1],yt=[20,40,60,80,100];
+ctx.font='11px sans-serif';ctx.lineWidth=1;
+for(i=0;i<yt.length;i++){
+ctx.strokeStyle='#eceff1';ctx.beginPath();ctx.moveTo(x0,Math.round(py(yt[i]))+0.5);ctx.lineTo(x1,Math.round(py(yt[i]))+0.5);ctx.stroke();
+ctx.fillStyle=GREY;ctx.textAlign='right';ctx.textBaseline='middle';txt(String(yt[i]),x0-8,py(yt[i]));
+}
+for(i=0;i<xt.length;i++){
+ctx.strokeStyle='#eceff1';ctx.beginPath();ctx.moveTo(Math.round(px(xt[i]))+0.5,y0);ctx.lineTo(Math.round(px(xt[i]))+0.5,y1);ctx.stroke();
+ctx.fillStyle=GREY;ctx.textAlign='center';ctx.textBaseline='top';txt(xt[i]===1?'1.0':String(xt[i]),px(xt[i]),y1+7);
+}
+ctx.fillStyle=INK;ctx.textAlign='center';ctx.textBaseline='top';
+var xl=narrow?'CHANCE OF AN EXCURSION, ε  (smaller is better)':'ALLOWED CHANCE OF AN EXCURSION, ε  (smaller is better, log scale)';
+fit(xl,W-L-R,11,'bold %px sans-serif');txt(xl,(x0+x1)/2,y1+25);
+ctx.strokeStyle=INK;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();
+for(i=0;i<=N;i++){var m2=i/N*M;if(i===0)ctx.moveTo(px(epsOf(m2)),py(sevOf(m2)));else ctx.lineTo(px(epsOf(m2)),py(sevOf(m2)));}
+ctx.stroke();
+ctx.fillStyle='#b23b3b';ctx.textAlign='left';ctx.textBaseline='alphabetic';
+fit('UNREACHABLE WITH THIS BUDGET',(x1-x0)*0.5,12,'bold %px sans-serif');
+txt('UNREACHABLE WITH THIS BUDGET',x0+12,y1-26);
+ctx.font='11px sans-serif';txt('both numbers small at once',x0+12,y1-11);
+ctx.fillStyle=GREY;ctx.textAlign='right';ctx.font='11px sans-serif';
+txt('reachable, but worse on both',x1-10,(y0+y1)/2-30);
+var MARK=[[0,'whole budget on the magnitude bound',1],[1,'',0],[2,'even split',1],[3,'',0],[4,'whole budget on the probability bound',1]];
+for(i=0;i<5;i++){
+var mp=MARK[i][0],X=px(epsOf(mp)),Y=py(sevOf(mp));
+ctx.fillStyle='#fff';ctx.strokeStyle=INK;ctx.lineWidth=MARK[i][2]?3:2;ctx.beginPath();ctx.arc(X,Y,MARK[i][2]?6:4,0,6.2832);ctx.fill();ctx.stroke();
+if(!MARK[i][2]||(narrow&&i===2))continue;
+var l1='ε = '+fe(epsOf(mp))+',  bound = '+sevOf(mp).toFixed(1),l2=MARK[i][1],left=i===0;
+ctx.textBaseline='alphabetic';ctx.textAlign=left?'right':'left';
+var tx=left?(narrow?x1-4:X-12):X+12,ty=i===4?Y+22:(narrow?Y-34:Y-22);
+ctx.fillStyle=INK;fit(l1,left?X-x0-18:x1-X-18,13,'bold %px sans-serif');txt(l1,tx,ty);
+ctx.fillStyle=GREY;fit(l2,left?X-x0-18:x1-X-18,11,'%px sans-serif');txt(l2,tx,ty+15);
+}
+}
+function start(){if(cv.clientWidth<10){requestAnimationFrame(start);return;}started=true;setup();draw();}
+if('IntersectionObserver' in window){
+new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();start();}},{threshold:0.1}).observe(cv);
+}else{start();}
+window.addEventListener('resize',function(){if(started){setup();draw();}});
 })();
 </script>
-<figcaption>The achievable region between probability margin and CVaR margin, swept continuously rather than at the five points the table samples. Every point below and to the left of the curve costs more control authority than this fixed budget has.</figcaption>
+<figcaption>One instance of Definition 3a's achievable region, for a fixed budget of four units. The five marked points are the table's five splits, and the curve is every split in between: each position trades a smaller chance of an excursion for a larger severity bound. The shaded corner, where both are small at once, costs more control authority than this budget has.</figcaption>
 </div>
 
 Read the table's shape, not its specific numbers, which are illustrative only. Moving margin toward tightening {% katex() %}\epsilon{% end %} strictly worsens the achievable severity bound, and moving margin the other way strictly worsens {% katex() %}\epsilon{% end %}, confirmed across the full sweep, not merely at the two ends. There is no split of a fixed budget that improves both numbers at once. This is the same achievable-region logic [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) used for a cost-over-time tradeoff, applied here to a cost-over-safety-dimensions tradeoff. The frontier this table traces is the lower envelope of what one fixed budget can jointly buy, not a claim that either bound alone was ever the full price.
@@ -718,13 +634,13 @@ Everything above is one worked instance, using this post's executor pool. Here i
 2. **Price {% katex() %}\epsilon{% end %}, the probability tolerance a reviewer would actually sign off on.** Not the smallest number you can compute. It is the number a reviewer would read once and trust, the way "Why a Rulebook Cannot Do This Job" describes a boundary being approved once rather than every action being re-approved forever.
 3. **Check whether excursion severity, conditional on leaving {% katex() %}\mathcal{C}{% end %}, is heavy-tailed.** If it is provably light-tailed, with a genuinely bounded worst case, stop here. The Reversal Condition above applies, and {% katex() %}\epsilon{% end %} alone is close to the full guarantee. Most correlated-retry regimes are not this case.
 4. **If it is heavy-tailed, price {% katex() %}\eta{% end %} and {% katex() %}\rho{% end %}**, Corollary 2's CVaR tail fraction and its maximum tolerable severity within that fraction. The two numbers are chosen independently of {% katex() %}\epsilon{% end %}, answering different questions on purpose.
-5. **Check the joint QP's feasible set, not only its cost.** Verify, empirically against your own reference implementation or by construction, that enforcing {% katex() %}\epsilon{% end %} and {% katex() %}\rho{% end %} together never empties the feasible set across your own operating envelope. This is per "A Cost Floor Assumes a Solution Exists at All" above. If you cannot verify this, build the backup-policy machinery this post has not. Otherwise, treat the resulting filter as unverified at your own system's worst-case states, not just expensive there.
+5. **Check the joint QP's feasible set, not only its cost.** Verify, empirically against your own reference model or by construction, that enforcing {% katex() %}\epsilon{% end %} and {% katex() %}\rho{% end %} together never empties the feasible set across your own operating envelope. This is per "A Cost Floor Assumes a Solution Exists at All" above. If you cannot verify this, build the backup-policy machinery this post has not. Otherwise, treat the resulting filter as unverified at your own system's worst-case states, not just expensive there.
 
 This checklist does not remove the judgment call in step 2, what a reviewer will actually accept, or the engineering work in step 5, an actual backup policy. It fixes their shape, so what remains is a specific boundary to defend, not a feeling that the system is probably safe enough.
 
 ## When the Probe Causes the Cliff It Is Measuring For
 
-[Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s ProbeBW cycle is the concrete mechanism Cyclic Adaptive Regulation borrows to keep reading its regulation as measurement. It has eight round trips: six cruising at its current bandwidth estimate, one probing 25 percent above it, one draining 25 percent below it. That cycle's drain phase carries an assumption worth stating outright, because this post's reference implementation already shows the dynamic that can break it.
+[Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s ProbeBW cycle is the concrete mechanism Cyclic Adaptive Regulation borrows to keep reading its regulation as measurement. It has eight round trips: six cruising at its current bandwidth estimate, one probing 25 percent above it, one draining 25 percent below it. That cycle's drain phase carries an assumption worth stating outright, because this post's reference model already shows the dynamic that can break it.
 
 ### The Assumption the Drain Phase Actually Makes
 
@@ -1018,8 +934,8 @@ That is real, load-bearing progress, and it would be dishonest to bury it under 
 - *Assumption:* The system has relative degree exactly one: the control input affects the barrier function's rate of change directly, not only its higher derivatives.
 - *Failure Mode:* A system where admission decisions only affect queue occupancy indirectly, through an intermediate state the controller cannot set directly, has higher relative degree. It needs High-Order CBFs instead{{ cite(ref="16", title="Xiao, W. & Belta, C. (2022) -- High-Order Control Barrier Functions, IEEE Transactions on Automatic Control, 67(7), 3655-3662") }}. Naively applying Definition 3 as stated would understate the control authority actually required to stay safe. A concurrent runtime's connection pooling or lock contention is a concrete instance of this failure mode. The admission decision sets how many requests are let in, but that decision only reaches queue occupancy after passing through a pooled-connection state the controller does not set directly. This is the same relative-degree-two structure Definition 4 was built to handle, elsewhere in this post, for a different intermediate state entirely. Definition 4 as stated derives {% katex() %}\varphi_1{% end %} from a bandwidth estimate's rate of change. A connection-pool-mediated system would need {% katex() %}\varphi_1{% end %} re-derived from the pool's occupancy dynamics instead, not reused unchanged. The construction generalizes, even though the specific instance does not. A different failure mode is easy to conflate with this one, and it needs its name. Pure transit delay, network round trips, executor spooling, a downstream dependency's response time, is neither a chain-of-integrator structure the control input passes through nor higher relative degree in Xiao and Belta's sense. High-Order CBFs answer the first failure mode. They do not, by themselves, answer the second. Predictor-feedback control barrier functions are the correct tool for that second case{{ cite(ref="23", title="Molnar, T.G., Kiss, A.K., Ames, A.D. & Orosz, G. (2023) -- Safety-Critical Control with Input Delay in Dynamic Environment, IEEE Transactions on Control Systems Technology, 31(4), 1507-1520") }}. They reconstruct the delayed state from the input history, rather than restructuring the barrier's derivative chain. That is the right tool once delay itself, not intermediate structure, separates an admission decision from its effect on queue occupancy. This post's admission-control layer sits close enough to its queue to treat network transit as negligible relative to the control loop's cycle time. A control plane spanning a slower network path would not get to make that assumption for free.
 
-**Claim.** Rejecting proactively reduces total backlog-time under sustained overload, and below the executors' joint ceiling shortens a real, derived recovery delay, as this post's reference implementation demonstrates.
-- *Assumption:* The executor pool's joint clearing rate is *coupled* to how many of its own members are simultaneously busy, not fixed independently of it: past a comfortable concurrency, real contention, connection or thread-pool exhaustion, lock contention, memory pressure, degrades every busy executor's rate, not only the newest arrival's, the specific relationship the widget's per-executor rate function encodes.
+**Claim.** Rejecting proactively reduces total backlog-time under sustained overload, as this post's reference model shows.
+- *Assumption:* The executor pool's joint clearing rate is *coupled* to how many of its own members are simultaneously busy, not fixed independently of it: past a comfortable concurrency, real contention, connection or thread-pool exhaustion, lock contention, memory pressure, degrades every busy executor's rate, not only the newest arrival's, the specific relationship this post's reference model's per-executor rate function encodes.
 - *Failure Mode:* In a classical decoupled buffer, where each server's service rate is fixed and does not depend on how many peers are simultaneously busy, ordinary queueing theory holds instead: a larger buffer only ever helps or is neutral to long-run throughput, converting a burst into delay rather than loss, and proactive rejection would be pure throughput loss with no offsetting gain. This model's result is conditional on the coupling above; it is not a general argument against buffering, and a system where servers genuinely do not contend with each other should size its buffer for its expected burst, not shed load early on this post's authority.
 
 **Claim.** The per-step QP jointly enforcing Definition 3 and Corollary 2 always returns some action, possibly an expensive one.
@@ -1028,7 +944,7 @@ That is real, load-bearing progress, and it would be dishonest to bury it under 
 
 **Claim.** This model's {% katex() %}(C/n)^2{% end %} throughput collapse follows the correct asymptotic shape for a coherency-dominated system.
 - *Assumption:* Queueing contention is negligible next to the coherency penalty, {% katex() %}\sigma \approx 0{% end %} in USL terms, the condition under which USL's asymptotic tail matches this model's {% katex() %}1/N{% end %} decay.
-- *Failure Mode:* Gunther's formula confirms only the tail exponent, not this post's specific ceiling number: a {% katex() %}\sigma \approx 0{% end %} USL curve fit to this model's comfortable-load rate gives roughly 67 requests per second at {% katex() %}n=8{% end %}, not the 75 this post derives and verifies directly against its reference implementation. The two curves are not the same function, only the same tail; the 75 figure was never re-derived from USL and does not depend on it.
+- *Failure Mode:* Gunther's formula confirms only the tail exponent, not this post's specific ceiling number: a {% katex() %}\sigma \approx 0{% end %} USL curve fit to this model's comfortable-load rate gives roughly 67 requests per second at {% katex() %}n=8{% end %}, not the 75 this post derives and verifies directly against its reference model. The two curves are not the same function, only the same tail; the 75 figure was never re-derived from USL and does not depend on it.
 
 **Reversal Condition.** This post's central recommendation, that a discrete-time stochastic control barrier function with an explicit magnitude bound is required rather than a probability bound alone, reverses when the disturbance the barrier defends against is genuinely light-tailed, with a provably bounded worst case. Under that condition, Definition 3's probability bound and Corollary 2's magnitude bound converge to saying nearly the same thing, since no single excursion can be arbitrarily costly regardless of how the tail is modeled, and building the CVaR extension buys little beyond what {% katex() %}\epsilon{% end %} alone already prices. Distributed admission-control systems facing correlated-retry regimes, the running case this entire series has priced, essentially never meet this condition, which is why the reversal is stated but not expected to apply here.
 
@@ -1079,7 +995,7 @@ A claim that cannot be wrong is not a claim. Parts 1 and 2 stated the conditions
 - *If confirmed:* the Pareto-frontier framing in "The Two Bounds Trade Against Each Other, Not for Free" is a theoretical possibility without practical bite in this specific running case, and an operator can treat both bounds as effectively free to tighten simultaneously here, though the underlying constrained-optimization argument, that shrinking a feasible set cannot lower an optimum, remains true regardless.
 
 **F17 (the joint safety filter never actually loses feasibility in practice).**
-- *Condition:* it is shown, empirically against this post's reference implementation or by a tighter argument than Corollary 3's cost-floor one, that the per-step QP jointly enforcing Definition 3's probability constraint and Corollary 2's CVaR constraint always has a nonempty feasible set across the running case's actual operating envelope, without requiring an explicit backup policy of the kind Chen, Jankovic, Santillo, and Ames construct.
+- *Condition:* it is shown, empirically against this post's reference model or by a tighter argument than Corollary 3's cost-floor one, that the per-step QP jointly enforcing Definition 3's probability constraint and Corollary 2's CVaR constraint always has a nonempty feasible set across the running case's actual operating envelope, without requiring an explicit backup policy of the kind Chen, Jankovic, Santillo, and Ames construct.
 - *If confirmed:* "A Cost Floor Assumes a Solution Exists at All" names a theoretical risk without practical bite in this specific running case, the same shape of resolution F16 states for the achievable-region frontier, and this post's two-constraint filter can be trusted as stated without a backup-set extension. If disconfirmed, Proposition 3 and Corollary 2 as this post states them are incomplete as a safety filter, not just costly, at states where the joint feasible set empties out, and would need the backup-policy construction this post has not built.
 
 **F18 (the bootstrap window is short enough not to matter).**
@@ -1088,7 +1004,7 @@ A claim that cannot be wrong is not a claim. Parts 1 and 2 stated the conditions
 
 **F19 (the 1/N tail shape is not structurally required, and other exponents are equally plausible for a coherency-dominated system).**
 - *Condition:* a system with negligible queueing contention ({% katex() %}\sigma \approx 0{% end %} in USL terms) and a genuine per-pair coherency penalty ({% katex() %}\kappa > 0{% end %}) is shown, empirically or by a tighter argument than Gunther's rational-function derivation, to exhibit throughput decay asymptotically different from 1/N at large concurrency.
-- *If confirmed:* this post's reference implementation's choice of {% katex() %}(C/n)^2{% end %} decay would need to be re-examined as an unexplained empirical fit rather than a structurally required shape. The specific 75 requests-per-second ceiling this post verifies directly against its code would be unaffected either way, since that number was never derived from USL in the first place.
+- *If confirmed:* this post's reference model's choice of {% katex() %}(C/n)^2{% end %} decay would need to be re-examined as an unexplained empirical fit rather than a structurally required shape. The specific 75 requests-per-second ceiling this post verifies directly against its code would be unaffected either way, since that number was never derived from USL in the first place.
 
 </details>
 
@@ -1098,7 +1014,7 @@ A claim that cannot be wrong is not a claim. Parts 1 and 2 stated the conditions
 
 *Formal Proposition:* Proposition 3, High-Probability Safety Filtration, extended by Corollary 2, Worst-Case CVaR Extension.
 
-*Production Instance:* this post's reference implementation, the same contention-compounded, health-scaled admission queue this post opened with. It enters a genuinely non-recovering state, not a slow one, once traffic exceeds the executor pool's derived joint ceiling while downstream health is degraded, the excursion a barrier calibrated to the queue's threshold is built to prevent, and the excursion whose *severity*, once it happens, Definition 3 alone cannot price.
+*Production Instance:* this post's reference model, the same contention-compounded, health-scaled admission queue this post opened with. It enters a genuinely non-recovering state, not a slow one, once traffic exceeds the executor pool's derived joint ceiling while downstream health is degraded, the excursion a barrier calibrated to the queue's threshold is built to prevent, and the excursion whose *severity*, once it happens, Definition 3 alone cannot price.
 
 *Exact vs. Approximate:* Layer 1 exact for the discrete-time probability bound (Cosner, Culbertson & Ames) and for the worst-case CVaR magnitude bound (Kishida), each as proven in its cited setting; Layer 2 approximate for applying either bound to an admission-control queue specifically, a setting neither citation was proven for; Layer 3 approximate for the actuator-inversion and heavy-tailed-ensemble sections, this post's worked constructions, not restatements of any cited theorem.
 
@@ -1162,7 +1078,7 @@ The {% katex() %}f^\ast = 0.125{% end %} tipping point in "From Two Controllers 
     [6, "The 1/N Tail Is Structurally Required", "This model's (C/n)^2 throughput collapse is not a curve chosen to fit the data. Gunther's Universal Scalability Law, reduced to the case where contention is negligible next to the coherency penalty, forces throughput to fall as 1/N for any such system. It confirms only the tail exponent, not this post's specific ceiling number. A sigma approx 0 USL curve fit to this model's comfortable-load rate gives roughly 67 requests per second at n=8, not the 75 this post derives and verifies directly against its code."]
   ]},
   {"theme": "Probability Is Not Magnitude", "c": "sky", "points": [
-    [7, "Probability and Magnitude Differ", "Probability and magnitude are different guarantees. This post's Node-verified comparison shows three designs, identically certified at a 5 percent chance of an excursion, whose worst observed excursion differs by more than four orders of magnitude once severity is heavy-tailed."],
+    [7, "Probability and Magnitude Differ", "Probability and magnitude are different guarantees. This post's numerical comparison shows three designs, identically certified at a 5 percent chance of an excursion, whose worst observed excursion differs by more than four orders of magnitude once severity is heavy-tailed."],
     [8, "Kishida's CVaR Bridges the Gap", "Kishida's worst-case CVaR control barrier function is the existing, verified literature bridge from a probability bound to a magnitude bound. Corollary 2 states the combined guarantee precisely: both bounds, jointly enforced, not one substituting for the other."],
     [9, "Both Bounds Cost Real Authority", "Jointly enforcing both bounds is not free. Shrinking a convex program's feasible set can only raise its optimal cost, never lower it, so a fixed control-authority budget traces a genuine achievable-region frontier between how tight ε can go and how tight the severity bound can go. That is the same lower-envelope logic <a href=\"/blog/cost-of-knowing-part2-dual-control-and-the-weaponized-probe/\">Dual Control and the Weaponized Probe</a> used for its cost-over-time tradeoff, applied here to a tradeoff over safety dimensions instead."],
     [10, "A Cost Floor Isn't a Feasibility Guarantee", "A cost floor is not a feasibility guarantee. The per-step QP enforcing both bounds can lose its feasible set entirely at a highly constrained state, not just grow more expensive. This post has not built the explicit backup policy the control-barrier-function literature uses to rule that out."],
@@ -1201,7 +1117,7 @@ The {% katex() %}f^\ast = 0.125{% end %} tipping point in "From Two Controllers 
 
 **Probability Is Not Magnitude**
 
-7. Probability and magnitude are different guarantees. This post's Node-verified comparison shows three designs, identically certified at a 5 percent chance of an excursion, whose worst observed excursion differs by more than four orders of magnitude once severity is heavy-tailed.
+7. Probability and magnitude are different guarantees. This post's numerical comparison shows three designs, identically certified at a 5 percent chance of an excursion, whose worst observed excursion differs by more than four orders of magnitude once severity is heavy-tailed.
 8. Kishida's worst-case CVaR control barrier function is the existing, verified literature bridge from a probability bound to a magnitude bound. Corollary 2 states the combined guarantee precisely: both bounds, jointly enforced, not one substituting for the other.
 9. Jointly enforcing both bounds is not free. Shrinking a convex program's feasible set can only raise its optimal cost, never lower it, so a fixed control-authority budget traces a genuine achievable-region frontier between how tight {% katex() %}\epsilon{% end %} can go and how tight the severity bound can go. That is the same lower-envelope logic [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) used for its cost-over-time tradeoff, applied here to a tradeoff over safety dimensions instead.
 10. A cost floor is not a feasibility guarantee. The per-step QP enforcing both bounds can lose its feasible set entirely at a highly constrained state, not just grow more expensive. This post has not built the explicit backup policy the control-barrier-function literature uses to rule that out.

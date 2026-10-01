@@ -1,7 +1,7 @@
 +++
 authors = ["Yuriy Polyulya"]
 title = "The Trigger to Stop Simulating"
-description = "Three parts in, this series finally answers the question it opened with: not whether to explore, not how safely, but exactly when the case for building the fix stops being patience and starts being negligence. Reframe that decision as what it actually is, a bounded premium paid once for the right to survive an open-ended, heavy-tailed cost, and this series' already-locked numbers say something sharper than \"eventually\": at this series' base discount rate, every tail weight this series has priced already clears that threshold, though the lightest tail's margin turns out to depend on the discount rate in a way the heavier tails' margins do not."
+description = "When does more simulation stop paying, and building the fix become overdue? This post treats the decision as a bounded premium paid once for the right to survive an open-ended, heavy-tailed cost, and derives the threshold. At the base discount rate every tail weight the series has priced clears it, though the lightest tail's margin depends on that rate in a way the heavier tails' margins do not."
 date = 2026-09-27
 slug = "cost-of-knowing-part4-the-trigger-to-stop-simulating"
 draft = false
@@ -14,7 +14,7 @@ series = ["cost-of-knowing"]
 toc = false
 series_order = 4
 series_title = "The Cost of Knowing: Dual Control, Bounded Probing, and the Limits of Forward Simulation"
-series_description = """<div class="series-lede">Your simulator has never once been wrong about the past.</div>Every engineer trusts a simulation right up until it is wrong in a way the simulation itself was built never to notice. This series is an audit of that trust, run against congruence bias, the specific paradox of building a check that can only ever agree with you, and against a real production incident, until the audit produces its math. Each part stands on a formal result from its discipline and prices one piece of the same underlying question, without assuming in advance which part, if any, closes it. Every post ends the same way, by naming the exact number at which its recommendation reverses, because an architecture is only as honest as the failure condition it names, and one that names none was never engineered, only decorated."""
+series_description = """<div class="series-lede">Every simulation answers one question and raises three new ones.</div>A simulator validated against history has never once been wrong about the past, which is why its clean result is so easy to mistake for evidence. This series asks when to stop simulating and start learning from live operation. Each part prices one step: what refusing to explore really costs, how a controller can measure while it operates, what a safety boundary has to bound, and the point where one more simulation costs more than it can teach. Every part ends by naming the condition under which its own recommendation reverses. An architecture is only as honest as the failure condition it names."""
 +++
 
 [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md) closed by naming the exact question this series has owed since its first page. Exploring costs less than not exploring. A probe engineered correctly costs less than one built to repeat the original mistake. A boundary drawn once costs less than review paid forever. Given all three, exactly when does the model stop being the cheaper choice and the probe become the required one? This post answers that question directly, by name. It is worth being precise about what kind of question it actually is before touching the mathematics that answers it.
@@ -67,7 +67,7 @@ What is missing from the room is the one thing a quiet dashboard cannot supply o
 
 Pricing this decision means stating it precisely enough, rather than arguing it by analogy.
 
-Building Cyclic Adaptive Regulation costs a known, bounded amount up front, [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s {% katex() %}B{% end %}. In exchange, it buys the right, not the obligation, to detect and survive whatever the next correlated-retry regime turns out to cost. On that cost, [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md)'s Node-verified severity table already showed it is heavy-tailed. At the worst-observed tail, it can run to hundreds of thousands of times a typical occurrence, not a fixed, bounded number at all. A known, bounded premium, paid once, in exchange for an open-ended, asymmetric payoff realized only if a specific, uncertain event occurs. That is the same structural object as a financial call option, and not an analogy to one. The machinery built to price exactly that object, real options theory, applies here directly rather than by metaphor.
+Building Cyclic Adaptive Regulation costs a known, bounded amount up front, [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s {% katex() %}B{% end %}. In exchange, it buys the right, not the obligation, to detect and survive whatever the next correlated-retry regime turns out to cost. On that cost, [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md)'s severity table already showed it is heavy-tailed. At the worst-observed tail, it can run to nearly two million times a typical occurrence, not a fixed, bounded number at all. A known, bounded premium, paid once, in exchange for an open-ended, asymmetric payoff realized only if a specific, uncertain event occurs. That is the same structural object as a financial call option, and not an analogy to one. The machinery built to price exactly that object, real options theory, applies here directly rather than by metaphor.
 
 <div class="pull-quote">This is a call option, not an analogy to one.</div>
 
@@ -132,106 +132,83 @@ Falsification Criterion F28 below states this as its testable claim, distinct fr
 {{ layer(n=3, type="Estimate", id="verify-the-tangency-conditi") }}**Checking the tangency, not assuming it.** Verify the tangency condition's consequence directly, rather than take the smooth-pasting story on faith. Because {% katex() %}W{% end %} meets its payoff tangentially at {% katex() %}V^\ast{% end %}, not at a corner, the expected payoff from exercising near the true optimum should be nearly flat. That flatness holds in a small neighborhood around it, a first-order condition's signature. Near a maximum, small deviations cost second-order amounts, not first-order ones.
 
 <div style="margin:1.5em 0;">
-<canvas id="chart-tangency" aria-label="Chart showing the option value function W(V) meeting the exercise payoff V minus I tangentially at the threshold V star. For V below V star, the curved W(V) line sits above the straight payoff line. At V star, approximately 2625 engineer-hours, the two lines touch without crossing, matching slope, and for V at or above V star they coincide exactly." style="width:100%; aspect-ratio:700/440; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
+<canvas id="chart-tangency" aria-label="A chart with one curve: how much better waiting is than building now, in engineer-hours, against V, what having the safeguard already built is worth today. The curve starts at 480 when V is zero, falls to 268 at V equals 480, the build cost, where the safeguard first pays for itself, and keeps falling to zero at the threshold V star, about 2,625 engineer-hours. It lands on zero smoothly, with no corner. Everything left of V star is marked wait and everything right of it is marked build." style="width:100%; height:340px; border:1px solid #e0e0e0; border-radius:4px; background:#fff; display:block;"></canvas>
 <script>
-(function () {
-  var canvas = document.getElementById('chart-tangency');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var W, H, pw, ph;
-  var L = 66, R = 24, T = 24, B = 46;
-  var I = 480, beta = 1.2237299763815301, Vstar = 2625.4433945920987, K = 0.14039003141168974;
-  var Vmax = 3800, Ymax = 3200;
-  var N = 300;
-  var Vvals = [], Wvals = [], Pvals = [];
-  for (var i = 0; i <= N; i++) {
-    var v = (i / N) * Vmax;
-    Vvals.push(v);
-    Wvals.push(v < Vstar ? K * Math.pow(v, beta) : (v - I));
-    Pvals.push(v - I);
-  }
-  function px(v) { return L + (v / Vmax) * pw; }
-  function py(y) { return T + (1 - Math.max(0, y) / Ymax) * ph; }
-  function setup() {
-    var rect = canvas.getBoundingClientRect();
-    var dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    W = rect.width; H = rect.height;
-    pw = W - L - R; ph = H - T - B;
-  }
-  function drawAxes() {
-    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.beginPath();
-    ctx.moveTo(L, T); ctx.lineTo(L, T + ph); ctx.lineTo(L + pw, T + ph); ctx.stroke();
-    ctx.fillStyle = '#444'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('V (engineer-hours)', L + pw / 2, H - 8);
-    ctx.save(); ctx.translate(16, T + ph / 2); ctx.rotate(-Math.PI / 2);
-    ctx.fillText('value (engineer-hours)', 0, 0); ctx.restore();
-    ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-    [0, 500, 1000, 1500, 2000, 2500, 3000, 3500].forEach(function (v) {
-      var x = px(v);
-      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.beginPath();
-      ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
-      ctx.strokeStyle = '#555'; ctx.beginPath();
-      ctx.moveTo(x, T + ph); ctx.lineTo(x, T + ph + 5); ctx.stroke();
-      ctx.fillStyle = '#444';
-      ctx.fillText(String(v), x, T + ph + 18);
-    });
-    ctx.textAlign = 'right';
-    [0, 500, 1000, 1500, 2000, 2500, 3000].forEach(function (y) {
-      var yy = py(y);
-      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.beginPath();
-      ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke();
-      ctx.strokeStyle = '#555'; ctx.beginPath();
-      ctx.moveTo(L, yy); ctx.lineTo(L - 5, yy); ctx.stroke();
-      ctx.fillStyle = '#444';
-      ctx.fillText(String(y), L - 8, yy + 4);
-    });
-  }
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    drawAxes();
-    ctx.setLineDash([5, 4]);
-    ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5; ctx.beginPath();
-    for (var i = 0; i <= N; i++) {
-      var x = px(Vvals[i]), y = py(Pvals[i]);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2.5; ctx.beginPath();
-    for (var i = 0; i <= N; i++) {
-      var x = px(Vvals[i]), y = py(Wvals[i]);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    var xStar = px(Vstar), yStar = py(K * Math.pow(Vstar, beta));
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.beginPath();
-    ctx.moveTo(xStar, T); ctx.lineTo(xStar, T + ph); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(xStar, yStar, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#c0392b'; ctx.fill();
-    ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#c0392b';
-    ctx.fillText('tangent at V∗ ≈ 2,625h', xStar + 8, yStar - 10);
-    ctx.font = '11px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#2980b9';
-    ctx.fillText('W(V)', px(600), py(K * Math.pow(600, beta)) - 10);
-    ctx.fillStyle = '#888';
-    ctx.fillText('payoff V − I', px(2900), py(2900 - I) + 16);
-  }
-  function trySetupAndDraw() {
-    var rect = canvas.getBoundingClientRect();
-    if (rect.width < 10 || rect.height < 10) { requestAnimationFrame(trySetupAndDraw); return; }
-    setup(); draw();
-  }
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (es, ob) { if (es[0].isIntersecting) { ob.disconnect(); trySetupAndDraw(); } }, { threshold: 0.2 }).observe(canvas);
-  } else { trySetupAndDraw(); }
-  window.addEventListener('resize', function () { setup(); draw(); });
+(function(){
+var cv=document.getElementById('chart-tangency');
+if(!cv)return;
+var ctx=cv.getContext('2d');
+var I=480,beta=1.2237299763815301,Vstar=2625.4433945920987,K=0.14039003141168974;
+var Vmax=3400,Ymax=520,N=240;
+var INK='#263238',GREY='#607d8b',ORANGE='#e07b39',GREEN='#2e7d32';
+var W=0,H=0,narrow=false,L=46,R=18,T=62,B=58,started=false;
+function adv(v){return v<Vstar?K*Math.pow(v,beta)-(v-I):0;}
+function px(v){return L+(v/Vmax)*(W-L-R);}
+function py(y){return T+(1-y/Ymax)*(H-T-B);}
+function txt(t,x,y){ctx.fillText(t,Math.round(x),Math.round(y));}
+function fit(t,maxW,size,style){var s=size;ctx.font=style.replace('%',s);while(s>8&&ctx.measureText(t).width>maxW){s--;ctx.font=style.replace('%',s);}return s;}
+function num(v){return Math.round(v).toLocaleString('en-US');}
+function setup(){
+W=cv.clientWidth;narrow=W<560;H=narrow?320:340;
+cv.style.height=H+'px';
+if(cv.clientHeight&&cv.clientHeight!==H){cv.style.height=(2*H-cv.clientHeight)+'px';}
+var dpr=window.devicePixelRatio||1;
+cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+}
+function draw(){
+if(!started)return;
+var i,x0=L,x1=W-R,y0=T,y1=H-B,xs=px(Vstar),xi=px(I);
+ctx.clearRect(0,0,W,H);
+ctx.fillStyle='rgba(46,125,50,0.10)';ctx.fillRect(xs,y0-22,x1-xs,y1-y0+22);
+ctx.fillStyle=INK;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+var ttl=narrow?'HOW MUCH BETTER WAITING IS THAN BUILDING NOW':'HOW MUCH BETTER WAITING IS THAN BUILDING NOW  (engineer-hours)';
+fit(ttl,W-L-R,11,'bold %px sans-serif');txt(ttl,L,20);
+ctx.font='bold 14px sans-serif';
+ctx.fillStyle=ORANGE;txt('WAIT',x0+8,y0-4);
+ctx.fillStyle=GREEN;txt('BUILD',xs+8,y0-4);
+var yt=[0,250,500];
+ctx.font='11px sans-serif';ctx.lineWidth=1;
+for(i=0;i<yt.length;i++){
+ctx.strokeStyle=i===0?'#b0bec5':'#eceff1';ctx.beginPath();ctx.moveTo(x0,Math.round(py(yt[i]))+0.5);ctx.lineTo(x1,Math.round(py(yt[i]))+0.5);ctx.stroke();
+ctx.fillStyle=GREY;ctx.textAlign='right';ctx.textBaseline='middle';txt(String(yt[i]),x0-8,py(yt[i]));
+}
+ctx.beginPath();ctx.moveTo(x0,y1);
+for(i=0;i<=N;i++){var u=i/N*Vstar;ctx.lineTo(px(u),py(adv(u)));}
+ctx.lineTo(xs,y1);ctx.closePath();ctx.fillStyle='rgba(224,123,57,0.20)';ctx.fill();
+ctx.strokeStyle=ORANGE;ctx.lineWidth=3;ctx.lineJoin='round';ctx.beginPath();
+for(i=0;i<=N;i++){var u2=i/N*Vstar;if(i===0)ctx.moveTo(px(u2),py(adv(u2)));else ctx.lineTo(px(u2),py(adv(u2)));}
+ctx.stroke();
+ctx.strokeStyle=GREEN;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xs,y1);ctx.lineTo(x1,y1);ctx.stroke();
+ctx.strokeStyle=GREY;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xi,y1);ctx.lineTo(xi,y1+6);ctx.stroke();
+ctx.strokeStyle=GREEN;ctx.beginPath();ctx.moveTo(xs,y1);ctx.lineTo(xs,y1+6);ctx.stroke();
+ctx.textBaseline='top';ctx.font='bold 11px sans-serif';
+ctx.fillStyle=GREY;ctx.textAlign='left';txt('480',xi-9,y1+9);
+ctx.font='11px sans-serif';txt(narrow?'build cost':'build cost: it pays for itself from here',xi-9,y1+23);
+ctx.fillStyle=GREEN;ctx.font='bold 11px sans-serif';ctx.textAlign=narrow?'right':'center';txt('2,625',narrow?xs+14:xs,y1+9);
+ctx.font='11px sans-serif';txt(narrow?'threshold V*':'threshold V*: build from here',narrow?xs+14:xs,y1+23);
+ctx.fillStyle=GREY;ctx.textAlign='left';txt('0',x0-3,y1+9);
+if(!narrow){ctx.fillStyle=GREEN;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.font='11px sans-serif';
+txt('lands on zero',xs+10,y1-30);txt('with no corner',xs+10,y1-15);}
+var MARK=[[0,'480','if the safeguard were worth nothing'],[I,'268','when it first pays for itself'],[Vstar,'0','at the threshold']];
+for(i=0;i<3;i++){
+var X=px(MARK[i][0]),Y=py(adv(MARK[i][0]));
+ctx.fillStyle='#fff';ctx.strokeStyle=i===2?GREEN:ORANGE;ctx.lineWidth=3;ctx.beginPath();ctx.arc(X,Y,6,0,6.2832);ctx.fill();ctx.stroke();
+if(i===2)continue;
+ctx.textAlign='left';ctx.textBaseline='alphabetic';
+ctx.fillStyle='#b85c1e';ctx.font='bold 14px sans-serif';txt(MARK[i][1],X+12,Y+2);
+var nw=ctx.measureText(MARK[i][1]).width;
+ctx.fillStyle=GREY;fit(MARK[i][2],x1-X-22-nw,11,'%px sans-serif');txt(MARK[i][2],X+18+nw,Y+2);
+}
+}
+function start(){if(cv.clientWidth<10){requestAnimationFrame(start);return;}started=true;setup();draw();}
+if('IntersectionObserver' in window){
+new IntersectionObserver(function(es,ob){if(es[0].isIntersecting){ob.disconnect();start();}},{threshold:0.1}).observe(cv);
+}else{start();}
+window.addEventListener('resize',function(){if(started){setup();draw();}});
 })();
 </script>
-<figcaption>W(V) meets its payoff tangentially at V*, the boundary condition Proposition 5's derivation depends on.</figcaption>
+<figcaption>The advantage of waiting over building now shrinks as the safeguard becomes more valuable. It reaches zero at V* ≈ 2,625 engineer-hours, more than five times the 480-hour build cost, and it lands there smoothly, with no corner. That smooth landing is the tangency Proposition 5's derivation depends on, and the flatness the table below tests.</figcaption>
 </div>
 
 A Monte Carlo simulation of the actual stopping problem, not the closed-form solution, checks this directly. Simulate {% katex() %}V(t){% end %} as the geometric Brownian motion Proposition 5 assumes, using this series' locked {% katex() %}\sigma{% end %} and the zero-drift case. Compare the expected discounted payoff from exercising at several candidate thresholds bracketing the closed-form {% katex() %}V^\ast{% end %}, using the same simulated paths for every candidate to keep the comparison itself low-noise.
@@ -465,6 +442,14 @@ Connect this back to "What Changes When More Than One Team Holds This Option" ab
 
 Both point the same direction, toward under-investment when each service prices only its simple option. Both are also structurally distinct enough that neither citation, Grenadier's nor Geske's, stands in for the other. A fleet holding this decision is exposed to two separate reasons a per-service calculation understates what the fleet as a whole should be willing to pay. That is not one reason counted twice under different names.
 
+## The Strange Loop of Deciding Whether to Keep Simulating
+
+Deciding whether to keep simulating is modeling work in its own right, not a pause taken outside the model. [The Constraint Sequence Framework](@/blog/2025-12-27/index.md) already found this shape once: optimization has no completion state, because checking whether to keep optimizing is itself optimization overhead. That is [the strange loop](@/blog/2025-12-27/index.md#the-strange-loop) Hofstadter described, recurring here one layer up, in the decision to keep simulating rather than in the thing the simulations were run to answer. A loop with no completion state has one exit: an explicit stopping criterion. That is how [the meta-constraint](@/blog/2025-12-27/index.md#the-meta-constraint) answers when to stop paying for the loop itself.
+
+That framework's static rule stops gathering information the instant its expected value turns negative, the ordinary value-of-information calculation{{ cite(ref="5", title="Howard, R.A. (1966) -- Information Value Theory, IEEE Transactions on Systems Science and Cybernetics, 2(1), 22-26") }}.
+
+{{ layer(n=2, type="Fit", id="proposition-5-is-the-identic") }}Proposition 5 can be read as the same rule in dynamic form. The value of waiting is the value of information that has not yet arrived. {% katex() %}V^\ast{% end %} is the point where that value stops covering the cost of delay. A one-shot value-of-information calculation and a continuous-time optimal-stopping threshold are answering the same question on two different clocks.
+
 ## The Decision Is a Loop, Not a Calculation
 
 Draw the decision this post actually recommends as a loop, not a one-time calculation. The two sections right after this one both live on this loop's right edge. They cover the number nobody actually has in real time, and trusting the signal that would trigger a different answer, not the comparison itself.
@@ -492,7 +477,7 @@ Read the loop's honesty into it rather than around it. The right edge, re-observ
 
 Proposition 5 compares {% katex() %}V{% end %} against {% katex() %}V^\ast{% end %} as though {% katex() %}V{% end %} were a number sitting on a dashboard, known exactly and instantly. That assumption is worth naming before leaning on it further, because this series priced the cost of this kind of idealization twice already, under two different vocabularies.
 
-{{ layer(n=1, type="Bound", id="a-decision-rule-comparing-a") }}A decision rule comparing a state variable against a threshold, computed from a fully and instantly observable state, is a Markov decision process. The moment that state variable is instead inferred from delayed, noisy, or incomplete signals, the correct formulation is a partially observable Markov decision process, a POMDP. The two are not interchangeable notational choices. A POMDP's optimal policy is a function of a belief distribution over the true state, not the state itself{{ cite(ref="5", title="Kaelbling, L.P., Littman, M.L. & Cassandra, A.R. (1998) -- Planning and Acting in Partially Observable Stochastic Domains, Artificial Intelligence, 101(1-2), 99-134") }}. That policy can differ substantially from the fully-observed policy evaluated at the belief's mean.
+{{ layer(n=1, type="Bound", id="a-decision-rule-comparing-a") }}A decision rule comparing a state variable against a threshold, computed from a fully and instantly observable state, is a Markov decision process. The moment that state variable is instead inferred from delayed, noisy, or incomplete signals, the correct formulation is a partially observable Markov decision process, a POMDP. The two are not interchangeable notational choices. A POMDP's optimal policy is a function of a belief distribution over the true state, not the state itself{{ cite(ref="6", title="Kaelbling, L.P., Littman, M.L. & Cassandra, A.R. (1998) -- Planning and Acting in Partially Observable Stochastic Domains, Artificial Intelligence, 101(1-2), 99-134") }}. That policy can differ substantially from the fully-observed policy evaluated at the belief's mean.
 
 {{ layer(n=2, type="Fit", id="this-series-has-already-loc") }}This series located the mechanism that would corrupt {% katex() %}V{% end %}'s own observability twice already, under two names. First, [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) established that a shared coordination signal carries a real, physical latency floor, bounded below by network, consensus, and telemetry aggregation time. That is not a tuning defect a faster implementation erases to zero. Second, [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md) named the identical floor again, independently, as PACELC's own "else" branch. Even absent a partition, a distributed system trades consistency against latency continuously. A controller acting on a shared signal is always acting on a view that is at best as fresh as that floor allows.
 
@@ -562,7 +547,7 @@ A team is free to run its numbers through this post's checklist. Whether the res
 
 A result this well-triangulated invites an uncomfortable question this series has not asked directly yet. If the math has agreed with itself three separate times, why does the team introduced at this post's opening still need to be told any of this? Naming the answer belongs here, not skipped past, because it is not a math question at all.
 
-{{ layer(n=1, type="Bound", id="present-biased-discounting-a") }}Present-biased discounting is a real, formally characterized departure from the exponential discounting Proposition 5 assumes throughout, not a loose way of saying people are impatient. A quasi-hyperbolic discounter applies an ordinary rate to costs and benefits once they are already in the future. It applies an extra, steep penalty specifically to anything that has to happen now{{ cite(ref="6", title="Laibson, D. (1997) -- Golden Eggs and Hyperbolic Discounting, Quarterly Journal of Economics, 112(2), 443-478") }}. A certain, immediate cost gets valued far more heavily than a rational exponential discounter would value it, relative to a benefit stream arriving later.
+{{ layer(n=1, type="Bound", id="present-biased-discounting-a") }}Present-biased discounting is a real, formally characterized departure from the exponential discounting Proposition 5 assumes throughout, not a loose way of saying people are impatient. A quasi-hyperbolic discounter applies an ordinary rate to costs and benefits once they are already in the future. It applies an extra, steep penalty specifically to anything that has to happen now{{ cite(ref="8", title="Laibson, D. (1997) -- Golden Eggs and Hyperbolic Discounting, Quarterly Journal of Economics, 112(2), 443-478") }}. A certain, immediate cost gets valued far more heavily than a rational exponential discounter would value it, relative to a benefit stream arriving later.
 
 [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) already found this series' instance of a closely related bias, Kahneman and Tversky's loss aversion. That bias drives resistance to abandoning a familiar one-shot testing process for a better cyclic one. This is not a restatement of that finding, but a different, independently documented bias, with its separate literature, that happens to bite exactly this post's decision shape.
 
@@ -588,6 +573,18 @@ None of these three findings individually reverses this post's recommendation. C
 
 What does not change, even in that worst case, is worth stating plainly. The heavy and very heavy tail rows do not share the moderate tail's fragility, clearing their thresholds by margins wide enough to absorb all three compounding effects at once and still say invest. A reader whose own running case sits anywhere near this series' heavier tail weights is not the reader this section's warning is really for. The warning is narrower and sharper than "this post's math might be wrong somewhere." It is that the one case where the arithmetic alone is not enough to guarantee action is also, not by coincidence, the case where the underlying risk looked smallest to begin with, exactly the shape congruence takes when it finds a genuine foothold instead of a manufactured one.
 
+## What to Derive, What to Measure, What to Simulate, and When to Stop
+
+Stopping looks different for different kinds of requirement, so the first step is to sort them. [The Governance Tax](@/blog/2026-04-16/index.md#gate-4-are-safety-constraints-satisfied) already sorted safety constraints into three tiers by how each one earns its guarantee; the same sort applies to the questions a model can answer on its own, the ones a measurement settles, and the ones only a simulation can touch.
+
+| Kind | Where it comes from | How to settle it | When to stop | When it expires |
+|---|---|---|---|---|
+| Derivable | A proof, like the characteristic equation behind Proposition 5 | Derive it; no simulation needed | At the proof | Never |
+| Measured | A fitted quantity, like this series' arrival rate or severity multiplier | Measure it to a stated precision, the kind of bound [The Simulation Singularity](@/blog/2026-09-13/index.md) computes in "How Many Simulations Would Have Been Enough?" | When the estimate meets that precision | With the measurement's staleness window |
+| Emergent | A regime the model was never shown, like this series' correlated-retry shift | Simulate the questions you can pose | When one more run costs more than it can teach, this post's own trigger | Never fully; switch to the bounded live probing [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md) and [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md) built |
+
+Read the three rows as a sequence, not a menu. A requirement earns its row by the kind of guarantee it can actually carry, not by which row is cheapest to claim.
+
 ## Compute Your Own V*, a Checklist
 
 Every finding above prices this series' running case, using anchors this series already locked. What follows is how a reader prices their own, arrived at three parts and one series' worth of locked anchors later. [The Simulation Singularity](@/blog/2026-09-13/index.md)'s own checklist, "Compute Your Own N*," named a specific exit condition without saying what would replace it: if no reference class exists for {% katex() %}p{% end %}, point-probability reasoning has hit its floor, and that checklist does not apply past that point. This is what replaces it, stripped to the same five-step shape for a reader running it against a real system rather than this post's illustrative numbers.
@@ -612,7 +609,7 @@ This checklist does not remove the judgment calls in steps 2 and 3, the same hon
 
 **Claim.** Modeling {% katex() %}V{% end %} as geometric Brownian motion, with McDonald and Siegel's machinery built on top of it, correctly prices the option to invest.
 - *Assumption:* The avoided-cost flow {% katex() %}V{% end %} can grow without an upper limit, the same assumption that lets an ordinary GBM-priced call option's payoff be unbounded.
-- *Failure Mode:* A real distributed system's avoided-cost flow cannot exceed what its hardware and network can physically clear, the same capacity asymptote the Universal Scalability Law derives for throughput{{ cite(ref="8", title="Gunther, N.J. (2008) -- A General Theory of Computational Scalability Based on Rational Functions, arXiv:0808.1431") }}; {% katex() %}V{% end %} is therefore a capped, not an uncapped, call option in the strict sense, though this post's {% katex() %}V{% end %} and {% katex() %}V^\ast{% end %} values, in the thousands of engineer-hours, sit far enough below any real fleet's physical ceiling that the cap does not bind anywhere this post actually prices. A team operating close enough to that ceiling for the cap to matter would need a bounded-diffusion or reflected-process variant of Proposition 5, not the unbounded GBM form used here.
+- *Failure Mode:* A real distributed system's avoided-cost flow cannot exceed what its hardware and network can physically clear, the same capacity asymptote the Universal Scalability Law derives for throughput{{ cite(ref="9", title="Gunther, N.J. (2008) -- A General Theory of Computational Scalability Based on Rational Functions, arXiv:0808.1431") }}; {% katex() %}V{% end %} is therefore a capped, not an uncapped, call option in the strict sense, though this post's {% katex() %}V{% end %} and {% katex() %}V^\ast{% end %} values, in the thousands of engineer-hours, sit far enough below any real fleet's physical ceiling that the cap does not bind anywhere this post actually prices. A team operating close enough to that ceiling for the cap to matter would need a bounded-diffusion or reflected-process variant of Proposition 5, not the unbounded GBM form used here.
 
 **Claim.** The smooth-pasting condition, {% katex() %}W'(V^\ast)=1{% end %}, correctly characterizes the optimal threshold.
 - *Assumption:* The process can be treated as approaching {% katex() %}V^\ast{% end %} continuously, the diffusion's property, not as a genuinely discrete arrival that can jump past it.
@@ -784,7 +781,7 @@ Every prior part's ledger row noted that none of its disciplines needed the othe
 
 **How do you let that exploration run without a human reviewing every experiment before it ships?** Proposition 3's discrete-time stochastic control barrier function, extended by Corollary 2's magnitude bound, answered this: a boundary a reviewer approves once, precisely enough to state what it does and does not certify, rather than a policy trusted forever on the strength of a single sign-off. This post's own "Compute Your Own V*" checklist above extends that same reviewer role to a different kind of boundary, drawn in engineer-hours rather than probability, and names exactly the same independence requirement [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md) already demanded of a safety boundary.
 
-**Once exploration is safe, exactly when should you stop simulating and start probing?** This post answers that question directly, by name, the one this series has owed since its first page. Proposition 5's threshold, computed from numbers this series had already locked before this post began, gives an answer sharper than a future date: at this series' base discount rate, the threshold has already been crossed under every tail weight this post checked, and has been for a while, a verdict this post has now checked against a Monte Carlo simulation of the actual stopping problem, a game-theoretic multi-team correction, a distributed-systems observability gap, and a documented behavioral bias against acting on it, and found still standing for the heavy and very heavy tails at every discount rate checked. The moderate tail's margin is thinner, and this post says exactly how thin: it flips to wait past roughly 7.5 percent, the one place in this post's whole worked table where the discount rate itself, not merely an input error, is enough to change the answer.
+**Once exploration is safe, exactly when should you stop simulating and start probing?** This post answers that question directly, by name, the one this series has owed since its first page. Proposition 5's threshold, computed from numbers this series had already locked before this post began, gives an answer sharper than a future date: at this series' base discount rate, the threshold has already been crossed under every tail weight this post checked, and has been for a while, a verdict this post has now checked against a Monte Carlo simulation of the actual stopping problem, a game-theoretic multi-team correction, a distributed-systems observability gap, and a documented behavioral bias against acting on it, and found still standing for the heavy and very heavy tails at every discount rate checked. The moderate tail's margin is thinner, and this post says exactly how thin: it flips to wait past roughly 7.5 percent, the one place in this post's whole worked table where the discount rate itself, not merely an input error, is enough to change the answer. The question asked sets the count of simulations needed, [The Simulation Singularity](@/blog/2026-09-13/index.md)'s own answer to this series' first question, and this post's trigger is the point past which asking for one more stops paying for itself.
 
 This closes the spine [The Simulation Singularity](@/blog/2026-09-13/index.md) opened when it named three separating moves and left the third one unattempted: separating the two demands in time, [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s own answer; separating them by subsystem, [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md)'s own answer; and pricing exactly when a separated exploration subsystem is worth invoking at all, the question this post has just answered.
 
@@ -853,7 +850,7 @@ Two things this diagram does not show are worth naming rather than leaving for a
 
 Every specific number in this post, {% katex() %}\sigma \approx 60{% end %} percent, {% katex() %}V^\ast \approx 2{,}625{% end %} engineer-hours at {% katex() %}r=5\%{% end %}, the 1.15x-to-6.38x margins, is this post's computation from this series' locked anchors, not an independently measured property of any real system. Change the anchors, {% katex() %}p{% end %}, {% katex() %}L{% end %}, {% katex() %}B{% end %}, or {% katex() %}c_{\text{maint}}{% end %}, and every number changes with them. What does not change, and is the actual claim this post stands behind, is the shape: an investment-timing threshold exists, is computable from numbers this series had already locked before this post began, and at this series' base discount rate, that threshold has already been crossed under every tail weight this post checked, with the moderate tail's crossing narrow enough to depend on the discount rate actually in force.
 
-McDonald and Siegel's primary source is not claimed to have been reproduced exactly. This post's reproduction of their stated illustrative parameters gives a trigger multiple of 2.64x against a summarized report of roughly 1.5-to-2x. That is close enough to confirm the characteristic equation and threshold formula are stated correctly. It is not close enough to claim their specific illustrative case has been verified digit for digit. A reader checking this post's derivation against a fuller systematic treatment than one journal article, the capped-option caveat in this post's Model Scope table above included, should reach for Dixit and Pindyck's textbook-length treatment of the same machinery, not merely McDonald and Siegel's paper{{ cite(ref="9", title="Dixit, A.K. & Pindyck, R.S. (1994) -- Investment under Uncertainty, Princeton University Press") }}. This post draws only the single threshold result it needs from a body of work the primary source itself is one early paper within.
+McDonald and Siegel's primary source is not claimed to have been reproduced exactly. This post's reproduction of their stated illustrative parameters gives a trigger multiple of 2.64x against a summarized report of roughly 1.5-to-2x. That is close enough to confirm the characteristic equation and threshold formula are stated correctly. It is not close enough to claim their specific illustrative case has been verified digit for digit. A reader checking this post's derivation against a fuller systematic treatment than one journal article, the capped-option caveat in this post's Model Scope table above included, should reach for Dixit and Pindyck's textbook-length treatment of the same machinery, not merely McDonald and Siegel's paper{{ cite(ref="10", title="Dixit, A.K. & Pindyck, R.S. (1994) -- Investment under Uncertainty, Princeton University Press") }}. This post draws only the single threshold result it needs from a body of work the primary source itself is one early paper within.
 
 The mapping from a rare, discrete regime-shift arrival to a continuously diffusing {% katex() %}V{% end %} is not claimed to be a proof of equivalence. It is a stated modeling choice, checked against one real consistency requirement, that the implied years-to-95-percent-confidence figure reproduces [The Simulation Singularity](@/blog/2026-09-13/index.md)'s own locked 8.2 years, and Falsification Criterion F20 states the condition under which that choice would need replacing.
 
@@ -866,6 +863,8 @@ Nothing in this post's machinery answers it, because Proposition 5's threshold i
 Nor does this post claim to have resolved the multi-team question it names in "What Changes When More Than One Team Holds This Option," or the ensemble-trust tension it names in "Trusting the Signal That Would Trigger a Different Answer." Both are stated as open, with Falsification Criteria F22 and F23 giving each a testable form, the same discipline this series applied to the multi-agent composition question [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md) named and declined rather than forced an answer to.
 
 The Monte Carlo simulation verifying Proposition 5's threshold is not claimed to prove the closed-form solution correct in any formal sense. It is a numerical check, using this post's locked parameters at one starting value of {% katex() %}V{% end %}, that the simulated optimum lands inside the flat region the smooth-pasting condition predicts around the closed-form answer, not a substitute for McDonald and Siegel's analytical proof.
+
+Nor is "What to Derive, What to Measure, What to Simulate, and When to Stop" above claimed to be a theorem. The derivable, measured, emergent sort it uses is a sorting aid borrowed from [The Governance Tax](@/blog/2026-04-16/index.md#gate-4-are-safety-constraints-satisfied)'s own constraint tiers, applied here to a different kind of object, not a new result this post proves.
 
 The present-bias account in "Three Converging Verdicts Are Not the Same as Three Teams That Act" is not claimed to be the only reason a team might delay, or even the most common one in practice. It is one specific, formally documented bias this post's machinery does not correct for, offered because Proposition 5 assumes rational exponential discounting throughout and a reader deserves to know exactly where that assumption could fail. Organizational friction, genuine skepticism of this post's anchors, and ordinary competing priorities have not been ruled out as explanations; naming one bias precisely is not a claim that it is the only one at work.
 
@@ -905,7 +904,8 @@ This post's machinery is the same kind of object every part in this series has b
     [19, "Self-Estimation Breaks Independence", "A team that both estimates its λ and E[L] and bears the cost of acting on that estimate violates the Independence condition <a href=\"/blog/cost-of-knowing-part1-the-simulation-singularity/\">The Simulation Singularity</a> already named, giving that team a live incentive to underestimate its inputs distinct from present bias."],
     [20, "Congruence Risk Lives in the Inputs", "Proposition 5's formula is not congruent, it returns whatever its inputs produce; this post's congruence risk lives entirely in who supplies those inputs, the same simulator-validated-against-its-own-history shape <a href=\"/blog/cost-of-knowing-part1-the-simulation-singularity/\">The Simulation Singularity</a> diagnosed, recurring one layer further from the original incident."],
     [21, "One Genuinely Fragile Combination", "The one combination this post can actually identify as genuinely fragile, not merely theoretically possible, is a moderate tail, estimated by an interested party, under ordinary organizational time pressure; every heavier tail weight this post checked clears its threshold by a margin wide enough to absorb all three effects compounded and still say invest."],
-    [22, "Maintenance Is Lumpy, Not Smooth", "Netting c_maint out of the avoided-cost flow prices maintenance as a smooth, fungible cost; <a href=\"/blog/cost-of-knowing-part2-dual-control-and-the-weaponized-probe/\">Dual Control and the Weaponized Probe</a>'s own BBR-tuning history says real maintenance trades one failure mode for another instead, so an under-maintained policy risks being specifically broken, a different problem than being cheaper, an asymmetry this post's linear formula has no term for."]
+    [22, "Maintenance Is Lumpy, Not Smooth", "Netting c_maint out of the avoided-cost flow prices maintenance as a smooth, fungible cost; <a href=\"/blog/cost-of-knowing-part2-dual-control-and-the-weaponized-probe/\">Dual Control and the Weaponized Probe</a>'s own BBR-tuning history says real maintenance trades one failure mode for another instead, so an under-maintained policy risks being specifically broken, a different problem than being cheaper, an asymmetry this post's linear formula has no term for."],
+    [23, "Deciding to Keep Simulating Is Itself the Loop", "Deciding whether to keep simulating is itself modeling work, <a href=\"/blog/microlearning-platform-part6-meta-framework/#the-strange-loop\">the strange loop</a> this post's checklist lives inside; its only exit is an explicit stopping criterion, <a href=\"/blog/microlearning-platform-part6-meta-framework/#the-meta-constraint\">the meta-constraint</a>'s own answer, with Proposition 5 as that rule's dynamic form. The derivable, measured, and emergent sort in \"What to Derive, What to Measure, What to Simulate, and When to Stop\" above borrows <a href=\"/blog/architecture-compromise-part6-deciding-deliberately/#gate-4-are-safety-constraints-satisfied\">The Governance Tax</a>'s tiering as a sorting aid, not a new theorem."]
   ]}
 ]
 }
@@ -947,6 +947,7 @@ This post's machinery is the same kind of object every part in this series has b
 20. Proposition 5's formula is not congruent, it returns whatever its inputs produce; this post's congruence risk lives entirely in who supplies those inputs, the same simulator-validated-against-its-own-history shape [The Simulation Singularity](@/blog/2026-09-13/index.md) diagnosed, recurring one layer further from the original incident.
 21. The one combination this post can actually identify as genuinely fragile, not merely theoretically possible, is a moderate tail, estimated by an interested party, under ordinary organizational time pressure; every heavier tail weight this post checked clears its threshold by a margin wide enough to absorb all three effects compounded and still say invest.
 22. Netting {% katex() %}c_{\text{maint}}{% end %} out of the avoided-cost flow prices maintenance as a smooth, fungible cost; [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s own BBR-tuning history says real maintenance trades one failure mode for another instead, so an under-maintained policy risks being specifically broken, a different problem than being cheaper, an asymmetry this post's linear formula has no term for.
+23. Deciding whether to keep simulating is itself modeling work, [the strange loop](@/blog/2025-12-27/index.md#the-strange-loop) this post's checklist lives inside; its only exit is an explicit stopping criterion, [the meta-constraint](@/blog/2025-12-27/index.md#the-meta-constraint)'s own answer, with Proposition 5 as that rule's dynamic form. The derivable, measured, and emergent sort in "What to Derive, What to Measure, What to Simulate, and When to Stop" above borrows [The Governance Tax](@/blog/2026-04-16/index.md#gate-4-are-safety-constraints-satisfied)'s tiering as a sorting aid, not a new theorem.
 
 </details>
 
@@ -960,12 +961,14 @@ This post's machinery is the same kind of object every part in this series has b
 
 <sup>[4]</sup> Geske, R. (1979). *The Valuation of Compound Options.* Journal of Financial Economics, 7(1), 63-81.
 
-<sup>[5]</sup> Kaelbling, L.P., Littman, M.L. & Cassandra, A.R. (1998). *Planning and Acting in Partially Observable Stochastic Domains.* Artificial Intelligence, 101(1-2), 99-134.
+<sup>[5]</sup> Howard, R.A. (1966). *Information Value Theory.* IEEE Transactions on Systems Science and Cybernetics, 2(1), 22-26.
 
-<sup>[6]</sup> Laibson, D. (1997). *Golden Eggs and Hyperbolic Discounting.* Quarterly Journal of Economics, 112(2), 443-478.
+<sup>[6]</sup> Kaelbling, L.P., Littman, M.L. & Cassandra, A.R. (1998). *Planning and Acting in Partially Observable Stochastic Domains.* Artificial Intelligence, 101(1-2), 99-134.
 
 <sup>[7]</sup> Ashby, W.R. (1956). *An Introduction to Cybernetics.* Chapman and Hall (Chapter 11, The Law of Requisite Variety).
 
-<sup>[8]</sup> Gunther, N.J. (2008). *A General Theory of Computational Scalability Based on Rational Functions.* arXiv:0808.1431.
+<sup>[8]</sup> Laibson, D. (1997). *Golden Eggs and Hyperbolic Discounting.* Quarterly Journal of Economics, 112(2), 443-478.
 
-<sup>[9]</sup> Dixit, A.K. & Pindyck, R.S. (1994). *Investment under Uncertainty.* Princeton University Press.
+<sup>[9]</sup> Gunther, N.J. (2008). *A General Theory of Computational Scalability Based on Rational Functions.* arXiv:0808.1431.
+
+<sup>[10]</sup> Dixit, A.K. & Pindyck, R.S. (1994). *Investment under Uncertainty.* Princeton University Press.
