@@ -877,7 +877,7 @@ A team that cannot fill in "Theorem paid" and "Exclusion zone" has not yet under
 
 9. C. Dwork, N. Lynch, L. Stockmeyer. "Consensus in the Presence of Partial Synchrony." *Journal of the ACM*, 35(2):288-323, 1988.
 
-10. N. Bronson, A. Amsden, G. Cabrera, P. Chakka, P. Dimov, H. Ding, J. Ferris, A. Giardullo, J. Hoon, E. Hung, W. Kaldewey, N. Khoury, A. Parmar, M. Perelman, T. Petrovic, T. Reed, D. Savage, B. Smith, A. Staszewski, N. Taylor, P. Tran, and K. VanNess. "Metastable Failures in Distributed Systems." *HotOS XVIII*, 2021.
+10. N. Bronson, A. Aghayev, A. Charapko, T. Zhu. "Metastable Failures in Distributed Systems." *HotOS XVIII*, 2021.
 
 11. P. Gill, N. Jain, N. Nagappan. "Understanding Network Failures in Data Centers: Measurement, Analysis, and Implications." *SIGCOMM*, 2011.
 

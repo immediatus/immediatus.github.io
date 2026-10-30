@@ -1660,7 +1660,7 @@ At what DAU does QUIC+MoQ justify its cost?
 - **Variable benefit**: Latency reduction protects revenue (scales with DAU)
 - **Break-even**: When annual impact \\(\geq \\$8.70M/year\\) (3x ROI threshold at $2.90M cost)
 
-> **Constraint Tax context**: This $2.90M is the largest component of the series' cumulative $3.36M/year Constraint Tax ($2.90M dual-stack + $0.46M creator pipeline from [Part 3](@/blog/2025-12-06/index.md#cost-per-dau)). At 10% operating margin, the full tax requires significant scale to break even - see the [Constraint Tax Breakeven derivation](@/blog/2025-11-22/index.md#applying-check-1-economics-the-constraint-tax-breakeven) in Part 1.
+> **Constraint Tax context**: This $2.90M is the largest component of the series' cumulative $3.36M/year Constraint Tax ($2.90M dual-stack + $0.46M creator pipeline from [Why GPU Quotas Kill Creators Before Content Flows](@/blog/2025-12-06/index.md#cost-per-dau)). At 10% operating margin, the full tax requires significant scale to break even - see the [Constraint Tax Breakeven derivation](@/blog/2025-11-22/index.md#applying-check-1-economics-the-constraint-tax-breakeven) in Part 1.
 
 Using the Safari-adjusted revenue calculation (full QUIC+MoQ benefit with \\(C_{\text{reach}} = 0.58\\)):
 - Safari-adjusted revenue @3M DAU = $1.75M/year (connection migration $1.35M + base latency $0.22M + DRM prefetch $0.18M)
