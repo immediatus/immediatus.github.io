@@ -40,6 +40,7 @@ series_description = """<div class="series-lede">Every simulation answers one qu
 - {% katex() %}W(V){% end %} is the option-value function, deliberately not {% katex() %}F{% end %}, [Safe in Probability, Not in Size](@/blog/2026-09-24/index.md)'s own safety-filter signature
 - {% katex() %}\lambda{% end %} is this series' locked annual regime-shift arrival rate; {% katex() %}p{% end %} is [The Simulation Singularity](@/blog/2026-09-13/index.md)'s own daily probability that {% katex() %}\lambda{% end %} converts from
 - {% katex() %}c_{\text{maint}}{% end %} and {% katex() %}c_{\text{test}}{% end %} are [Dual Control and the Weaponized Probe](@/blog/2026-09-20/index.md)'s own maintenance and one-shot-test costs, unchanged quantities carried under their series-wide names
+- L1 · Bound, L2 · Fit and L3 · Estimate are the tags on claims: a proof or a cited fact, a judgment or approximation the text argues for, and a worked example computed from the model
 
 ## Not a Third Pass at an Argument Already Made Twice
 

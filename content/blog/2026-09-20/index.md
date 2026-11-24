@@ -34,6 +34,8 @@ Make the proposal concrete, the way the incident that motivated it was concrete.
 
 This post is about why that instinct, doing something instead of nothing, is not yet the fix, and about the specific way it fails.
 
+Some paragraphs below carry a tag. L1 · Bound marks a proof or a cited fact, L2 · Fit a judgment or approximation the text argues for, and L3 · Estimate a worked example computed from the model. Hover over a tag, or tap it, for what it asks of the reader.
+
 ## The Second Mistake Looks Like the First One's Opposite
 
 Call the proposed test what it actually is. A fixed, bounded injection: some volume of synthetic requests, some duration, run once, inspected, then torn down. The team schedules it, runs it, watches the dashboards, and files the results. It feels like the opposite of the failure diagnosed in [The Simulation Singularity](@/blog/2026-09-13/index.md). That post's simulator sat still and trusted history. This test moves, deliberately, into territory history never covered.

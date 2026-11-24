@@ -520,6 +520,8 @@ The frozen policy this corollary describes is the limiting, degenerate case of t
 
 ### What This Bound Rules In and Out
 
+Each line below carries a tag. L1 · Bound marks a proof or a cited fact, L2 · Fit a judgment or approximation the text argues for, and L3 · Estimate a worked example computed from the model. Hover over a tag, or tap it, for what it asks of the reader.
+
 - {{ layer(n=1, type="Bound", id="the-lai-robbins-framework-prov") }}The Lai-Robbins framework proves that in an unknown, stationary stochastic environment, no uniformly good algorithm can drive cumulative regret below {% katex() %}\Omega(\log N){% end %}. This is exact, substrate-free, and holds regardless of what kind of system is doing the choosing.
 - {{ layer(n=1, type="Bound", id="corollary-s-linear-regret-resu") }}Corollary 1's linear-regret result is exact given its own stated setup, a policy frozen before a regime shift at a known gap {% katex() %}\Delta{% end %}. It is a direct arithmetic consequence of that setup, not an estimate, and it sits inside a broader body of switching-bandit results, not outside it: Garivier and Moulines independently prove that abrupt regime changes carry a genuine regret cost beyond the stationary floor, for any policy that does not specifically detect and adapt to the switch.
 - {{ layer(n=2, type="Fit", id="the-legacy-simulator-fit-a") }}The legacy simulator fit a single, static distribution to what it treated as one traffic population. The correlated-retry burst belonged to a different, non-stationary regime the fitted distribution had zero mass on. The empirical variance the simulator reported was a measurement of the wrong population, not a noisy measurement of the right one.

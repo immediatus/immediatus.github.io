@@ -43,6 +43,7 @@ This post is the answer to that specific, named gap. Not a bigger probe, and not
 - {% katex() %}s{% end %} is one executor's comfortable-load rate, {% katex() %}C{% end %} the comfortable concurrency, and {% katex() %}P{% end %} the executor pool size, 8
 - {% katex() %}m_{\text{tot}}{% end %} is the fixed control-authority budget Corollary 3's frontier splits
 - {% katex() %}M{% end %} is the fleet size in "From Two Controllers to a Fleet" and Proposition 4, the number of controllers simultaneously facing the coordination-signal outage
+- L1 · Bound, L2 · Fit and L3 · Estimate are the tags on claims: a proof or a cited fact, a judgment or approximation the text argues for, and a worked example computed from the model
 
 [The Trigger to Stop Simulating](@/blog/2026-09-27/index.md) later uses {% katex() %}\sigma{% end %} for a real-options value process's volatility, a different quantity from this post's USL contention parameter of the same name.
 

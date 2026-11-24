@@ -18,5 +18,6 @@
         "source=${localEnv:HOME}/.gemini,target=/home/developer/.gemini,type=bind,readonly=false",
         "source=${localEnv:HOME}/.local/bin/agy,target=/home/developer/.local/bin/agy,type=bind"
     ],
+    "postCreateCommand": "test -f experiments/requirements-dev.txt && python3 -m pip install --user -r experiments/requirements-dev.txt || true",
     "postStartCommand": "claude update || true"
 }
