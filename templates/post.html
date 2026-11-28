@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% import "macros/series.html" as series_macros %}
 {% import "macros/taxonomy.html" as taxonomy_macros %}
+{% import "macros/repo.html" as repo %}
 
 {% block content %}
 <header class="post-header">
@@ -18,7 +19,15 @@
       <span class="post-author">{{ page.authors[0] }}</span>
     {%- endif %}
 
-    {{ taxonomy_macros::render_tags(page=page, format="inline", show_separator=true) }}
+
+  </div>
+
+  <div class="post-links">
+    {%- if page.extra.repo %}
+      {{ repo::link(url=page.extra.repo, label="Simulation results, models and evidence behind this part", text="repo") }}
+      <span class="post-links-divider" aria-hidden="true"></span>
+    {%- endif %}
+    {{ taxonomy_macros::render_tags(page=page, format="inline", show_separator=false) }}
   </div>
 </header>
 

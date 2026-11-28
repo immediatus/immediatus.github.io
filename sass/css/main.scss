@@ -590,12 +590,12 @@ a:hover {
 }
 
 /* Content area links with subtle underline */
-#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):not(.cite-ref) {
+#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):not(.cite-ref):not(.repo-link) {
   border-bottom: 1px solid var(--lavender);
   opacity: 0.9;
 }
 
-#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):not(.cite-ref):hover {
+#main a:not(.tag):not(.inline-button):not(.series-nav-item):not(.series-link):not(.series-badge a):not(.defined-term):not(.cite-ref):not(.repo-link):hover {
   border-bottom-color: var(--accent);
   opacity: 1;
 }
@@ -1180,7 +1180,8 @@ tbody tr {
 }
 
 .blog-list .tags {
-  display: inline-flex;
+  display: flex;
+  margin-top: var(--space-1);
   flex-wrap: wrap;
   gap: var(--space-1);
   list-style: none;
@@ -1235,21 +1236,11 @@ nav a:focus-visible {
    Tags
    ============================================ */
 
+/* A tag is drawn as the same drafting label as the repository chip below (.repo-chip):
+   dashed border, corner brackets and monospace, in lowercase as a hashtag reads. */
 .tag {
-  font-size: 0.813rem;
-  color: var(--text-secondary);
-  padding: var(--space-05) var(--space-15);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  display: inline-block;
   transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.tag:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-light);
 }
 
 /* ============================================
@@ -1570,7 +1561,7 @@ aside code {
 
 .post-header {
   margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
+  padding-bottom: var(--space-15);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1601,11 +1592,14 @@ aside code {
   opacity: 0.5;
 }
 
+/* Tags sit on their own row under the date, author and evidence, everywhere a post is shown,
+   so a long list wraps within its row instead of breaking the meta line at a random point. */
 .post-tags {
-  display: inline-flex;
+  display: flex;
   gap: var(--space-1);
   align-items: center;
   flex-wrap: wrap;
+  margin-top: var(--space-2);
 }
 
 /* ============================================
@@ -1642,14 +1636,138 @@ aside code {
   color: var(--accent);
 }
 
+/* Experiment repository mark: beside a series title, and in a post's meta line */
+.repo-link {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 0.35em;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.repo-link svg {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+}
+
+/* The drafting label shared by tags and the repository chip in a post's meta line: built
+   from the series lede's dashed border and corner brackets and the monospace the site uses
+   for load-bearing statements, so both read as part of the apparatus rather than buttons. */
+.tag,
+.repo-link {
+  position: relative;
+  padding: var(--space-05) var(--space-15);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border-strong);
+  border-radius: 0;
+}
+
+.tag {
+  letter-spacing: 0.02em;
+}
+
+/* A post's header: a quiet note of date and author, then one row of links, the evidence
+   chip first and the tags after it, wrapping as a single flow. */
+.post-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.post-links .post-tags {
+  display: contents;
+}
+
+/* Between the repository chip and the tags: the evidence is one group, the topics another. */
+.post-links-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 0 var(--space-1);
+  background: var(--border-strong);
+}
+
+.repo-chip {
+  gap: 0.45em;
+  margin-left: 0;
+  text-transform: uppercase;
+  opacity: 1;
+}
+
+.tag::before,
+.tag::after,
+.repo-link::before,
+.repo-link::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--accent);
+}
+
+.tag::before,
+.repo-link::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.tag::after,
+.repo-link::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+.tag:hover,
+.repo-link:hover,
+.repo-link:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.repo-link:hover,
+.repo-link:focus-visible {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* The mark alone, beside a series title: the same drafting label, square around the mark. */
+.repo-link:not(.repo-chip) {
+  padding: 0.3em;
+  line-height: 1;
+}
+
+h1 .repo-link,
+h2 .repo-link {
+  font-size: 0.55em;
+}
+
+/* A reading of where the reader stands, drawn in the drafting label's dashed border and
+   monospace, without the corner brackets that mark the labels a reader can follow. */
 .series-progress {
   color: var(--text-tertiary);
-  font-size: 0.813rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  padding: var(--space-05) var(--space-1);
+  padding: var(--space-05) var(--space-15);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-strong);
+  border-radius: 0;
 }
 
 .series-nav {
@@ -2160,8 +2278,15 @@ aside code {
   margin-top: var(--space-1);
 }
 
+.series-meta .tags,
 .series-page-post-meta .tags {
-  display: inline-flex;
+  flex-basis: 100%;
+}
+
+.series-page-post-meta .tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
   gap: var(--space-1);
   list-style: none;
   padding: 0;

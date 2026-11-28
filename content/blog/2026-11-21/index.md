@@ -14,6 +14,8 @@ series = ["adoption-mechanics"]
 toc = false
 series_order = 2
 series_title = "Adoption Mechanics: Why Correct Designs Die, and Where Human Attention Belongs"
+series_repo = "https://github.com/immediatus/experiments/tree/main/adoption-mechanics"
+repo = "https://github.com/immediatus/experiments/blob/main/adoption-mechanics/docs/part2-smarter-agents-fewer-opinions.md"
 series_description = """<div class="series-lede">Agreement is the cheapest state any system can reach. Consensus is the most expensive way to get there.</div> A review has a human energy budget, and correct designs die where it goes. This series builds one model of a review: people with correlated signals and careers to protect, a vote taken in order, a chain of hand-offs, and veto gates guarding a status quo. People and AI agents differ in it only by a few parameters, several of them measured. The first part follows a design through a human review: first-writer-wins, trivia every pair must settle, and good designs aligned to death. The second gives the model agent values and finds machines that agree for free too, wrong on the same hard questions. The third gives AI a job, not a seat: the Residual Protocol spends machines on everything that can be written and a fixed budget of human attention on what cannot. Every number comes from executed code, and every part names the observation that would prove it wrong."""
 +++
 

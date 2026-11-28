@@ -1,3 +1,4 @@
+{% import "macros/repo.html" as repo %}
 {% macro navigation(page) %}
   {% set_global series_name = false %}
   {% set_global series_posts = [] %}
@@ -61,6 +62,7 @@
           <a href="{{ get_taxonomy_url(kind='series', name=series_name) }}" class="series-link">
             {{ page.extra.series_title | default(value=series_name) }}
           </a>
+          {% if page.extra.series_repo %}{{ repo::link(url=page.extra.series_repo, label="Experiment repository: the code, results and models behind this series", text="simulation repo") }}{% endif %}
           {% if current_index or current_index == 0 %}
             <span class="series-progress">Part {{ current_index + 1 }}/{{ series_posts | length }}</span>
           {% endif %}

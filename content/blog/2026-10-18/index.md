@@ -13,6 +13,8 @@ series = ["capacity-in-arrears"]
 toc = false
 series_order = 3
 series_title = "Capacity in Arrears: Autoscaling Under Dead Time, Saturated Metrics, and Retry Debt"
+series_repo = "https://github.com/immediatus/experiments/tree/main/capacity-in-arrears"
+repo = "https://github.com/immediatus/experiments/blob/main/capacity-in-arrears/docs/part3-demand-is-not-debt.md"
 series_description = """<div class="series-lede">An autoscaler adds capacity for the load it can measure, and an overload is the load it cannot.</div>A utilization metric is bounded by the capacity it reports on, so it reads the same at twice the load and at thirty times. This series follows one widely deployed autoscaler from its source code to its limits, and uses it to test four things engineers reasonably believe about a control loop: that its metric measures load, that a stabilization window makes it stable, that a cleaner signal is a safer one, and that a limit removes a risk. Each part prices what one belief leaves out. The results come from the controller's own arithmetic and from simulations whose assumptions each part states. Every part names the observation, on a real cluster, that would prove it wrong."""
 +++
 

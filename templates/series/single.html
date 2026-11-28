@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros/repo.html" as repo %}
 
 {% block content %}
 
@@ -18,7 +19,7 @@
     {% for post in series_posts %}
       {% if loop.index0 == 0 %}
         {% if post.extra.series_title %}
-          <h1>Series: {{ post.extra.series_title }}</h1>
+          <h1>Series: {{ post.extra.series_title }}{% if post.extra.series_repo %} {{ repo::link(url=post.extra.series_repo, label="Experiment repository: the code, results and models behind this series") }}{% endif %}</h1>
           <div class="series-description">{{ post.extra.series_description | safe }}</div>
         {% endif %}
       {% endif %}

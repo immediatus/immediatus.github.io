@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros/repo.html" as repo %}
 
 {% block content %}
 <h1>All Series</h1>
@@ -23,7 +24,7 @@
         {% if series_posts | length > 0 %}
           {% for post in series_posts %}
             {% if loop.index0 == 0 and post.extra.series_title %}
-              <h2> <a href="{{ term.permalink }}">{{ post.extra.series_title }}</a></h2>
+              <h2> <a href="{{ term.permalink }}">{{ post.extra.series_title }}</a>{% if post.extra.series_repo %} {{ repo::link(url=post.extra.series_repo, label="Experiment repository: the code, results and models behind this series") }}{% endif %}</h2>
               <div class="series-index-description">{{ post.extra.series_description | safe }}</div>
             {% endif %}
           {% endfor %}

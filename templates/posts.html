@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "macros/taxonomy.html" as taxonomy_macros %}
+{% import "macros/repo.html" as repo %}
 
 {% block content %}
 <h1>{{ section.title }}</h1>
@@ -67,6 +68,7 @@
             <a href="{{ get_taxonomy_url(kind='series', name=current_series) }}" class="series-title">
               {{ page.extra.series_title | default(value=current_series | title) }}
             </a>
+            {% if series_posts[0].extra.series_repo %}{{ repo::link(url=series_posts[0].extra.series_repo, label="Experiment repository: the code, results and models behind this series") }}{% endif %}
             <span class="series-count">{{ series_posts | length }} parts</span>
           </div>
 
@@ -94,7 +96,7 @@
           {%- if series_posts[0].date %}
             <small class="series-meta">
               <time datetime="{{ series_posts[0].date | date(format='%+') }}" pubdate>{{- series_posts[0].date | date(format=config.extra.date_format) -}}</time>
-              {{ taxonomy_macros::render_tags(page=series_posts[0], format="list", show_separator=true) }}
+              {{ taxonomy_macros::render_tags(page=series_posts[0], format="list", show_separator=false) }}
             </small>
           {%- endif %}
         </article>
@@ -109,7 +111,7 @@
           {%- if page.date %}
             <small>
               <time datetime="{{ page.date | date(format='%+') }}" pubdate>{{- page.date | date(format=config.extra.date_format) -}}</time>
-              {{ taxonomy_macros::render_tags(page=page, format="list", show_separator=true) }}
+              {{ taxonomy_macros::render_tags(page=page, format="list", show_separator=false) }}
             </small>
           {%- endif %}
         </article>
